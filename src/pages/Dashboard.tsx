@@ -12,7 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "@/hooks/use-toast";
-import { Settings } from "lucide-react";
+import { Settings, Bell } from "lucide-react";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -148,13 +148,22 @@ const Dashboard = () => {
         {/* Greeting */}
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold">Hola, {userName}</h1>
-          <Button
-            variant="outline"
-            onClick={() => navigate("/configuracion-notificaciones")}
-          >
-            <Settings className="h-4 w-4 mr-2" />
-            Configurar notificaciones
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => navigate("/recordatorios-pendientes")}
+            >
+              <Bell className="h-4 w-4 mr-2" />
+              Recordatorios
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => navigate("/configuracion-notificaciones")}
+            >
+              <Settings className="h-4 w-4 mr-2" />
+              Configurar notificaciones
+            </Button>
+          </div>
         </div>
 
         {/* Metrics Cards */}
