@@ -410,7 +410,6 @@ const PatientDetail = () => {
         <PatientForm
           open={showEditForm}
           onOpenChange={setShowEditForm}
-          businessId={patient.business_id}
           patientId={patient.id}
           initialData={{
             full_name: patient.full_name,

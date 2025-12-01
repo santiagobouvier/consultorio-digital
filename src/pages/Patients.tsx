@@ -41,7 +41,6 @@ const Patients = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [showForm, setShowForm] = useState(false);
-  const [businessId, setBusinessId] = useState<string>("");
 
   useEffect(() => {
     fetchPatients();
@@ -67,18 +66,13 @@ const Patients = () => {
         .from("businesses")
         .select("id")
         .eq("owner_user_id", user.id)
-        .single();
+        .maybeSingle();
 
       if (!business) {
-        toast({
-          title: "Error",
-          description: "No se encontró el negocio asociado",
-          variant: "destructive",
-        });
+        // Redirect silently to business setup
+        navigate("/configurar-negocio");
         return;
       }
-
-      setBusinessId(business.id);
 
       // Get patients
       const { data: patientsData } = await supabase
@@ -281,7 +275,6 @@ const Patients = () => {
       <PatientForm
         open={showForm}
         onOpenChange={setShowForm}
-        businessId={businessId}
         onSuccess={() => {
           setShowForm(false);
           fetchPatients();
