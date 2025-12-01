@@ -95,29 +95,29 @@ const Patients = () => {
           // Last appointment (attended)
           const { data: lastAppt } = await supabase
             .from("appointments")
-            .select("start_datetime")
+            .select("start_at")
             .eq("patient_id", patient.id)
-            .eq("status", "attended")
-            .lt("start_datetime", today.toISOString())
-            .order("start_datetime", { ascending: false })
+            .eq("status", "realizada")
+            .lt("start_at", today.toISOString())
+            .order("start_at", { ascending: false })
             .limit(1)
             .maybeSingle();
 
           // Next appointment (future)
           const { data: nextAppt } = await supabase
             .from("appointments")
-            .select("start_datetime")
+            .select("start_at")
             .eq("patient_id", patient.id)
-            .not("status", "in", '("cancelled","no_show")')
-            .gte("start_datetime", today.toISOString())
-            .order("start_datetime", { ascending: true })
+            .eq("status", "programada")
+            .gte("start_at", today.toISOString())
+            .order("start_at", { ascending: true })
             .limit(1)
             .maybeSingle();
 
           return {
             ...patient,
-            last_appointment: lastAppt?.start_datetime || null,
-            next_appointment: nextAppt?.start_datetime || null,
+            last_appointment: lastAppt?.start_at || null,
+            next_appointment: nextAppt?.start_at || null,
           };
         })
       );

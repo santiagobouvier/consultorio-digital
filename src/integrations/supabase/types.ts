@@ -21,14 +21,17 @@ export type Database = {
           contact_name: string | null
           contact_phone: string | null
           created_at: string
-          end_datetime: string
+          end_at: string
           id: string
           is_new_contact: boolean
-          notes_internal: string | null
+          location: string | null
+          modality: string | null
+          notes: string | null
           patient_id: string | null
-          service_id: string
+          payment_status: string | null
+          service_id: string | null
           source: string
-          start_datetime: string
+          start_at: string
           status: string
           updated_at: string
         }
@@ -38,14 +41,17 @@ export type Database = {
           contact_name?: string | null
           contact_phone?: string | null
           created_at?: string
-          end_datetime: string
+          end_at: string
           id?: string
           is_new_contact?: boolean
-          notes_internal?: string | null
+          location?: string | null
+          modality?: string | null
+          notes?: string | null
           patient_id?: string | null
-          service_id: string
+          payment_status?: string | null
+          service_id?: string | null
           source?: string
-          start_datetime: string
+          start_at: string
           status?: string
           updated_at?: string
         }
@@ -55,14 +61,17 @@ export type Database = {
           contact_name?: string | null
           contact_phone?: string | null
           created_at?: string
-          end_datetime?: string
+          end_at?: string
           id?: string
           is_new_contact?: boolean
-          notes_internal?: string | null
+          location?: string | null
+          modality?: string | null
+          notes?: string | null
           patient_id?: string | null
-          service_id?: string
+          payment_status?: string | null
+          service_id?: string | null
           source?: string
-          start_datetime?: string
+          start_at?: string
           status?: string
           updated_at?: string
         }
