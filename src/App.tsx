@@ -11,7 +11,6 @@ import Patients from "./pages/Patients";
 import PatientDetail from "./pages/PatientDetail";
 import Appointments from "./pages/Appointments";
 import Agenda from "./pages/Agenda";
-import NotificationSettings from "./pages/NotificationSettings";
 import PendingReminders from "./pages/PendingReminders";
 import ClinicSettings from "./pages/ClinicSettings";
 import NotFound from "./pages/NotFound";
@@ -33,7 +32,6 @@ const App = () => (
           <Route path="/patients/:id" element={<PatientDetail />} />
           <Route path="/appointments" element={<Appointments />} />
           <Route path="/agenda" element={<Agenda />} />
-          <Route path="/configuracion-notificaciones" element={<NotificationSettings />} />
           <Route path="/recordatorios-pendientes" element={<PendingReminders />} />
           <Route path="/mi-consultorio" element={<ClinicSettings />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
