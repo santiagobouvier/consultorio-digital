@@ -16,6 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { PatientForm } from "@/components/PatientForm";
 import { CreateAppointmentModal } from "@/components/CreateAppointmentModal";
+import { WhatsAppButtons } from "@/components/WhatsAppButtons";
 import { ArrowLeft, Calendar, Edit } from "lucide-react";
 
 interface Patient {
@@ -328,23 +329,38 @@ const PatientDetail = () => {
             {futureAppointments.length === 0 ? (
               <p className="text-muted-foreground">No hay citas programadas</p>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {futureAppointments.map((appointment) => {
                   const { date, time } = formatDateTime(appointment.start_at);
                   return (
                     <div
                       key={appointment.id}
-                      className="flex items-center justify-between p-3 border rounded-lg"
+                      className="p-4 border rounded-lg space-y-3"
                     >
-                      <div>
-                        <p className="font-medium">{date} - {time}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {appointment.modality === "online" ? "Online" : "Presencial"}
-                        </p>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium">{date} - {time}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {appointment.modality === "online" ? "Online" : "Presencial"}
+                          </p>
+                          {appointment.location && (
+                            <p className="text-sm text-muted-foreground mt-1">
+                              {appointment.location}
+                            </p>
+                          )}
+                        </div>
+                        <Badge>
+                          {statusMap[appointment.status] || appointment.status}
+                        </Badge>
                       </div>
-                      <Badge>
-                        {statusMap[appointment.status] || appointment.status}
-                      </Badge>
+                      <WhatsAppButtons
+                        patientName={patient.full_name}
+                        patientPhone={patient.whatsapp_phone}
+                        appointmentDate={date}
+                        appointmentTime={time}
+                        modality={appointment.modality}
+                        location={appointment.location}
+                      />
                     </div>
                   );
                 })}

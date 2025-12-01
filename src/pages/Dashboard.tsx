@@ -12,6 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "@/hooks/use-toast";
+import { Settings } from "lucide-react";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -145,8 +146,15 @@ const Dashboard = () => {
     <div className="min-h-screen bg-background p-8">
       <div className="max-w-7xl mx-auto space-y-8">
         {/* Greeting */}
-        <div>
+        <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold">Hola, {userName}</h1>
+          <Button
+            variant="outline"
+            onClick={() => navigate("/configuracion-notificaciones")}
+          >
+            <Settings className="h-4 w-4 mr-2" />
+            Configurar notificaciones
+          </Button>
         </div>
 
         {/* Metrics Cards */}
