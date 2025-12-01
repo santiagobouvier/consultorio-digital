@@ -84,8 +84,7 @@ export function CreateAppointmentModal({
         notes: notes.trim() || null,
         status: "programada",
         payment_status: "pendiente",
-        service_id: null,
-      });
+      } as any);
 
       if (error) throw error;
 
