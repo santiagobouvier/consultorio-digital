@@ -57,11 +57,13 @@ const BusinessSetup = () => {
         return;
       }
 
+      const userId = user.id;
+
       // Check if business already exists
       const { data: existingBusiness } = await supabase
         .from("businesses")
         .select("id")
-        .eq("owner_user_id", user.id)
+        .eq("owner_user_id", userId)
         .maybeSingle();
 
       if (existingBusiness) {
@@ -71,24 +73,45 @@ const BusinessSetup = () => {
       }
 
       // Create business
-      const { error } = await supabase
-        .from("businesses")
-        .insert([{
-          owner_user_id: user.id,
-          name: data.name,
-          specialty: data.specialty,
-          contact_email: data.contact_email,
-          public_slug: data.public_slug,
-          timezone: "America/Montevideo",
-        }]);
+      const baseBusinessData = {
+        owner_user_id: userId,
+        name: data.name,
+        specialty: data.specialty,
+        contact_email: data.contact_email,
+        public_slug: data.public_slug,
+        timezone: "America/Montevideo",
+      };
 
-      if (error) throw error;
+      const businessWithAuditFields: any = {
+        ...baseBusinessData,
+        created_by: userId,
+        updated_by: userId,
+      };
+
+      const { error: initialError } = await supabase
+        .from("businesses")
+        .insert([businessWithAuditFields]);
+
+      let finalError = initialError;
+
+      // Si falla porque las columnas no existen, reintentamos sin created_by/updated_by
+      if (finalError && finalError.message?.includes("column") && finalError.message?.includes("created_by")) {
+        const { error: retryError } = await supabase
+          .from("businesses")
+          .insert([baseBusinessData]);
+
+        finalError = retryError;
+      }
+
+      if (finalError) throw finalError;
+
+      
 
       toast.success("¡Consultorio configurado correctamente!");
       navigate("/dashboard");
     } catch (error: any) {
       console.error("Error creating business:", error);
-      toast.error(error.message || "No se pudo crear el consultorio");
+      toast.error("No se pudo crear el consultorio. Por favor, intentá de nuevo más tarde.");
     } finally {
       setLoading(false);
     }
