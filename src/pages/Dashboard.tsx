@@ -12,7 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "@/hooks/use-toast";
-import { Settings, Bell, Building2 } from "lucide-react";
+import { Bell, Building2 } from "lucide-react";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -162,13 +162,6 @@ const Dashboard = () => {
             >
               <Bell className="h-4 w-4 mr-2" />
               Recordatorios
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => navigate("/configuracion-notificaciones")}
-            >
-              <Settings className="h-4 w-4 mr-2" />
-              Configurar notificaciones
             </Button>
           </div>
         </div>
