@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { Bell, Send } from "lucide-react";
 
 interface ReminderModalProps {
@@ -20,6 +21,10 @@ interface ReminderModalProps {
   appointmentTime: string;
   modality: string;
   location: string | null;
+}
+
+interface Patient {
+  id: string;
 }
 
 export const ReminderModal = ({
@@ -54,7 +59,7 @@ export const ReminderModal = ({
       .replace("{{link}}", location || "");
   };
 
-  const scheduleReminder = (daysBeforeOrNow: number | "now") => {
+  const scheduleReminder = async (daysBeforeOrNow: number | "now") => {
     if (!patientPhone) {
       toast({
         title: "Error",
@@ -71,7 +76,7 @@ export const ReminderModal = ({
       const message = formatMessage(templates.reminder);
 
       if (daysBeforeOrNow === "now") {
-        // Enviar ahora - abrir WhatsApp (web o app)
+        // Enviar ahora - abrir WhatsApp
         const phone = patientPhone.replace(/\D/g, "");
         const encodedMessage = encodeURIComponent(message);
         const url = `https://wa.me/${phone}?text=${encodedMessage}`;
@@ -82,29 +87,33 @@ export const ReminderModal = ({
           description: "Se abrió WhatsApp con el mensaje preparado",
         });
       } else {
-        // Programar recordatorio
+        // Programar recordatorio en la base de datos
         const appointmentDateTime = new Date(`${appointmentDate.split("/").reverse().join("-")}T${appointmentTime}`);
         const scheduledDate = new Date(appointmentDateTime);
         scheduledDate.setDate(scheduledDate.getDate() - daysBeforeOrNow);
 
-        const reminders = JSON.parse(localStorage.getItem("pending_reminders") || "[]");
-        
-        const newReminder = {
-          id: `${appointmentId}-${Date.now()}`,
-          appointmentId,
-          patientName,
-          patientPhone,
-          appointmentDate,
-          appointmentTime,
-          modality,
-          location,
-          scheduledDate: scheduledDate.toISOString(),
-          message,
-          createdAt: new Date().toISOString(),
-        };
+        // Obtener el patient_id desde la cita
+        const { data: appointmentData, error: appointmentError } = await supabase
+          .from("appointments")
+          .select("patient_id")
+          .eq("id", appointmentId)
+          .single();
 
-        reminders.push(newReminder);
-        localStorage.setItem("pending_reminders", JSON.stringify(reminders));
+        if (appointmentError || !appointmentData) {
+          throw new Error("No se pudo obtener la información de la cita");
+        }
+
+        // Insertar en la tabla scheduled_reminders
+        const { error: insertError } = await supabase
+          .from("scheduled_reminders")
+          .insert({
+            appointment_id: appointmentId,
+            patient_id: appointmentData.patient_id,
+            scheduled_for: scheduledDate.toISOString(),
+            message,
+          });
+
+        if (insertError) throw insertError;
 
         toast({
           title: "Recordatorio programado",

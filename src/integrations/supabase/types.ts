@@ -206,6 +206,51 @@ export type Database = {
         }
         Relationships: []
       }
+      scheduled_reminders: {
+        Row: {
+          appointment_id: string
+          created_at: string
+          id: string
+          message: string
+          patient_id: string
+          scheduled_for: string
+          sent: boolean
+        }
+        Insert: {
+          appointment_id: string
+          created_at?: string
+          id?: string
+          message: string
+          patient_id: string
+          scheduled_for: string
+          sent?: boolean
+        }
+        Update: {
+          appointment_id?: string
+          created_at?: string
+          id?: string
+          message?: string
+          patient_id?: string
+          scheduled_for?: string
+          sent?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_appointment"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_patient"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       services: {
         Row: {
           business_id: string
