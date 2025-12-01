@@ -97,18 +97,18 @@ const Patients = () => {
             .from("appointments")
             .select("start_at")
             .eq("patient_id", patient.id)
-            .eq("status", "realizada")
+            .eq("status", "attended")
             .lt("start_at", today.toISOString())
             .order("start_at", { ascending: false })
             .limit(1)
             .maybeSingle();
 
-          // Next appointment (future)
+          // Next appointment (future, not cancelled/no_show)
           const { data: nextAppt } = await supabase
             .from("appointments")
             .select("start_at")
             .eq("patient_id", patient.id)
-            .eq("status", "programada")
+            .not("status", "in", '("cancelled","no_show")')
             .gte("start_at", today.toISOString())
             .order("start_at", { ascending: true })
             .limit(1)

@@ -82,7 +82,7 @@ export function CreateAppointmentModal({
         modality,
         location: location.trim() || null,
         notes: notes.trim() || null,
-        status: "programada",
+        status: "pending",
         payment_status: "pendiente",
       } as any);
 

@@ -51,11 +51,11 @@ const PatientDetail = () => {
   const [notes, setNotes] = useState("");
 
   const statusMap: Record<string, string> = {
-    pending: "pendiente",
-    confirmed: "confirmada",
-    cancelled: "cancelada",
-    attended: "atendida",
-    no_show: "ausencia",
+    pending: "Programada",
+    confirmed: "Programada",
+    cancelled: "Cancelada",
+    attended: "Realizada",
+    no_show: "Ausente",
   };
 
   useEffect(() => {
