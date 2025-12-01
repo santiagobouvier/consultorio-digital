@@ -17,7 +17,8 @@ import { toast } from "@/hooks/use-toast";
 import { PatientForm } from "@/components/PatientForm";
 import { CreateAppointmentModal } from "@/components/CreateAppointmentModal";
 import { WhatsAppButtons } from "@/components/WhatsAppButtons";
-import { ArrowLeft, Calendar, Edit } from "lucide-react";
+import { ReminderModal } from "@/components/ReminderModal";
+import { ArrowLeft, Calendar, Edit, Bell } from "lucide-react";
 
 interface Patient {
   id: string;
@@ -50,6 +51,21 @@ const PatientDetail = () => {
   const [showCreateAppointment, setShowCreateAppointment] = useState(false);
   const [editingNotes, setEditingNotes] = useState(false);
   const [notes, setNotes] = useState("");
+  const [reminderModal, setReminderModal] = useState<{
+    open: boolean;
+    appointmentId: string;
+    date: string;
+    time: string;
+    modality: string;
+    location: string | null;
+  }>({
+    open: false,
+    appointmentId: "",
+    date: "",
+    time: "",
+    modality: "",
+    location: null,
+  });
 
   const statusMap: Record<string, string> = {
     pending: "Programada",
@@ -353,14 +369,34 @@ const PatientDetail = () => {
                           {statusMap[appointment.status] || appointment.status}
                         </Badge>
                       </div>
-                      <WhatsAppButtons
-                        patientName={patient.full_name}
-                        patientPhone={patient.whatsapp_phone}
-                        appointmentDate={date}
-                        appointmentTime={time}
-                        modality={appointment.modality}
-                        location={appointment.location}
-                      />
+                      <div className="space-y-2">
+                        <WhatsAppButtons
+                          patientName={patient.full_name}
+                          patientPhone={patient.whatsapp_phone}
+                          appointmentDate={date}
+                          appointmentTime={time}
+                          modality={appointment.modality}
+                          location={appointment.location}
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full"
+                          onClick={() =>
+                            setReminderModal({
+                              open: true,
+                              appointmentId: appointment.id,
+                              date,
+                              time,
+                              modality: appointment.modality,
+                              location: appointment.location,
+                            })
+                          }
+                        >
+                          <Bell className="h-4 w-4 mr-2" />
+                          Recordatorio
+                        </Button>
+                      </div>
                     </div>
                   );
                 })}
@@ -438,6 +474,20 @@ const PatientDetail = () => {
             onOpenChange={setShowCreateAppointment}
             patientId={patient.id}
             onSuccess={fetchPatientData}
+          />
+
+          <ReminderModal
+            open={reminderModal.open}
+            onOpenChange={(open) =>
+              setReminderModal({ ...reminderModal, open })
+            }
+            appointmentId={reminderModal.appointmentId}
+            patientName={patient.full_name}
+            patientPhone={patient.whatsapp_phone}
+            appointmentDate={reminderModal.date}
+            appointmentTime={reminderModal.time}
+            modality={reminderModal.modality}
+            location={reminderModal.location}
           />
         </>
       )}
