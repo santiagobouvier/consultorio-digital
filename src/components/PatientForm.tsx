@@ -141,11 +141,11 @@ export function PatientForm({
 
       form.reset();
       onSuccess();
-    } catch (error) {
-      console.error("Error saving patient:", error);
+    } catch (error: any) {
+      console.error("Error completo al guardar paciente:", error);
       toast({
         title: "Error",
-        description: "No se pudo guardar el paciente",
+        description: `No se pudo guardar el paciente. ${error?.message || JSON.stringify(error)}`,
         variant: "destructive",
       });
     }
