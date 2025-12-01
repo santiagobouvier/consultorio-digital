@@ -206,8 +206,8 @@ const Dashboard = () => {
         {/* Navigation Buttons */}
         <div className="flex gap-4">
           <Button onClick={() => navigate("/patients")}>Ver pacientes</Button>
-          <Button onClick={() => navigate("/appointments")} variant="outline">
-            Ver agenda completa
+          <Button onClick={() => navigate("/agenda")} variant="outline">
+            Ver agenda
           </Button>
         </div>
       </div>
