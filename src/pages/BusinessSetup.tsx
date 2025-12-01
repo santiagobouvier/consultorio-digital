@@ -112,6 +112,10 @@ const BusinessSetup = () => {
     } catch (error: any) {
       console.error("Error creating business:", error);
       toast.error("No se pudo crear el consultorio. Por favor, intentá de nuevo más tarde.");
+      // Error técnico para desarrollo
+      toast.error(`Detalles técnicos: ${error.message || JSON.stringify(error)}`, {
+        duration: 10000,
+      });
     } finally {
       setLoading(false);
     }
