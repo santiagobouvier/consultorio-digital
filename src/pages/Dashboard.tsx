@@ -12,7 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "@/hooks/use-toast";
-import { Settings, Bell } from "lucide-react";
+import { Settings, Bell, Building2 } from "lucide-react";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -149,6 +149,13 @@ const Dashboard = () => {
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold">Hola, {userName}</h1>
           <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => navigate("/mi-consultorio")}
+            >
+              <Building2 className="h-4 w-4 mr-2" />
+              Mi Consultorio
+            </Button>
             <Button
               variant="outline"
               onClick={() => navigate("/recordatorios-pendientes")}

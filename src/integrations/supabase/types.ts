@@ -135,6 +135,51 @@ export type Database = {
         }
         Relationships: []
       }
+      clinic_settings: {
+        Row: {
+          clinic_name: string | null
+          cover_image_url: string | null
+          created_at: string
+          default_confirmation_message: string | null
+          default_postsession_message: string | null
+          default_reminder_message: string | null
+          id: string
+          logo_url: string | null
+          specialty: string | null
+          updated_at: string
+          user_id: string
+          welcome_message: string | null
+        }
+        Insert: {
+          clinic_name?: string | null
+          cover_image_url?: string | null
+          created_at?: string
+          default_confirmation_message?: string | null
+          default_postsession_message?: string | null
+          default_reminder_message?: string | null
+          id?: string
+          logo_url?: string | null
+          specialty?: string | null
+          updated_at?: string
+          user_id: string
+          welcome_message?: string | null
+        }
+        Update: {
+          clinic_name?: string | null
+          cover_image_url?: string | null
+          created_at?: string
+          default_confirmation_message?: string | null
+          default_postsession_message?: string | null
+          default_reminder_message?: string | null
+          id?: string
+          logo_url?: string | null
+          specialty?: string | null
+          updated_at?: string
+          user_id?: string
+          welcome_message?: string | null
+        }
+        Relationships: []
+      }
       patients: {
         Row: {
           business_id: string
