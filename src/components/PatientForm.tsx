@@ -43,7 +43,6 @@ type PatientFormData = z.infer<typeof patientSchema>;
 interface PatientFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  businessId: string;
   patientId?: string;
   initialData?: PatientFormData;
   onSuccess: () => void;
@@ -52,7 +51,6 @@ interface PatientFormProps {
 export function PatientForm({
   open,
   onOpenChange,
-  businessId,
   patientId,
   initialData,
   onSuccess,
@@ -71,6 +69,32 @@ export function PatientForm({
 
   const onSubmit = async (data: PatientFormData) => {
     try {
+      // Get current user's business
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({
+          title: "Error",
+          description: "No se encontró el usuario autenticado",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const { data: business } = await supabase
+        .from("businesses")
+        .select("id")
+        .eq("owner_user_id", user.id)
+        .maybeSingle();
+
+      if (!business) {
+        toast({
+          title: "Configuración necesaria",
+          description: "Primero configurá tu consultorio antes de crear pacientes.",
+        });
+        window.location.href = "/configurar-negocio";
+        return;
+      }
+
       // Clean empty strings to null
       const cleanData = {
         ...data,
@@ -98,7 +122,7 @@ export function PatientForm({
         const { error } = await supabase
           .from("patients")
           .insert([{
-            business_id: businessId,
+            business_id: business.id,
             full_name: cleanData.full_name,
             email: cleanData.email,
             whatsapp_phone: cleanData.whatsapp_phone,

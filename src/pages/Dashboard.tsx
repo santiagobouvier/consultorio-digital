@@ -60,14 +60,11 @@ const Dashboard = () => {
         .from("businesses")
         .select("id")
         .eq("owner_user_id", user.id)
-        .single();
+        .maybeSingle();
 
       if (!business) {
-        toast({
-          title: "Error",
-          description: "No se encontró el negocio asociado",
-          variant: "destructive",
-        });
+        // Redirect silently to business setup
+        navigate("/configurar-negocio");
         return;
       }
 

@@ -23,8 +23,24 @@ const Auth = () => {
       if (isLogin) {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
+        
         toast.success("¡Bienvenido de nuevo!");
-        navigate("/dashboard");
+        
+        // Check if user has a business configured
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: business } = await supabase
+            .from("businesses")
+            .select("id")
+            .eq("owner_user_id", user.id)
+            .maybeSingle();
+          
+          if (business) {
+            navigate("/dashboard");
+          } else {
+            navigate("/configurar-negocio");
+          }
+        }
       } else {
         const { error } = await supabase.auth.signUp({
           email,
