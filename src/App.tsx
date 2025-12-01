@@ -11,6 +11,7 @@ import Patients from "./pages/Patients";
 import PatientDetail from "./pages/PatientDetail";
 import Appointments from "./pages/Appointments";
 import Agenda from "./pages/Agenda";
+import NotificationSettings from "./pages/NotificationSettings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +31,7 @@ const App = () => (
           <Route path="/patients/:id" element={<PatientDetail />} />
           <Route path="/appointments" element={<Appointments />} />
           <Route path="/agenda" element={<Agenda />} />
+          <Route path="/configuracion-notificaciones" element={<NotificationSettings />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
