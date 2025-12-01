@@ -17,16 +17,21 @@ import { ArrowLeft, Send, Trash2 } from "lucide-react";
 
 interface Reminder {
   id: string;
-  appointmentId: string;
-  patientName: string;
-  patientPhone: string;
-  appointmentDate: string;
-  appointmentTime: string;
-  modality: string;
-  location: string | null;
-  scheduledDate: string;
+  appointment_id: string;
+  patient_id: string;
+  scheduled_for: string;
   message: string;
-  createdAt: string;
+  sent: boolean;
+  created_at: string;
+  patient?: {
+    full_name: string;
+    whatsapp_phone: string | null;
+  };
+  appointment?: {
+    start_at: string;
+    modality: string;
+    location: string | null;
+  };
 }
 
 const PendingReminders = () => {
@@ -35,8 +40,11 @@ const PendingReminders = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    checkAuth();
-    loadReminders();
+    const initPage = async () => {
+      await checkAuth();
+      await loadReminders();
+    };
+    initPage();
   }, []);
 
   const checkAuth = async () => {
@@ -46,26 +54,25 @@ const PendingReminders = () => {
     }
   };
 
-  const loadReminders = () => {
+  const loadReminders = async () => {
     try {
-      const stored = localStorage.getItem("pending_reminders");
-      if (!stored) {
-        setReminders([]);
-        return;
-      }
-
-      const allReminders: Reminder[] = JSON.parse(stored);
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      // Filtrar solo recordatorios cuya fecha programada sea hoy o anterior
-      const dueReminders = allReminders.filter((reminder) => {
-        const scheduledDate = new Date(reminder.scheduledDate);
-        scheduledDate.setHours(0, 0, 0, 0);
-        return scheduledDate <= today;
-      });
+      const { data, error } = await supabase
+        .from("scheduled_reminders")
+        .select(`
+          *,
+          patient:patients(full_name, whatsapp_phone),
+          appointment:appointments(start_at, modality, location)
+        `)
+        .eq("sent", false)
+        .lte("scheduled_for", new Date().toISOString())
+        .order("scheduled_for", { ascending: true });
 
-      setReminders(dueReminders);
+      if (error) throw error;
+
+      setReminders(data || []);
     } catch (error) {
       console.error("Error loading reminders:", error);
       toast({
@@ -78,12 +85,32 @@ const PendingReminders = () => {
     }
   };
 
-  const sendWhatsApp = (reminder: Reminder) => {
+  const sendWhatsApp = async (reminder: Reminder) => {
     try {
-      const phone = reminder.patientPhone.replace(/\D/g, "");
+      if (!reminder.patient?.whatsapp_phone) {
+        toast({
+          title: "Error",
+          description: "El paciente no tiene número de teléfono",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const phone = reminder.patient.whatsapp_phone.replace(/\D/g, "");
       const encodedMessage = encodeURIComponent(reminder.message);
       const url = `https://wa.me/${phone}?text=${encodedMessage}`;
       window.open(url, "_blank");
+
+      // Marcar como enviado
+      const { error } = await supabase
+        .from("scheduled_reminders")
+        .update({ sent: true })
+        .eq("id", reminder.id);
+
+      if (error) throw error;
+
+      // Actualizar lista local
+      setReminders((prev) => prev.filter((r) => r.id !== reminder.id));
 
       toast({
         title: "WhatsApp abierto",
@@ -99,15 +126,15 @@ const PendingReminders = () => {
     }
   };
 
-  const deleteReminder = (reminderId: string) => {
+  const deleteReminder = async (reminderId: string) => {
     try {
-      const stored = localStorage.getItem("pending_reminders");
-      if (!stored) return;
+      const { error } = await supabase
+        .from("scheduled_reminders")
+        .delete()
+        .eq("id", reminderId);
 
-      const allReminders: Reminder[] = JSON.parse(stored);
-      const updatedReminders = allReminders.filter((r) => r.id !== reminderId);
-      
-      localStorage.setItem("pending_reminders", JSON.stringify(updatedReminders));
+      if (error) throw error;
+
       setReminders((prev) => prev.filter((r) => r.id !== reminderId));
 
       toast({
@@ -131,6 +158,21 @@ const PendingReminders = () => {
       month: "2-digit",
       year: "numeric",
     });
+  };
+
+  const formatAppointmentDateTime = (isoDate: string) => {
+    const date = new Date(isoDate);
+    return {
+      date: date.toLocaleDateString("es-UY", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      }),
+      time: date.toLocaleTimeString("es-UY", {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    };
   };
 
   if (loading) {
@@ -180,49 +222,52 @@ const PendingReminders = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {reminders.map((reminder) => (
-                    <TableRow key={reminder.id}>
-                      <TableCell className="font-medium">
-                        {reminder.patientName}
-                      </TableCell>
-                      <TableCell>
-                        <div className="space-y-1">
-                          <p className="text-sm">
-                            {reminder.appointmentDate} - {reminder.appointmentTime}
+                  {reminders.map((reminder) => {
+                    const { date, time } = formatAppointmentDateTime(reminder.appointment?.start_at || "");
+                    return (
+                      <TableRow key={reminder.id}>
+                        <TableCell className="font-medium">
+                          {reminder.patient?.full_name || "-"}
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-1">
+                            <p className="text-sm">
+                              {date} - {time}
+                            </p>
+                            <Badge variant="outline" className="text-xs">
+                              {reminder.appointment?.modality === "online" ? "Online" : "Presencial"}
+                            </Badge>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {formatScheduledDate(reminder.scheduled_for)}
+                        </TableCell>
+                        <TableCell>
+                          <p className="text-sm text-muted-foreground truncate max-w-xs">
+                            {reminder.message}
                           </p>
-                          <Badge variant="outline" className="text-xs">
-                            {reminder.modality === "online" ? "Online" : "Presencial"}
-                          </Badge>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {formatScheduledDate(reminder.scheduledDate)}
-                      </TableCell>
-                      <TableCell>
-                        <p className="text-sm text-muted-foreground truncate max-w-xs">
-                          {reminder.message}
-                        </p>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex gap-2 justify-end">
-                          <Button
-                            size="sm"
-                            onClick={() => sendWhatsApp(reminder)}
-                          >
-                            <Send className="h-4 w-4 mr-1" />
-                            Enviar
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => deleteReminder(reminder.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex gap-2 justify-end">
+                            <Button
+                              size="sm"
+                              onClick={() => sendWhatsApp(reminder)}
+                            >
+                              <Send className="h-4 w-4 mr-1" />
+                              Enviar
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => deleteReminder(reminder.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             )}
