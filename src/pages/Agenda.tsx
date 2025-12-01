@@ -39,9 +39,11 @@ const Agenda = () => {
   const [filter, setFilter] = useState<string>("todas");
 
   const statusMap: Record<string, string> = {
-    programada: "Programada",
-    realizada: "Realizada",
-    cancelada: "Cancelada",
+    pending: "Programada",
+    confirmed: "Programada",
+    attended: "Realizada",
+    cancelled: "Cancelada",
+    no_show: "Ausente",
   };
 
   useEffect(() => {
@@ -257,9 +259,9 @@ const Agenda = () => {
                         </div>
                         <Badge
                           variant={
-                            appointment.status === "programada"
+                            appointment.status === "pending" || appointment.status === "confirmed"
                               ? "default"
-                              : appointment.status === "realizada"
+                              : appointment.status === "attended"
                               ? "secondary"
                               : "destructive"
                           }
