@@ -23,7 +23,7 @@ const Auth = () => {
       if (isLogin) {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        toast.success("Welcome back!");
+        toast.success("¡Bienvenido de nuevo!");
         navigate("/dashboard");
       } else {
         const { error } = await supabase.auth.signUp({
@@ -35,11 +35,11 @@ const Auth = () => {
           },
         });
         if (error) throw error;
-        toast.success("Account created! You can now sign in.");
+        toast.success("¡Cuenta creada! Ya podés iniciar sesión.");
         setIsLogin(true);
       }
     } catch (error: any) {
-      toast.error(error.message || "An error occurred");
+      toast.error(error.message || "Ocurrió un error");
     } finally {
       setLoading(false);
     }
@@ -50,17 +50,17 @@ const Auth = () => {
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-center">
-            {isLogin ? "Welcome Back" : "Create Account"}
+            {isLogin ? "Bienvenido" : "Crear cuenta"}
           </CardTitle>
           <CardDescription className="text-center">
-            {isLogin ? "Sign in to your professional account" : "Start managing your practice"}
+            {isLogin ? "Iniciá sesión en tu cuenta profesional" : "Comenzá a gestionar tu consultorio"}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             {!isLogin && (
               <div className="space-y-2">
-                <Label htmlFor="name">Full Name</Label>
+                <Label htmlFor="name">Nombre completo</Label>
                 <Input
                   id="name"
                   type="text"
@@ -72,7 +72,7 @@ const Auth = () => {
               </div>
             )}
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">Correo electrónico</Label>
               <Input
                 id="email"
                 type="email"
@@ -83,7 +83,7 @@ const Auth = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">Contraseña</Label>
               <Input
                 id="password"
                 type="password"
@@ -95,7 +95,7 @@ const Auth = () => {
               />
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Please wait..." : isLogin ? "Sign In" : "Sign Up"}
+              {loading ? "Aguardá un momento..." : isLogin ? "Iniciar sesión" : "Registrarse"}
             </Button>
           </form>
           <div className="mt-4 text-center text-sm">
@@ -104,7 +104,7 @@ const Auth = () => {
               onClick={() => setIsLogin(!isLogin)}
               className="text-primary hover:underline"
             >
-              {isLogin ? "Need an account? Sign up" : "Already have an account? Sign in"}
+              {isLogin ? "¿No tenés cuenta? Registrate" : "¿Ya tenés cuenta? Iniciá sesión"}
             </button>
           </div>
         </CardContent>
