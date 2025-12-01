@@ -13,6 +13,9 @@ import Appointments from "./pages/Appointments";
 import Agenda from "./pages/Agenda";
 import PendingReminders from "./pages/PendingReminders";
 import ClinicSettings from "./pages/ClinicSettings";
+import PublicClinic from "./pages/PublicClinic";
+import PublicBooking from "./pages/PublicBooking";
+import AppointmentRequests from "./pages/AppointmentRequests";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,6 +37,9 @@ const App = () => (
           <Route path="/agenda" element={<Agenda />} />
           <Route path="/recordatorios-pendientes" element={<PendingReminders />} />
           <Route path="/mi-consultorio" element={<ClinicSettings />} />
+          <Route path="/solicitudes" element={<AppointmentRequests />} />
+          <Route path="/consultorio/:slug" element={<PublicClinic />} />
+          <Route path="/consultorio/:slug/reservar" element={<PublicBooking />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

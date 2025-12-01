@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      appointment_requests: {
+        Row: {
+          clinic_user_id: string
+          created_at: string
+          email: string
+          id: string
+          message: string | null
+          name: string
+          phone: string
+          requested_datetime: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          clinic_user_id: string
+          created_at?: string
+          email: string
+          id?: string
+          message?: string | null
+          name: string
+          phone: string
+          requested_datetime: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          clinic_user_id?: string
+          created_at?: string
+          email?: string
+          id?: string
+          message?: string | null
+          name?: string
+          phone?: string
+          requested_datetime?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       appointments: {
         Row: {
           business_id: string
@@ -137,6 +176,7 @@ export type Database = {
       }
       clinic_settings: {
         Row: {
+          auto_accept_bookings: boolean
           clinic_name: string | null
           cover_image_url: string | null
           created_at: string
@@ -151,6 +191,7 @@ export type Database = {
           welcome_message: string | null
         }
         Insert: {
+          auto_accept_bookings?: boolean
           clinic_name?: string | null
           cover_image_url?: string | null
           created_at?: string
@@ -165,6 +206,7 @@ export type Database = {
           welcome_message?: string | null
         }
         Update: {
+          auto_accept_bookings?: boolean
           clinic_name?: string | null
           cover_image_url?: string | null
           created_at?: string

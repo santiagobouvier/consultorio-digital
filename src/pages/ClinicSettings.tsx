@@ -29,6 +29,7 @@ const ClinicSettings = () => {
   const [postsessionMessage, setPostsessionMessage] = useState(DEFAULT_TEMPLATES.postsession);
   const [logoUrl, setLogoUrl] = useState("");
   const [coverImageUrl, setCoverImageUrl] = useState("");
+  const [autoAcceptBookings, setAutoAcceptBookings] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -69,6 +70,7 @@ const ClinicSettings = () => {
         setPostsessionMessage(settings.default_postsession_message || DEFAULT_TEMPLATES.postsession);
         setLogoUrl(settings.logo_url || "");
         setCoverImageUrl(settings.cover_image_url || "");
+        setAutoAcceptBookings(settings.auto_accept_bookings || false);
       }
     } catch (error) {
       console.error("Error loading settings:", error);
@@ -98,6 +100,7 @@ const ClinicSettings = () => {
         default_postsession_message: postsessionMessage,
         logo_url: logoUrl,
         cover_image_url: coverImageUrl,
+        auto_accept_bookings: autoAcceptBookings,
       };
 
       if (settingsId) {
@@ -229,6 +232,32 @@ const ClinicSettings = () => {
                 value={coverImageUrl}
                 onChange={(e) => setCoverImageUrl(e.target.value)}
                 placeholder="https://ejemplo.com/portada.jpg"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Auto-Accept Bookings */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Reservas automáticas</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between p-4 border rounded-lg">
+              <div className="space-y-1 flex-1">
+                <Label htmlFor="auto-accept" className="cursor-pointer">
+                  Auto-aceptar reservas de pacientes registrados
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Si está activado, las reservas de pacientes ya registrados se confirmarán automáticamente
+                </p>
+              </div>
+              <input
+                id="auto-accept"
+                type="checkbox"
+                checked={autoAcceptBookings}
+                onChange={(e) => setAutoAcceptBookings(e.target.checked)}
+                className="h-5 w-5 cursor-pointer"
               />
             </div>
           </CardContent>
