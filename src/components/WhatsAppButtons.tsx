@@ -85,23 +85,6 @@ export const WhatsAppButtons = ({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => sendWhatsApp("reminder")}
-              disabled={loading === "reminder"}
-            >
-              <Bell className="h-4 w-4 mr-1" />
-              {loading === "reminder" ? "Enviando..." : "Recordatorio"}
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Enviar recordatorio por WhatsApp</p>
-          </TooltipContent>
-        </Tooltip>
-
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
               onClick={() => sendWhatsApp("confirmation")}
               disabled={loading === "confirmation"}
             >
