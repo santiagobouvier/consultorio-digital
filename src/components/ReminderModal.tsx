@@ -88,20 +88,21 @@ export const ReminderModal = ({
         });
       } else {
         // Programar recordatorio en la base de datos
-        const appointmentDateTime = new Date(`${appointmentDate.split("/").reverse().join("-")}T${appointmentTime}`);
-        const scheduledDate = new Date(appointmentDateTime);
-        scheduledDate.setDate(scheduledDate.getDate() - daysBeforeOrNow);
-
-        // Obtener el patient_id desde la cita
+        // Obtener la fecha original de la cita desde la BD
         const { data: appointmentData, error: appointmentError } = await supabase
           .from("appointments")
-          .select("patient_id")
+          .select("patient_id, start_at")
           .eq("id", appointmentId)
           .single();
 
         if (appointmentError || !appointmentData) {
           throw new Error("No se pudo obtener la información de la cita");
         }
+
+        // Calcular la fecha del recordatorio
+        const appointmentDateTime = new Date(appointmentData.start_at);
+        const scheduledDate = new Date(appointmentDateTime);
+        scheduledDate.setDate(scheduledDate.getDate() - daysBeforeOrNow);
 
         // Insertar en la tabla scheduled_reminders
         const { error: insertError } = await supabase
