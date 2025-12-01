@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft, Save, Copy, ExternalLink } from "lucide-react";
 
 const DEFAULT_TEMPLATES = {
   reminder: "Hola {{paciente}}, te recuerdo tu sesión del {{fecha}} a las {{hora}}. Modalidad: {{modalidad}}. {{link}}. Cualquier cosa me escribís por acá.",
@@ -30,6 +30,7 @@ const ClinicSettings = () => {
   const [logoUrl, setLogoUrl] = useState("");
   const [coverImageUrl, setCoverImageUrl] = useState("");
   const [autoAcceptBookings, setAutoAcceptBookings] = useState(false);
+  const [publicSlug, setPublicSlug] = useState("");
 
   useEffect(() => {
     checkAuth();
@@ -48,6 +49,17 @@ const ClinicSettings = () => {
       setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+
+      // Load business slug
+      const { data: business } = await supabase
+        .from("businesses")
+        .select("public_slug")
+        .eq("owner_user_id", user.id)
+        .single();
+
+      if (business) {
+        setPublicSlug(business.public_slug);
+      }
 
       const { data: settings, error } = await supabase
         .from("clinic_settings")
@@ -169,6 +181,47 @@ const ClinicSettings = () => {
           </Button>
           <h1 className="text-3xl font-bold">Mi Consultorio</h1>
         </div>
+
+        {/* URL Pública */}
+        {publicSlug && (
+          <Card className="border-primary/50 bg-primary/5">
+            <CardHeader>
+              <CardTitle className="text-lg">Tu página pública</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Compartí esta URL para que pacientes puedan solicitar citas
+              </p>
+              <div className="flex gap-2">
+                <Input
+                  value={`${window.location.origin}/consultorio/${publicSlug}`}
+                  readOnly
+                  className="font-mono text-sm"
+                />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => {
+                    navigator.clipboard.writeText(`${window.location.origin}/consultorio/${publicSlug}`);
+                    toast({
+                      title: "URL copiada",
+                      description: "La URL se copió al portapapeles",
+                    });
+                  }}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => window.open(`/consultorio/${publicSlug}`, "_blank")}
+                >
+                  <ExternalLink className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Información básica */}
         <Card>
