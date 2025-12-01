@@ -6,13 +6,13 @@ const Index = () => {
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-primary/5 to-background">
       <div className="text-center space-y-6 px-4">
         <h1 className="text-5xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-          Mental Health Practice Manager
+          Gestión de Consultorio de Salud Mental
         </h1>
         <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-          Professional appointment scheduling and patient management for mental health practitioners in Uruguay
+          Agenda profesional y gestión de pacientes para profesionales de salud mental en Uruguay
         </p>
         <Link to="/auth">
-          <Button size="lg" className="mt-4">Get Started</Button>
+          <Button size="lg" className="mt-4">Comenzar</Button>
         </Link>
       </div>
     </div>
