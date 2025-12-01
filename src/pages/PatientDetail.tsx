@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { PatientForm } from "@/components/PatientForm";
+import { CreateAppointmentModal } from "@/components/CreateAppointmentModal";
 import { ArrowLeft, Calendar, Edit } from "lucide-react";
 
 interface Patient {
@@ -30,12 +31,11 @@ interface Patient {
 
 interface Appointment {
   id: string;
-  start_datetime: string;
+  start_at: string;
+  end_at: string;
   status: string;
-  service_id: string;
-  services: {
-    name: string;
-  };
+  modality: string;
+  location: string | null;
 }
 
 const PatientDetail = () => {
@@ -46,6 +46,7 @@ const PatientDetail = () => {
   const [futureAppointments, setFutureAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [showEditForm, setShowEditForm] = useState(false);
+  const [showCreateAppointment, setShowCreateAppointment] = useState(false);
   const [editingNotes, setEditingNotes] = useState(false);
   const [notes, setNotes] = useState("");
 
@@ -104,32 +105,20 @@ const PatientDetail = () => {
       // Past appointments
       const { data: pastData } = await supabase
         .from("appointments")
-        .select(`
-          id,
-          start_datetime,
-          status,
-          service_id,
-          services (name)
-        `)
+        .select("id, start_at, end_at, status, modality, location")
         .eq("patient_id", id)
-        .lt("start_datetime", today.toISOString())
-        .order("start_datetime", { ascending: false });
+        .lt("start_at", today.toISOString())
+        .order("start_at", { ascending: false });
 
       setPastAppointments(pastData || []);
 
       // Future appointments
       const { data: futureData } = await supabase
         .from("appointments")
-        .select(`
-          id,
-          start_datetime,
-          status,
-          service_id,
-          services (name)
-        `)
+        .select("id, start_at, end_at, status, modality, location")
         .eq("patient_id", id)
-        .gte("start_datetime", today.toISOString())
-        .order("start_datetime", { ascending: true });
+        .gte("start_at", today.toISOString())
+        .order("start_at", { ascending: true });
 
       setFutureAppointments(futureData || []);
     } catch (error) {
@@ -329,7 +318,7 @@ const PatientDetail = () => {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>Próximas citas</CardTitle>
-              <Button size="sm" onClick={() => navigate("/appointments")}>
+              <Button size="sm" onClick={() => setShowCreateAppointment(true)}>
                 <Calendar className="h-4 w-4 mr-2" />
                 Crear nueva cita
               </Button>
@@ -341,7 +330,7 @@ const PatientDetail = () => {
             ) : (
               <div className="space-y-3">
                 {futureAppointments.map((appointment) => {
-                  const { date, time } = formatDateTime(appointment.start_datetime);
+                  const { date, time } = formatDateTime(appointment.start_at);
                   return (
                     <div
                       key={appointment.id}
@@ -350,7 +339,7 @@ const PatientDetail = () => {
                       <div>
                         <p className="font-medium">{date} - {time}</p>
                         <p className="text-sm text-muted-foreground">
-                          {appointment.services.name}
+                          {appointment.modality === "online" ? "Online" : "Presencial"}
                         </p>
                       </div>
                       <Badge>
@@ -384,12 +373,14 @@ const PatientDetail = () => {
                 </TableHeader>
                 <TableBody>
                   {pastAppointments.map((appointment) => {
-                    const { date, time } = formatDateTime(appointment.start_datetime);
+                    const { date, time } = formatDateTime(appointment.start_at);
                     return (
                       <TableRow key={appointment.id}>
                         <TableCell>{date}</TableCell>
                         <TableCell>{time}</TableCell>
-                        <TableCell>{appointment.services.name}</TableCell>
+                        <TableCell>
+                          {appointment.modality === "online" ? "Online" : "Presencial"}
+                        </TableCell>
                         <TableCell>
                           <Badge variant="secondary">
                             {statusMap[appointment.status] || appointment.status}
@@ -407,23 +398,32 @@ const PatientDetail = () => {
 
       {/* Edit Patient Form */}
       {patient && (
-        <PatientForm
-          open={showEditForm}
-          onOpenChange={setShowEditForm}
-          patientId={patient.id}
-          initialData={{
-            full_name: patient.full_name,
-            email: patient.email || "",
-            whatsapp_phone: patient.whatsapp_phone || "",
-            reason_for_consultation: patient.reason_for_consultation || "",
-            private_notes: patient.private_notes || "",
-            is_active: patient.is_active,
-          }}
-          onSuccess={() => {
-            setShowEditForm(false);
-            fetchPatientData();
-          }}
-        />
+        <>
+          <PatientForm
+            open={showEditForm}
+            onOpenChange={setShowEditForm}
+            patientId={patient.id}
+            initialData={{
+              full_name: patient.full_name,
+              email: patient.email || "",
+              whatsapp_phone: patient.whatsapp_phone || "",
+              reason_for_consultation: patient.reason_for_consultation || "",
+              private_notes: patient.private_notes || "",
+              is_active: patient.is_active,
+            }}
+            onSuccess={() => {
+              setShowEditForm(false);
+              fetchPatientData();
+            }}
+          />
+
+          <CreateAppointmentModal
+            open={showCreateAppointment}
+            onOpenChange={setShowCreateAppointment}
+            patientId={patient.id}
+            onSuccess={fetchPatientData}
+          />
+        </>
       )}
     </div>
   );
