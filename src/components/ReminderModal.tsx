@@ -74,7 +74,7 @@ export const ReminderModal = ({
         // Enviar ahora - abrir WhatsApp Web
         const phone = patientPhone.replace(/\D/g, "");
         const encodedMessage = encodeURIComponent(message);
-        const url = `https://wa.me/${phone}?text=${encodedMessage}`;
+        const url = `https://web.whatsapp.com/send?phone=${phone}&text=${encodedMessage}`;
         window.open(url, "_blank");
         
         toast({
