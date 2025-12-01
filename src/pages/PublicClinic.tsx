@@ -53,62 +53,54 @@ const PublicClinic = () => {
     );
   }
 
-  if (!clinicData) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Card className="max-w-md">
-          <CardHeader>
-            <CardTitle>Consultorio no encontrado</CardTitle>
-            <CardDescription>
-              No se pudo encontrar la información de este consultorio.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
-    );
-  }
+  // Show default content if no clinic settings exist yet
+  const displayData = clinicData || {
+    clinic_name: "Consultorio",
+    specialty: null,
+    welcome_message: "Bienvenido a nuestro consultorio. Estamos aquí para ayudarte.",
+    logo_url: null,
+    cover_image_url: null,
+  };
 
   return (
     <div className="min-h-screen bg-background">
       {/* Cover Image */}
-      {clinicData.cover_image_url && (
+      {displayData.cover_image_url && (
         <div 
           className="h-64 bg-cover bg-center"
-          style={{ backgroundImage: `url(${clinicData.cover_image_url})` }}
+          style={{ backgroundImage: `url(${displayData.cover_image_url})` }}
         />
       )}
 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         {/* Logo and Header */}
-        <div className="flex flex-col items-center text-center mb-8 -mt-16">
-          {clinicData.logo_url && (
+        <div className={`flex flex-col items-center text-center mb-8 ${displayData.cover_image_url ? '-mt-16' : ''}`}>
+          {displayData.logo_url && (
             <img 
-              src={clinicData.logo_url} 
+              src={displayData.logo_url} 
               alt="Logo"
               className="w-32 h-32 rounded-full border-4 border-background shadow-lg mb-4 object-cover"
             />
           )}
           <h1 className="text-4xl font-bold text-foreground mb-2">
-            {clinicData.clinic_name || "Consultorio"}
+            {displayData.clinic_name}
           </h1>
-          {clinicData.specialty && (
+          {displayData.specialty && (
             <p className="text-xl text-muted-foreground">
-              {clinicData.specialty}
+              {displayData.specialty}
             </p>
           )}
         </div>
 
         {/* Welcome Message */}
-        {clinicData.welcome_message && (
-          <Card className="mb-8">
-            <CardContent className="pt-6">
-              <p className="text-foreground whitespace-pre-wrap">
-                {clinicData.welcome_message}
-              </p>
-            </CardContent>
-          </Card>
-        )}
+        <Card className="mb-8">
+          <CardContent className="pt-6">
+            <p className="text-foreground whitespace-pre-wrap">
+              {displayData.welcome_message}
+            </p>
+          </CardContent>
+        </Card>
 
         {/* CTA Button */}
         <div className="flex justify-center">
