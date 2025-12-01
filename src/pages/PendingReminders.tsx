@@ -197,7 +197,12 @@ const PendingReminders = () => {
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-3xl font-bold">Recordatorios pendientes</h1>
+          <div>
+            <h1 className="text-3xl font-bold">Recordatorios pendientes</h1>
+            <p className="text-muted-foreground mt-1">
+              {reminders.length} {reminders.length === 1 ? 'recordatorio pendiente' : 'recordatorios pendientes'}
+            </p>
+          </div>
         </div>
 
         {/* Reminders List */}
