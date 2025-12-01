@@ -50,12 +50,40 @@ const ClinicSettings = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Load business slug
-      const { data: business } = await supabase
+      // Load or create business slug
+      let { data: business } = await supabase
         .from("businesses")
         .select("public_slug")
         .eq("owner_user_id", user.id)
-        .single();
+        .maybeSingle();
+
+      // If no business exists, create one
+      if (!business) {
+        const slug = user.id.slice(0, 8); // Use first 8 chars of user ID as default slug
+        const { data: newBusiness, error: createError } = await supabase
+          .from("businesses")
+          .insert({
+            owner_user_id: user.id,
+            public_slug: slug,
+            name: "Mi Consultorio",
+            contact_email: user.email || "",
+            timezone: "America/Montevideo"
+          })
+          .select("public_slug")
+          .single();
+
+        if (createError) {
+          console.error("Error creating business:", createError);
+          toast({
+            title: "Error",
+            description: "No se pudo crear el consultorio",
+            variant: "destructive"
+          });
+          return;
+        }
+
+        business = newBusiness;
+      }
 
       if (business) {
         setPublicSlug(business.public_slug);
