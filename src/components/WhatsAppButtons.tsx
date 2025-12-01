@@ -62,7 +62,7 @@ export const WhatsAppButtons = ({
     const templates = getTemplates();
     const message = formatMessage(templates[type]);
     const phone = patientPhone.replace(/[^0-9]/g, "");
-    const url = `https://web.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(message)}`;
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
     
     window.open(url, "_blank");
     

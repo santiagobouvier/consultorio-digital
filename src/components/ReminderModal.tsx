@@ -71,10 +71,10 @@ export const ReminderModal = ({
       const message = formatMessage(templates.reminder);
 
       if (daysBeforeOrNow === "now") {
-        // Enviar ahora - abrir WhatsApp Web
+        // Enviar ahora - abrir WhatsApp (web o app)
         const phone = patientPhone.replace(/\D/g, "");
         const encodedMessage = encodeURIComponent(message);
-        const url = `https://web.whatsapp.com/send?phone=${phone}&text=${encodedMessage}`;
+        const url = `https://wa.me/${phone}?text=${encodedMessage}`;
         window.open(url, "_blank");
         
         toast({

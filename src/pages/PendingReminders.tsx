@@ -82,7 +82,7 @@ const PendingReminders = () => {
     try {
       const phone = reminder.patientPhone.replace(/\D/g, "");
       const encodedMessage = encodeURIComponent(reminder.message);
-      const url = `https://web.whatsapp.com/send?phone=${phone}&text=${encodedMessage}`;
+      const url = `https://wa.me/${phone}?text=${encodedMessage}`;
       window.open(url, "_blank");
 
       toast({
