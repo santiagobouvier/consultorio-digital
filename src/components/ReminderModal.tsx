@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -39,14 +39,36 @@ export const ReminderModal = ({
   location,
 }: ReminderModalProps) => {
   const [loading, setLoading] = useState(false);
+  const [reminderTemplate, setReminderTemplate] = useState(
+    "Hola {{paciente}}, te recuerdo tu sesión del {{fecha}} a las {{hora}}. Modalidad: {{modalidad}}. {{link}}"
+  );
+
+  useEffect(() => {
+    loadClinicSettings();
+  }, []);
+
+  const loadClinicSettings = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: settings } = await supabase
+        .from("clinic_settings")
+        .select("default_reminder_message")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (settings?.default_reminder_message) {
+        setReminderTemplate(settings.default_reminder_message);
+      }
+    } catch (error) {
+      console.error("Error loading clinic settings:", error);
+    }
+  };
 
   const getTemplates = () => {
-    const stored = localStorage.getItem("whatsapp_templates");
-    if (stored) {
-      return JSON.parse(stored);
-    }
     return {
-      reminder: `Hola {{paciente}}, te recuerdo tu sesión del {{fecha}} a las {{hora}}. Modalidad: {{modalidad}}. {{link}}`,
+      reminder: reminderTemplate,
     };
   };
 

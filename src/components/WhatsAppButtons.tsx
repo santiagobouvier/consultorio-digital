@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { MessageCircle, Bell, CheckCircle, MessageSquare } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface WhatsAppButtonsProps {
   patientName: string;
@@ -27,13 +28,32 @@ export const WhatsAppButtons = ({
   location,
 }: WhatsAppButtonsProps) => {
   const [loading, setLoading] = useState<string | null>(null);
+  const [templates, setTemplates] = useState(DEFAULT_TEMPLATES);
 
-  const getTemplates = () => {
+  useEffect(() => {
+    loadClinicSettings();
+  }, []);
+
+  const loadClinicSettings = async () => {
     try {
-      const stored = localStorage.getItem("whatsapp_templates");
-      return stored ? JSON.parse(stored) : DEFAULT_TEMPLATES;
-    } catch {
-      return DEFAULT_TEMPLATES;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: settings } = await supabase
+        .from("clinic_settings")
+        .select("default_reminder_message, default_confirmation_message, default_postsession_message")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (settings) {
+        setTemplates({
+          reminder: settings.default_reminder_message || DEFAULT_TEMPLATES.reminder,
+          confirmation: settings.default_confirmation_message || DEFAULT_TEMPLATES.confirmation,
+          followup: settings.default_postsession_message || DEFAULT_TEMPLATES.followup,
+        });
+      }
+    } catch (error) {
+      console.error("Error loading clinic settings:", error);
     }
   };
 
@@ -59,7 +79,6 @@ export const WhatsAppButtons = ({
 
     setLoading(type);
     
-    const templates = getTemplates();
     const message = formatMessage(templates[type]);
     const phone = patientPhone.replace(/[^0-9]/g, "");
     const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
