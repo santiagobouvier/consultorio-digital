@@ -1,0 +1,1 @@
+CREATE POLICY test_policy ON public.patients FOR SELECT USING (true);
