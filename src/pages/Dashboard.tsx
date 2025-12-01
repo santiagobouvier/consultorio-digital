@@ -89,8 +89,8 @@ const Dashboard = () => {
         .from("appointments")
         .select("*", { count: "exact", head: true })
         .eq("business_id", business.id)
-        .gte("start_datetime", today.toISOString())
-        .lt("start_datetime", tomorrow.toISOString())
+        .gte("start_at", today.toISOString())
+        .lt("start_at", tomorrow.toISOString())
         .not("status", "in", '("cancelled","no_show")');
 
       setTodayAppointmentsCount(appointmentsCount || 0);
@@ -100,16 +100,16 @@ const Dashboard = () => {
         .from("appointments")
         .select(`
           id,
-          start_datetime,
+          start_at,
           status,
           contact_name,
           patient_id,
           patients (full_name)
         `)
         .eq("business_id", business.id)
-        .gte("start_datetime", today.toISOString())
-        .lt("start_datetime", tomorrow.toISOString())
-        .order("start_datetime", { ascending: true });
+        .gte("start_at", today.toISOString())
+        .lt("start_at", tomorrow.toISOString())
+        .order("start_at", { ascending: true });
 
       setTodayAppointments(appointments || []);
     } catch (error) {
@@ -207,7 +207,7 @@ const Dashboard = () => {
                 <TableBody>
                   {todayAppointments.map((appointment) => (
                     <TableRow key={appointment.id}>
-                      <TableCell>{formatTime(appointment.start_datetime)}</TableCell>
+                      <TableCell>{formatTime(appointment.start_at)}</TableCell>
                       <TableCell>
                         {appointment.patients?.full_name || appointment.contact_name}
                       </TableCell>
