@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -14,6 +15,7 @@ const PublicBooking = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
   const [clinicUserId, setClinicUserId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: "",
@@ -31,6 +33,7 @@ const PublicBooking = () => {
 
   const loadClinicUserId = async () => {
     try {
+      setPageLoading(true);
       const { data: business, error } = await supabase
         .from("businesses")
         .select("owner_user_id")
@@ -46,6 +49,8 @@ const PublicBooking = () => {
         description: "No se pudo cargar la información del consultorio",
         variant: "destructive",
       });
+    } finally {
+      setPageLoading(false);
     }
   };
 
@@ -186,6 +191,28 @@ const PublicBooking = () => {
     const message = `Hola, soy ${formData.name}. Solicité una cita para ${formattedDate} a las ${formattedTime}.`;
     return `https://wa.me/?text=${encodeURIComponent(message)}`;
   };
+
+  if (pageLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <Card className="max-w-2xl w-full animate-enter">
+          <CardHeader>
+            <CardTitle>Preparando tu formulario</CardTitle>
+            <CardDescription>
+              Estamos cargando la información del consultorio...
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Skeleton className="h-6 w-1/3" />
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-24 w-full" />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (submitted) {
     return (
