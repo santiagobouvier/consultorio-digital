@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -9,39 +9,93 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { Calendar, Clock } from "lucide-react";
+
+interface AvailabilitySlot {
+  id: string;
+  date: string;
+  start_time: string;
+  end_time: string;
+  modality: string;
+  price: number | null;
+}
 
 const PublicBooking = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [slots, setSlots] = useState<AvailabilitySlot[]>([]);
+  const [selectedSlot, setSelectedSlot] = useState<AvailabilitySlot | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     phone: "",
     message: "",
-    date: "",
-    time: "",
   });
   const [submitted, setSubmitted] = useState(false);
+
+  useEffect(() => {
+    loadAvailableSlots();
+  }, [slug]);
+
+  const loadAvailableSlots = async () => {
+    setLoading(true);
+    try {
+      if (!slug) return;
+
+      const { data: business } = await supabase
+        .from("businesses")
+        .select("id")
+        .eq("public_slug", slug)
+        .single();
+
+      if (!business) {
+        toast({
+          title: "Error",
+          description: "No se encontró el consultorio",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("availability_slots")
+        .select("id, date, start_time, end_time, modality, price")
+        .eq("business_id", business.id)
+        .eq("status", "available")
+        .gte("date", format(new Date(), "yyyy-MM-dd"))
+        .order("date", { ascending: true })
+        .order("start_time", { ascending: true });
+
+      if (error) throw error;
+      setSlots(data || []);
+    } catch (error) {
+      console.error("Error loading slots:", error);
+      toast({
+        title: "Error",
+        description: "No se pudieron cargar los horarios disponibles",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!selectedSlot) {
+      toast({
+        title: "Error",
+        description: "Debes seleccionar un horario",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const requestedDatetime = new Date(`${formData.date}T${formData.time}`);
-
-      if (requestedDatetime <= new Date()) {
-        toast({
-          title: "Error",
-          description: "La fecha y hora deben ser futuras",
-          variant: "destructive",
-        });
-        setLoading(false);
-        return;
-      }
-
       if (!slug) {
         toast({
           title: "Error",
@@ -55,11 +109,11 @@ const PublicBooking = () => {
       const { error } = await supabase.functions.invoke("public-create-appointment-request", {
         body: {
           slug,
+          slotId: selectedSlot.id,
           name: formData.name,
           email: formData.email,
           phone: formData.phone,
           message: formData.message,
-          requestedDatetime: requestedDatetime.toISOString(),
         },
       });
 
@@ -70,14 +124,14 @@ const PublicBooking = () => {
 
       setSubmitted(true);
       toast({
-        title: "Solicitud enviada",
-        description: "La profesional se comunicará contigo para confirmar",
+        title: "Cita reservada",
+        description: "Tu cita ha sido confirmada",
       });
     } catch (error) {
       console.error("Error submitting request:", error);
       toast({
         title: "Error",
-        description: "No se pudo enviar la solicitud",
+        description: "No se pudo realizar la reserva",
         variant: "destructive",
       });
     } finally {
@@ -86,10 +140,10 @@ const PublicBooking = () => {
   };
 
   const getWhatsAppLink = () => {
-    const datetime = new Date(`${formData.date}T${formData.time}`);
-    const formattedDate = format(datetime, "dd/MM/yyyy", { locale: es });
-    const formattedTime = format(datetime, "HH:mm", { locale: es });
-    const message = `Hola, soy ${formData.name}. Solicité una cita para ${formattedDate} a las ${formattedTime}.`;
+    if (!selectedSlot) return "";
+    const formattedDate = format(new Date(selectedSlot.date), "dd/MM/yyyy", { locale: es });
+    const formattedTime = selectedSlot.start_time.slice(0, 5);
+    const message = `Hola, soy ${formData.name}. Reservé una cita para ${formattedDate} a las ${formattedTime}.`;
     return `https://wa.me/?text=${encodeURIComponent(message)}`;
   };
 
@@ -98,12 +152,22 @@ const PublicBooking = () => {
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <Card className="max-w-md w-full">
           <CardHeader>
-            <CardTitle>¡Solicitud enviada!</CardTitle>
+            <CardTitle>¡Cita confirmada!</CardTitle>
             <CardDescription>
-              La profesional se comunicará contigo para confirmar tu cita.
+              Tu cita ha sido reservada exitosamente.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {selectedSlot && (
+              <div className="p-4 bg-muted rounded-lg">
+                <p className="font-medium">
+                  {format(new Date(selectedSlot.date), "EEEE d 'de' MMMM", { locale: es })}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {selectedSlot.start_time.slice(0, 5)} - {selectedSlot.end_time.slice(0, 5)} • {selectedSlot.modality}
+                </p>
+              </div>
+            )}
             <Button 
               onClick={() => window.open(getWhatsAppLink(), "_blank")}
               className="w-full"
@@ -124,97 +188,150 @@ const PublicBooking = () => {
     );
   }
 
+  if (selectedSlot) {
+    return (
+      <div className="min-h-screen bg-background p-4 py-12">
+        <div className="container mx-auto max-w-2xl">
+          <Button variant="ghost" onClick={() => setSelectedSlot(null)} className="mb-4">
+            ← Volver a horarios
+          </Button>
+          <Card>
+            <CardHeader>
+              <CardTitle>Completá tus datos</CardTitle>
+              <CardDescription>
+                Has seleccionado: {format(new Date(selectedSlot.date), "EEEE d 'de' MMMM", { locale: es })} a las {selectedSlot.start_time.slice(0, 5)}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Nombre completo *</Label>
+                  <Input
+                    id="name"
+                    required
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email *</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    required
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="phone">WhatsApp *</Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    required
+                    placeholder="Ej: +598 99 123 456"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="message">Motivo o consulta</Label>
+                  <Textarea
+                    id="message"
+                    value={formData.message}
+                    onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                    rows={4}
+                  />
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setSelectedSlot(null)}
+                    className="flex-1"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button type="submit" disabled={loading} className="flex-1">
+                    {loading ? "Confirmando..." : "Confirmar cita"}
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background p-4 py-12">
       <div className="container mx-auto max-w-2xl">
+        <Button variant="ghost" onClick={() => navigate(`/consultorio/${slug}`)} className="mb-4">
+          ← Volver al consultorio
+        </Button>
         <Card>
           <CardHeader>
-            <CardTitle>Solicitar una cita</CardTitle>
+            <CardTitle>Reservar una cita</CardTitle>
             <CardDescription>
-              Completa el formulario y la profesional se comunicará contigo para confirmar
+              Seleccioná un horario disponible
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Nombre completo *</Label>
-                <Input
-                  id="name"
-                  required
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                />
+            {loading ? (
+              <p className="text-muted-foreground">Cargando horarios disponibles...</p>
+            ) : slots.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground mb-4">
+                  Por el momento no hay horarios disponibles.
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Por favor, volvé a intentar más tarde o contactá por WhatsApp.
+                </p>
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="email">Email *</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  required
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                />
+            ) : (
+              <div className="space-y-3">
+                {slots.map((slot) => (
+                  <button
+                    key={slot.id}
+                    onClick={() => setSelectedSlot(slot)}
+                    className="w-full p-4 border rounded-lg hover:border-primary hover:bg-accent transition-colors text-left"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <Calendar className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium">
+                            {format(new Date(slot.date), "EEEE d 'de' MMMM", { locale: es })}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Clock className="h-4 w-4" />
+                          {slot.start_time.slice(0, 5)} - {slot.end_time.slice(0, 5)}
+                        </div>
+                        <div className="flex items-center gap-2 mt-2">
+                          <span className="text-xs px-2 py-1 bg-muted rounded">
+                            {slot.modality}
+                          </span>
+                          {slot.price && (
+                            <span className="text-xs px-2 py-1 bg-muted rounded">
+                              ${slot.price}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-sm text-primary">
+                        Seleccionar →
+                      </div>
+                    </div>
+                  </button>
+                ))}
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="phone">Teléfono *</Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  required
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="date">Fecha deseada *</Label>
-                <Input
-                  id="date"
-                  type="date"
-                  required
-                  min={format(new Date(), "yyyy-MM-dd")}
-                  value={formData.date}
-                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="time">Hora deseada *</Label>
-                <Input
-                  id="time"
-                  type="time"
-                  required
-                  value={formData.time}
-                  onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="message">Motivo o consulta</Label>
-                <Textarea
-                  id="message"
-                  value={formData.message}
-                  onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                  rows={4}
-                />
-              </div>
-
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => navigate(`/consultorio/${slug}`)}
-                  className="flex-1"
-                >
-                  Cancelar
-                </Button>
-                <Button type="submit" disabled={loading} className="flex-1">
-                  {loading ? "Enviando..." : "Solicitar cita"}
-                </Button>
-              </div>
-            </form>
+            )}
           </CardContent>
         </Card>
       </div>
