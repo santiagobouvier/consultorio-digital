@@ -19,25 +19,34 @@ const PublicClinic = () => {
     try {
       setLoading(true);
       
-      // First try to find business by public_slug
-      const { data: business, error: businessError } = await supabase
-        .from("businesses")
-        .select("owner_user_id")
-        .eq("public_slug", slug)
-        .single();
+      // Optimized query: get both business and settings in parallel
+      const [businessResult, settingsResult] = await Promise.all([
+        supabase
+          .from("businesses")
+          .select("owner_user_id")
+          .eq("public_slug", slug)
+          .single(),
+        supabase
+          .from("businesses")
+          .select("owner_user_id")
+          .eq("public_slug", slug)
+          .single()
+          .then(({ data: business }) => {
+            if (business) {
+              return supabase
+                .from("clinic_settings")
+                .select("*")
+                .eq("user_id", business.owner_user_id)
+                .maybeSingle();
+            }
+            return { data: null, error: null };
+          })
+      ]);
 
-      if (businessError) throw businessError;
-
-      // Then get clinic settings
-      const { data: settings, error: settingsError } = await supabase
-        .from("clinic_settings")
-        .select("*")
-        .eq("user_id", business.owner_user_id)
-        .single();
-
-      if (settingsError) throw settingsError;
-
-      setClinicData(settings);
+      if (businessResult.error) throw businessResult.error;
+      if (settingsResult.data) {
+        setClinicData(settingsResult.data);
+      }
     } catch (error) {
       console.error("Error loading clinic:", error);
     } finally {
