@@ -43,11 +43,21 @@ const PublicBooking = () => {
     try {
       if (!slug) return;
 
-      const { data: business } = await supabase
+      const { data: business, error: businessError } = await supabase
         .from("businesses")
         .select("id")
         .eq("public_slug", slug)
-        .single();
+        .maybeSingle();
+
+      if (businessError) {
+        console.error("Error loading business:", businessError);
+        toast({
+          title: "Error",
+          description: "No se pudo conectar con el consultorio",
+          variant: "destructive",
+        });
+        return;
+      }
 
       if (!business) {
         toast({
@@ -67,13 +77,22 @@ const PublicBooking = () => {
         .order("date", { ascending: true })
         .order("start_time", { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error loading slots:", error);
+        toast({
+          title: "Error",
+          description: "No se pudieron cargar los horarios",
+          variant: "destructive",
+        });
+        return;
+      }
+
       setSlots(data || []);
     } catch (error) {
-      console.error("Error loading slots:", error);
+      console.error("Unexpected error loading slots:", error);
       toast({
         title: "Error",
-        description: "No se pudieron cargar los horarios disponibles",
+        description: "Ocurrió un error inesperado",
         variant: "destructive",
       });
     } finally {
