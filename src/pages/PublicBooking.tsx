@@ -43,42 +43,12 @@ const PublicBooking = () => {
     try {
       if (!slug) return;
 
-      const { data: business, error: businessError } = await supabase
-        .from("businesses")
-        .select("id")
-        .eq("public_slug", slug)
-        .maybeSingle();
-
-      if (businessError) {
-        console.error("Error loading business:", businessError);
-        toast({
-          title: "Error",
-          description: "No se pudo conectar con el consultorio",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      if (!business) {
-        toast({
-          title: "Error",
-          description: "No se encontró el consultorio",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from("availability_slots")
-        .select("id, date, start_time, end_time, modality, price")
-        .eq("business_id", business.id)
-        .eq("status", "available")
-        .gte("date", format(new Date(), "yyyy-MM-dd"))
-        .order("date", { ascending: true })
-        .order("start_time", { ascending: true });
+      const { data, error } = await supabase.functions.invoke("public-get-availability-slots", {
+        body: { slug },
+      });
 
       if (error) {
-        console.error("Error loading slots:", error);
+        console.error("Error from public-get-availability-slots:", error);
         toast({
           title: "Error",
           description: "No se pudieron cargar los horarios",
@@ -87,7 +57,19 @@ const PublicBooking = () => {
         return;
       }
 
-      setSlots(data || []);
+      const response = data as { slots?: AvailabilitySlot[]; error?: string } | null;
+
+      if (!response || response.error === "business_not_found") {
+        toast({
+          title: "Error",
+          description: "No se encontró el consultorio",
+          variant: "destructive",
+        });
+        setSlots([]);
+        return;
+      }
+
+      setSlots(response.slots || []);
     } catch (error) {
       console.error("Unexpected error loading slots:", error);
       toast({
