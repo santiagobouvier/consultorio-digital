@@ -55,6 +55,7 @@ export type Database = {
       }
       appointments: {
         Row: {
+          availability_slot_id: string | null
           business_id: string
           contact_email: string | null
           contact_name: string | null
@@ -75,6 +76,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          availability_slot_id?: string | null
           business_id: string
           contact_email?: string | null
           contact_name?: string | null
@@ -95,6 +97,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          availability_slot_id?: string | null
           business_id?: string
           contact_email?: string | null
           contact_name?: string | null
@@ -116,6 +119,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "appointments_availability_slot_id_fkey"
+            columns: ["availability_slot_id"]
+            isOneToOne: false
+            referencedRelation: "availability_slots"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "appointments_business_id_fkey"
             columns: ["business_id"]
             isOneToOne: false
@@ -134,6 +144,56 @@ export type Database = {
             columns: ["service_id"]
             isOneToOne: false
             referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      availability_slots: {
+        Row: {
+          business_id: string
+          created_at: string
+          date: string
+          end_time: string
+          id: string
+          modality: string
+          notes: string | null
+          price: number | null
+          start_time: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          date: string
+          end_time: string
+          id?: string
+          modality: string
+          notes?: string | null
+          price?: number | null
+          start_time: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          date?: string
+          end_time?: string
+          id?: string
+          modality?: string
+          notes?: string | null
+          price?: number | null
+          start_time?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "availability_slots_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
             referencedColumns: ["id"]
           },
         ]

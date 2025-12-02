@@ -21,32 +21,24 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { slug, name, email, phone, message, requestedDatetime } = body ?? {};
+    const { slug, slotId, name, email, phone, message } = body ?? {};
 
-    if (!slug || !name || !email || !phone || !requestedDatetime) {
+    if (!slug || !slotId || !name || !email || !phone) {
       return new Response(
         JSON.stringify({ error: "missing_fields" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    const requested = new Date(requestedDatetime);
-    if (Number.isNaN(requested.getTime()) || requested <= new Date()) {
-      return new Response(
-        JSON.stringify({ error: "invalid_datetime" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-
-    // Find clinic owner by public slug
+    // Find business by public slug
     const { data: business, error: businessError } = await supabase
       .from("businesses")
-      .select("owner_user_id")
+      .select("id, owner_user_id")
       .eq("public_slug", slug)
       .maybeSingle();
 
     if (businessError) {
-      console.error("Error loading business in function:", businessError);
+      console.error("Error loading business:", businessError);
       return new Response(
         JSON.stringify({ error: "business_lookup_failed" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -60,23 +52,101 @@ serve(async (req) => {
       );
     }
 
-    const { error: insertError } = await supabase
-      .from("appointment_requests")
-      .insert({
-        clinic_user_id: business.owner_user_id,
-        name,
-        email,
-        phone,
-        message: message ?? null,
-        requested_datetime: requested.toISOString(),
-      });
+    // Get slot and verify it's available
+    const { data: slot, error: slotError } = await supabase
+      .from("availability_slots")
+      .select("*")
+      .eq("id", slotId)
+      .eq("business_id", business.id)
+      .eq("status", "available")
+      .maybeSingle();
 
-    if (insertError) {
-      console.error("Error inserting appointment request:", insertError);
+    if (slotError) {
+      console.error("Error loading slot:", slotError);
       return new Response(
-        JSON.stringify({ error: "insert_failed" }),
+        JSON.stringify({ error: "slot_lookup_failed" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
+    }
+
+    if (!slot) {
+      return new Response(
+        JSON.stringify({ error: "slot_not_available" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    // Create or find patient
+    const { data: existingPatient } = await supabase
+      .from("patients")
+      .select("id")
+      .eq("business_id", business.id)
+      .eq("whatsapp_phone", phone)
+      .maybeSingle();
+
+    let patientId = existingPatient?.id;
+
+    if (!patientId) {
+      const { data: newPatient, error: patientError } = await supabase
+        .from("patients")
+        .insert({
+          business_id: business.id,
+          full_name: name,
+          email,
+          whatsapp_phone: phone,
+          reason_for_consultation: message || null,
+        })
+        .select("id")
+        .maybeSingle();
+
+      if (patientError || !newPatient) {
+        console.error("Error creating patient:", patientError);
+        return new Response(
+          JSON.stringify({ error: "patient_creation_failed" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+      patientId = newPatient.id;
+    }
+
+    // Create appointment with slot datetime
+    const startDatetime = new Date(`${slot.date}T${slot.start_time}`);
+    const endDatetime = new Date(`${slot.date}T${slot.end_time}`);
+
+    const { error: appointmentError } = await supabase
+      .from("appointments")
+      .insert({
+        business_id: business.id,
+        patient_id: patientId,
+        availability_slot_id: slotId,
+        start_at: startDatetime.toISOString(),
+        end_at: endDatetime.toISOString(),
+        modality: slot.modality,
+        contact_name: name,
+        contact_email: email,
+        contact_phone: phone,
+        notes: message || null,
+        status: "confirmed",
+        source: "public_booking",
+      });
+
+    if (appointmentError) {
+      console.error("Error creating appointment:", appointmentError);
+      return new Response(
+        JSON.stringify({ error: "appointment_creation_failed" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    // Mark slot as reserved
+    const { error: updateError } = await supabase
+      .from("availability_slots")
+      .update({ status: "reserved" })
+      .eq("id", slotId);
+
+    if (updateError) {
+      console.error("Error updating slot:", updateError);
+      // Don't fail the request if slot update fails, appointment is already created
     }
 
     return new Response(

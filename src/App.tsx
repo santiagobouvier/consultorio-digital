@@ -17,6 +17,7 @@ const Appointments = lazy(() => import("./pages/Appointments"));
 const Agenda = lazy(() => import("./pages/Agenda"));
 const PendingReminders = lazy(() => import("./pages/PendingReminders"));
 const ClinicSettings = lazy(() => import("./pages/ClinicSettings"));
+const AvailableSlots = lazy(() => import("./pages/AvailableSlots"));
 const PublicClinic = lazy(() => import("./pages/PublicClinic"));
 const PublicBooking = lazy(() => import("./pages/PublicBooking"));
 const AppointmentRequests = lazy(() => import("./pages/AppointmentRequests"));
@@ -42,6 +43,7 @@ const App = () => (
             <Route path="/agenda" element={<Agenda />} />
             <Route path="/recordatorios-pendientes" element={<PendingReminders />} />
             <Route path="/mi-consultorio" element={<ClinicSettings />} />
+            <Route path="/horarios-disponibles" element={<AvailableSlots />} />
             <Route path="/solicitudes" element={<AppointmentRequests />} />
             <Route path="/consultorio/:slug" element={<PublicClinic />} />
             <Route path="/consultorio/:slug/reservar" element={<PublicBooking />} />
