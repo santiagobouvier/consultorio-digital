@@ -245,8 +245,7 @@ const PatientDetail = () => {
           </div>
           <Button 
             onClick={() => setShowEditForm(true)}
-            size="sm"
-            className="shrink-0 rounded-xl h-10 px-4"
+            className="shrink-0 rounded-xl h-11 px-4 font-semibold"
           >
             <Edit className="h-4 w-4 sm:mr-2" />
             <span className="hidden sm:inline">Editar</span>
@@ -317,11 +316,11 @@ const PatientDetail = () => {
                 </p>
               )}
             </div>
-            <div className="pt-3">
+            <div className="pt-4">
               <Button 
                 variant="outline" 
                 onClick={toggleActiveStatus}
-                className="w-full sm:w-auto rounded-xl h-11"
+                className="w-full rounded-xl h-12 font-semibold"
               >
                 {patient.is_active ? "Marcar como inactivo" : "Marcar como activo"}
               </Button>
@@ -335,9 +334,8 @@ const PatientDetail = () => {
             <div className="flex items-center justify-between gap-2">
               <CardTitle className="text-lg font-bold">Próximas citas</CardTitle>
               <Button 
-                size="sm" 
                 onClick={() => setShowCreateAppointment(true)}
-                className="rounded-xl h-9 px-3"
+                className="rounded-xl h-10 px-4 font-semibold"
               >
                 <Calendar className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Nueva cita</span>
@@ -388,8 +386,7 @@ const PatientDetail = () => {
                         />
                         <Button
                           variant="outline"
-                          size="sm"
-                          className="w-full rounded-xl h-10"
+                          className="w-full rounded-xl h-11 font-semibold"
                           onClick={() =>
                             setReminderModal({
                               open: true,

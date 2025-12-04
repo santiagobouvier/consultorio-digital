@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,7 +17,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 
@@ -38,6 +38,7 @@ export function CreateAppointmentModal({
   patientId,
   onSuccess,
 }: CreateAppointmentModalProps) {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [selectedPatientId, setSelectedPatientId] = useState(patientId || "");
@@ -153,8 +154,11 @@ export function CreateAppointmentModal({
       setNotes("");
       setSelectedPatientId(patientId || "");
       
-      onSuccess();
       onOpenChange(false);
+      onSuccess();
+      
+      // Navigate to agenda
+      navigate("/agenda");
     } catch (error) {
       console.error("Error creating appointment:", error);
       toast({
@@ -169,18 +173,19 @@ export function CreateAppointmentModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto mx-4 rounded-2xl">
         <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>Crear nueva cita</DialogTitle>
+          <DialogHeader className="pb-2">
+            <DialogTitle className="text-xl font-bold">Crear nueva cita</DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
+          <div className="space-y-5 py-4">
+            {/* Paciente */}
             {!patientId && (
               <div className="space-y-2">
-                <Label htmlFor="patient">Paciente *</Label>
+                <Label htmlFor="patient" className="text-sm font-semibold">Paciente *</Label>
                 <Select value={selectedPatientId} onValueChange={setSelectedPatientId}>
-                  <SelectTrigger id="patient">
+                  <SelectTrigger id="patient" className="h-12 text-base rounded-xl">
                     <SelectValue placeholder="Selecciona un paciente" />
                   </SelectTrigger>
                   <SelectContent>
@@ -194,32 +199,37 @@ export function CreateAppointmentModal({
               </div>
             )}
 
+            {/* Fecha */}
             <div className="space-y-2">
-              <Label htmlFor="date">Fecha *</Label>
+              <Label htmlFor="date" className="text-sm font-semibold">Fecha *</Label>
               <Input
                 id="date"
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
                 required
+                className="h-12 text-base rounded-xl"
               />
             </div>
 
+            {/* Hora */}
             <div className="space-y-2">
-              <Label htmlFor="time">Hora de inicio *</Label>
+              <Label htmlFor="time" className="text-sm font-semibold">Hora de inicio *</Label>
               <Input
                 id="time"
                 type="time"
                 value={time}
                 onChange={(e) => setTime(e.target.value)}
                 required
+                className="h-12 text-base rounded-xl"
               />
             </div>
 
+            {/* Duración */}
             <div className="space-y-2">
-              <Label htmlFor="duration">Duración</Label>
+              <Label htmlFor="duration" className="text-sm font-semibold">Duración</Label>
               <Select value={duration} onValueChange={setDuration}>
-                <SelectTrigger id="duration">
+                <SelectTrigger id="duration" className="h-12 text-base rounded-xl">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -231,10 +241,11 @@ export function CreateAppointmentModal({
               </Select>
             </div>
 
+            {/* Modalidad */}
             <div className="space-y-2">
-              <Label htmlFor="modality">Modalidad</Label>
+              <Label htmlFor="modality" className="text-sm font-semibold">Modalidad</Label>
               <Select value={modality} onValueChange={setModality}>
-                <SelectTrigger id="modality">
+                <SelectTrigger id="modality" className="h-12 text-base rounded-xl">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -244,8 +255,9 @@ export function CreateAppointmentModal({
               </Select>
             </div>
 
+            {/* Ubicación/Link */}
             <div className="space-y-2">
-              <Label htmlFor="location">
+              <Label htmlFor="location" className="text-sm font-semibold">
                 {modality === "online" ? "Link de videollamada" : "Dirección"}
               </Label>
               <Input
@@ -258,34 +270,42 @@ export function CreateAppointmentModal({
                     ? "https://meet.google.com/..."
                     : "Dirección del consultorio"
                 }
+                className="h-12 text-base rounded-xl"
               />
             </div>
 
+            {/* Notas */}
             <div className="space-y-2">
-              <Label htmlFor="notes">Notas internas</Label>
+              <Label htmlFor="notes" className="text-sm font-semibold">Notas internas</Label>
               <Textarea
                 id="notes"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={3}
                 placeholder="Notas solo visibles para el profesional"
+                className="text-base rounded-xl resize-none"
               />
             </div>
           </div>
 
-          <DialogFooter>
+          <div className="flex flex-col-reverse sm:flex-row gap-3 pt-2">
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={loading}
+              className="h-12 rounded-xl text-base font-semibold flex-1"
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button 
+              type="submit" 
+              disabled={loading}
+              className="h-12 rounded-xl text-base font-semibold flex-1"
+            >
               {loading ? "Creando..." : "Crear cita"}
             </Button>
-          </DialogFooter>
+          </div>
         </form>
       </DialogContent>
     </Dialog>

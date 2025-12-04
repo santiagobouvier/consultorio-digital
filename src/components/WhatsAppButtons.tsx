@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { MessageCircle, Bell, CheckCircle, MessageSquare } from "lucide-react";
+import { CheckCircle, MessageSquare } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 
 interface WhatsAppButtonsProps {
   patientName: string;
@@ -73,7 +73,11 @@ export const WhatsAppButtons = ({
 
   const sendWhatsApp = (type: "reminder" | "confirmation" | "followup") => {
     if (!patientPhone) {
-      alert("El paciente no tiene un número de WhatsApp registrado");
+      toast({
+        title: "Sin número",
+        description: "El paciente no tiene un número de WhatsApp registrado",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -90,49 +94,35 @@ export const WhatsAppButtons = ({
 
   if (!patientPhone) {
     return (
-      <div className="text-sm text-muted-foreground italic">
-        Sin número de WhatsApp registrado
+      <div className="p-3 bg-muted/50 rounded-xl text-center">
+        <p className="text-sm text-muted-foreground">
+          Sin número de WhatsApp registrado
+        </p>
       </div>
     );
   }
 
   return (
-    <TooltipProvider>
-      <div className="flex gap-2">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => sendWhatsApp("confirmation")}
-              disabled={loading === "confirmation"}
-            >
-              <CheckCircle className="h-4 w-4 mr-1" />
-              {loading === "confirmation" ? "Enviando..." : "Confirmar"}
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Enviar confirmación por WhatsApp</p>
-          </TooltipContent>
-        </Tooltip>
+    <div className="flex flex-col sm:flex-row gap-2">
+      <Button
+        variant="outline"
+        onClick={() => sendWhatsApp("confirmation")}
+        disabled={loading === "confirmation"}
+        className="h-11 rounded-xl text-sm font-semibold flex-1"
+      >
+        <CheckCircle className="h-4 w-4 mr-2" />
+        {loading === "confirmation" ? "Enviando..." : "Confirmar"}
+      </Button>
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => sendWhatsApp("followup")}
-              disabled={loading === "followup"}
-            >
-              <MessageSquare className="h-4 w-4 mr-1" />
-              {loading === "followup" ? "Enviando..." : "Post-sesión"}
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Enviar mensaje posterior a la sesión</p>
-          </TooltipContent>
-        </Tooltip>
-      </div>
-    </TooltipProvider>
+      <Button
+        variant="outline"
+        onClick={() => sendWhatsApp("followup")}
+        disabled={loading === "followup"}
+        className="h-11 rounded-xl text-sm font-semibold flex-1"
+      >
+        <MessageSquare className="h-4 w-4 mr-2" />
+        {loading === "followup" ? "Enviando..." : "Post-sesión"}
+      </Button>
+    </div>
   );
 };

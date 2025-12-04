@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useNavigate } from "react-router-dom";
 
 const patientSchema = z.object({
   full_name: z.string().min(1, "El nombre es obligatorio").max(100),
@@ -55,6 +56,7 @@ export function PatientForm({
   initialData,
   onSuccess,
 }: PatientFormProps) {
+  const navigate = useNavigate();
   const form = useForm<PatientFormData>({
     resolver: zodResolver(patientSchema),
     defaultValues: initialData || {
@@ -117,9 +119,11 @@ export function PatientForm({
           title: "Éxito",
           description: "Paciente actualizado correctamente",
         });
+        form.reset();
+        onSuccess();
       } else {
         // Create new patient
-        const { error } = await supabase
+        const { data: newPatient, error } = await supabase
           .from("patients")
           .insert([{
             business_id: business.id,
@@ -129,7 +133,9 @@ export function PatientForm({
             reason_for_consultation: cleanData.reason_for_consultation,
             private_notes: cleanData.private_notes,
             is_active: cleanData.is_active,
-          }]);
+          }])
+          .select("id")
+          .single();
 
         if (error) throw error;
 
@@ -137,10 +143,17 @@ export function PatientForm({
           title: "Éxito",
           description: "Paciente creado correctamente",
         });
-      }
 
-      form.reset();
-      onSuccess();
+        form.reset();
+        onOpenChange(false);
+        
+        // Redirect to patient detail
+        if (newPatient?.id) {
+          navigate(`/patients/${newPatient.id}`);
+        } else {
+          onSuccess();
+        }
+      }
     } catch (error: any) {
       console.error("Error completo al guardar paciente:", error);
       toast({
@@ -153,71 +166,82 @@ export function PatientForm({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto mx-4 rounded-2xl">
+        <DialogHeader className="pb-2">
+          <DialogTitle className="text-xl font-bold">
             {patientId ? "Editar paciente" : "Nuevo paciente"}
           </DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
             <FormField
               control={form.control}
               name="full_name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Nombre completo *</FormLabel>
+                  <FormLabel className="text-sm font-semibold">Nombre completo *</FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder="Juan Pérez" />
+                    <Input 
+                      {...field} 
+                      placeholder="Juan Pérez" 
+                      className="h-12 text-base rounded-xl"
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        type="email"
-                        placeholder="juan@ejemplo.com"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-semibold">Email</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      type="email"
+                      placeholder="juan@ejemplo.com"
+                      className="h-12 text-base rounded-xl"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-              <FormField
-                control={form.control}
-                name="whatsapp_phone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Teléfono WhatsApp</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="+598 99 123 456" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="whatsapp_phone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm font-semibold">Teléfono WhatsApp</FormLabel>
+                  <FormControl>
+                    <Input 
+                      {...field} 
+                      placeholder="+598 99 123 456" 
+                      className="h-12 text-base rounded-xl"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}
               name="reason_for_consultation"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Motivo de consulta</FormLabel>
+                  <FormLabel className="text-sm font-semibold">Motivo de consulta</FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder="Breve descripción" />
+                    <Input 
+                      {...field} 
+                      placeholder="Breve descripción" 
+                      className="h-12 text-base rounded-xl"
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -229,12 +253,13 @@ export function PatientForm({
               name="private_notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Notas privadas</FormLabel>
+                  <FormLabel className="text-sm font-semibold">Notas privadas</FormLabel>
                   <FormControl>
                     <Textarea
                       {...field}
                       placeholder="Notas solo visibles para el profesional"
-                      rows={4}
+                      rows={3}
+                      className="text-base rounded-xl resize-none"
                     />
                   </FormControl>
                   <FormMessage />
@@ -246,29 +271,34 @@ export function PatientForm({
               control={form.control}
               name="is_active"
               render={({ field }) => (
-                <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                <FormItem className="flex flex-row items-center space-x-3 space-y-0 p-4 bg-muted/50 rounded-xl">
                   <FormControl>
                     <Checkbox
                       checked={field.value}
                       onCheckedChange={field.onChange}
+                      className="h-5 w-5"
                     />
                   </FormControl>
-                  <div className="space-y-1 leading-none">
-                    <FormLabel>Paciente activo</FormLabel>
-                  </div>
+                  <FormLabel className="text-sm font-medium cursor-pointer">
+                    Paciente activo
+                  </FormLabel>
                 </FormItem>
               )}
             />
 
-            <div className="flex justify-end gap-3 pt-4">
+            <div className="flex flex-col-reverse sm:flex-row gap-3 pt-4">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
+                className="h-12 rounded-xl text-base font-semibold flex-1"
               >
                 Cancelar
               </Button>
-              <Button type="submit">
+              <Button 
+                type="submit"
+                className="h-12 rounded-xl text-base font-semibold flex-1"
+              >
                 {patientId ? "Guardar cambios" : "Crear paciente"}
               </Button>
             </div>

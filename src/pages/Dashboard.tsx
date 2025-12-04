@@ -282,12 +282,12 @@ const Dashboard = () => {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             <Button
               variant="ghost"
               size="icon"
               onClick={() => navigate("/recordatorios-pendientes")}
-              className="text-muted-foreground hover:text-foreground"
+              className="text-muted-foreground hover:text-foreground h-10 w-10"
             >
               <Bell className="h-5 w-5" />
             </Button>
@@ -295,7 +295,7 @@ const Dashboard = () => {
               variant="ghost"
               size="icon"
               onClick={handleLogout}
-              className="text-muted-foreground hover:text-destructive"
+              className="text-muted-foreground hover:text-destructive h-10 w-10"
             >
               <LogOut className="h-5 w-5" />
             </Button>
@@ -303,23 +303,23 @@ const Dashboard = () => {
         </div>
 
         {/* Metrics */}
-        <div className="grid grid-cols-2 gap-3 sm:gap-4">
-          <Card className="bg-card border-border shadow-sm">
-            <CardContent className="p-4 sm:p-6 text-center">
-              <p className="text-xs sm:text-sm text-muted-foreground font-medium uppercase tracking-wide">
+        <div className="grid grid-cols-2 gap-3">
+          <Card className="mobile-card-compact">
+            <CardContent className="p-4 text-center">
+              <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wide">
                 Pacientes activos
               </p>
-              <p className="text-3xl sm:text-4xl font-bold text-foreground mt-2">
+              <p className="text-3xl font-bold text-foreground mt-2">
                 {activePatientsCount}
               </p>
             </CardContent>
           </Card>
-          <Card className="bg-card border-border shadow-sm">
-            <CardContent className="p-4 sm:p-6 text-center">
-              <p className="text-xs sm:text-sm text-muted-foreground font-medium uppercase tracking-wide">
+          <Card className="mobile-card-compact">
+            <CardContent className="p-4 text-center">
+              <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wide">
                 Citas de hoy
               </p>
-              <p className="text-3xl sm:text-4xl font-bold text-foreground mt-2">
+              <p className="text-3xl font-bold text-foreground mt-2">
                 {todayAppointmentsCount}
               </p>
             </CardContent>
@@ -327,80 +327,80 @@ const Dashboard = () => {
         </div>
 
         {/* Main Actions */}
-        <div className="grid grid-cols-2 gap-3 sm:gap-4">
+        <div className="grid grid-cols-2 gap-3">
           <Card 
-            className="bg-card border-border shadow-sm hover:shadow-md transition-shadow cursor-pointer group"
+            className="mobile-card-compact hover:shadow-md transition-all cursor-pointer group active:scale-[0.98]"
             onClick={() => setShowPatientForm(true)}
           >
-            <CardContent className="p-4 sm:p-6 flex flex-col items-center justify-center text-center min-h-[100px] sm:min-h-[120px]">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/10 flex items-center justify-center mb-2 sm:mb-3 group-hover:bg-primary/20 transition-colors">
-                <UserPlus className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+            <CardContent className="p-4 flex flex-col items-center justify-center text-center min-h-[100px]">
+              <div className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center mb-2 group-hover:bg-primary/20 transition-colors">
+                <UserPlus className="h-5 w-5 text-primary" />
               </div>
-              <p className="font-semibold text-sm sm:text-base text-foreground">Crear paciente</p>
+              <p className="font-semibold text-sm text-foreground">Crear paciente</p>
             </CardContent>
           </Card>
 
           <Card 
-            className="bg-card border-border shadow-sm hover:shadow-md transition-shadow cursor-pointer group"
+            className="mobile-card-compact hover:shadow-md transition-all cursor-pointer group active:scale-[0.98]"
             onClick={() => setShowAppointmentModal(true)}
           >
-            <CardContent className="p-4 sm:p-6 flex flex-col items-center justify-center text-center min-h-[100px] sm:min-h-[120px]">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/10 flex items-center justify-center mb-2 sm:mb-3 group-hover:bg-primary/20 transition-colors">
-                <CalendarPlus className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+            <CardContent className="p-4 flex flex-col items-center justify-center text-center min-h-[100px]">
+              <div className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center mb-2 group-hover:bg-primary/20 transition-colors">
+                <CalendarPlus className="h-5 w-5 text-primary" />
               </div>
-              <p className="font-semibold text-sm sm:text-base text-foreground">Crear cita</p>
+              <p className="font-semibold text-sm text-foreground">Crear cita</p>
             </CardContent>
           </Card>
 
           <Card 
-            className="bg-card border-border shadow-sm hover:shadow-md transition-shadow cursor-pointer group"
+            className="mobile-card-compact hover:shadow-md transition-all cursor-pointer group active:scale-[0.98]"
             onClick={() => navigate("/patients")}
           >
-            <CardContent className="p-4 sm:p-6 flex flex-col items-center justify-center text-center min-h-[100px] sm:min-h-[120px]">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-secondary flex items-center justify-center mb-2 sm:mb-3 group-hover:bg-secondary/80 transition-colors">
-                <Users className="h-5 w-5 sm:h-6 sm:w-6 text-secondary-foreground" />
+            <CardContent className="p-4 flex flex-col items-center justify-center text-center min-h-[100px]">
+              <div className="w-11 h-11 rounded-full bg-secondary flex items-center justify-center mb-2 group-hover:bg-secondary/80 transition-colors">
+                <Users className="h-5 w-5 text-secondary-foreground" />
               </div>
-              <p className="font-semibold text-sm sm:text-base text-foreground">Ver pacientes</p>
+              <p className="font-semibold text-sm text-foreground">Ver pacientes</p>
             </CardContent>
           </Card>
 
           <Card 
-            className="bg-card border-border shadow-sm hover:shadow-md transition-shadow cursor-pointer group"
+            className="mobile-card-compact hover:shadow-md transition-all cursor-pointer group active:scale-[0.98]"
             onClick={() => navigate("/agenda")}
           >
-            <CardContent className="p-4 sm:p-6 flex flex-col items-center justify-center text-center min-h-[100px] sm:min-h-[120px]">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-secondary flex items-center justify-center mb-2 sm:mb-3 group-hover:bg-secondary/80 transition-colors">
-                <CalendarDays className="h-5 w-5 sm:h-6 sm:w-6 text-secondary-foreground" />
+            <CardContent className="p-4 flex flex-col items-center justify-center text-center min-h-[100px]">
+              <div className="w-11 h-11 rounded-full bg-secondary flex items-center justify-center mb-2 group-hover:bg-secondary/80 transition-colors">
+                <CalendarDays className="h-5 w-5 text-secondary-foreground" />
               </div>
-              <p className="font-semibold text-sm sm:text-base text-foreground">Ver agenda</p>
+              <p className="font-semibold text-sm text-foreground">Ver agenda</p>
             </CardContent>
           </Card>
         </div>
 
         {/* Today's Appointments */}
         {todayAppointments.length > 0 && (
-          <Card className="bg-card border-border shadow-sm">
-            <CardHeader className="pb-2 px-4 sm:px-6 pt-4 sm:pt-6">
-              <CardTitle className="text-base sm:text-lg font-semibold">
+          <Card className="mobile-card">
+            <CardHeader className="pb-3 px-0 pt-0 sm:px-6 sm:pt-6">
+              <CardTitle className="text-base font-bold">
                 Próximas citas de hoy
               </CardTitle>
             </CardHeader>
-            <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6">
-              <div className="space-y-2">
+            <CardContent className="px-0 pb-0 sm:px-6 sm:pb-6">
+              <div className="space-y-1">
                 {todayAppointments.map((appointment) => (
                   <div 
                     key={appointment.id} 
-                    className="flex items-center justify-between py-2 border-b border-border last:border-0"
+                    className="flex items-center justify-between py-3 border-b border-border last:border-0"
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <span className="text-sm font-medium text-primary whitespace-nowrap">
+                      <span className="text-sm font-bold text-primary whitespace-nowrap">
                         {formatTime(appointment.start_at)}
                       </span>
                       <span className="text-sm text-foreground truncate">
                         {appointment.patients?.full_name || appointment.contact_name}
                       </span>
                     </div>
-                    <span className="text-xs text-muted-foreground capitalize whitespace-nowrap ml-2">
+                    <span className="text-xs text-muted-foreground capitalize whitespace-nowrap ml-2 px-2 py-1 bg-muted rounded-full">
                       {statusMap[appointment.status] || appointment.status}
                     </span>
                   </div>
@@ -409,7 +409,7 @@ const Dashboard = () => {
               {todayAppointmentsCount > 5 && (
                 <Button 
                   variant="ghost" 
-                  className="w-full mt-3 text-sm"
+                  className="w-full mt-3 h-11 rounded-xl text-sm font-semibold"
                   onClick={() => navigate("/agenda")}
                 >
                   Ver todas las citas
@@ -420,14 +420,24 @@ const Dashboard = () => {
         )}
 
         {todayAppointments.length === 0 && (
-          <Card className="bg-card border-border shadow-sm">
-            <CardContent className="p-6 text-center">
+          <Card className="mobile-card">
+            <CardContent className="py-8 text-center">
+              <CalendarDays className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
               <p className="text-muted-foreground text-sm">
                 No hay citas programadas para hoy
               </p>
             </CardContent>
           </Card>
         )}
+
+        {/* Settings Link */}
+        <Button
+          variant="outline"
+          className="w-full h-12 rounded-xl font-semibold"
+          onClick={() => navigate("/clinic-settings")}
+        >
+          Mi Consultorio
+        </Button>
       </div>
 
       {/* Modals */}
