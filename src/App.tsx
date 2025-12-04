@@ -7,7 +7,7 @@ import { lazy, Suspense } from "react";
 import LoadingPage from "./components/LoadingPage";
 
 // Lazy load all pages for optimal performance
-const Index = lazy(() => import("./pages/Index"));
+const Landing = lazy(() => import("./pages/Landing"));
 const Auth = lazy(() => import("./pages/Auth"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const BusinessSetup = lazy(() => import("./pages/BusinessSetup"));
@@ -33,7 +33,7 @@ const App = () => (
       <BrowserRouter>
         <Suspense fallback={<LoadingPage />}>
           <Routes>
-            <Route path="/" element={<Index />} />
+            <Route path="/" element={<Landing />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/configurar-negocio" element={<BusinessSetup />} />
             <Route path="/dashboard" element={<Dashboard />} />
