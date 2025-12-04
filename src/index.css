@@ -101,7 +101,7 @@ All colors MUST be HSL.
 /* Mobile-first card styles */
 @layer components {
   .mobile-card {
-    @apply bg-card rounded-2xl border border-border p-5 sm:p-6;
+    @apply bg-card rounded-2xl border border-border p-5;
     box-shadow: 0 2px 8px -2px hsl(var(--foreground) / 0.04), 
                 0 4px 16px -4px hsl(var(--foreground) / 0.06);
   }
@@ -117,7 +117,7 @@ All colors MUST be HSL.
   }
 
   .mobile-label {
-    @apply text-xs font-medium uppercase tracking-wide text-muted-foreground;
+    @apply text-xs font-semibold uppercase tracking-wide text-muted-foreground;
   }
 
   .mobile-value {
@@ -134,5 +134,10 @@ All colors MUST be HSL.
 
   .mobile-btn-icon {
     @apply h-11 w-11 rounded-xl;
+  }
+
+  /* Tap highlight for interactive elements */
+  .tap-highlight {
+    @apply active:scale-[0.98] transition-transform;
   }
 }

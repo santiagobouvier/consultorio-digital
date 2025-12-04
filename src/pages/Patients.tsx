@@ -173,22 +173,28 @@ const Patients = () => {
       <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+          <div className="flex items-center gap-3 min-w-0">
             <Button
               variant="ghost"
               size="icon"
               onClick={() => navigate("/dashboard")}
-              className="shrink-0"
+              className="shrink-0 h-10 w-10"
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold truncate">
-              Pacientes
-            </h1>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold">Pacientes</h1>
+              <p className="text-sm text-muted-foreground hidden sm:block">
+                {filteredPatients.length} {filteredPatients.length === 1 ? 'paciente' : 'pacientes'}
+              </p>
+            </div>
           </div>
-          <Button onClick={() => setShowForm(true)} size="sm" className="sm:size-default shrink-0">
+          <Button 
+            onClick={() => setShowForm(true)} 
+            className="h-11 px-4 rounded-xl font-semibold shrink-0"
+          >
             <Plus className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">Nuevo paciente</span>
+            <span className="hidden sm:inline">Nuevo</span>
           </Button>
         </div>
 
@@ -200,11 +206,11 @@ const Patients = () => {
               placeholder="Buscar por nombre o email..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
+              className="pl-10 h-12 rounded-xl text-base"
             />
           </div>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-full sm:w-[180px]">
+            <SelectTrigger className="w-full sm:w-[180px] h-12 rounded-xl">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -217,9 +223,11 @@ const Patients = () => {
 
         {/* Content */}
         {filteredPatients.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">No se encontraron pacientes</p>
-          </div>
+          <Card className="mobile-card">
+            <CardContent className="py-12 text-center">
+              <p className="text-muted-foreground">No se encontraron pacientes</p>
+            </CardContent>
+          </Card>
         ) : (
           <>
             {/* Mobile List */}
@@ -227,28 +235,28 @@ const Patients = () => {
               {filteredPatients.map((patient) => (
                 <Card
                   key={patient.id}
-                  className="bg-card border-border shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                  className="mobile-card-compact hover:shadow-md transition-shadow cursor-pointer active:scale-[0.99]"
                   onClick={() => navigate(`/patients/${patient.id}`)}
                 >
                   <CardContent className="p-4 flex items-center justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <p className="font-semibold text-foreground truncate">
+                        <p className="text-base font-semibold text-foreground truncate">
                           {patient.full_name}
                         </p>
                         {!patient.is_active && (
-                          <Badge variant="secondary" className="text-xs shrink-0">
+                          <Badge variant="secondary" className="text-xs shrink-0 rounded-full">
                             Inactivo
                           </Badge>
                         )}
                       </div>
-                      {patient.email && (
-                        <p className="text-sm text-muted-foreground truncate">
-                          {patient.email}
-                        </p>
-                      )}
+                      <p className="text-sm text-muted-foreground truncate">
+                        {patient.email || patient.whatsapp_phone || "Sin contacto"}
+                      </p>
                     </div>
-                    <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
+                    <Button variant="ghost" size="icon" className="shrink-0 h-10 w-10">
+                      <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                    </Button>
                   </CardContent>
                 </Card>
               ))}
