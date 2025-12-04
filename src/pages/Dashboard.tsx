@@ -3,16 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { toast } from "@/hooks/use-toast";
-import { Users, CalendarPlus, CalendarDays, UserPlus, Bell } from "lucide-react";
+import { Users, CalendarPlus, CalendarDays, UserPlus, Bell, LogOut } from "lucide-react";
+import { PatientForm } from "@/components/PatientForm";
+import { CreateAppointmentModal } from "@/components/CreateAppointmentModal";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -21,6 +15,8 @@ const Dashboard = () => {
   const [todayAppointmentsCount, setTodayAppointmentsCount] = useState(0);
   const [todayAppointments, setTodayAppointments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showPatientForm, setShowPatientForm] = useState(false);
+  const [showAppointmentModal, setShowAppointmentModal] = useState(false);
 
   const statusMap: Record<string, string> = {
     pending: "pendiente",
@@ -117,6 +113,20 @@ const Dashboard = () => {
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      navigate("/auth");
+    } catch (error) {
+      console.error("Error signing out:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo cerrar sesión",
+        variant: "destructive",
+      });
+    }
+  };
+
   const formatTime = (datetime: string) => {
     const date = new Date(datetime);
     return date.toLocaleTimeString("es-UY", {
@@ -146,14 +156,24 @@ const Dashboard = () => {
               Bienvenido a tu panel
             </p>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate("/recordatorios-pendientes")}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <Bell className="h-5 w-5" />
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate("/recordatorios-pendientes")}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <Bell className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleLogout}
+              className="text-muted-foreground hover:text-destructive"
+            >
+              <LogOut className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
 
         {/* Metrics */}
@@ -184,7 +204,7 @@ const Dashboard = () => {
         <div className="grid grid-cols-2 gap-3 sm:gap-4">
           <Card 
             className="bg-card border-border shadow-sm hover:shadow-md transition-shadow cursor-pointer group"
-            onClick={() => navigate("/patients?new=true")}
+            onClick={() => setShowPatientForm(true)}
           >
             <CardContent className="p-4 sm:p-6 flex flex-col items-center justify-center text-center min-h-[100px] sm:min-h-[120px]">
               <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/10 flex items-center justify-center mb-2 sm:mb-3 group-hover:bg-primary/20 transition-colors">
@@ -196,7 +216,7 @@ const Dashboard = () => {
 
           <Card 
             className="bg-card border-border shadow-sm hover:shadow-md transition-shadow cursor-pointer group"
-            onClick={() => navigate("/agenda?new=true")}
+            onClick={() => setShowAppointmentModal(true)}
           >
             <CardContent className="p-4 sm:p-6 flex flex-col items-center justify-center text-center min-h-[100px] sm:min-h-[120px]">
               <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/10 flex items-center justify-center mb-2 sm:mb-3 group-hover:bg-primary/20 transition-colors">
@@ -283,6 +303,23 @@ const Dashboard = () => {
           </Card>
         )}
       </div>
+
+      {/* Modals */}
+      <PatientForm
+        open={showPatientForm}
+        onOpenChange={setShowPatientForm}
+        onSuccess={() => {
+          setShowPatientForm(false);
+          fetchDashboardData();
+        }}
+      />
+
+      <CreateAppointmentModal
+        open={showAppointmentModal}
+        onOpenChange={setShowAppointmentModal}
+        patientId={null}
+        onSuccess={fetchDashboardData}
+      />
     </div>
   );
 };

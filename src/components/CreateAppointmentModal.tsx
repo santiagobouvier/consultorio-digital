@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,10 +20,15 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 
+interface Patient {
+  id: string;
+  full_name: string;
+}
+
 interface CreateAppointmentModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  patientId: string;
+  patientId: string | null;
   onSuccess: () => void;
 }
 
@@ -34,12 +39,49 @@ export function CreateAppointmentModal({
   onSuccess,
 }: CreateAppointmentModalProps) {
   const [loading, setLoading] = useState(false);
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [selectedPatientId, setSelectedPatientId] = useState(patientId || "");
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [duration, setDuration] = useState("60");
   const [modality, setModality] = useState("presencial");
   const [location, setLocation] = useState("");
   const [notes, setNotes] = useState("");
+
+  useEffect(() => {
+    if (open && !patientId) {
+      fetchPatients();
+    }
+    if (patientId) {
+      setSelectedPatientId(patientId);
+    }
+  }, [open, patientId]);
+
+  const fetchPatients = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: business } = await supabase
+        .from("businesses")
+        .select("id")
+        .eq("owner_user_id", user.id)
+        .maybeSingle();
+
+      if (!business) return;
+
+      const { data } = await supabase
+        .from("patients")
+        .select("id, full_name")
+        .eq("business_id", business.id)
+        .eq("is_active", true)
+        .order("full_name");
+
+      setPatients(data || []);
+    } catch (error) {
+      console.error("Error fetching patients:", error);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,6 +90,15 @@ export function CreateAppointmentModal({
       toast({
         title: "Error",
         description: "Por favor completa fecha y hora",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!selectedPatientId) {
+      toast({
+        title: "Error",
+        description: "Por favor selecciona un paciente",
         variant: "destructive",
       });
       return;
@@ -76,7 +127,7 @@ export function CreateAppointmentModal({
       // Insert appointment
       const { error } = await supabase.from("appointments").insert({
         business_id: business.id,
-        patient_id: patientId,
+        patient_id: selectedPatientId,
         start_at: startAt.toISOString(),
         end_at: endAt.toISOString(),
         modality,
@@ -100,6 +151,7 @@ export function CreateAppointmentModal({
       setModality("presencial");
       setLocation("");
       setNotes("");
+      setSelectedPatientId(patientId || "");
       
       onSuccess();
       onOpenChange(false);
@@ -124,6 +176,24 @@ export function CreateAppointmentModal({
           </DialogHeader>
 
           <div className="space-y-4 py-4">
+            {!patientId && (
+              <div className="space-y-2">
+                <Label htmlFor="patient">Paciente *</Label>
+                <Select value={selectedPatientId} onValueChange={setSelectedPatientId}>
+                  <SelectTrigger id="patient">
+                    <SelectValue placeholder="Selecciona un paciente" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {patients.map((patient) => (
+                      <SelectItem key={patient.id} value={patient.id}>
+                        {patient.full_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="date">Fecha *</Label>
               <Input
