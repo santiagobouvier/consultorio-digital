@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Send, Trash2 } from "lucide-react";
+import { ArrowLeft, Send, Trash2, Bell } from "lucide-react";
 
 interface Reminder {
   id: string;
@@ -177,107 +177,165 @@ const PendingReminders = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background p-8">
-        <div className="max-w-7xl mx-auto">
-          <p className="text-muted-foreground">Cargando...</p>
-        </div>
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <p className="text-muted-foreground">Cargando...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background p-8">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-background">
+      <div className="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 space-y-5 sm:space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => navigate("/dashboard")}
+            className="shrink-0"
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold">Recordatorios pendientes</h1>
-            <p className="text-muted-foreground mt-1">
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">Recordatorios pendientes</h1>
+            <p className="text-sm text-muted-foreground">
               {reminders.length} {reminders.length === 1 ? 'recordatorio pendiente' : 'recordatorios pendientes'}
             </p>
           </div>
         </div>
 
-        {/* Reminders List */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Recordatorios para enviar</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {reminders.length === 0 ? (
+        {/* Empty State */}
+        {reminders.length === 0 ? (
+          <Card className="mobile-card">
+            <CardContent className="py-12 text-center">
+              <Bell className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <p className="text-muted-foreground">
-                No hay recordatorios pendientes para enviar hoy
+                No hay recordatorios pendientes para enviar
               </p>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Paciente</TableHead>
-                    <TableHead>Cita</TableHead>
-                    <TableHead>Programado para</TableHead>
-                    <TableHead>Mensaje</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {reminders.map((reminder) => {
-                    const { date, time } = formatAppointmentDateTime(reminder.appointment?.start_at || "");
-                    return (
-                      <TableRow key={reminder.id}>
-                        <TableCell className="font-medium">
-                          {reminder.patient?.full_name || "-"}
-                        </TableCell>
-                        <TableCell>
-                          <div className="space-y-1">
-                            <p className="text-sm">
-                              {date} - {time}
-                            </p>
-                            <Badge variant="outline" className="text-xs">
-                              {reminder.appointment?.modality === "online" ? "Online" : "Presencial"}
-                            </Badge>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {formatScheduledDate(reminder.scheduled_for)}
-                        </TableCell>
-                        <TableCell>
-                          <p className="text-sm text-muted-foreground truncate max-w-xs">
-                            {reminder.message}
+            </CardContent>
+          </Card>
+        ) : (
+          <>
+            {/* Mobile List */}
+            <div className="md:hidden space-y-3">
+              {reminders.map((reminder) => {
+                const { date, time } = formatAppointmentDateTime(reminder.appointment?.start_at || "");
+                return (
+                  <Card key={reminder.id} className="mobile-card-compact">
+                    <CardContent className="p-4 space-y-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-bold text-foreground">
+                            {reminder.patient?.full_name || "Sin paciente"}
                           </p>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex gap-2 justify-end">
-                            <Button
-                              size="sm"
-                              onClick={() => sendWhatsApp(reminder)}
-                            >
-                              <Send className="h-4 w-4 mr-1" />
-                              Enviar
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => deleteReminder(reminder.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            Cita: {date} a las {time}
+                          </p>
+                        </div>
+                        <Badge variant="outline" className="rounded-full text-xs shrink-0">
+                          {reminder.appointment?.modality === "online" ? "Online" : "Presencial"}
+                        </Badge>
+                      </div>
+                      
+                      <p className="text-sm text-muted-foreground line-clamp-2">
+                        {reminder.message}
+                      </p>
+
+                      <div className="flex gap-2 pt-1">
+                        <Button
+                          size="sm"
+                          className="flex-1 rounded-xl h-10"
+                          onClick={() => sendWhatsApp(reminder)}
+                        >
+                          <Send className="h-4 w-4 mr-2" />
+                          Enviar WhatsApp
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="rounded-xl h-10 w-10 p-0"
+                          onClick={() => deleteReminder(reminder.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+
+            {/* Desktop Table */}
+            <Card className="hidden md:block">
+              <CardHeader>
+                <CardTitle>Recordatorios para enviar</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Paciente</TableHead>
+                      <TableHead>Cita</TableHead>
+                      <TableHead>Programado para</TableHead>
+                      <TableHead>Mensaje</TableHead>
+                      <TableHead className="text-right">Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {reminders.map((reminder) => {
+                      const { date, time } = formatAppointmentDateTime(reminder.appointment?.start_at || "");
+                      return (
+                        <TableRow key={reminder.id}>
+                          <TableCell className="font-medium">
+                            {reminder.patient?.full_name || "-"}
+                          </TableCell>
+                          <TableCell>
+                            <div className="space-y-1">
+                              <p className="text-sm">
+                                {date} - {time}
+                              </p>
+                              <Badge variant="outline" className="text-xs rounded-full">
+                                {reminder.appointment?.modality === "online" ? "Online" : "Presencial"}
+                              </Badge>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {formatScheduledDate(reminder.scheduled_for)}
+                          </TableCell>
+                          <TableCell>
+                            <p className="text-sm text-muted-foreground truncate max-w-xs">
+                              {reminder.message}
+                            </p>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex gap-2 justify-end">
+                              <Button
+                                size="sm"
+                                className="rounded-xl"
+                                onClick={() => sendWhatsApp(reminder)}
+                              >
+                                <Send className="h-4 w-4 mr-1" />
+                                Enviar
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="rounded-xl"
+                                onClick={() => deleteReminder(reminder.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
     </div>
   );
