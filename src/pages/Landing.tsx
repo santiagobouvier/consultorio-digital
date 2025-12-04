@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Users, Calendar, MessageCircle, UserPlus, ClipboardList, CalendarCheck, Clock, Eye, Sparkles, CheckCircle } from "lucide-react";
+import { Users, Calendar, MessageCircle, UserPlus, ClipboardList, CalendarCheck, Clock, Eye, Sparkles } from "lucide-react";
+import heroImage from "@/assets/hero-image.png";
 
 const features = [
   {
@@ -65,62 +66,108 @@ const Landing = () => {
   const whatsappLink = "https://api.whatsapp.com/send?phone=59891093977&text=Hola%2C+vengo+de+su+sitio+web.+Soy+profesional+y+me+interesa+el+servicio+de+gesti%C3%B3n+para+mis+pacientes.";
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
+    <div className="min-h-screen bg-black text-white">
       {/* Hero Section */}
-      <section className="min-h-screen flex flex-col items-center justify-center px-6 py-16">
-        <div className="max-w-2xl mx-auto text-center animate-fade-in">
-          {/* Logo placeholder */}
-          <div className="w-16 h-16 mx-auto mb-8 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-            <Calendar className="w-8 h-8 text-emerald-500" />
+      <section className="min-h-screen flex flex-col items-center justify-center px-4 sm:px-6 py-20 sm:py-24">
+        <div className="w-full max-w-3xl mx-auto animate-fade-in">
+          {/* Premium Hero Card */}
+          <div 
+            className="relative rounded-3xl p-6 sm:p-10 md:p-14"
+            style={{ 
+              backgroundColor: '#111111',
+              boxShadow: '0 8px 60px rgba(0, 199, 138, 0.15), 0 0 80px rgba(0, 199, 138, 0.08)'
+            }}
+          >
+            {/* Hero Image */}
+            <div className="flex justify-center mb-10">
+              <div className="relative">
+                <img 
+                  src={heroImage} 
+                  alt="Sistema de Gestión de Consultorio" 
+                  className="w-full max-w-xs sm:max-w-sm md:max-w-md h-auto rounded-2xl"
+                />
+                {/* Subtle glow behind image */}
+                <div 
+                  className="absolute inset-0 -z-10 blur-3xl opacity-30 rounded-full"
+                  style={{ backgroundColor: '#00c78a' }}
+                />
+              </div>
+            </div>
+
+            {/* Icon with glow */}
+            <div className="flex justify-center mb-8">
+              <div 
+                className="w-16 h-16 rounded-2xl flex items-center justify-center relative"
+                style={{ 
+                  backgroundColor: 'rgba(0, 199, 138, 0.12)',
+                  boxShadow: '0 0 40px rgba(0, 199, 138, 0.4), 0 0 20px rgba(0, 199, 138, 0.3)'
+                }}
+              >
+                <Calendar className="w-8 h-8" style={{ color: '#00c78a' }} />
+              </div>
+            </div>
+            
+            {/* Title */}
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-center mb-6 leading-tight">
+              Sistema de Gestión
+              <span className="block" style={{ color: '#00c78a' }}>de Consultorio</span>
+            </h1>
+            
+            {/* Subtitle */}
+            <p className="text-base sm:text-lg md:text-xl text-gray-400 text-center mb-10 max-w-xl mx-auto leading-relaxed font-light">
+              Organizá pacientes, citas y recordatorios en un panel simple y profesional.
+            </p>
+            
+            {/* CTA Button */}
+            <div className="flex justify-center">
+              <Link to="/auth">
+                <Button 
+                  size="lg" 
+                  className="h-14 px-12 text-base font-semibold rounded-xl transition-all duration-300"
+                  style={{ 
+                    backgroundColor: '#00c78a',
+                    boxShadow: '0 4px 30px rgba(0, 199, 138, 0.35)'
+                  }}
+                >
+                  Iniciar sesión
+                </Button>
+              </Link>
+            </div>
           </div>
-          
-          {/* Title */}
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-6">
-            Sistema de Gestión de Consultorio
-          </h1>
-          
-          {/* Subtitle */}
-          <p className="text-lg md:text-xl text-gray-400 mb-10 max-w-lg mx-auto leading-relaxed">
-            Organizá pacientes, citas y recordatorios en un panel simple y profesional.
-          </p>
-          
-          {/* CTA Button */}
-          <Link to="/auth">
-            <Button 
-              size="lg" 
-              className="h-14 px-10 text-base font-semibold bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl transition-all duration-200 shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30"
-            >
-              Iniciar sesión
-            </Button>
-          </Link>
         </div>
       </section>
 
       {/* How it Works Section */}
-      <section className="px-6 py-24 bg-[#0a0a0a]">
+      <section className="px-4 sm:px-6 py-28 bg-black">
         <div className="max-w-5xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-bold text-center mb-16">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-center mb-20 tracking-tight">
             Cómo funciona
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-10 md:gap-8">
             {steps.map((step, index) => (
               <div
                 key={step.title}
                 className="text-center animate-fade-in"
                 style={{ animationDelay: `${(index + 1) * 100}ms`, animationFillMode: 'both' }}
               >
-                {/* Step number */}
-                <div className="w-14 h-14 mx-auto mb-6 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-                  <step.icon className="w-6 h-6 text-emerald-500" />
+                {/* Step icon with glow */}
+                <div 
+                  className="w-16 h-16 mx-auto mb-6 rounded-2xl flex items-center justify-center"
+                  style={{ 
+                    backgroundColor: 'rgba(0, 199, 138, 0.1)',
+                    boxShadow: '0 0 30px rgba(0, 199, 138, 0.2)'
+                  }}
+                >
+                  <step.icon className="w-7 h-7" style={{ color: '#00c78a' }} />
                 </div>
                 
                 {/* Title */}
-                <h3 className="text-lg font-semibold text-white mb-3">
+                <h3 className="text-lg font-semibold text-white mb-3 tracking-tight">
                   {step.title}
                 </h3>
                 
                 {/* Description */}
-                <p className="text-gray-400 text-sm leading-relaxed">
+                <p className="text-gray-500 text-sm leading-relaxed font-light">
                   {step.description}
                 </p>
               </div>
@@ -130,26 +177,33 @@ const Landing = () => {
       </section>
 
       {/* Benefits Section */}
-      <section className="px-6 py-24 bg-[#0f0f0f]">
+      <section className="px-4 sm:px-6 py-28" style={{ backgroundColor: '#080808' }}>
         <div className="max-w-4xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-bold text-center mb-16">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-center mb-20 tracking-tight">
             Beneficios
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             {benefits.map((benefit, index) => (
               <div
                 key={benefit.title}
-                className="flex items-start gap-4 p-5 rounded-xl bg-[#161616] border border-white/5 animate-fade-in"
-                style={{ animationDelay: `${(index + 1) * 100}ms`, animationFillMode: 'both' }}
+                className="flex items-start gap-5 p-6 rounded-2xl border border-white/5 animate-fade-in transition-all duration-300 hover:border-white/10"
+                style={{ 
+                  backgroundColor: '#111111',
+                  animationDelay: `${(index + 1) * 100}ms`, 
+                  animationFillMode: 'both' 
+                }}
               >
-                <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
-                  <benefit.icon className="w-5 h-5 text-emerald-500" />
+                <div 
+                  className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+                  style={{ backgroundColor: 'rgba(0, 199, 138, 0.1)' }}
+                >
+                  <benefit.icon className="w-5 h-5" style={{ color: '#00c78a' }} />
                 </div>
                 <div>
-                  <h3 className="text-white font-semibold mb-1">
+                  <h3 className="text-white font-semibold mb-1.5 tracking-tight">
                     {benefit.title}
                   </h3>
-                  <p className="text-gray-400 text-sm">
+                  <p className="text-gray-500 text-sm font-light">
                     {benefit.description}
                   </p>
                 </div>
@@ -160,27 +214,34 @@ const Landing = () => {
       </section>
 
       {/* Features Section */}
-      <section className="px-6 py-24 bg-[#0a0a0a]">
+      <section className="px-4 sm:px-6 py-28 bg-black">
         <div className="max-w-5xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {features.map((feature, index) => (
               <div
                 key={feature.title}
-                className="p-6 md:p-8 rounded-2xl bg-[#161616] border border-white/5 shadow-xl shadow-black/20 animate-fade-in"
-                style={{ animationDelay: `${(index + 1) * 100}ms`, animationFillMode: 'both' }}
+                className="p-7 md:p-8 rounded-2xl border border-white/5 animate-fade-in transition-all duration-300 hover:border-white/10"
+                style={{ 
+                  backgroundColor: '#111111',
+                  animationDelay: `${(index + 1) * 100}ms`, 
+                  animationFillMode: 'both' 
+                }}
               >
                 {/* Icon */}
-                <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center mb-5">
-                  <feature.icon className="w-6 h-6 text-emerald-500" />
+                <div 
+                  className="w-12 h-12 rounded-xl flex items-center justify-center mb-6"
+                  style={{ backgroundColor: 'rgba(0, 199, 138, 0.1)' }}
+                >
+                  <feature.icon className="w-6 h-6" style={{ color: '#00c78a' }} />
                 </div>
                 
                 {/* Title */}
-                <h3 className="text-lg font-semibold text-white mb-3">
+                <h3 className="text-lg font-semibold text-white mb-3 tracking-tight">
                   {feature.title}
                 </h3>
                 
                 {/* Description */}
-                <p className="text-gray-400 text-sm leading-relaxed">
+                <p className="text-gray-500 text-sm leading-relaxed font-light">
                   {feature.description}
                 </p>
               </div>
@@ -190,8 +251,8 @@ const Landing = () => {
       </section>
 
       {/* Footer */}
-      <footer className="px-6 py-10 bg-[#0a0a0a] border-t border-white/5">
-        <p className="text-center text-gray-500 text-sm">
+      <footer className="px-4 sm:px-6 py-12 bg-black border-t border-white/5">
+        <p className="text-center text-gray-600 text-sm font-light">
           © {new Date().getFullYear()} Sistema de Gestión de Consultorio
         </p>
       </footer>
@@ -201,7 +262,11 @@ const Landing = () => {
         href={whatsappLink}
         target="_blank"
         rel="noopener noreferrer"
-        className="fixed bottom-6 right-6 z-50 w-14 h-14 bg-emerald-500 hover:bg-emerald-600 rounded-full flex items-center justify-center shadow-lg shadow-emerald-500/30 transition-all duration-200 hover:scale-105"
+        className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110"
+        style={{ 
+          backgroundColor: '#00c78a',
+          boxShadow: '0 4px 30px rgba(0, 199, 138, 0.4)'
+        }}
         aria-label="Contactar por WhatsApp"
       >
         <svg
