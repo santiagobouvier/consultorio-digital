@@ -173,7 +173,7 @@ export function CreateAppointmentModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto mx-4 rounded-2xl">
+      <DialogContent className="max-h-[85vh] overflow-y-auto">
         <form onSubmit={handleSubmit}>
           <DialogHeader className="pb-2">
             <DialogTitle className="text-xl font-bold">Crear nueva cita</DialogTitle>
