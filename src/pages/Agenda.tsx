@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
 import { ArrowLeft, Calendar as CalendarIcon } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface AppointmentWithPatient {
   id: string;
@@ -63,7 +63,6 @@ const Agenda = () => {
   }, [timeRange]);
 
   const getDateRange = () => {
-    const now = new Date();
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -157,7 +156,6 @@ const Agenda = () => {
         weekday: "long",
         day: "2-digit",
         month: "long",
-        year: "numeric",
       });
 
       if (!groups[date]) {
@@ -189,7 +187,75 @@ const Agenda = () => {
 
   const groupedAppointments = groupByDate(appointments);
 
-  const renderListView = () => {
+  const renderMobileListView = () => {
+    if (Object.keys(groupedAppointments).length === 0) {
+      return (
+        <Card className="mobile-card">
+          <CardContent className="py-12">
+            <div className="text-center">
+              <CalendarIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <p className="text-muted-foreground">
+                No hay citas programadas
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    return (
+      <div className="space-y-5">
+        {Object.entries(groupedAppointments).map(([date, dayAppointments]) => (
+          <div key={date}>
+            <h3 className="text-base font-bold text-foreground mb-3 capitalize px-1">
+              {date}
+            </h3>
+            <div className="space-y-3">
+              {dayAppointments.map((appointment) => (
+                <Card
+                  key={appointment.id}
+                  className="mobile-card-compact cursor-pointer hover:shadow-md transition-shadow"
+                  onClick={() => appointment.patient_id && navigate(`/patients/${appointment.patient_id}`)}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-lg font-bold text-primary">
+                          {formatTime(appointment.start_at)}
+                        </p>
+                        {appointment.patients ? (
+                          <p className="font-semibold text-foreground mt-1 truncate">
+                            {appointment.patients.full_name}
+                          </p>
+                        ) : (
+                          <p className="text-sm text-muted-foreground mt-1">Sin paciente</p>
+                        )}
+                        {appointment.location && (
+                          <p className="text-xs text-muted-foreground mt-1 truncate">
+                            📍 {appointment.location}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex flex-col items-end gap-2 shrink-0">
+                        <Badge variant="outline" className="rounded-full text-xs">
+                          {appointment.modality === "online" ? "Online" : "Presencial"}
+                        </Badge>
+                        <Badge variant={getStatusVariant(appointment.status)} className="rounded-full text-xs">
+                          {statusMap[appointment.status]}
+                        </Badge>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const renderDesktopListView = () => {
     if (Object.keys(groupedAppointments).length === 0) {
       return (
         <Card>
@@ -217,17 +283,17 @@ const Agenda = () => {
                 {dayAppointments.map((appointment) => (
                   <div
                     key={appointment.id}
-                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
+                    className="flex items-center justify-between p-4 border rounded-xl hover:bg-accent/50 transition-colors"
                   >
                     <div className="flex-1 space-y-2">
                       <div className="flex items-center gap-3 flex-wrap">
                         <span className="font-semibold">
                           {formatTime(appointment.start_at)} - {formatTime(appointment.end_at)}
                         </span>
-                        <Badge variant="outline">
+                        <Badge variant="outline" className="rounded-full">
                           {appointment.modality === "online" ? "Online" : "Presencial"}
                         </Badge>
-                        <Badge variant={getPaymentVariant(appointment.payment_status)}>
+                        <Badge variant={getPaymentVariant(appointment.payment_status)} className="rounded-full">
                           {paymentStatusMap[appointment.payment_status] || appointment.payment_status}
                         </Badge>
                       </div>
@@ -247,7 +313,7 @@ const Agenda = () => {
                         </p>
                       )}
                     </div>
-                    <Badge variant={getStatusVariant(appointment.status)}>
+                    <Badge variant={getStatusVariant(appointment.status)} className="rounded-full">
                       {statusMap[appointment.status] || appointment.status}
                     </Badge>
                   </div>
@@ -279,39 +345,35 @@ const Agenda = () => {
     return (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {Object.entries(groupedAppointments).map(([date, dayAppointments]) => (
-          <Card key={date}>
+          <Card key={date} className="rounded-2xl">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium capitalize">{date}</CardTitle>
+              <CardTitle className="text-sm font-bold capitalize">{date}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               {dayAppointments.map((appointment) => (
                 <div
                   key={appointment.id}
-                  className="p-3 border rounded-md space-y-1 hover:bg-accent/50 transition-colors"
+                  className="p-3 border rounded-xl space-y-1 hover:bg-accent/50 transition-colors cursor-pointer"
+                  onClick={() => appointment.patient_id && navigate(`/patients/${appointment.patient_id}`)}
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-semibold">
+                    <span className="text-sm font-bold text-primary">
                       {formatTime(appointment.start_at)}
                     </span>
-                    <Badge variant={getStatusVariant(appointment.status)} className="text-xs">
+                    <Badge variant={getStatusVariant(appointment.status)} className="text-xs rounded-full">
                       {statusMap[appointment.status]}
                     </Badge>
                   </div>
                   {appointment.patients ? (
-                    <button
-                      onClick={() => navigate(`/patients/${appointment.patient_id}`)}
-                      className="text-xs text-primary hover:underline font-medium block"
-                    >
+                    <p className="text-xs font-medium text-foreground truncate">
                       {appointment.patients.full_name}
-                    </button>
+                    </p>
                   ) : (
                     <p className="text-xs text-muted-foreground">Sin paciente</p>
                   )}
-                  <div className="flex items-center gap-1 flex-wrap">
-                    <Badge variant="outline" className="text-xs">
-                      {appointment.modality === "online" ? "Online" : "Presencial"}
-                    </Badge>
-                  </div>
+                  <Badge variant="outline" className="text-xs rounded-full">
+                    {appointment.modality === "online" ? "Online" : "Presencial"}
+                  </Badge>
                 </div>
               ))}
             </CardContent>
@@ -323,37 +385,37 @@ const Agenda = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background p-8">
+      <div className="min-h-screen bg-background p-4 sm:p-6 lg:p-8">
         <div className="max-w-7xl mx-auto space-y-6">
           <div className="flex items-center gap-4">
-            <Skeleton className="h-10 w-10" />
+            <Skeleton className="h-10 w-10 rounded-xl" />
             <Skeleton className="h-8 w-32" />
           </div>
           <div className="flex gap-4">
-            <Skeleton className="h-10 w-48" />
-            <Skeleton className="h-10 w-48" />
+            <Skeleton className="h-11 w-full sm:w-48 rounded-xl" />
           </div>
-          <Skeleton className="h-64 w-full" />
+          <Skeleton className="h-64 w-full rounded-2xl" />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background p-8">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-background">
+      <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-5 sm:space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 sm:gap-4">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => navigate("/dashboard")}
+            className="shrink-0"
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold">Agenda</h1>
-            <p className="text-muted-foreground">
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">Agenda</h1>
+            <p className="text-sm text-muted-foreground">
               {timeRange === "today" && "Citas de hoy"}
               {timeRange === "week" && "Próximos 7 días"}
               {timeRange === "month" && "Este mes"}
@@ -362,9 +424,9 @@ const Agenda = () => {
         </div>
 
         {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex flex-col sm:flex-row gap-3">
           <Select value={timeRange} onValueChange={(value) => setTimeRange(value as TimeRange)}>
-            <SelectTrigger className="w-full sm:w-[200px]">
+            <SelectTrigger className="w-full sm:w-[200px] h-11 rounded-xl">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -374,16 +436,23 @@ const Agenda = () => {
             </SelectContent>
           </Select>
 
-          <Tabs value={viewType} onValueChange={(value) => setViewType(value as ViewType)} className="w-full sm:w-auto">
-            <TabsList>
-              <TabsTrigger value="list">Lista</TabsTrigger>
-              <TabsTrigger value="weekly">Semanal</TabsTrigger>
+          <Tabs value={viewType} onValueChange={(value) => setViewType(value as ViewType)} className="hidden md:block">
+            <TabsList className="rounded-xl">
+              <TabsTrigger value="list" className="rounded-lg">Lista</TabsTrigger>
+              <TabsTrigger value="weekly" className="rounded-lg">Semanal</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
 
-        {/* Views */}
-        {viewType === "list" ? renderListView() : renderWeeklyView()}
+        {/* Mobile View */}
+        <div className="md:hidden">
+          {renderMobileListView()}
+        </div>
+
+        {/* Desktop View */}
+        <div className="hidden md:block">
+          {viewType === "list" ? renderDesktopListView() : renderWeeklyView()}
+        </div>
       </div>
     </div>
   );
