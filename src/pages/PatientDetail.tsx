@@ -3,14 +3,6 @@ import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
@@ -87,14 +79,12 @@ const PatientDetail = () => {
     try {
       setLoading(true);
 
-      // Get current user
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         navigate("/auth");
         return;
       }
 
-      // Get patient
       const { data: patientData, error: patientError } = await supabase
         .from("patients")
         .select("*")
@@ -115,11 +105,9 @@ const PatientDetail = () => {
       setPatient(patientData);
       setNotes(patientData.private_notes || "");
 
-      // Get appointments
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      // Past appointments
       const { data: pastData } = await supabase
         .from("appointments")
         .select("id, start_at, end_at, status, modality, location")
@@ -129,7 +117,6 @@ const PatientDetail = () => {
 
       setPastAppointments(pastData || []);
 
-      // Future appointments
       const { data: futureData } = await supabase
         .from("appointments")
         .select("id, start_at, end_at, status, modality, location")
@@ -220,10 +207,8 @@ const PatientDetail = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background p-8">
-        <div className="max-w-7xl mx-auto">
-          <p className="text-muted-foreground">Cargando...</p>
-        </div>
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <p className="text-muted-foreground">Cargando...</p>
       </div>
     );
   }
@@ -233,85 +218,90 @@ const PatientDetail = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background p-8">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-background">
+      <div className="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 space-y-5 sm:space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start gap-3 min-w-0">
             <Button
               variant="ghost"
               size="icon"
               onClick={() => navigate("/patients")}
+              className="shrink-0 mt-1"
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <div>
-              <h1 className="text-3xl font-bold">{patient.full_name}</h1>
+            <div className="min-w-0">
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground truncate">
+                {patient.full_name}
+              </h1>
               <Badge
                 variant={patient.is_active ? "default" : "secondary"}
-                className="mt-2"
+                className="mt-2 rounded-full"
               >
                 {patient.is_active ? "Activo" : "Inactivo"}
               </Badge>
             </div>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setShowEditForm(true)}>
-              <Edit className="h-4 w-4 mr-2" />
-              Editar información
-            </Button>
-            <Button variant="outline" onClick={toggleActiveStatus}>
-              {patient.is_active ? "Marcar como inactivo" : "Marcar como activo"}
-            </Button>
-          </div>
+          <Button 
+            onClick={() => setShowEditForm(true)}
+            size="sm"
+            className="shrink-0 rounded-xl h-10 px-4"
+          >
+            <Edit className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Editar</span>
+          </Button>
         </div>
 
         {/* Basic Information */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Información básica</CardTitle>
+        <Card className="mobile-card">
+          <CardHeader className="pb-3 px-0 pt-0 sm:px-6 sm:pt-6">
+            <CardTitle className="text-lg font-bold">Información básica</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+          <CardContent className="px-0 pb-0 sm:px-6 sm:pb-6 space-y-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
               <div>
-                <p className="text-sm text-muted-foreground">Email</p>
-                <p className="font-medium">{patient.email || "-"}</p>
+                <p className="mobile-label">Email</p>
+                <p className="mobile-value">{patient.email || "—"}</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Teléfono WhatsApp</p>
-                <p className="font-medium">{patient.whatsapp_phone || "-"}</p>
+                <p className="mobile-label">WhatsApp</p>
+                <p className="mobile-value">{patient.whatsapp_phone || "—"}</p>
               </div>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Motivo de consulta</p>
-              <p className="font-medium">{patient.reason_for_consultation || "-"}</p>
+              <p className="mobile-label">Motivo de consulta</p>
+              <p className="mobile-value">{patient.reason_for_consultation || "—"}</p>
             </div>
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-sm text-muted-foreground">Notas privadas</p>
+            <div className="pt-2 border-t border-border">
+              <div className="flex items-center justify-between mb-3">
+                <p className="mobile-label">Notas privadas</p>
                 {!editingNotes && (
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => setEditingNotes(true)}
+                    className="h-8 text-xs"
                   >
-                    <Edit className="h-4 w-4 mr-1" />
+                    <Edit className="h-3.5 w-3.5 mr-1" />
                     Editar
                   </Button>
                 )}
               </div>
               {editingNotes ? (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <Textarea
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     rows={4}
                     placeholder="Notas solo visibles para el profesional"
+                    className="rounded-xl"
                   />
                   <div className="flex gap-2">
-                    <Button onClick={saveNotes}>Guardar</Button>
+                    <Button onClick={saveNotes} className="rounded-xl">Guardar</Button>
                     <Button
                       variant="outline"
+                      className="rounded-xl"
                       onClick={() => {
                         setNotes(patient.private_notes || "");
                         setEditingNotes(false);
@@ -322,54 +312,72 @@ const PatientDetail = () => {
                   </div>
                 </div>
               ) : (
-                <p className="font-medium whitespace-pre-wrap">
-                  {patient.private_notes || "-"}
+                <p className="text-sm text-foreground whitespace-pre-wrap">
+                  {patient.private_notes || "Sin notas"}
                 </p>
               )}
+            </div>
+            <div className="pt-3">
+              <Button 
+                variant="outline" 
+                onClick={toggleActiveStatus}
+                className="w-full sm:w-auto rounded-xl h-11"
+              >
+                {patient.is_active ? "Marcar como inactivo" : "Marcar como activo"}
+              </Button>
             </div>
           </CardContent>
         </Card>
 
         {/* Future Appointments */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Próximas citas</CardTitle>
-              <Button size="sm" onClick={() => setShowCreateAppointment(true)}>
-                <Calendar className="h-4 w-4 mr-2" />
-                Crear nueva cita
+        <Card className="mobile-card">
+          <CardHeader className="pb-3 px-0 pt-0 sm:px-6 sm:pt-6">
+            <div className="flex items-center justify-between gap-2">
+              <CardTitle className="text-lg font-bold">Próximas citas</CardTitle>
+              <Button 
+                size="sm" 
+                onClick={() => setShowCreateAppointment(true)}
+                className="rounded-xl h-9 px-3"
+              >
+                <Calendar className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Nueva cita</span>
               </Button>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-0 pb-0 sm:px-6 sm:pb-6">
             {futureAppointments.length === 0 ? (
-              <p className="text-muted-foreground">No hay citas programadas</p>
+              <p className="text-muted-foreground text-sm py-4 text-center">
+                No hay citas programadas
+              </p>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {futureAppointments.map((appointment) => {
                   const { date, time } = formatDateTime(appointment.start_at);
                   return (
                     <div
                       key={appointment.id}
-                      className="p-4 border rounded-lg space-y-3"
+                      className="mobile-card-compact space-y-3"
                     >
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-start justify-between gap-2">
                         <div>
-                          <p className="font-medium">{date} - {time}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {appointment.modality === "online" ? "Online" : "Presencial"}
-                          </p>
-                          {appointment.location && (
-                            <p className="text-sm text-muted-foreground mt-1">
-                              {appointment.location}
-                            </p>
-                          )}
+                          <p className="text-base font-bold text-foreground">{date}</p>
+                          <p className="text-sm text-muted-foreground mt-0.5">{time}</p>
                         </div>
-                        <Badge>
-                          {statusMap[appointment.status] || appointment.status}
-                        </Badge>
+                        <div className="flex items-center gap-2 flex-wrap justify-end">
+                          <Badge variant="outline" className="rounded-full text-xs">
+                            {appointment.modality === "online" ? "Online" : "Presencial"}
+                          </Badge>
+                          <Badge className="rounded-full text-xs">
+                            {statusMap[appointment.status] || appointment.status}
+                          </Badge>
+                        </div>
                       </div>
-                      <div className="space-y-2">
+                      {appointment.location && (
+                        <p className="text-xs text-muted-foreground">
+                          📍 {appointment.location}
+                        </p>
+                      )}
+                      <div className="space-y-2 pt-1">
                         <WhatsAppButtons
                           patientName={patient.full_name}
                           patientPhone={patient.whatsapp_phone}
@@ -381,7 +389,7 @@ const PatientDetail = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="w-full"
+                          className="w-full rounded-xl h-10"
                           onClick={() =>
                             setReminderModal({
                               open: true,
@@ -406,49 +414,77 @@ const PatientDetail = () => {
         </Card>
 
         {/* Appointment History */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Historial de citas</CardTitle>
+        <Card className="mobile-card">
+          <CardHeader className="pb-3 px-0 pt-0 sm:px-6 sm:pt-6">
+            <CardTitle className="text-lg font-bold">Historial de citas</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-0 pb-0 sm:px-6 sm:pb-6">
             {pastAppointments.length === 0 ? (
-              <p className="text-muted-foreground">No hay citas anteriores</p>
+              <p className="text-muted-foreground text-sm py-4 text-center">
+                No hay citas anteriores
+              </p>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Fecha</TableHead>
-                    <TableHead>Hora</TableHead>
-                    <TableHead>Servicio</TableHead>
-                    <TableHead>Estado</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {pastAppointments.map((appointment) => {
+              <>
+                {/* Mobile List */}
+                <div className="md:hidden space-y-2">
+                  {pastAppointments.slice(0, 10).map((appointment) => {
                     const { date, time } = formatDateTime(appointment.start_at);
                     return (
-                      <TableRow key={appointment.id}>
-                        <TableCell>{date}</TableCell>
-                        <TableCell>{time}</TableCell>
-                        <TableCell>
-                          {appointment.modality === "online" ? "Online" : "Presencial"}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="secondary">
-                            {statusMap[appointment.status] || appointment.status}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
+                      <div
+                        key={appointment.id}
+                        className="flex items-center justify-between py-3 border-b border-border last:border-0"
+                      >
+                        <div>
+                          <p className="font-semibold text-sm text-foreground">{date}</p>
+                          <p className="text-xs text-muted-foreground">{time} • {appointment.modality === "online" ? "Online" : "Presencial"}</p>
+                        </div>
+                        <Badge variant="secondary" className="rounded-full text-xs">
+                          {statusMap[appointment.status] || appointment.status}
+                        </Badge>
+                      </div>
                     );
                   })}
-                </TableBody>
-              </Table>
+                </div>
+
+                {/* Desktop Table */}
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-border">
+                        <th className="text-left py-3 px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Fecha</th>
+                        <th className="text-left py-3 px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Hora</th>
+                        <th className="text-left py-3 px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Modalidad</th>
+                        <th className="text-left py-3 px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pastAppointments.map((appointment) => {
+                        const { date, time } = formatDateTime(appointment.start_at);
+                        return (
+                          <tr key={appointment.id} className="border-b border-border last:border-0">
+                            <td className="py-3 px-2 text-sm">{date}</td>
+                            <td className="py-3 px-2 text-sm">{time}</td>
+                            <td className="py-3 px-2 text-sm">
+                              {appointment.modality === "online" ? "Online" : "Presencial"}
+                            </td>
+                            <td className="py-3 px-2">
+                              <Badge variant="secondary" className="rounded-full text-xs">
+                                {statusMap[appointment.status] || appointment.status}
+                              </Badge>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Edit Patient Form */}
+      {/* Modals */}
       {patient && (
         <>
           <PatientForm

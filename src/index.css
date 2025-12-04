@@ -37,21 +37,15 @@ All colors MUST be HSL.
     --ring: 186 100% 35%;
 
     --radius: 0.75rem;
+    --radius-mobile: 1rem;
 
     --sidebar-background: 0 0% 98%;
-
     --sidebar-foreground: 240 5.3% 26.1%;
-
     --sidebar-primary: 240 5.9% 10%;
-
     --sidebar-primary-foreground: 0 0% 98%;
-
     --sidebar-accent: 240 4.8% 95.9%;
-
     --sidebar-accent-foreground: 240 5.9% 10%;
-
     --sidebar-border: 220 13% 91%;
-
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
@@ -101,5 +95,44 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* Mobile-first card styles */
+@layer components {
+  .mobile-card {
+    @apply bg-card rounded-2xl border border-border p-5 sm:p-6;
+    box-shadow: 0 2px 8px -2px hsl(var(--foreground) / 0.04), 
+                0 4px 16px -4px hsl(var(--foreground) / 0.06);
+  }
+
+  .mobile-card-compact {
+    @apply bg-card rounded-xl border border-border p-4;
+    box-shadow: 0 1px 4px -1px hsl(var(--foreground) / 0.04), 
+                0 2px 8px -2px hsl(var(--foreground) / 0.05);
+  }
+
+  .mobile-section-title {
+    @apply text-lg font-bold text-foreground mb-4;
+  }
+
+  .mobile-label {
+    @apply text-xs font-medium uppercase tracking-wide text-muted-foreground;
+  }
+
+  .mobile-value {
+    @apply text-base font-semibold text-foreground mt-1;
+  }
+
+  .mobile-badge {
+    @apply px-3 py-1 rounded-full text-xs font-semibold;
+  }
+
+  .mobile-btn {
+    @apply h-12 px-5 rounded-xl text-base font-semibold;
+  }
+
+  .mobile-btn-icon {
+    @apply h-11 w-11 rounded-xl;
   }
 }
