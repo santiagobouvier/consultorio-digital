@@ -12,7 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "@/hooks/use-toast";
-import { Bell, Building2, Inbox, Calendar } from "lucide-react";
+import { Users, CalendarPlus, CalendarDays, UserPlus, Bell } from "lucide-react";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -38,14 +38,12 @@ const Dashboard = () => {
     try {
       setLoading(true);
 
-      // Get current user
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         navigate("/auth");
         return;
       }
 
-      // Get user profile
       const { data: profile } = await supabase
         .from("profiles")
         .select("name")
@@ -56,7 +54,6 @@ const Dashboard = () => {
         setUserName(profile.name);
       }
 
-      // Get user's business
       const { data: business } = await supabase
         .from("businesses")
         .select("id")
@@ -64,12 +61,10 @@ const Dashboard = () => {
         .maybeSingle();
 
       if (!business) {
-        // Redirect silently to business setup
         navigate("/configurar-negocio");
         return;
       }
 
-      // Get active patients count
       const { count: patientsCount } = await supabase
         .from("patients")
         .select("*", { count: "exact", head: true })
@@ -78,13 +73,11 @@ const Dashboard = () => {
 
       setActivePatientsCount(patientsCount || 0);
 
-      // Get today's date range
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
 
-      // Get today's appointments count
       const { count: appointmentsCount } = await supabase
         .from("appointments")
         .select("*", { count: "exact", head: true })
@@ -95,7 +88,6 @@ const Dashboard = () => {
 
       setTodayAppointmentsCount(appointmentsCount || 0);
 
-      // Get today's appointments with patient data
       const { data: appointments } = await supabase
         .from("appointments")
         .select(`
@@ -109,7 +101,8 @@ const Dashboard = () => {
         .eq("business_id", business.id)
         .gte("start_at", today.toISOString())
         .lt("start_at", tomorrow.toISOString())
-        .order("start_at", { ascending: true });
+        .order("start_at", { ascending: true })
+        .limit(5);
 
       setTodayAppointments(appointments || []);
     } catch (error) {
@@ -134,113 +127,161 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background p-8">
-        <div className="max-w-7xl mx-auto">
-          <p className="text-muted-foreground">Cargando...</p>
-        </div>
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <p className="text-muted-foreground">Cargando...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background p-8">
-      <div className="max-w-7xl mx-auto space-y-8">
-        {/* Greeting */}
+    <div className="min-h-screen bg-background">
+      <div className="max-w-2xl mx-auto p-4 sm:p-6 space-y-6">
+        {/* Header */}
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">Hola, {userName}</h1>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={() => navigate("/horarios-disponibles")}
-            >
-              <Calendar className="h-4 w-4 mr-2" />
-              Horarios
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => navigate("/mi-consultorio")}
-            >
-              <Building2 className="h-4 w-4 mr-2" />
-              Mi Consultorio
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => navigate("/recordatorios-pendientes")}
-            >
-              <Bell className="h-4 w-4 mr-2" />
-              Recordatorios
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => navigate("/solicitudes")}
-            >
-              <Inbox className="h-4 w-4 mr-2" />
-              Solicitudes
-            </Button>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
+              Hola, {userName}
+            </h1>
+            <p className="text-muted-foreground text-sm mt-1">
+              Bienvenido a tu panel
+            </p>
           </div>
-        </div>
-
-        {/* Metrics Cards */}
-        <div className="grid gap-4 md:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Pacientes activos</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-4xl font-bold">{activePatientsCount}</div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Citas de hoy</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-4xl font-bold">{todayAppointmentsCount}</div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Today's Appointments Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Citas de hoy</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {todayAppointments.length === 0 ? (
-              <p className="text-muted-foreground">No hay citas programadas para hoy</p>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Hora</TableHead>
-                    <TableHead>Paciente/Contacto</TableHead>
-                    <TableHead>Estado</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {todayAppointments.map((appointment) => (
-                    <TableRow key={appointment.id}>
-                      <TableCell>{formatTime(appointment.start_at)}</TableCell>
-                      <TableCell>
-                        {appointment.patients?.full_name || appointment.contact_name}
-                      </TableCell>
-                      <TableCell>{statusMap[appointment.status] || appointment.status}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Navigation Buttons */}
-        <div className="flex gap-4">
-          <Button onClick={() => navigate("/patients")}>Ver pacientes</Button>
-          <Button onClick={() => navigate("/agenda")} variant="outline">
-            Ver agenda
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate("/recordatorios-pendientes")}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <Bell className="h-5 w-5" />
           </Button>
         </div>
+
+        {/* Metrics */}
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
+          <Card className="bg-card border-border shadow-sm">
+            <CardContent className="p-4 sm:p-6 text-center">
+              <p className="text-xs sm:text-sm text-muted-foreground font-medium uppercase tracking-wide">
+                Pacientes activos
+              </p>
+              <p className="text-3xl sm:text-4xl font-bold text-foreground mt-2">
+                {activePatientsCount}
+              </p>
+            </CardContent>
+          </Card>
+          <Card className="bg-card border-border shadow-sm">
+            <CardContent className="p-4 sm:p-6 text-center">
+              <p className="text-xs sm:text-sm text-muted-foreground font-medium uppercase tracking-wide">
+                Citas de hoy
+              </p>
+              <p className="text-3xl sm:text-4xl font-bold text-foreground mt-2">
+                {todayAppointmentsCount}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Main Actions */}
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
+          <Card 
+            className="bg-card border-border shadow-sm hover:shadow-md transition-shadow cursor-pointer group"
+            onClick={() => navigate("/patients?new=true")}
+          >
+            <CardContent className="p-4 sm:p-6 flex flex-col items-center justify-center text-center min-h-[100px] sm:min-h-[120px]">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/10 flex items-center justify-center mb-2 sm:mb-3 group-hover:bg-primary/20 transition-colors">
+                <UserPlus className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+              </div>
+              <p className="font-semibold text-sm sm:text-base text-foreground">Crear paciente</p>
+            </CardContent>
+          </Card>
+
+          <Card 
+            className="bg-card border-border shadow-sm hover:shadow-md transition-shadow cursor-pointer group"
+            onClick={() => navigate("/agenda?new=true")}
+          >
+            <CardContent className="p-4 sm:p-6 flex flex-col items-center justify-center text-center min-h-[100px] sm:min-h-[120px]">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/10 flex items-center justify-center mb-2 sm:mb-3 group-hover:bg-primary/20 transition-colors">
+                <CalendarPlus className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+              </div>
+              <p className="font-semibold text-sm sm:text-base text-foreground">Crear cita</p>
+            </CardContent>
+          </Card>
+
+          <Card 
+            className="bg-card border-border shadow-sm hover:shadow-md transition-shadow cursor-pointer group"
+            onClick={() => navigate("/patients")}
+          >
+            <CardContent className="p-4 sm:p-6 flex flex-col items-center justify-center text-center min-h-[100px] sm:min-h-[120px]">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-secondary flex items-center justify-center mb-2 sm:mb-3 group-hover:bg-secondary/80 transition-colors">
+                <Users className="h-5 w-5 sm:h-6 sm:w-6 text-secondary-foreground" />
+              </div>
+              <p className="font-semibold text-sm sm:text-base text-foreground">Ver pacientes</p>
+            </CardContent>
+          </Card>
+
+          <Card 
+            className="bg-card border-border shadow-sm hover:shadow-md transition-shadow cursor-pointer group"
+            onClick={() => navigate("/agenda")}
+          >
+            <CardContent className="p-4 sm:p-6 flex flex-col items-center justify-center text-center min-h-[100px] sm:min-h-[120px]">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-secondary flex items-center justify-center mb-2 sm:mb-3 group-hover:bg-secondary/80 transition-colors">
+                <CalendarDays className="h-5 w-5 sm:h-6 sm:w-6 text-secondary-foreground" />
+              </div>
+              <p className="font-semibold text-sm sm:text-base text-foreground">Ver agenda</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Today's Appointments */}
+        {todayAppointments.length > 0 && (
+          <Card className="bg-card border-border shadow-sm">
+            <CardHeader className="pb-2 px-4 sm:px-6 pt-4 sm:pt-6">
+              <CardTitle className="text-base sm:text-lg font-semibold">
+                Próximas citas de hoy
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6">
+              <div className="space-y-2">
+                {todayAppointments.map((appointment) => (
+                  <div 
+                    key={appointment.id} 
+                    className="flex items-center justify-between py-2 border-b border-border last:border-0"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="text-sm font-medium text-primary whitespace-nowrap">
+                        {formatTime(appointment.start_at)}
+                      </span>
+                      <span className="text-sm text-foreground truncate">
+                        {appointment.patients?.full_name || appointment.contact_name}
+                      </span>
+                    </div>
+                    <span className="text-xs text-muted-foreground capitalize whitespace-nowrap ml-2">
+                      {statusMap[appointment.status] || appointment.status}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              {todayAppointmentsCount > 5 && (
+                <Button 
+                  variant="ghost" 
+                  className="w-full mt-3 text-sm"
+                  onClick={() => navigate("/agenda")}
+                >
+                  Ver todas las citas
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {todayAppointments.length === 0 && (
+          <Card className="bg-card border-border shadow-sm">
+            <CardContent className="p-6 text-center">
+              <p className="text-muted-foreground text-sm">
+                No hay citas programadas para hoy
+              </p>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );
