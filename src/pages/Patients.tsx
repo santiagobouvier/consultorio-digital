@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -21,7 +22,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { PatientForm } from "@/components/PatientForm";
-import { Search, Plus, ArrowLeft } from "lucide-react";
+import { Search, Plus, ArrowLeft, ChevronRight } from "lucide-react";
 
 interface Patient {
   id: string;
@@ -54,14 +55,12 @@ const Patients = () => {
     try {
       setLoading(true);
 
-      // Get current user
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         navigate("/auth");
         return;
       }
 
-      // Get user's business
       const { data: business } = await supabase
         .from("businesses")
         .select("id")
@@ -69,12 +68,10 @@ const Patients = () => {
         .maybeSingle();
 
       if (!business) {
-        // Redirect silently to business setup
         navigate("/configurar-negocio");
         return;
       }
 
-      // Get patients
       const { data: patientsData } = await supabase
         .from("patients")
         .select("*")
@@ -86,13 +83,11 @@ const Patients = () => {
         return;
       }
 
-      // Get appointments data for each patient
       const patientsWithAppointments = await Promise.all(
         patientsData.map(async (patient) => {
           const today = new Date();
           today.setHours(0, 0, 0, 0);
 
-          // Last appointment (attended)
           const { data: lastAppt } = await supabase
             .from("appointments")
             .select("start_at")
@@ -103,7 +98,6 @@ const Patients = () => {
             .limit(1)
             .maybeSingle();
 
-          // Next appointment (future, not cancelled/no_show)
           const { data: nextAppt } = await supabase
             .from("appointments")
             .select("start_at")
@@ -138,7 +132,6 @@ const Patients = () => {
   const filterPatients = () => {
     let filtered = [...patients];
 
-    // Search filter
     if (searchTerm) {
       const search = searchTerm.toLowerCase();
       filtered = filtered.filter(
@@ -148,7 +141,6 @@ const Patients = () => {
       );
     }
 
-    // Status filter
     if (statusFilter === "active") {
       filtered = filtered.filter((p) => p.is_active);
     } else if (statusFilter === "inactive") {
@@ -170,37 +162,38 @@ const Patients = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background p-8">
-        <div className="max-w-7xl mx-auto">
-          <p className="text-muted-foreground">Cargando...</p>
-        </div>
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <p className="text-muted-foreground">Cargando...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background p-8">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-background">
+      <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 sm:gap-4 min-w-0">
             <Button
               variant="ghost"
               size="icon"
               onClick={() => navigate("/dashboard")}
+              className="shrink-0"
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <h1 className="text-3xl font-bold">Gestión de Pacientes</h1>
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold truncate">
+              Pacientes
+            </h1>
           </div>
-          <Button onClick={() => setShowForm(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Nuevo paciente
+          <Button onClick={() => setShowForm(true)} size="sm" className="sm:size-default shrink-0">
+            <Plus className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Nuevo paciente</span>
           </Button>
         </div>
 
         {/* Filters */}
-        <div className="flex gap-4">
+        <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -211,7 +204,7 @@ const Patients = () => {
             />
           </div>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -222,56 +215,92 @@ const Patients = () => {
           </Select>
         </div>
 
-        {/* Table */}
+        {/* Content */}
         {filteredPatients.length === 0 ? (
-          <p className="text-muted-foreground text-center py-8">
-            No se encontraron pacientes
-          </p>
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">No se encontraron pacientes</p>
+          </div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nombre completo</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>WhatsApp</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead>Última consulta</TableHead>
-                <TableHead>Próxima consulta</TableHead>
-                <TableHead className="text-right">Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+          <>
+            {/* Mobile List */}
+            <div className="md:hidden space-y-3">
               {filteredPatients.map((patient) => (
-                <TableRow key={patient.id}>
-                  <TableCell className="font-medium">
-                    {patient.full_name}
-                  </TableCell>
-                  <TableCell>{patient.email || "-"}</TableCell>
-                  <TableCell>{patient.whatsapp_phone || "-"}</TableCell>
-                  <TableCell>
-                    <Badge variant={patient.is_active ? "default" : "secondary"}>
-                      {patient.is_active ? "Activo" : "Inactivo"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{formatDate(patient.last_appointment)}</TableCell>
-                  <TableCell>{formatDate(patient.next_appointment)}</TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => navigate(`/patients/${patient.id}`)}
-                    >
-                      Ver detalle
-                    </Button>
-                  </TableCell>
-                </TableRow>
+                <Card
+                  key={patient.id}
+                  className="bg-card border-border shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                  onClick={() => navigate(`/patients/${patient.id}`)}
+                >
+                  <CardContent className="p-4 flex items-center justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="font-semibold text-foreground truncate">
+                          {patient.full_name}
+                        </p>
+                        {!patient.is_active && (
+                          <Badge variant="secondary" className="text-xs shrink-0">
+                            Inactivo
+                          </Badge>
+                        )}
+                      </div>
+                      {patient.email && (
+                        <p className="text-sm text-muted-foreground truncate">
+                          {patient.email}
+                        </p>
+                      )}
+                    </div>
+                    <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
+                  </CardContent>
+                </Card>
               ))}
-            </TableBody>
-          </Table>
+            </div>
+
+            {/* Desktop Table */}
+            <div className="hidden md:block">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nombre completo</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>WhatsApp</TableHead>
+                    <TableHead>Estado</TableHead>
+                    <TableHead>Última consulta</TableHead>
+                    <TableHead>Próxima consulta</TableHead>
+                    <TableHead className="text-right">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredPatients.map((patient) => (
+                    <TableRow key={patient.id}>
+                      <TableCell className="font-medium">
+                        {patient.full_name}
+                      </TableCell>
+                      <TableCell>{patient.email || "-"}</TableCell>
+                      <TableCell>{patient.whatsapp_phone || "-"}</TableCell>
+                      <TableCell>
+                        <Badge variant={patient.is_active ? "default" : "secondary"}>
+                          {patient.is_active ? "Activo" : "Inactivo"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{formatDate(patient.last_appointment)}</TableCell>
+                      <TableCell>{formatDate(patient.next_appointment)}</TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => navigate(`/patients/${patient.id}`)}
+                        >
+                          Ver detalle
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </>
         )}
       </div>
 
-      {/* Create Patient Form */}
       <PatientForm
         open={showForm}
         onOpenChange={setShowForm}
