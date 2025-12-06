@@ -554,23 +554,25 @@ const Landing = () => {
           </div>
 
           {/* Billing Toggle */}
-          <div className="flex items-center justify-center gap-4 mb-8 sm:mb-12">
-            <span className={`text-sm font-medium transition-colors whitespace-nowrap ${!isAnnual ? 'text-white' : 'text-gray-500'}`}>
-              Pago mensual
-            </span>
-            <button
-              onClick={() => setIsAnnual(!isAnnual)}
-              className="relative w-14 h-7 rounded-full transition-colors duration-300 flex-shrink-0"
-              style={{ backgroundColor: isAnnual ? '#00c78a' : 'rgba(255, 255, 255, 0.2)' }}
-            >
-              <span
-                className="absolute top-1 w-5 h-5 bg-white rounded-full transition-transform duration-300"
-                style={{ transform: isAnnual ? 'translateX(32px)' : 'translateX(4px)' }}
-              />
-            </button>
-            <span className={`text-sm font-medium transition-colors whitespace-nowrap ${isAnnual ? 'text-white' : 'text-gray-500'}`}>
-              Pago anual
-            </span>
+          <div className="flex justify-center mb-8 sm:mb-12">
+            <div className="inline-flex items-center gap-4 px-4">
+              <span className={`text-sm font-medium transition-colors ${!isAnnual ? 'text-white' : 'text-gray-500'}`}>
+                Pago mensual
+              </span>
+              <button
+                onClick={() => setIsAnnual(!isAnnual)}
+                className="relative w-14 h-7 rounded-full transition-colors duration-300"
+                style={{ backgroundColor: isAnnual ? '#00c78a' : 'rgba(255, 255, 255, 0.2)' }}
+              >
+                <span
+                  className="absolute top-1 left-1 w-5 h-5 bg-white rounded-full transition-transform duration-300"
+                  style={{ transform: isAnnual ? 'translateX(28px)' : 'translateX(0)' }}
+                />
+              </button>
+              <span className={`text-sm font-medium transition-colors ${isAnnual ? 'text-white' : 'text-gray-500'}`}>
+                Pago anual
+              </span>
+            </div>
           </div>
 
           {/* Pricing Cards Grid */}
