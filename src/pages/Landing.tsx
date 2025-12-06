@@ -597,46 +597,6 @@ const Landing = () => {
       </section>
 
       {/* Final CTA Section */}
-      <section className="px-4 sm:px-6 py-16 sm:py-28" style={{ backgroundColor: '#080808' }}>
-        <div className="max-w-2xl mx-auto text-center">
-          <span className="text-4xl sm:text-6xl mb-6 block">🚀</span>
-          <h2 className="text-xl sm:text-3xl md:text-4xl font-bold mb-4 sm:mb-6 tracking-tight">
-            Empezá a organizar tu consultorio
-            <span className="block" style={{ color: '#00c78a' }}>hoy mismo</span>
-          </h2>
-          <p className="text-gray-500 text-sm sm:text-lg mb-8 sm:mb-10 font-light max-w-lg mx-auto">
-            Probá gratis durante 14 días. Sin tarjeta de crédito. Cancelá cuando quieras.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/auth">
-              <Button 
-                size="lg" 
-                className="w-full sm:w-auto h-12 sm:h-14 px-8 sm:px-12 text-sm sm:text-base font-semibold rounded-xl transition-all duration-300"
-                style={{ 
-                  backgroundColor: '#00c78a',
-                  boxShadow: '0 4px 30px rgba(0, 199, 138, 0.35)'
-                }}
-              >
-                Crear cuenta gratis
-              </Button>
-            </Link>
-            <a href="#pricing">
-              <Button 
-                variant="outline"
-                size="lg" 
-                className="w-full sm:w-auto h-12 sm:h-14 px-8 sm:px-12 text-sm sm:text-base font-semibold rounded-xl transition-all duration-300"
-                style={{ 
-                  borderColor: 'rgba(255, 255, 255, 0.2)',
-                  color: 'white',
-                  backgroundColor: 'transparent'
-                }}
-              >
-                Ver planes
-              </Button>
-            </a>
-          </div>
-        </div>
-      </section>
 
       {/* Demo CTA Section */}
       <section className="px-4 sm:px-6 py-16 sm:py-24 bg-black">
