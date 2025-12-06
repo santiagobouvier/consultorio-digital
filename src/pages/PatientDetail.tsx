@@ -5,10 +5,20 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Mail, Phone, Calendar, FileText, CreditCard, Plus, Check, RefreshCw } from "lucide-react";
+import { ArrowLeft, Mail, Phone, Calendar, FileText, CreditCard, Plus, Check, RefreshCw, Pencil, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { PaymentForm } from "@/components/PaymentForm";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { PaymentWhatsAppMenu } from "@/components/PaymentWhatsAppMenu";
 import {
   calculatePaymentStatus,
@@ -73,6 +83,8 @@ const PatientDetail = () => {
   const [loading, setLoading] = useState(true);
   const [paymentsError, setPaymentsError] = useState(false);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const [editingPayment, setEditingPayment] = useState<Payment | null>(null);
+  const [deletingPaymentId, setDeletingPaymentId] = useState<string | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -236,6 +248,37 @@ const PatientDetail = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const handleDeletePayment = async () => {
+    if (!deletingPaymentId) return;
+    
+    try {
+      const { error } = await supabase
+        .from("payments")
+        .delete()
+        .eq("id", deletingPaymentId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Éxito",
+        description: "Pago eliminado correctamente",
+      });
+      setDeletingPaymentId(null);
+      fetchData();
+    } catch (error) {
+      console.error("Error deleting payment:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo eliminar el pago",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleEditPayment = (payment: Payment) => {
+    setEditingPayment(payment);
   };
 
   if (loading) {
@@ -468,6 +511,24 @@ const PatientDetail = () => {
                           </Button>
                         </>
                       )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEditPayment(payment)}
+                        className="rounded-lg h-8 px-2"
+                        title="Editar pago"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setDeletingPaymentId(payment.id)}
+                        className="rounded-lg h-8 px-2 text-destructive hover:text-destructive"
+                        title="Eliminar pago"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
                 ))}
@@ -477,7 +538,7 @@ const PatientDetail = () => {
         </Card>
       </div>
 
-      {/* Payment Form Modal */}
+      {/* Payment Form Modal - Create */}
       {patient && (
         <PaymentForm
           open={showPaymentForm}
@@ -487,6 +548,47 @@ const PatientDetail = () => {
           onSuccess={fetchData}
         />
       )}
+
+      {/* Payment Form Modal - Edit */}
+      {patient && editingPayment && (
+        <PaymentForm
+          open={!!editingPayment}
+          onOpenChange={(open) => !open && setEditingPayment(null)}
+          patientId={patient.id}
+          businessId={patient.business_id}
+          paymentId={editingPayment.id}
+          initialData={{
+            amount: editingPayment.amount,
+            due_date: editingPayment.due_date,
+            method: editingPayment.method,
+            notes: editingPayment.notes,
+            recurrence_type: editingPayment.recurrence_type,
+            anchor_day: editingPayment.anchor_day,
+          }}
+          onSuccess={() => {
+            setEditingPayment(null);
+            fetchData();
+          }}
+        />
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deletingPaymentId} onOpenChange={(open) => !open && setDeletingPaymentId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar pago?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. El pago será eliminado permanentemente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-xl">Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeletePayment} className="rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
