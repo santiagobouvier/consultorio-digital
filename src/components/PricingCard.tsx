@@ -9,6 +9,7 @@ interface PricingCardProps {
   patients: string;
   price: string;
   priceNote?: string;
+  savingsNote?: string;
   buttonText: string;
   buttonLink: string;
   isExternal?: boolean;
@@ -31,6 +32,7 @@ const PricingCard = ({
   patients,
   price,
   priceNote,
+  savingsNote,
   buttonText,
   buttonLink,
   isExternal = false,
@@ -79,6 +81,11 @@ const PricingCard = ({
         </span>
         {priceNote && (
           <span className="text-gray-500 text-xs sm:text-sm ml-1 sm:ml-2">{priceNote}</span>
+        )}
+        {savingsNote && (
+          <p className="text-xs mt-2 font-light" style={{ color: "#00c78a" }}>
+            {savingsNote}
+          </p>
         )}
       </div>
 

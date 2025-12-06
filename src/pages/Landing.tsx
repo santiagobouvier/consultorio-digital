@@ -62,48 +62,6 @@ const faqItems = [
   },
 ];
 
-const pricingPlans = [
-  {
-    id: "individual",
-    name: "Consultorio Individual",
-    description: "Ideal para profesionales independientes",
-    professionals: "1 profesional",
-    patients: "Hasta 80 pacientes activos",
-    price: "1.900 UYU",
-    priceNote: "/ mes (pago anual)",
-    buttonText: "Elegir este plan",
-    buttonLink: "https://wa.me/59891093977?text=Hola,%20quiero%20contratar%20el%20Plan%20Consultorio%20Individual%20(1.900%20UYU/mes%20-%20pago%20anual).",
-    isExternal: true,
-    isHighlighted: false,
-  },
-  {
-    id: "profesional",
-    name: "Consultorio Profesional",
-    description: "Para consultorios en crecimiento",
-    professionals: "Hasta 3 profesionales",
-    patients: "Hasta 300 pacientes activos",
-    price: "3.900 UYU",
-    priceNote: "/ mes (pago anual)",
-    buttonText: "Elegir este plan",
-    buttonLink: "https://wa.me/59891093977?text=Hola,%20quiero%20contratar%20el%20Plan%20Consultorio%20Profesional%20(3.900%20UYU/mes%20-%20pago%20anual).",
-    isExternal: true,
-    isHighlighted: true,
-    highlightLabel: "Más elegido",
-  },
-  {
-    id: "avanzada",
-    name: "Clínica Avanzada",
-    description: "Para clínicas medianas",
-    professionals: "Hasta 7 profesionales",
-    patients: "Hasta 800 pacientes activos",
-    price: "6.900 UYU",
-    priceNote: "/ mes (pago anual)",
-    buttonText: "Elegir este plan",
-    buttonLink: "https://wa.me/59891093977?text=Hola,%20quiero%20contratar%20el%20Plan%20Clínica%20Avanzada%20(6.900%20UYU/mes%20-%20pago%20anual).",
-    isExternal: true,
-    isHighlighted: false,
-  },
-];
 
 const enterprisePlan = {
   id: "enterprise",
@@ -349,7 +307,58 @@ const ScreenshotsCarousel = () => {
 };
 
 const Landing = () => {
+  const [isAnnual, setIsAnnual] = useState(true);
   const whatsappLink = "https://api.whatsapp.com/send?phone=59891093977&text=Hola%2C+me+gustar%C3%ADa+coordinar+una+demo+del+sistema+de+gesti%C3%B3n+para+profesionales+de+salud+mental.";
+
+  const getPricingPlans = () => {
+    const savingsNote = isAnnual ? "Ahorrás más del 50% pagando anual." : undefined;
+    
+    return [
+      {
+        id: "individual",
+        name: "Consultorio Individual",
+        description: "Ideal para profesionales independientes",
+        professionals: "1 profesional",
+        patients: "Hasta 80 pacientes activos",
+        price: isAnnual ? "1.900 UYU" : "2.900 UYU",
+        priceNote: isAnnual ? "/ mes (pago anual)" : "/ mes",
+        savingsNote,
+        buttonText: "Elegir este plan",
+        buttonLink: "https://wa.me/59891093977?text=Hola,%20quiero%20contratar%20el%20Plan%20Consultorio%20Individual%20(1.900%20UYU/mes%20-%20pago%20anual).",
+        isExternal: true,
+        isHighlighted: false,
+      },
+      {
+        id: "profesional",
+        name: "Consultorio Profesional",
+        description: "Para consultorios en crecimiento",
+        professionals: "Hasta 3 profesionales",
+        patients: "Hasta 300 pacientes activos",
+        price: isAnnual ? "3.900 UYU" : "5.400 UYU",
+        priceNote: isAnnual ? "/ mes (pago anual)" : "/ mes",
+        savingsNote,
+        buttonText: "Elegir este plan",
+        buttonLink: "https://wa.me/59891093977?text=Hola,%20quiero%20contratar%20el%20Plan%20Consultorio%20Profesional%20(3.900%20UYU/mes%20-%20pago%20anual).",
+        isExternal: true,
+        isHighlighted: true,
+        highlightLabel: "Más elegido",
+      },
+      {
+        id: "avanzada",
+        name: "Clínica Avanzada",
+        description: "Para clínicas medianas",
+        professionals: "Hasta 7 profesionales",
+        patients: "Hasta 800 pacientes activos",
+        price: isAnnual ? "6.900 UYU" : "9.200 UYU",
+        priceNote: isAnnual ? "/ mes (pago anual)" : "/ mes",
+        savingsNote,
+        buttonText: "Elegir este plan",
+        buttonLink: "https://wa.me/59891093977?text=Hola,%20quiero%20contratar%20el%20Plan%20Clínica%20Avanzada%20(6.900%20UYU/mes%20-%20pago%20anual).",
+        isExternal: true,
+        isHighlighted: false,
+      },
+    ];
+  };
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -543,9 +552,29 @@ const Landing = () => {
             </p>
           </div>
 
+          {/* Billing Toggle */}
+          <div className="flex items-center justify-center gap-3 mb-8 sm:mb-12">
+            <span className={`text-sm font-medium transition-colors ${!isAnnual ? 'text-white' : 'text-gray-500'}`}>
+              Pago mensual
+            </span>
+            <button
+              onClick={() => setIsAnnual(!isAnnual)}
+              className="relative w-14 h-7 rounded-full transition-colors duration-300"
+              style={{ backgroundColor: isAnnual ? '#00c78a' : 'rgba(255, 255, 255, 0.2)' }}
+            >
+              <span
+                className="absolute top-1 w-5 h-5 bg-white rounded-full transition-transform duration-300"
+                style={{ transform: isAnnual ? 'translateX(32px)' : 'translateX(4px)' }}
+              />
+            </button>
+            <span className={`text-sm font-medium transition-colors ${isAnnual ? 'text-white' : 'text-gray-500'}`}>
+              Pago anual
+            </span>
+          </div>
+
           {/* Pricing Cards Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-4 sm:mb-8">
-            {pricingPlans.map((plan, index) => (
+            {getPricingPlans().map((plan, index) => (
               <div
                 key={plan.id}
                 className="animate-fade-in"
