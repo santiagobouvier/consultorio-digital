@@ -9,6 +9,7 @@ import dashboardMobile from "@/assets/screenshots/dashboard-mobile.png";
 import appointmentsMobile from "@/assets/screenshots/appointments-mobile.png";
 import agendaMobile from "@/assets/screenshots/agenda-mobile.png";
 import patientsMobile from "@/assets/screenshots/patients-mobile.png";
+import remindersMobile from "@/assets/screenshots/reminders-mobile.png";
 
 const screenshotSlides = [
   {
@@ -29,7 +30,7 @@ const screenshotSlides = [
   {
     title: "Recordatorios WhatsApp",
     description: "Enviá recordatorios con un solo click, sin salir del sistema. Mantené a tus pacientes informados de sus próximas citas.",
-    image: null
+    image: remindersMobile
   },
   {
     title: "Portal de Reservas",
