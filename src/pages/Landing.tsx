@@ -77,17 +77,9 @@ const Landing = () => {
               boxShadow: '0 8px 60px rgba(0, 199, 138, 0.15), 0 0 80px rgba(0, 199, 138, 0.08)'
             }}
           >
-            {/* Emoji with glow */}
+            {/* Emoji */}
             <div className="flex justify-center mb-10">
-              <div 
-                className="w-28 h-28 sm:w-36 sm:h-36 rounded-3xl flex items-center justify-center relative"
-                style={{ 
-                  backgroundColor: 'rgba(0, 199, 138, 0.12)',
-                  boxShadow: '0 0 80px rgba(0, 199, 138, 0.5), 0 0 40px rgba(0, 199, 138, 0.3)'
-                }}
-              >
-                <span className="text-6xl sm:text-7xl">🗓️</span>
-              </div>
+              <span className="text-7xl sm:text-8xl">🗓️</span>
             </div>
             
             {/* Title */}
