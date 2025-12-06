@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Users, Calendar, MessageCircle, UserPlus, ClipboardList, CalendarCheck, Clock, Eye, Sparkles } from "lucide-react";
-import heroImage from "@/assets/hero-image.png";
+import { Users, MessageCircle, UserPlus, ClipboardList, CalendarCheck, Clock, Eye, Sparkles, Calendar } from "lucide-react";
 
 const features = [
   {
@@ -78,32 +77,16 @@ const Landing = () => {
               boxShadow: '0 8px 60px rgba(0, 199, 138, 0.15), 0 0 80px rgba(0, 199, 138, 0.08)'
             }}
           >
-            {/* Hero Image */}
-            <div className="flex justify-center mb-10">
-              <div className="relative">
-                <img 
-                  src={heroImage} 
-                  alt="Sistema de Gestión de Consultorio" 
-                  className="w-full max-w-xs sm:max-w-sm md:max-w-md h-auto rounded-2xl"
-                />
-                {/* Subtle glow behind image */}
-                <div 
-                  className="absolute inset-0 -z-10 blur-3xl opacity-30 rounded-full"
-                  style={{ backgroundColor: '#00c78a' }}
-                />
-              </div>
-            </div>
-
-            {/* Icon with glow */}
+            {/* Emoji with glow */}
             <div className="flex justify-center mb-8">
               <div 
-                className="w-16 h-16 rounded-2xl flex items-center justify-center relative"
+                className="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl flex items-center justify-center relative"
                 style={{ 
                   backgroundColor: 'rgba(0, 199, 138, 0.12)',
-                  boxShadow: '0 0 40px rgba(0, 199, 138, 0.4), 0 0 20px rgba(0, 199, 138, 0.3)'
+                  boxShadow: '0 0 60px rgba(0, 199, 138, 0.4), 0 0 30px rgba(0, 199, 138, 0.3)'
                 }}
               >
-                <Calendar className="w-8 h-8" style={{ color: '#00c78a' }} />
+                <span className="text-4xl sm:text-5xl">🩺</span>
               </div>
             </div>
             
