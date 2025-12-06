@@ -8,6 +8,7 @@ import useEmblaCarousel from "embla-carousel-react";
 import dashboardMobile from "@/assets/screenshots/dashboard-mobile.png";
 import appointmentsMobile from "@/assets/screenshots/appointments-mobile.png";
 import agendaMobile from "@/assets/screenshots/agenda-mobile.png";
+import patientsMobile from "@/assets/screenshots/patients-mobile.png";
 
 const screenshotSlides = [
   {
@@ -23,7 +24,7 @@ const screenshotSlides = [
   {
     title: "Gestión de Pacientes",
     description: "Fichas completas con historial, notas privadas y datos de contacto. Todo organizado para que encuentres la información que necesitás.",
-    image: null
+    image: patientsMobile
   },
   {
     title: "Recordatorios WhatsApp",
