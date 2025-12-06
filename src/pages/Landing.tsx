@@ -76,7 +76,8 @@ const pricingPlans = [
     price: "1.900 UYU",
     priceNote: "/ mes (pago anual)",
     buttonText: "Elegir este plan",
-    buttonLink: "/pago-plan/individual",
+    buttonLink: "https://wa.me/59891093977?text=Hola,%20quiero%20contratar%20el%20Plan%20Consultorio%20Individual%20(1.900%20UYU/mes%20-%20pago%20anual).",
+    isExternal: true,
     isHighlighted: false,
   },
   {
@@ -88,7 +89,8 @@ const pricingPlans = [
     price: "3.900 UYU",
     priceNote: "/ mes (pago anual)",
     buttonText: "Elegir este plan",
-    buttonLink: "/pago-plan/profesional",
+    buttonLink: "https://wa.me/59891093977?text=Hola,%20quiero%20contratar%20el%20Plan%20Consultorio%20Profesional%20(3.900%20UYU/mes%20-%20pago%20anual).",
+    isExternal: true,
     isHighlighted: true,
     highlightLabel: "Más elegido",
   },
@@ -101,7 +103,8 @@ const pricingPlans = [
     price: "6.900 UYU",
     priceNote: "/ mes (pago anual)",
     buttonText: "Elegir este plan",
-    buttonLink: "/pago-plan/avanzada",
+    buttonLink: "https://wa.me/59891093977?text=Hola,%20quiero%20contratar%20el%20Plan%20Clínica%20Avanzada%20(6.900%20UYU/mes%20-%20pago%20anual).",
+    isExternal: true,
     isHighlighted: false,
   },
 ];
@@ -115,7 +118,7 @@ const enterprisePlan = {
   price: "Desde 12.000 UYU",
   priceNote: "/ mes",
   buttonText: "Hablar con ventas",
-  buttonLink: "https://api.whatsapp.com/send?phone=59891093977&text=Hola%2C+me+interesa+el+Plan+Enterprise+para+mi+organizaci%C3%B3n.",
+  buttonLink: "https://wa.me/59891093977?text=Hola,%20quiero%20hablar%20sobre%20el%20Plan%20Enterprise%20para%20mi%20organización.",
   isExternal: true,
   isHighlighted: false,
 };
