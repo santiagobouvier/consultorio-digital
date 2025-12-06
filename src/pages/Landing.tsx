@@ -1,8 +1,38 @@
 import { Link } from "react-router-dom";
+import { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Users, MessageCircle, UserPlus, ClipboardList, CalendarCheck, Clock, Eye, Sparkles, Calendar, Play, HelpCircle } from "lucide-react";
+import { Users, MessageCircle, UserPlus, ClipboardList, CalendarCheck, Clock, Eye, Sparkles, Calendar, HelpCircle, ChevronLeft, ChevronRight } from "lucide-react";
 import PricingCard from "@/components/PricingCard";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import useEmblaCarousel from "embla-carousel-react";
+
+const screenshotSlides = [
+  {
+    title: "Dashboard Principal",
+    description: "Visualizá todas tus citas del día y estadísticas importantes de un vistazo.",
+    placeholder: "📊"
+  },
+  {
+    title: "Agenda Inteligente",
+    description: "Calendario visual para organizar tus citas por día, semana o mes.",
+    placeholder: "📅"
+  },
+  {
+    title: "Gestión de Pacientes",
+    description: "Fichas completas con historial, notas privadas y datos de contacto.",
+    placeholder: "👥"
+  },
+  {
+    title: "Recordatorios WhatsApp",
+    description: "Enviá recordatorios con un solo click, sin salir del sistema.",
+    placeholder: "💬"
+  },
+  {
+    title: "Portal de Reservas",
+    description: "Tus pacientes pueden agendar citas desde tu página pública.",
+    placeholder: "🌐"
+  }
+];
 
 const faqItems = [
   {
@@ -144,6 +174,110 @@ const benefits = [
   },
 ];
 
+const ScreenshotsCarousel = () => {
+  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, align: "center" });
+  const [selectedIndex, setSelectedIndex] = useState(0);
+
+  const scrollPrev = useCallback(() => emblaApi && emblaApi.scrollPrev(), [emblaApi]);
+  const scrollNext = useCallback(() => emblaApi && emblaApi.scrollNext(), [emblaApi]);
+
+  const onSelect = useCallback(() => {
+    if (!emblaApi) return;
+    setSelectedIndex(emblaApi.selectedScrollSnap());
+  }, [emblaApi]);
+
+  useEffect(() => {
+    if (!emblaApi) return;
+    onSelect();
+    emblaApi.on("select", onSelect);
+    return () => { emblaApi.off("select", onSelect); };
+  }, [emblaApi, onSelect]);
+
+  return (
+    <section className="px-4 sm:px-6 py-14 sm:py-24" style={{ backgroundColor: '#080808' }}>
+      <div className="max-w-5xl mx-auto">
+        <div className="text-center mb-8 sm:mb-12">
+          <h2 className="text-xl sm:text-3xl md:text-4xl font-bold mb-3 sm:mb-4 tracking-tight">
+            Conocé el sistema
+          </h2>
+          <p className="text-gray-500 text-sm sm:text-lg font-light">
+            Todo lo que necesitás para gestionar tu consultorio.
+          </p>
+        </div>
+
+        {/* Carousel */}
+        <div className="relative">
+          <div className="overflow-hidden rounded-xl sm:rounded-2xl" ref={emblaRef}>
+            <div className="flex">
+              {screenshotSlides.map((slide, index) => (
+                <div 
+                  key={index} 
+                  className="flex-[0_0_100%] min-w-0 px-2 sm:px-4"
+                >
+                  <div 
+                    className="aspect-video rounded-xl sm:rounded-2xl border border-white/10 flex flex-col items-center justify-center p-6 sm:p-10"
+                    style={{ 
+                      backgroundColor: '#111111',
+                      boxShadow: selectedIndex === index ? '0 8px 40px rgba(0, 199, 138, 0.15)' : 'none'
+                    }}
+                  >
+                    {/* Placeholder - Reemplazar con capturas reales */}
+                    <span className="text-5xl sm:text-7xl mb-4 sm:mb-6">{slide.placeholder}</span>
+                    <h3 className="text-lg sm:text-xl font-semibold text-white mb-2 text-center">
+                      {slide.title}
+                    </h3>
+                    <p className="text-gray-400 text-sm sm:text-base text-center max-w-md font-light">
+                      {slide.description}
+                    </p>
+                    <p className="text-gray-600 text-xs mt-4 font-light">Captura próximamente</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Navigation Arrows */}
+          <button
+            onClick={scrollPrev}
+            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-2 sm:-translate-x-4 w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 z-10"
+            style={{ 
+              backgroundColor: '#00c78a',
+              boxShadow: '0 4px 20px rgba(0, 199, 138, 0.3)'
+            }}
+          >
+            <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+          </button>
+          <button
+            onClick={scrollNext}
+            className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-2 sm:translate-x-4 w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 z-10"
+            style={{ 
+              backgroundColor: '#00c78a',
+              boxShadow: '0 4px 20px rgba(0, 199, 138, 0.3)'
+            }}
+          >
+            <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+          </button>
+        </div>
+
+        {/* Dots Indicator */}
+        <div className="flex justify-center gap-2 mt-6">
+          {screenshotSlides.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => emblaApi?.scrollTo(index)}
+              className="w-2 h-2 rounded-full transition-all duration-300"
+              style={{ 
+                backgroundColor: selectedIndex === index ? '#00c78a' : 'rgba(255, 255, 255, 0.2)',
+                transform: selectedIndex === index ? 'scale(1.3)' : 'scale(1)'
+              }}
+            />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+};
+
 const Landing = () => {
   const whatsappLink = "https://api.whatsapp.com/send?phone=59891093977&text=Hola%2C+vengo+de+su+sitio+web.+Soy+profesional+y+me+interesa+el+servicio+de+gesti%C3%B3n+para+mis+pacientes.";
 
@@ -195,51 +329,8 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* Video Demo Section */}
-      <section className="px-4 sm:px-6 py-14 sm:py-24" style={{ backgroundColor: '#080808' }}>
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-8 sm:mb-12">
-            <h2 className="text-xl sm:text-3xl md:text-4xl font-bold mb-3 sm:mb-4 tracking-tight">
-              Mirá el sistema en acción
-            </h2>
-            <p className="text-gray-500 text-sm sm:text-lg font-light">
-              Una demo de 2 minutos que muestra todo lo que podés hacer.
-            </p>
-          </div>
-          
-          {/* Video Container */}
-          <div 
-            className="relative aspect-video rounded-xl sm:rounded-2xl overflow-hidden border border-white/10"
-            style={{ 
-              backgroundColor: '#111111',
-              boxShadow: '0 8px 40px rgba(0, 199, 138, 0.1)'
-            }}
-          >
-            {/* Placeholder - Reemplazar con video real */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <div 
-                className="w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center mb-4 cursor-pointer transition-all duration-300 hover:scale-110"
-                style={{ 
-                  backgroundColor: '#00c78a',
-                  boxShadow: '0 4px 30px rgba(0, 199, 138, 0.4)'
-                }}
-              >
-                <Play className="w-7 h-7 sm:w-8 sm:h-8 text-white ml-1" fill="white" />
-              </div>
-              <p className="text-gray-400 text-sm font-light">Video demo próximamente</p>
-            </div>
-            
-            {/* Uncomment and add your video URL when ready */}
-            {/* <iframe 
-              src="https://www.youtube.com/embed/YOUR_VIDEO_ID"
-              title="Demo del Sistema"
-              className="absolute inset-0 w-full h-full"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            /> */}
-          </div>
-        </div>
-      </section>
+      {/* Screenshots Carousel Section */}
+      <ScreenshotsCarousel />
 
       {/* How it Works Section */}
       <section className="px-4 sm:px-6 py-14 sm:py-28 bg-black">
