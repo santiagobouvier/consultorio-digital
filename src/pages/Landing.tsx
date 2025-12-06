@@ -19,7 +19,7 @@ const faqItems = [
   },
   {
     question: "¿Qué pasa si supero el límite de pacientes?",
-    answer: "Te avisaremos cuando estés cerca del límite. Podés actualizar tu plan o archivar pacientes inactivos para liberar espacio."
+    answer: "Te avisaremos cuando estés cerca del límite. Para superarlo, debés solicitar un upgrade de plan manualmente, nunca se te cobrará nada sin tu autorización."
   },
   {
     question: "¿Los recordatorios por WhatsApp tienen costo adicional?",
