@@ -12,27 +12,27 @@ import agendaMobile from "@/assets/screenshots/agenda-mobile.png";
 const screenshotSlides = [
   {
     title: "Dashboard Principal",
-    description: "Visualizá todas tus citas del día y estadísticas importantes de un vistazo.",
+    description: "Visualizá todas tus citas del día y estadísticas importantes de un vistazo. Accedé rápidamente a pacientes activos, citas pendientes y acciones frecuentes.",
     image: dashboardMobile
   },
   {
     title: "Agenda Inteligente",
-    description: "Calendario visual para organizar tus citas por día, semana o mes.",
+    description: "Calendario visual para organizar tus citas por día, semana o mes. Filtrá por modalidad y estado para tener todo bajo control.",
     image: agendaMobile
   },
   {
     title: "Gestión de Pacientes",
-    description: "Fichas completas con historial, notas privadas y datos de contacto.",
-    placeholder: "👥"
+    description: "Fichas completas con historial, notas privadas y datos de contacto. Todo organizado para que encuentres la información que necesitás.",
+    image: null
   },
   {
     title: "Recordatorios WhatsApp",
-    description: "Enviá recordatorios con un solo click, sin salir del sistema.",
-    placeholder: "💬"
+    description: "Enviá recordatorios con un solo click, sin salir del sistema. Mantené a tus pacientes informados de sus próximas citas.",
+    image: null
   },
   {
     title: "Portal de Reservas",
-    description: "Tus pacientes pueden agendar citas desde tu página pública.",
+    description: "Tus pacientes pueden agendar citas desde tu página pública. Ahorrá tiempo y dejá que ellos elijan el horario que les convenga.",
     image: appointmentsMobile
   }
 ];
@@ -198,8 +198,8 @@ const ScreenshotsCarousel = () => {
 
   return (
     <section className="px-4 sm:px-6 py-14 sm:py-24" style={{ backgroundColor: '#080808' }}>
-      <div className="max-w-5xl mx-auto">
-        <div className="text-center mb-8 sm:mb-12">
+      <div className="max-w-6xl mx-auto">
+        <div className="text-center mb-10 sm:mb-16">
           <h2 className="text-xl sm:text-3xl md:text-4xl font-bold mb-3 sm:mb-4 tracking-tight">
             Conocé el sistema
           </h2>
@@ -208,67 +208,166 @@ const ScreenshotsCarousel = () => {
           </p>
         </div>
 
-        {/* Carousel */}
-        <div className="relative">
-          <div className="overflow-hidden rounded-xl sm:rounded-2xl" ref={emblaRef}>
-            <div className="flex">
-              {screenshotSlides.map((slide, index) => (
-                <div 
-                  key={index} 
-                  className="flex-[0_0_100%] min-w-0 px-2 sm:px-4"
-                >
+        {/* Desktop/Tablet: Side by side layout */}
+        <div className="hidden md:block">
+          <div className="relative">
+            <div className="overflow-hidden" ref={emblaRef}>
+              <div className="flex">
+                {screenshotSlides.map((slide, index) => (
                   <div 
-                    className="aspect-[9/16] sm:aspect-video max-h-[500px] sm:max-h-none rounded-xl sm:rounded-2xl border border-white/10 flex flex-col items-center justify-center p-4 sm:p-10 overflow-hidden"
-                    style={{ 
-                      backgroundColor: '#111111',
-                      boxShadow: selectedIndex === index ? '0 8px 40px rgba(0, 199, 138, 0.15)' : 'none'
-                    }}
+                    key={index} 
+                    className="flex-[0_0_100%] min-w-0 px-4"
                   >
-                    {slide.image ? (
-                      <img 
-                        src={slide.image} 
-                        alt={slide.title}
-                        className="h-full w-auto max-w-full object-contain rounded-lg"
-                      />
-                    ) : (
-                      <>
-                        <span className="text-5xl sm:text-7xl mb-4 sm:mb-6">{slide.placeholder}</span>
-                        <h3 className="text-lg sm:text-xl font-semibold text-white mb-2 text-center">
+                    <div 
+                      className={`flex items-center gap-12 lg:gap-20 rounded-2xl p-8 lg:p-12 border border-white/10 ${
+                        index % 2 === 0 ? 'flex-row' : 'flex-row-reverse'
+                      }`}
+                      style={{ 
+                        backgroundColor: '#111111',
+                        boxShadow: selectedIndex === index ? '0 8px 40px rgba(0, 199, 138, 0.15)' : 'none'
+                      }}
+                    >
+                      {/* Image Side */}
+                      <div className="flex-1 flex justify-center">
+                        {slide.image ? (
+                          <img 
+                            src={slide.image} 
+                            alt={slide.title}
+                            className="h-[400px] lg:h-[480px] w-auto object-contain rounded-xl shadow-2xl"
+                          />
+                        ) : (
+                          <div 
+                            className="h-[400px] lg:h-[480px] w-[220px] lg:w-[260px] rounded-xl flex items-center justify-center border border-white/10"
+                            style={{ backgroundColor: '#1a1a1a' }}
+                          >
+                            <p className="text-gray-500 text-sm font-light">Próximamente</p>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Text Side */}
+                      <div className="flex-1 flex flex-col justify-center">
+                        <span 
+                          className="text-xs font-semibold tracking-widest uppercase mb-4"
+                          style={{ color: '#00c78a' }}
+                        >
+                          Funcionalidad {index + 1}/{screenshotSlides.length}
+                        </span>
+                        <h3 className="text-2xl lg:text-3xl font-bold text-white mb-4">
                           {slide.title}
                         </h3>
-                        <p className="text-gray-400 text-sm sm:text-base text-center max-w-md font-light">
+                        <p className="text-gray-400 text-base lg:text-lg leading-relaxed font-light">
                           {slide.description}
                         </p>
-                        <p className="text-gray-600 text-xs mt-4 font-light">Captura próximamente</p>
-                      </>
-                    )}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
 
-          {/* Navigation Arrows */}
-          <button
-            onClick={scrollPrev}
-            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-2 sm:-translate-x-4 w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 z-10"
-            style={{ 
-              backgroundColor: '#00c78a',
-              boxShadow: '0 4px 20px rgba(0, 199, 138, 0.3)'
-            }}
-          >
-            <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-          </button>
-          <button
-            onClick={scrollNext}
-            className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-2 sm:translate-x-4 w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 z-10"
-            style={{ 
-              backgroundColor: '#00c78a',
-              boxShadow: '0 4px 20px rgba(0, 199, 138, 0.3)'
-            }}
-          >
-            <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-          </button>
+            {/* Navigation Arrows */}
+            <button
+              onClick={scrollPrev}
+              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-6 w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 z-10"
+              style={{ 
+                backgroundColor: '#00c78a',
+                boxShadow: '0 4px 20px rgba(0, 199, 138, 0.3)'
+              }}
+            >
+              <ChevronLeft className="w-6 h-6 text-white" />
+            </button>
+            <button
+              onClick={scrollNext}
+              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-6 w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 z-10"
+              style={{ 
+                backgroundColor: '#00c78a',
+                boxShadow: '0 4px 20px rgba(0, 199, 138, 0.3)'
+              }}
+            >
+              <ChevronRight className="w-6 h-6 text-white" />
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile: Stacked layout */}
+        <div className="md:hidden">
+          <div className="relative">
+            <div className="overflow-hidden rounded-xl" ref={emblaRef}>
+              <div className="flex">
+                {screenshotSlides.map((slide, index) => (
+                  <div 
+                    key={index} 
+                    className="flex-[0_0_100%] min-w-0 px-2"
+                  >
+                    <div 
+                      className="rounded-xl border border-white/10 p-5 flex flex-col"
+                      style={{ 
+                        backgroundColor: '#111111',
+                        boxShadow: selectedIndex === index ? '0 8px 40px rgba(0, 199, 138, 0.15)' : 'none'
+                      }}
+                    >
+                      {/* Text First on Mobile */}
+                      <div className="mb-5">
+                        <span 
+                          className="text-[10px] font-semibold tracking-widest uppercase mb-2 block"
+                          style={{ color: '#00c78a' }}
+                        >
+                          {index + 1}/{screenshotSlides.length}
+                        </span>
+                        <h3 className="text-lg font-bold text-white mb-2">
+                          {slide.title}
+                        </h3>
+                        <p className="text-gray-400 text-sm leading-relaxed font-light">
+                          {slide.description}
+                        </p>
+                      </div>
+                      
+                      {/* Image */}
+                      <div className="flex justify-center">
+                        {slide.image ? (
+                          <img 
+                            src={slide.image} 
+                            alt={slide.title}
+                            className="h-[320px] w-auto object-contain rounded-lg"
+                          />
+                        ) : (
+                          <div 
+                            className="h-[320px] w-[180px] rounded-lg flex items-center justify-center border border-white/10"
+                            style={{ backgroundColor: '#1a1a1a' }}
+                          >
+                            <p className="text-gray-500 text-xs font-light">Próximamente</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Navigation Arrows Mobile */}
+            <button
+              onClick={scrollPrev}
+              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-2 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 z-10"
+              style={{ 
+                backgroundColor: '#00c78a',
+                boxShadow: '0 4px 20px rgba(0, 199, 138, 0.3)'
+              }}
+            >
+              <ChevronLeft className="w-5 h-5 text-white" />
+            </button>
+            <button
+              onClick={scrollNext}
+              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-2 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 z-10"
+              style={{ 
+                backgroundColor: '#00c78a',
+                boxShadow: '0 4px 20px rgba(0, 199, 138, 0.3)'
+              }}
+            >
+              <ChevronRight className="w-5 h-5 text-white" />
+            </button>
+          </div>
         </div>
 
         {/* Dots Indicator */}
