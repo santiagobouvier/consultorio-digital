@@ -208,166 +208,124 @@ const ScreenshotsCarousel = () => {
           </p>
         </div>
 
-        {/* Desktop/Tablet: Side by side layout */}
-        <div className="hidden md:block">
-          <div className="relative">
-            <div className="overflow-hidden" ref={emblaRef}>
-              <div className="flex">
-                {screenshotSlides.map((slide, index) => (
+        {/* Carousel */}
+        <div className="relative">
+          <div className="overflow-hidden rounded-xl md:rounded-2xl" ref={emblaRef}>
+            <div className="flex">
+              {screenshotSlides.map((slide, index) => (
+                <div 
+                  key={index} 
+                  className="flex-[0_0_100%] min-w-0 px-2 md:px-4"
+                >
+                  {/* Mobile Layout */}
                   <div 
-                    key={index} 
-                    className="flex-[0_0_100%] min-w-0 px-4"
+                    className="md:hidden rounded-xl border border-white/10 p-5 flex flex-col"
+                    style={{ 
+                      backgroundColor: '#111111',
+                      boxShadow: selectedIndex === index ? '0 8px 40px rgba(0, 199, 138, 0.15)' : 'none'
+                    }}
                   >
-                    <div 
-                      className={`flex items-center gap-12 lg:gap-20 rounded-2xl p-8 lg:p-12 border border-white/10 ${
-                        index % 2 === 0 ? 'flex-row' : 'flex-row-reverse'
-                      }`}
-                      style={{ 
-                        backgroundColor: '#111111',
-                        boxShadow: selectedIndex === index ? '0 8px 40px rgba(0, 199, 138, 0.15)' : 'none'
-                      }}
-                    >
-                      {/* Image Side */}
-                      <div className="flex-1 flex justify-center">
-                        {slide.image ? (
-                          <img 
-                            src={slide.image} 
-                            alt={slide.title}
-                            className="h-[400px] lg:h-[480px] w-auto object-contain rounded-xl shadow-2xl"
-                          />
-                        ) : (
-                          <div 
-                            className="h-[400px] lg:h-[480px] w-[220px] lg:w-[260px] rounded-xl flex items-center justify-center border border-white/10"
-                            style={{ backgroundColor: '#1a1a1a' }}
-                          >
-                            <p className="text-gray-500 text-sm font-light">Próximamente</p>
-                          </div>
-                        )}
-                      </div>
-                      
-                      {/* Text Side */}
-                      <div className="flex-1 flex flex-col justify-center">
-                        <span 
-                          className="text-xs font-semibold tracking-widest uppercase mb-4"
-                          style={{ color: '#00c78a' }}
+                    <div className="mb-5">
+                      <span 
+                        className="text-[10px] font-semibold tracking-widest uppercase mb-2 block"
+                        style={{ color: '#00c78a' }}
+                      >
+                        {index + 1}/{screenshotSlides.length}
+                      </span>
+                      <h3 className="text-lg font-bold text-white mb-2">
+                        {slide.title}
+                      </h3>
+                      <p className="text-gray-400 text-sm leading-relaxed font-light">
+                        {slide.description}
+                      </p>
+                    </div>
+                    
+                    <div className="flex justify-center">
+                      {slide.image ? (
+                        <img 
+                          src={slide.image} 
+                          alt={slide.title}
+                          className="h-[320px] w-auto object-contain rounded-lg"
+                        />
+                      ) : (
+                        <div 
+                          className="h-[320px] w-[180px] rounded-lg flex items-center justify-center border border-white/10"
+                          style={{ backgroundColor: '#1a1a1a' }}
                         >
-                          Funcionalidad {index + 1}/{screenshotSlides.length}
-                        </span>
-                        <h3 className="text-2xl lg:text-3xl font-bold text-white mb-4">
-                          {slide.title}
-                        </h3>
-                        <p className="text-gray-400 text-base lg:text-lg leading-relaxed font-light">
-                          {slide.description}
-                        </p>
-                      </div>
+                          <p className="text-gray-500 text-xs font-light">Próximamente</p>
+                        </div>
+                      )}
                     </div>
                   </div>
-                ))}
-              </div>
-            </div>
 
-            {/* Navigation Arrows */}
-            <button
-              onClick={scrollPrev}
-              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-6 w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 z-10"
-              style={{ 
-                backgroundColor: '#00c78a',
-                boxShadow: '0 4px 20px rgba(0, 199, 138, 0.3)'
-              }}
-            >
-              <ChevronLeft className="w-6 h-6 text-white" />
-            </button>
-            <button
-              onClick={scrollNext}
-              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-6 w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 z-10"
-              style={{ 
-                backgroundColor: '#00c78a',
-                boxShadow: '0 4px 20px rgba(0, 199, 138, 0.3)'
-              }}
-            >
-              <ChevronRight className="w-6 h-6 text-white" />
-            </button>
-          </div>
-        </div>
-
-        {/* Mobile: Stacked layout */}
-        <div className="md:hidden">
-          <div className="relative">
-            <div className="overflow-hidden rounded-xl" ref={emblaRef}>
-              <div className="flex">
-                {screenshotSlides.map((slide, index) => (
+                  {/* Desktop Layout */}
                   <div 
-                    key={index} 
-                    className="flex-[0_0_100%] min-w-0 px-2"
+                    className={`hidden md:flex items-center gap-12 lg:gap-20 rounded-2xl p-8 lg:p-12 border border-white/10 ${
+                      index % 2 === 0 ? 'flex-row' : 'flex-row-reverse'
+                    }`}
+                    style={{ 
+                      backgroundColor: '#111111',
+                      boxShadow: selectedIndex === index ? '0 8px 40px rgba(0, 199, 138, 0.15)' : 'none'
+                    }}
                   >
-                    <div 
-                      className="rounded-xl border border-white/10 p-5 flex flex-col"
-                      style={{ 
-                        backgroundColor: '#111111',
-                        boxShadow: selectedIndex === index ? '0 8px 40px rgba(0, 199, 138, 0.15)' : 'none'
-                      }}
-                    >
-                      {/* Text First on Mobile */}
-                      <div className="mb-5">
-                        <span 
-                          className="text-[10px] font-semibold tracking-widest uppercase mb-2 block"
-                          style={{ color: '#00c78a' }}
+                    <div className="flex-1 flex justify-center">
+                      {slide.image ? (
+                        <img 
+                          src={slide.image} 
+                          alt={slide.title}
+                          className="h-[400px] lg:h-[480px] w-auto object-contain rounded-xl shadow-2xl"
+                        />
+                      ) : (
+                        <div 
+                          className="h-[400px] lg:h-[480px] w-[220px] lg:w-[260px] rounded-xl flex items-center justify-center border border-white/10"
+                          style={{ backgroundColor: '#1a1a1a' }}
                         >
-                          {index + 1}/{screenshotSlides.length}
-                        </span>
-                        <h3 className="text-lg font-bold text-white mb-2">
-                          {slide.title}
-                        </h3>
-                        <p className="text-gray-400 text-sm leading-relaxed font-light">
-                          {slide.description}
-                        </p>
-                      </div>
-                      
-                      {/* Image */}
-                      <div className="flex justify-center">
-                        {slide.image ? (
-                          <img 
-                            src={slide.image} 
-                            alt={slide.title}
-                            className="h-[320px] w-auto object-contain rounded-lg"
-                          />
-                        ) : (
-                          <div 
-                            className="h-[320px] w-[180px] rounded-lg flex items-center justify-center border border-white/10"
-                            style={{ backgroundColor: '#1a1a1a' }}
-                          >
-                            <p className="text-gray-500 text-xs font-light">Próximamente</p>
-                          </div>
-                        )}
-                      </div>
+                          <p className="text-gray-500 text-sm font-light">Próximamente</p>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="flex-1 flex flex-col justify-center">
+                      <span 
+                        className="text-xs font-semibold tracking-widest uppercase mb-4"
+                        style={{ color: '#00c78a' }}
+                      >
+                        Funcionalidad {index + 1}/{screenshotSlides.length}
+                      </span>
+                      <h3 className="text-2xl lg:text-3xl font-bold text-white mb-4">
+                        {slide.title}
+                      </h3>
+                      <p className="text-gray-400 text-base lg:text-lg leading-relaxed font-light">
+                        {slide.description}
+                      </p>
                     </div>
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
             </div>
-
-            {/* Navigation Arrows Mobile */}
-            <button
-              onClick={scrollPrev}
-              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-2 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 z-10"
-              style={{ 
-                backgroundColor: '#00c78a',
-                boxShadow: '0 4px 20px rgba(0, 199, 138, 0.3)'
-              }}
-            >
-              <ChevronLeft className="w-5 h-5 text-white" />
-            </button>
-            <button
-              onClick={scrollNext}
-              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-2 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 z-10"
-              style={{ 
-                backgroundColor: '#00c78a',
-                boxShadow: '0 4px 20px rgba(0, 199, 138, 0.3)'
-              }}
-            >
-              <ChevronRight className="w-5 h-5 text-white" />
-            </button>
           </div>
+
+          {/* Navigation Arrows */}
+          <button
+            onClick={scrollPrev}
+            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-2 md:-translate-x-6 w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 z-10"
+            style={{ 
+              backgroundColor: '#00c78a',
+              boxShadow: '0 4px 20px rgba(0, 199, 138, 0.3)'
+            }}
+          >
+            <ChevronLeft className="w-5 h-5 md:w-6 md:h-6 text-white" />
+          </button>
+          <button
+            onClick={scrollNext}
+            className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-2 md:translate-x-6 w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 z-10"
+            style={{ 
+              backgroundColor: '#00c78a',
+              boxShadow: '0 4px 20px rgba(0, 199, 138, 0.3)'
+            }}
+          >
+            <ChevronRight className="w-5 h-5 md:w-6 md:h-6 text-white" />
+          </button>
         </div>
 
         {/* Dots Indicator */}
