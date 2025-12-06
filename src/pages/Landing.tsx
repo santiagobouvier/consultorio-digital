@@ -122,29 +122,29 @@ const Landing = () => {
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Hero Section */}
-      <section className="min-h-screen flex flex-col items-center justify-center px-4 sm:px-6 py-20 sm:py-24">
+      <section className="min-h-[85vh] sm:min-h-screen flex flex-col items-center justify-center px-4 sm:px-6 py-12 sm:py-24">
         <div className="w-full max-w-3xl mx-auto animate-fade-in">
           {/* Premium Hero Card */}
           <div 
-            className="relative rounded-3xl p-6 sm:p-10 md:p-14"
+            className="relative rounded-2xl sm:rounded-3xl p-5 sm:p-10 md:p-14"
             style={{ 
               backgroundColor: '#111111',
               boxShadow: '0 8px 60px rgba(0, 199, 138, 0.15), 0 0 80px rgba(0, 199, 138, 0.08)'
             }}
           >
             {/* Emoji */}
-            <div className="flex justify-center mb-10">
-              <span className="text-7xl sm:text-8xl">🗓️</span>
+            <div className="flex justify-center mb-6 sm:mb-10">
+              <span className="text-6xl sm:text-8xl">🗓️</span>
             </div>
             
             {/* Title */}
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-center mb-6 leading-tight">
+            <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-center mb-4 sm:mb-6 leading-tight">
               Sistema de Gestión
               <span className="block" style={{ color: '#00c78a' }}>de Consultorio</span>
             </h1>
             
             {/* Subtitle */}
-            <p className="text-base sm:text-lg md:text-xl text-gray-400 text-center mb-10 max-w-xl mx-auto leading-relaxed font-light">
+            <p className="text-sm sm:text-lg md:text-xl text-gray-400 text-center mb-6 sm:mb-10 max-w-xl mx-auto leading-relaxed font-light">
               Organizá pacientes, citas y recordatorios en un panel simple y profesional.
             </p>
             
@@ -153,7 +153,7 @@ const Landing = () => {
               <Link to="/auth">
                 <Button 
                   size="lg" 
-                  className="h-14 px-12 text-base font-semibold rounded-xl transition-all duration-300"
+                  className="h-12 sm:h-14 px-8 sm:px-12 text-sm sm:text-base font-semibold rounded-xl transition-all duration-300"
                   style={{ 
                     backgroundColor: '#00c78a',
                     boxShadow: '0 4px 30px rgba(0, 199, 138, 0.35)'
@@ -168,12 +168,12 @@ const Landing = () => {
       </section>
 
       {/* How it Works Section */}
-      <section className="px-4 sm:px-6 py-28 bg-black">
+      <section className="px-4 sm:px-6 py-14 sm:py-28 bg-black">
         <div className="max-w-5xl mx-auto">
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-center mb-20 tracking-tight">
+          <h2 className="text-xl sm:text-3xl md:text-4xl font-bold text-center mb-10 sm:mb-20 tracking-tight">
             Cómo funciona
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-10 md:gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
             {steps.map((step, index) => (
               <div
                 key={step.title}
@@ -182,22 +182,22 @@ const Landing = () => {
               >
                 {/* Step icon with glow */}
                 <div 
-                  className="w-16 h-16 mx-auto mb-6 rounded-2xl flex items-center justify-center"
+                  className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 sm:mb-6 rounded-xl sm:rounded-2xl flex items-center justify-center"
                   style={{ 
                     backgroundColor: 'rgba(0, 199, 138, 0.1)',
                     boxShadow: '0 0 30px rgba(0, 199, 138, 0.2)'
                   }}
                 >
-                  <step.icon className="w-7 h-7" style={{ color: '#00c78a' }} />
+                  <step.icon className="w-5 h-5 sm:w-7 sm:h-7" style={{ color: '#00c78a' }} />
                 </div>
                 
                 {/* Title */}
-                <h3 className="text-lg font-semibold text-white mb-3 tracking-tight">
+                <h3 className="text-base sm:text-lg font-semibold text-white mb-2 sm:mb-3 tracking-tight">
                   {step.title}
                 </h3>
                 
                 {/* Description */}
-                <p className="text-gray-500 text-sm leading-relaxed font-light">
+                <p className="text-gray-500 text-xs sm:text-sm leading-relaxed font-light">
                   {step.description}
                 </p>
               </div>
@@ -207,16 +207,16 @@ const Landing = () => {
       </section>
 
       {/* Benefits Section */}
-      <section className="px-4 sm:px-6 py-28" style={{ backgroundColor: '#080808' }}>
+      <section className="px-4 sm:px-6 py-14 sm:py-28" style={{ backgroundColor: '#080808' }}>
         <div className="max-w-4xl mx-auto">
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-center mb-20 tracking-tight">
+          <h2 className="text-xl sm:text-3xl md:text-4xl font-bold text-center mb-8 sm:mb-20 tracking-tight">
             Beneficios
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
             {benefits.map((benefit, index) => (
               <div
                 key={benefit.title}
-                className="flex items-start gap-5 p-6 rounded-2xl border border-white/5 animate-fade-in transition-all duration-300 hover:border-white/10"
+                className="flex items-start gap-3 sm:gap-5 p-4 sm:p-6 rounded-xl sm:rounded-2xl border border-white/5 animate-fade-in transition-all duration-300 hover:border-white/10"
                 style={{ 
                   backgroundColor: '#111111',
                   animationDelay: `${(index + 1) * 100}ms`, 
@@ -224,16 +224,16 @@ const Landing = () => {
                 }}
               >
                 <div 
-                  className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+                  className="w-9 h-9 sm:w-11 sm:h-11 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0"
                   style={{ backgroundColor: 'rgba(0, 199, 138, 0.1)' }}
                 >
-                  <benefit.icon className="w-5 h-5" style={{ color: '#00c78a' }} />
+                  <benefit.icon className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: '#00c78a' }} />
                 </div>
                 <div>
-                  <h3 className="text-white font-semibold mb-1.5 tracking-tight">
+                  <h3 className="text-sm sm:text-base text-white font-semibold mb-1 tracking-tight">
                     {benefit.title}
                   </h3>
-                  <p className="text-gray-500 text-sm font-light">
+                  <p className="text-gray-500 text-xs sm:text-sm font-light">
                     {benefit.description}
                   </p>
                 </div>
@@ -244,13 +244,13 @@ const Landing = () => {
       </section>
 
       {/* Features Section */}
-      <section className="px-4 sm:px-6 py-28 bg-black">
+      <section className="px-4 sm:px-6 py-14 sm:py-28 bg-black">
         <div className="max-w-5xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-5">
             {features.map((feature, index) => (
               <div
                 key={feature.title}
-                className="p-7 md:p-8 rounded-2xl border border-white/5 animate-fade-in transition-all duration-300 hover:border-white/10"
+                className="p-5 sm:p-7 md:p-8 rounded-xl sm:rounded-2xl border border-white/5 animate-fade-in transition-all duration-300 hover:border-white/10"
                 style={{ 
                   backgroundColor: '#111111',
                   animationDelay: `${(index + 1) * 100}ms`, 
@@ -259,19 +259,19 @@ const Landing = () => {
               >
                 {/* Icon */}
                 <div 
-                  className="w-12 h-12 rounded-xl flex items-center justify-center mb-6"
+                  className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl flex items-center justify-center mb-4 sm:mb-6"
                   style={{ backgroundColor: 'rgba(0, 199, 138, 0.1)' }}
                 >
-                  <feature.icon className="w-6 h-6" style={{ color: '#00c78a' }} />
+                  <feature.icon className="w-5 h-5 sm:w-6 sm:h-6" style={{ color: '#00c78a' }} />
                 </div>
                 
                 {/* Title */}
-                <h3 className="text-lg font-semibold text-white mb-3 tracking-tight">
+                <h3 className="text-base sm:text-lg font-semibold text-white mb-2 sm:mb-3 tracking-tight">
                   {feature.title}
                 </h3>
                 
                 {/* Description */}
-                <p className="text-gray-500 text-sm leading-relaxed font-light">
+                <p className="text-gray-500 text-xs sm:text-sm leading-relaxed font-light">
                   {feature.description}
                 </p>
               </div>
@@ -281,20 +281,20 @@ const Landing = () => {
       </section>
 
       {/* Pricing Section */}
-      <section id="pricing" className="px-4 sm:px-6 py-28" style={{ backgroundColor: '#080808' }}>
+      <section id="pricing" className="px-4 sm:px-6 py-14 sm:py-28" style={{ backgroundColor: '#080808' }}>
         <div className="max-w-6xl mx-auto">
           {/* Section Header */}
-          <div className="text-center mb-16">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 tracking-tight">
+          <div className="text-center mb-8 sm:mb-16">
+            <h2 className="text-xl sm:text-3xl md:text-4xl font-bold mb-3 sm:mb-4 tracking-tight">
               Planes y Precios
             </h2>
-            <p className="text-gray-500 text-base sm:text-lg max-w-2xl mx-auto font-light">
+            <p className="text-gray-500 text-sm sm:text-lg max-w-2xl mx-auto font-light">
               Pagás según el tamaño de tu consultorio. Todas las funciones están incluidas en todos los planes.
             </p>
           </div>
 
           {/* Pricing Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-4 sm:mb-8">
             {pricingPlans.map((plan, index) => (
               <div
                 key={plan.id}
@@ -312,15 +312,15 @@ const Landing = () => {
           </div>
 
           {/* Payment Note */}
-          <p className="text-center text-gray-500 text-sm mt-10 font-light">
+          <p className="text-center text-gray-500 text-xs sm:text-sm mt-6 sm:mt-10 font-light">
             💳 Todos los planes anuales se pueden pagar en hasta 12 cuotas sin interés.
           </p>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="px-4 sm:px-6 py-12 bg-black border-t border-white/5">
-        <p className="text-center text-gray-600 text-sm font-light">
+      <footer className="px-4 sm:px-6 py-8 sm:py-12 bg-black border-t border-white/5">
+        <p className="text-center text-gray-600 text-xs sm:text-sm font-light">
           © {new Date().getFullYear()} Sistema de Gestión de Consultorio
         </p>
       </footer>
