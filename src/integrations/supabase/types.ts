@@ -332,6 +332,7 @@ export type Database = {
       payments: {
         Row: {
           amount: number
+          anchor_day: number | null
           appointment_id: string | null
           business_id: string
           created_at: string
@@ -342,11 +343,13 @@ export type Database = {
           notes: string | null
           paid_at: string | null
           patient_id: string
+          recurrence_type: string
           status: string
           updated_at: string
         }
         Insert: {
           amount: number
+          anchor_day?: number | null
           appointment_id?: string | null
           business_id: string
           created_at?: string
@@ -357,11 +360,13 @@ export type Database = {
           notes?: string | null
           paid_at?: string | null
           patient_id: string
+          recurrence_type?: string
           status?: string
           updated_at?: string
         }
         Update: {
           amount?: number
+          anchor_day?: number | null
           appointment_id?: string | null
           business_id?: string
           created_at?: string
@@ -372,6 +377,7 @@ export type Database = {
           notes?: string | null
           paid_at?: string | null
           patient_id?: string
+          recurrence_type?: string
           status?: string
           updated_at?: string
         }

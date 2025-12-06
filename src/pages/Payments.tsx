@@ -15,19 +15,37 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Search, Filter } from "lucide-react";
+import { ArrowLeft, Search, Filter, RefreshCw } from "lucide-react";
+import { PaymentWhatsAppMenu } from "@/components/PaymentWhatsAppMenu";
 import {
   calculatePaymentStatus,
   getPaymentStatusColor,
   getPaymentStatusLabel,
   formatCurrency,
-  type Payment,
+  getRecurrenceTypeLabel,
   type PaymentStatus,
+  type RecurrenceType,
 } from "@/lib/payments";
 
 interface Patient {
   id: string;
   full_name: string;
+  whatsapp_phone: string | null;
+}
+
+interface Payment {
+  id: string;
+  patient_id: string;
+  amount: number;
+  currency: string;
+  due_date: string;
+  paid_at: string | null;
+  status: PaymentStatus;
+  recurrence_type: RecurrenceType;
+  patients?: {
+    full_name: string;
+    whatsapp_phone: string | null;
+  };
 }
 
 const Payments = () => {
@@ -77,7 +95,7 @@ const Payments = () => {
       // Fetch payments
       const { data: paymentsData, error: paymentsError } = await supabase
         .from("payments")
-        .select("*")
+        .select("*, recurrence_type, anchor_day")
         .eq("business_id", business.id)
         .order("due_date", { ascending: true });
 
@@ -86,19 +104,20 @@ const Payments = () => {
       // Fetch patients for filter and to map names
       const { data: patientsData } = await supabase
         .from("patients")
-        .select("id, full_name")
+        .select("id, full_name, whatsapp_phone")
         .eq("business_id", business.id)
         .order("full_name");
 
       const patientsMap = new Map(
-        (patientsData || []).map((p) => [p.id, p.full_name])
+        (patientsData || []).map((p) => [p.id, { full_name: p.full_name, whatsapp_phone: p.whatsapp_phone }])
       );
 
       // Calculate real-time status and add patient name
       const paymentsWithStatus = (paymentsData || []).map((payment) => ({
         ...payment,
         status: calculatePaymentStatus(payment),
-        patients: { full_name: patientsMap.get(payment.patient_id) || "Desconocido" },
+        recurrence_type: (payment.recurrence_type || 'one_time') as RecurrenceType,
+        patients: patientsMap.get(payment.patient_id) || { full_name: "Desconocido", whatsapp_phone: null },
       })) as Payment[];
 
       setPayments(paymentsWithStatus);
@@ -248,11 +267,25 @@ const Payments = () => {
                       >
                         {payment.patients?.full_name || "Paciente desconocido"}
                       </button>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        Vence: {format(new Date(payment.due_date), "d MMM yyyy", { locale: es })}
-                      </p>
+                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                        <p className="text-xs text-muted-foreground">
+                          Vence: {format(new Date(payment.due_date), "d MMM yyyy", { locale: es })}
+                        </p>
+                        {payment.recurrence_type !== "one_time" && (
+                          <Badge variant="outline" className="rounded-full text-[10px] gap-0.5 h-5">
+                            <RefreshCw className="h-2.5 w-2.5" />
+                            {getRecurrenceTypeLabel(payment.recurrence_type)}
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
+                      {payment.status !== "paid" && payment.status !== "cancelled" && (
+                        <PaymentWhatsAppMenu
+                          patientPhone={payment.patients?.whatsapp_phone || null}
+                          patientName={payment.patients?.full_name || ""}
+                        />
+                      )}
                       <span className="font-bold text-sm text-foreground">
                         {formatCurrency(payment.amount, payment.currency)}
                       </span>
