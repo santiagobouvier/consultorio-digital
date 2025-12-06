@@ -5,9 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Mail, Phone, Calendar, FileText, CreditCard } from "lucide-react";
+import { ArrowLeft, Mail, Phone, Calendar, FileText, CreditCard, Plus, Check } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { PaymentForm } from "@/components/PaymentForm";
 
 interface Patient {
   id: string;
@@ -63,6 +64,7 @@ const PatientDetail = () => {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [paymentsError, setPaymentsError] = useState(false);
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -160,6 +162,30 @@ const PatientDetail = () => {
       currency: currency,
       minimumFractionDigits: 0,
     }).format(amount);
+  };
+
+  const handleMarkAsPaid = async (paymentId: string) => {
+    try {
+      const { error } = await supabase
+        .from("payments")
+        .update({ paid_at: new Date().toISOString(), status: "paid" })
+        .eq("id", paymentId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Éxito",
+        description: "Pago marcado como pagado",
+      });
+      fetchData();
+    } catch (error) {
+      console.error("Error marking payment as paid:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo actualizar el pago",
+        variant: "destructive",
+      });
+    }
   };
 
   if (loading) {
@@ -308,10 +334,21 @@ const PatientDetail = () => {
         {/* Payments Section */}
         <Card className="rounded-2xl border-border/50">
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg font-bold flex items-center gap-2">
-              <CreditCard className="h-5 w-5 text-primary" />
-              Pagos y vencimientos
-            </CardTitle>
+            <div className="flex items-center justify-between gap-2">
+              <CardTitle className="text-lg font-bold flex items-center gap-2">
+                <CreditCard className="h-5 w-5 text-primary" />
+                Pagos y vencimientos
+              </CardTitle>
+              {!paymentsError && (
+                <Button
+                  onClick={() => setShowPaymentForm(true)}
+                  className="rounded-xl h-10 px-4 font-semibold"
+                >
+                  <Plus className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Registrar pago</span>
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             {paymentsError ? (
@@ -342,14 +379,26 @@ const PatientDetail = () => {
                         </p>
                       )}
                     </div>
-                    <Badge
-                      variant={payment.status === "paid" ? "default" : "secondary"}
-                      className={`rounded-full text-xs ${
-                        payment.status === "overdue" ? "bg-destructive text-destructive-foreground" : ""
-                      }`}
-                    >
-                      {paymentStatusLabels[payment.status] || payment.status}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      {payment.status !== "paid" && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleMarkAsPaid(payment.id)}
+                          className="rounded-lg h-8 px-2"
+                        >
+                          <Check className="h-4 w-4" />
+                        </Button>
+                      )}
+                      <Badge
+                        variant={payment.status === "paid" ? "default" : "secondary"}
+                        className={`rounded-full text-xs ${
+                          payment.status === "overdue" ? "bg-destructive text-destructive-foreground" : ""
+                        }`}
+                      >
+                        {paymentStatusLabels[payment.status] || payment.status}
+                      </Badge>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -357,6 +406,17 @@ const PatientDetail = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Payment Form Modal */}
+      {patient && (
+        <PaymentForm
+          open={showPaymentForm}
+          onOpenChange={setShowPaymentForm}
+          patientId={patient.id}
+          businessId={patient.business_id}
+          onSuccess={fetchData}
+        />
+      )}
     </div>
   );
 };
