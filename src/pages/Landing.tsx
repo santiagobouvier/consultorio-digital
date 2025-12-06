@@ -349,7 +349,7 @@ const ScreenshotsCarousel = () => {
 };
 
 const Landing = () => {
-  const whatsappLink = "https://api.whatsapp.com/send?phone=59891093977&text=Hola%2C+vengo+de+su+sitio+web.+Soy+profesional+y+me+interesa+el+servicio+de+gesti%C3%B3n+para+mis+pacientes.";
+  const whatsappLink = "https://api.whatsapp.com/send?phone=59891093977&text=Hola%2C+me+gustar%C3%ADa+coordinar+una+demo+del+sistema+de+gesti%C3%B3n+para+profesionales+de+salud+mental.";
 
   return (
     <div className="min-h-screen bg-black text-white">
