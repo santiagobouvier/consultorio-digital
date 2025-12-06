@@ -1,7 +1,35 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Users, MessageCircle, UserPlus, ClipboardList, CalendarCheck, Clock, Eye, Sparkles, Calendar } from "lucide-react";
+import { Users, MessageCircle, UserPlus, ClipboardList, CalendarCheck, Clock, Eye, Sparkles, Calendar, Play, HelpCircle } from "lucide-react";
 import PricingCard from "@/components/PricingCard";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+
+const faqItems = [
+  {
+    question: "¿Qué incluye cada plan?",
+    answer: "Todos los planes incluyen las mismas funcionalidades: portal del paciente, agenda inteligente, recordatorios por WhatsApp, dashboard financiero y alertas de vencimiento. La diferencia está en la cantidad de profesionales y pacientes activos."
+  },
+  {
+    question: "¿Cómo funciona el pago anual en cuotas?",
+    answer: "Podés pagar el plan anual en hasta 12 cuotas sin interés con tarjeta de crédito. El acceso se activa inmediatamente después de confirmar el pago."
+  },
+  {
+    question: "¿Puedo cambiar de plan en cualquier momento?",
+    answer: "Sí, podés escalar tu plan cuando lo necesites. Si pasás a un plan superior, solo pagás la diferencia proporcional."
+  },
+  {
+    question: "¿Qué pasa si supero el límite de pacientes?",
+    answer: "Te avisaremos cuando estés cerca del límite. Podés actualizar tu plan o archivar pacientes inactivos para liberar espacio."
+  },
+  {
+    question: "¿Los recordatorios por WhatsApp tienen costo adicional?",
+    answer: "No, los recordatorios semi-automáticos están incluidos en todos los planes sin límite de envíos."
+  },
+  {
+    question: "¿Ofrecen período de prueba?",
+    answer: "Sí, podés probar el sistema durante 14 días gratis con todas las funcionalidades. No se requiere tarjeta de crédito."
+  },
+];
 
 const pricingPlans = [
   {
@@ -167,6 +195,52 @@ const Landing = () => {
         </div>
       </section>
 
+      {/* Video Demo Section */}
+      <section className="px-4 sm:px-6 py-14 sm:py-24" style={{ backgroundColor: '#080808' }}>
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-8 sm:mb-12">
+            <h2 className="text-xl sm:text-3xl md:text-4xl font-bold mb-3 sm:mb-4 tracking-tight">
+              Mirá el sistema en acción
+            </h2>
+            <p className="text-gray-500 text-sm sm:text-lg font-light">
+              Una demo de 2 minutos que muestra todo lo que podés hacer.
+            </p>
+          </div>
+          
+          {/* Video Container */}
+          <div 
+            className="relative aspect-video rounded-xl sm:rounded-2xl overflow-hidden border border-white/10"
+            style={{ 
+              backgroundColor: '#111111',
+              boxShadow: '0 8px 40px rgba(0, 199, 138, 0.1)'
+            }}
+          >
+            {/* Placeholder - Reemplazar con video real */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <div 
+                className="w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center mb-4 cursor-pointer transition-all duration-300 hover:scale-110"
+                style={{ 
+                  backgroundColor: '#00c78a',
+                  boxShadow: '0 4px 30px rgba(0, 199, 138, 0.4)'
+                }}
+              >
+                <Play className="w-7 h-7 sm:w-8 sm:h-8 text-white ml-1" fill="white" />
+              </div>
+              <p className="text-gray-400 text-sm font-light">Video demo próximamente</p>
+            </div>
+            
+            {/* Uncomment and add your video URL when ready */}
+            {/* <iframe 
+              src="https://www.youtube.com/embed/YOUR_VIDEO_ID"
+              title="Demo del Sistema"
+              className="absolute inset-0 w-full h-full"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            /> */}
+          </div>
+        </div>
+      </section>
+
       {/* How it Works Section */}
       <section className="px-4 sm:px-6 py-14 sm:py-28 bg-black">
         <div className="max-w-5xl mx-auto">
@@ -315,6 +389,91 @@ const Landing = () => {
           <p className="text-center text-gray-500 text-xs sm:text-sm mt-6 sm:mt-10 font-light">
             💳 Todos los planes anuales se pueden pagar en hasta 12 cuotas sin interés.
           </p>
+        </div>
+      </section>
+
+      {/* FAQ Section */}
+      <section className="px-4 sm:px-6 py-14 sm:py-28 bg-black">
+        <div className="max-w-3xl mx-auto">
+          <div className="text-center mb-10 sm:mb-16">
+            <div className="flex justify-center mb-4">
+              <div 
+                className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl flex items-center justify-center"
+                style={{ 
+                  backgroundColor: 'rgba(0, 199, 138, 0.1)',
+                  boxShadow: '0 0 30px rgba(0, 199, 138, 0.15)'
+                }}
+              >
+                <HelpCircle className="w-6 h-6 sm:w-7 sm:h-7" style={{ color: '#00c78a' }} />
+              </div>
+            </div>
+            <h2 className="text-xl sm:text-3xl md:text-4xl font-bold mb-3 sm:mb-4 tracking-tight">
+              Preguntas Frecuentes
+            </h2>
+            <p className="text-gray-500 text-sm sm:text-lg font-light">
+              Todo lo que necesitás saber antes de empezar.
+            </p>
+          </div>
+
+          <Accordion type="single" collapsible className="space-y-3">
+            {faqItems.map((item, index) => (
+              <AccordionItem 
+                key={index} 
+                value={`item-${index}`}
+                className="border border-white/5 rounded-xl sm:rounded-2xl px-5 sm:px-6 overflow-hidden"
+                style={{ backgroundColor: '#111111' }}
+              >
+                <AccordionTrigger className="text-left text-sm sm:text-base font-medium text-white hover:no-underline py-4 sm:py-5">
+                  {item.question}
+                </AccordionTrigger>
+                <AccordionContent className="text-gray-400 text-sm pb-4 sm:pb-5 font-light leading-relaxed">
+                  {item.answer}
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+        </div>
+      </section>
+
+      {/* Final CTA Section */}
+      <section className="px-4 sm:px-6 py-16 sm:py-28" style={{ backgroundColor: '#080808' }}>
+        <div className="max-w-2xl mx-auto text-center">
+          <span className="text-4xl sm:text-6xl mb-6 block">🚀</span>
+          <h2 className="text-xl sm:text-3xl md:text-4xl font-bold mb-4 sm:mb-6 tracking-tight">
+            Empezá a organizar tu consultorio
+            <span className="block" style={{ color: '#00c78a' }}>hoy mismo</span>
+          </h2>
+          <p className="text-gray-500 text-sm sm:text-lg mb-8 sm:mb-10 font-light max-w-lg mx-auto">
+            Probá gratis durante 14 días. Sin tarjeta de crédito. Cancelá cuando quieras.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link to="/auth">
+              <Button 
+                size="lg" 
+                className="w-full sm:w-auto h-12 sm:h-14 px-8 sm:px-12 text-sm sm:text-base font-semibold rounded-xl transition-all duration-300"
+                style={{ 
+                  backgroundColor: '#00c78a',
+                  boxShadow: '0 4px 30px rgba(0, 199, 138, 0.35)'
+                }}
+              >
+                Crear cuenta gratis
+              </Button>
+            </Link>
+            <a href="#pricing">
+              <Button 
+                variant="outline"
+                size="lg" 
+                className="w-full sm:w-auto h-12 sm:h-14 px-8 sm:px-12 text-sm sm:text-base font-semibold rounded-xl transition-all duration-300"
+                style={{ 
+                  borderColor: 'rgba(255, 255, 255, 0.2)',
+                  color: 'white',
+                  backgroundColor: 'transparent'
+                }}
+              >
+                Ver planes
+              </Button>
+            </a>
+          </div>
         </div>
       </section>
 
