@@ -5,7 +5,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import LoadingPage from "./components/LoadingPage";
-import PatientDetail from "./pages/PatientDetail";
 
 // Lazy load all pages for optimal performance
 const Landing = lazy(() => import("./pages/Landing"));
@@ -13,6 +12,7 @@ const Auth = lazy(() => import("./pages/Auth"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const BusinessSetup = lazy(() => import("./pages/BusinessSetup"));
 const Patients = lazy(() => import("./pages/Patients"));
+const PatientDetail = lazy(() => import("./pages/PatientDetail"));
 const Appointments = lazy(() => import("./pages/Appointments"));
 const Agenda = lazy(() => import("./pages/Agenda"));
 const PendingReminders = lazy(() => import("./pages/PendingReminders"));
