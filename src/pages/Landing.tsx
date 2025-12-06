@@ -312,6 +312,7 @@ const Landing = () => {
 
   const getPricingPlans = () => {
     const savingsNote = isAnnual ? "Ahorrás más del 50% pagando anual." : undefined;
+    const paymentType = isAnnual ? "pago anual" : "pago mensual";
     
     return [
       {
@@ -324,7 +325,7 @@ const Landing = () => {
         priceNote: isAnnual ? "/ mes (pago anual)" : "/ mes",
         savingsNote,
         buttonText: "Elegir este plan",
-        buttonLink: "https://wa.me/59891093977?text=Hola,%20quiero%20contratar%20el%20Plan%20Consultorio%20Individual%20(1.900%20UYU/mes%20-%20pago%20anual).",
+        buttonLink: `https://wa.me/59891093977?text=Hola,%20quiero%20contratar%20el%20Plan%20Consultorio%20Individual%20(${isAnnual ? "1.900" : "2.900"}%20UYU/mes%20-%20${encodeURIComponent(paymentType)}).`,
         isExternal: true,
         isHighlighted: false,
       },
@@ -338,7 +339,7 @@ const Landing = () => {
         priceNote: isAnnual ? "/ mes (pago anual)" : "/ mes",
         savingsNote,
         buttonText: "Elegir este plan",
-        buttonLink: "https://wa.me/59891093977?text=Hola,%20quiero%20contratar%20el%20Plan%20Consultorio%20Profesional%20(3.900%20UYU/mes%20-%20pago%20anual).",
+        buttonLink: `https://wa.me/59891093977?text=Hola,%20quiero%20contratar%20el%20Plan%20Consultorio%20Profesional%20(${isAnnual ? "3.900" : "5.400"}%20UYU/mes%20-%20${encodeURIComponent(paymentType)}).`,
         isExternal: true,
         isHighlighted: true,
         highlightLabel: "Más elegido",
@@ -353,7 +354,7 @@ const Landing = () => {
         priceNote: isAnnual ? "/ mes (pago anual)" : "/ mes",
         savingsNote,
         buttonText: "Elegir este plan",
-        buttonLink: "https://wa.me/59891093977?text=Hola,%20quiero%20contratar%20el%20Plan%20Clínica%20Avanzada%20(6.900%20UYU/mes%20-%20pago%20anual).",
+        buttonLink: `https://wa.me/59891093977?text=Hola,%20quiero%20contratar%20el%20Plan%20Clínica%20Avanzada%20(${isAnnual ? "6.900" : "9.200"}%20UYU/mes%20-%20${encodeURIComponent(paymentType)}).`,
         isExternal: true,
         isHighlighted: false,
       },
@@ -553,13 +554,13 @@ const Landing = () => {
           </div>
 
           {/* Billing Toggle */}
-          <div className="flex items-center justify-center gap-3 mb-8 sm:mb-12">
-            <span className={`text-sm font-medium transition-colors ${!isAnnual ? 'text-white' : 'text-gray-500'}`}>
+          <div className="flex items-center justify-center gap-4 mb-8 sm:mb-12">
+            <span className={`text-sm font-medium transition-colors whitespace-nowrap ${!isAnnual ? 'text-white' : 'text-gray-500'}`}>
               Pago mensual
             </span>
             <button
               onClick={() => setIsAnnual(!isAnnual)}
-              className="relative w-14 h-7 rounded-full transition-colors duration-300"
+              className="relative w-14 h-7 rounded-full transition-colors duration-300 flex-shrink-0"
               style={{ backgroundColor: isAnnual ? '#00c78a' : 'rgba(255, 255, 255, 0.2)' }}
             >
               <span
@@ -567,7 +568,7 @@ const Landing = () => {
                 style={{ transform: isAnnual ? 'translateX(32px)' : 'translateX(4px)' }}
               />
             </button>
-            <span className={`text-sm font-medium transition-colors ${isAnnual ? 'text-white' : 'text-gray-500'}`}>
+            <span className={`text-sm font-medium transition-colors whitespace-nowrap ${isAnnual ? 'text-white' : 'text-gray-500'}`}>
               Pago anual
             </span>
           </div>
