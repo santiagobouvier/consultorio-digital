@@ -198,7 +198,7 @@ const ScreenshotsCarousel = () => {
   }, [emblaApi, onSelect]);
 
   return (
-    <section className="px-4 sm:px-6 py-14 sm:py-24" style={{ backgroundColor: '#080808' }}>
+    <section id="conoce-el-sistema" className="px-4 sm:px-6 py-14 sm:py-24" style={{ backgroundColor: '#080808' }}>
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-10 sm:mb-16">
           <h2 className="text-xl sm:text-3xl md:text-4xl font-bold mb-3 sm:mb-4 tracking-tight">
@@ -380,12 +380,12 @@ const Landing = () => {
               Organizá pacientes, citas y recordatorios en un panel simple y profesional.
             </p>
             
-            {/* CTA Button */}
-            <div className="flex justify-center">
+            {/* CTA Buttons */}
+            <div className="flex flex-col sm:flex-row justify-center gap-4">
               <Link to="/auth">
                 <Button 
                   size="lg" 
-                  className="h-12 sm:h-14 px-8 sm:px-12 text-sm sm:text-base font-semibold rounded-xl transition-all duration-300"
+                  className="w-full sm:w-auto h-12 sm:h-14 px-8 sm:px-12 text-sm sm:text-base font-semibold rounded-xl transition-all duration-300"
                   style={{ 
                     backgroundColor: '#00c78a',
                     boxShadow: '0 4px 30px rgba(0, 199, 138, 0.35)'
@@ -394,6 +394,21 @@ const Landing = () => {
                   Iniciar sesión
                 </Button>
               </Link>
+              <a 
+                href="#conoce-el-sistema"
+                onClick={(e) => {
+                  e.preventDefault();
+                  document.getElementById('conoce-el-sistema')?.scrollIntoView({ behavior: 'smooth' });
+                }}
+              >
+                <Button 
+                  variant="outline"
+                  size="lg" 
+                  className="w-full sm:w-auto h-12 sm:h-14 px-8 sm:px-12 text-sm sm:text-base font-semibold rounded-xl transition-all duration-300 bg-white text-black border-white hover:bg-gray-100"
+                >
+                  Conoce el sistema
+                </Button>
+              </a>
             </div>
           </div>
         </div>
