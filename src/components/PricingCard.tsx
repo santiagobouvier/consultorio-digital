@@ -1,0 +1,155 @@
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Check } from "lucide-react";
+
+interface PricingCardProps {
+  name: string;
+  description: string;
+  professionals: string;
+  patients: string;
+  price: string;
+  priceNote?: string;
+  buttonText: string;
+  buttonLink: string;
+  isExternal?: boolean;
+  isHighlighted?: boolean;
+  highlightLabel?: string;
+}
+
+const features = [
+  "Portal del paciente",
+  "Agenda inteligente",
+  "Pagos + alertas de vencimiento",
+  "Dashboard financiero",
+  "Recordatorios automáticos por WhatsApp",
+];
+
+const PricingCard = ({
+  name,
+  description,
+  professionals,
+  patients,
+  price,
+  priceNote,
+  buttonText,
+  buttonLink,
+  isExternal = false,
+  isHighlighted = false,
+  highlightLabel,
+}: PricingCardProps) => {
+  return (
+    <div
+      className={`relative p-6 sm:p-8 rounded-2xl border transition-all duration-300 ${
+        isHighlighted
+          ? "border-[#00c78a]/50"
+          : "border-white/5 hover:border-white/10"
+      }`}
+      style={{
+        backgroundColor: isHighlighted ? "rgba(0, 199, 138, 0.05)" : "#111111",
+        boxShadow: isHighlighted
+          ? "0 8px 40px rgba(0, 199, 138, 0.15)"
+          : "0 4px 20px rgba(0, 0, 0, 0.3)",
+      }}
+    >
+      {/* Highlight Label */}
+      {isHighlighted && highlightLabel && (
+        <div
+          className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-xs font-semibold text-black"
+          style={{ backgroundColor: "#00c78a" }}
+        >
+          {highlightLabel}
+        </div>
+      )}
+
+      {/* Plan Name */}
+      <h3 className="text-xl font-bold text-white mb-2 tracking-tight">
+        {name}
+      </h3>
+
+      {/* Description */}
+      <p className="text-gray-500 text-sm mb-6 font-light">{description}</p>
+
+      {/* Price */}
+      <div className="mb-6">
+        <span
+          className="text-3xl sm:text-4xl font-bold"
+          style={{ color: isHighlighted ? "#00c78a" : "white" }}
+        >
+          {price}
+        </span>
+        {priceNote && (
+          <span className="text-gray-500 text-sm ml-2">{priceNote}</span>
+        )}
+      </div>
+
+      {/* Professionals & Patients */}
+      <div className="space-y-2 mb-6 text-sm">
+        <div className="flex items-center gap-2 text-gray-300">
+          <Check className="w-4 h-4" style={{ color: "#00c78a" }} />
+          <span>{professionals}</span>
+        </div>
+        <div className="flex items-center gap-2 text-gray-300">
+          <Check className="w-4 h-4" style={{ color: "#00c78a" }} />
+          <span>{patients}</span>
+        </div>
+      </div>
+
+      {/* CTA Button */}
+      {isExternal ? (
+        <a href={buttonLink} target="_blank" rel="noopener noreferrer" className="block">
+          <Button
+            className="w-full h-12 font-semibold rounded-xl transition-all duration-300"
+            variant={isHighlighted ? "default" : "outline"}
+            style={
+              isHighlighted
+                ? {
+                    backgroundColor: "#00c78a",
+                    boxShadow: "0 4px 20px rgba(0, 199, 138, 0.3)",
+                  }
+                : {
+                    borderColor: "rgba(255, 255, 255, 0.2)",
+                    color: "white",
+                    backgroundColor: "transparent",
+                  }
+            }
+          >
+            {buttonText}
+          </Button>
+        </a>
+      ) : (
+        <Link to={buttonLink}>
+          <Button
+            className="w-full h-12 font-semibold rounded-xl transition-all duration-300"
+            variant={isHighlighted ? "default" : "outline"}
+            style={
+              isHighlighted
+                ? {
+                    backgroundColor: "#00c78a",
+                    boxShadow: "0 4px 20px rgba(0, 199, 138, 0.3)",
+                  }
+                : {
+                    borderColor: "rgba(255, 255, 255, 0.2)",
+                    color: "white",
+                    backgroundColor: "transparent",
+                  }
+            }
+          >
+            {buttonText}
+          </Button>
+        </Link>
+      )}
+
+      {/* Features List */}
+      <div className="mt-6 pt-6 border-t border-white/10 space-y-3">
+        {features.map((feature) => (
+          <div key={feature} className="flex items-center gap-2 text-sm text-gray-400">
+            <Check className="w-4 h-4 flex-shrink-0" style={{ color: "#00c78a" }} />
+            <span>{feature}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+export default PricingCard;
