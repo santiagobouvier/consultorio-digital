@@ -1,4 +1,3 @@
-// Patient Detail Page
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
