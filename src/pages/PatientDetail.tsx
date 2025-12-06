@@ -9,6 +9,13 @@ import { ArrowLeft, Mail, Phone, Calendar, FileText, CreditCard, Plus, Check } f
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { PaymentForm } from "@/components/PaymentForm";
+import {
+  calculatePaymentStatus,
+  getPaymentStatusColor,
+  getPaymentStatusLabel,
+  formatCurrency,
+  type PaymentStatus,
+} from "@/lib/payments";
 
 interface Patient {
   id: string;
@@ -36,8 +43,10 @@ interface Payment {
   amount: number;
   currency: string;
   due_date: string;
-  status: string;
+  status: PaymentStatus;
   paid_at: string | null;
+  method: string | null;
+  notes: string | null;
 }
 
 const statusLabels: Record<string, string> = {
@@ -46,13 +55,6 @@ const statusLabels: Record<string, string> = {
   cancelled: "Cancelada",
   attended: "Realizada",
   no_show: "No asistió",
-};
-
-const paymentStatusLabels: Record<string, string> = {
-  pending: "Pendiente",
-  paid: "Pagado",
-  overdue: "Vencido",
-  cancelled: "Cancelado",
 };
 
 const PatientDetail = () => {
@@ -119,19 +121,24 @@ const PatientDetail = () => {
 
       setAppointments(appointmentsData || []);
 
-      // Fetch payments (defensively)
+      // Fetch payments (defensively) with real-time status calculation
       try {
         const { data: paymentsData, error: paymentsError } = await supabase
           .from("payments")
-          .select("id, amount, currency, due_date, status, paid_at")
+          .select("id, amount, currency, due_date, status, paid_at, method, notes")
           .eq("patient_id", id)
-          .order("due_date", { ascending: false });
+          .order("due_date", { ascending: true });
 
         if (paymentsError) {
           console.error("Error fetching payments:", paymentsError);
           setPaymentsError(true);
         } else {
-          setPayments(paymentsData || []);
+          // Calculate real-time status for each payment
+          const paymentsWithStatus = (paymentsData || []).map((payment) => ({
+            ...payment,
+            status: calculatePaymentStatus(payment),
+          })) as Payment[];
+          setPayments(paymentsWithStatus);
         }
       } catch {
         setPaymentsError(true);
@@ -156,12 +163,8 @@ const PatientDetail = () => {
     return format(new Date(dateString), "d MMM yyyy, HH:mm", { locale: es });
   };
 
-  const formatCurrency = (amount: number, currency: string) => {
-    return new Intl.NumberFormat("es-UY", {
-      style: "currency",
-      currency: currency,
-      minimumFractionDigits: 0,
-    }).format(amount);
+  const formatCurrencyLocal = (amount: number, currency: string) => {
+    return formatCurrency(amount, currency);
   };
 
   const handleMarkAsPaid = async (paymentId: string) => {
@@ -366,38 +369,46 @@ const PatientDetail = () => {
                     key={payment.id}
                     className="flex items-center justify-between p-3 rounded-xl bg-muted/30 border border-border/50"
                   >
-                    <div>
-                      <p className="font-bold text-foreground">
-                        {formatCurrency(payment.amount, payment.currency)}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-bold text-foreground">
+                          {formatCurrencyLocal(payment.amount, payment.currency)}
+                        </p>
+                        <Badge className={`${getPaymentStatusColor(payment.status)} rounded-full text-xs`}>
+                          {getPaymentStatusLabel(payment.status)}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
                         Vence: {formatDate(payment.due_date)}
                       </p>
+                      {payment.method && (
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Método: {payment.method}
+                        </p>
+                      )}
+                      {payment.notes && (
+                        <p className="text-xs text-muted-foreground mt-0.5 italic truncate">
+                          {payment.notes}
+                        </p>
+                      )}
                       {payment.paid_at && (
-                        <p className="text-xs text-green-600 mt-0.5">
+                        <p className="text-xs text-green-600 mt-1">
                           Pagado el {formatDate(payment.paid_at)}
                         </p>
                       )}
                     </div>
-                    <div className="flex items-center gap-2">
-                      {payment.status !== "paid" && (
+                    <div className="flex items-center gap-2 shrink-0">
+                      {payment.status !== "paid" && payment.status !== "cancelled" && (
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => handleMarkAsPaid(payment.id)}
                           className="rounded-lg h-8 px-2"
+                          title="Marcar como pagado"
                         >
                           <Check className="h-4 w-4" />
                         </Button>
                       )}
-                      <Badge
-                        variant={payment.status === "paid" ? "default" : "secondary"}
-                        className={`rounded-full text-xs ${
-                          payment.status === "overdue" ? "bg-destructive text-destructive-foreground" : ""
-                        }`}
-                      >
-                        {paymentStatusLabels[payment.status] || payment.status}
-                      </Badge>
                     </div>
                   </div>
                 ))}
