@@ -60,10 +60,6 @@ const faqItems = [
     question: "¿Los recordatorios por WhatsApp tienen costo adicional?",
     answer: "No, los recordatorios semi-automáticos están incluidos en todos los planes sin límite de envíos."
   },
-  {
-    question: "¿Ofrecen período de prueba?",
-    answer: "Sí, podés probar el sistema durante 14 días gratis con todas las funcionalidades. No se requiere tarjeta de crédito."
-  },
 ];
 
 const pricingPlans = [
