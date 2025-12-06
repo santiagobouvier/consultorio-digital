@@ -8,7 +8,7 @@ import { CalendarIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { PAYMENT_METHODS } from "@/lib/payments";
+import { PAYMENT_METHODS, RECURRENCE_TYPES } from "@/lib/payments";
 
 import {
   Dialog,
@@ -47,6 +47,8 @@ const globalPaymentSchema = z.object({
   due_date: z.date({ required_error: "La fecha de vencimiento es requerida" }),
   method: z.string().optional(),
   notes: z.string().optional(),
+  recurrence_type: z.enum(["one_time", "monthly", "yearly"]).default("one_time"),
+  anchor_day: z.coerce.number().min(1).max(31).optional(),
 });
 
 type GlobalPaymentFormData = z.infer<typeof globalPaymentSchema>;
@@ -81,8 +83,13 @@ export function GlobalPaymentForm({
       due_date: undefined,
       method: "",
       notes: "",
+      recurrence_type: "one_time",
+      anchor_day: undefined,
     },
   });
+
+  const recurrenceType = form.watch("recurrence_type");
+  const dueDate = form.watch("due_date");
 
   useEffect(() => {
     if (open && businessId) {
@@ -109,9 +116,20 @@ export function GlobalPaymentForm({
     }
   };
 
+  const handleDueDateChange = (date: Date | undefined) => {
+    form.setValue("due_date", date as Date);
+    if (date && recurrenceType !== "one_time") {
+      form.setValue("anchor_day", date.getDate());
+    }
+  };
+
   const onSubmit = async (data: GlobalPaymentFormData) => {
     try {
       setLoading(true);
+
+      const anchorDay = data.recurrence_type !== "one_time" 
+        ? (data.anchor_day || data.due_date.getDate())
+        : null;
 
       const paymentData = {
         business_id: businessId,
@@ -121,6 +139,8 @@ export function GlobalPaymentForm({
         method: data.method || null,
         notes: data.notes || null,
         status: "pending" as const,
+        recurrence_type: data.recurrence_type,
+        anchor_day: anchorDay,
       };
 
       const { error } = await supabase.from("payments").insert(paymentData);
@@ -156,7 +176,7 @@ export function GlobalPaymentForm({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Registrar pago</DialogTitle>
         </DialogHeader>
@@ -242,7 +262,7 @@ export function GlobalPaymentForm({
                       <Calendar
                         mode="single"
                         selected={field.value}
-                        onSelect={field.onChange}
+                        onSelect={handleDueDateChange}
                         initialFocus
                         className={cn("p-3 pointer-events-auto")}
                       />
@@ -252,6 +272,61 @@ export function GlobalPaymentForm({
                 </FormItem>
               )}
             />
+
+            <FormField
+              control={form.control}
+              name="recurrence_type"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Tipo de pago</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="rounded-xl">
+                        <SelectValue placeholder="Seleccionar tipo" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {RECURRENCE_TYPES.map((type) => (
+                        <SelectItem key={type.value} value={type.value}>
+                          {type.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {recurrenceType !== "one_time" && (
+              <FormField
+                control={form.control}
+                name="anchor_day"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Día de vencimiento mensual</FormLabel>
+                    <Select 
+                      onValueChange={(val) => field.onChange(parseInt(val))} 
+                      value={field.value?.toString() || dueDate?.getDate()?.toString()}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="rounded-xl">
+                          <SelectValue placeholder="Seleccionar día" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
+                          <SelectItem key={day} value={day.toString()}>
+                            Día {day}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             <FormField
               control={form.control}

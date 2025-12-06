@@ -1,6 +1,8 @@
 // Helper functions for payment status calculation
+import { addMonths, addYears, setDate, getDaysInMonth } from "date-fns";
 
 export type PaymentStatus = 'pending' | 'due_soon' | 'overdue' | 'paid' | 'cancelled';
+export type RecurrenceType = 'one_time' | 'monthly' | 'yearly';
 
 export interface Payment {
   id: string;
@@ -16,6 +18,8 @@ export interface Payment {
   notes: string | null;
   created_at: string;
   updated_at: string;
+  recurrence_type: RecurrenceType;
+  anchor_day: number | null;
   patients?: {
     full_name: string;
   };
@@ -112,3 +116,47 @@ export const PAYMENT_METHODS = [
   { value: 'tarjeta', label: 'Tarjeta' },
   { value: 'otro', label: 'Otro' },
 ];
+
+/**
+ * Recurrence types
+ */
+export const RECURRENCE_TYPES = [
+  { value: 'one_time', label: 'Pago único' },
+  { value: 'monthly', label: 'Mensual' },
+  { value: 'yearly', label: 'Anual' },
+];
+
+/**
+ * Get recurrence type label
+ */
+export function getRecurrenceTypeLabel(type: RecurrenceType): string {
+  const found = RECURRENCE_TYPES.find(r => r.value === type);
+  return found?.label || 'Pago único';
+}
+
+/**
+ * Calculate next due date based on recurrence type
+ */
+export function calculateNextDueDate(
+  currentDueDate: Date,
+  recurrenceType: RecurrenceType,
+  anchorDay?: number | null
+): Date {
+  const day = anchorDay || currentDueDate.getDate();
+  
+  let nextDate: Date;
+  
+  if (recurrenceType === 'monthly') {
+    nextDate = addMonths(currentDueDate, 1);
+  } else if (recurrenceType === 'yearly') {
+    nextDate = addYears(currentDueDate, 1);
+  } else {
+    return currentDueDate; // one_time doesn't generate next date
+  }
+  
+  // Adjust day to handle months with fewer days
+  const daysInMonth = getDaysInMonth(nextDate);
+  const adjustedDay = Math.min(day, daysInMonth);
+  
+  return setDate(nextDate, adjustedDay);
+}

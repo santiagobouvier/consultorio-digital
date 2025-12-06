@@ -5,16 +5,20 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Mail, Phone, Calendar, FileText, CreditCard, Plus, Check } from "lucide-react";
+import { ArrowLeft, Mail, Phone, Calendar, FileText, CreditCard, Plus, Check, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { PaymentForm } from "@/components/PaymentForm";
+import { PaymentWhatsAppMenu } from "@/components/PaymentWhatsAppMenu";
 import {
   calculatePaymentStatus,
   getPaymentStatusColor,
   getPaymentStatusLabel,
   formatCurrency,
+  calculateNextDueDate,
+  getRecurrenceTypeLabel,
   type PaymentStatus,
+  type RecurrenceType,
 } from "@/lib/payments";
 
 interface Patient {
@@ -47,6 +51,8 @@ interface Payment {
   paid_at: string | null;
   method: string | null;
   notes: string | null;
+  recurrence_type: RecurrenceType;
+  anchor_day: number | null;
 }
 
 const statusLabels: Record<string, string> = {
@@ -125,7 +131,7 @@ const PatientDetail = () => {
       try {
         const { data: paymentsData, error: paymentsError } = await supabase
           .from("payments")
-          .select("id, amount, currency, due_date, status, paid_at, method, notes")
+          .select("id, amount, currency, due_date, status, paid_at, method, notes, recurrence_type, anchor_day")
           .eq("patient_id", id)
           .order("due_date", { ascending: true });
 
@@ -137,6 +143,7 @@ const PatientDetail = () => {
           const paymentsWithStatus = (paymentsData || []).map((payment) => ({
             ...payment,
             status: calculatePaymentStatus(payment),
+            recurrence_type: (payment.recurrence_type || 'one_time') as RecurrenceType,
           })) as Payment[];
           setPayments(paymentsWithStatus);
         }
@@ -167,19 +174,59 @@ const PatientDetail = () => {
     return formatCurrency(amount, currency);
   };
 
-  const handleMarkAsPaid = async (paymentId: string) => {
+  const handleMarkAsPaid = async (payment: Payment) => {
     try {
+      // Mark current payment as paid
       const { error } = await supabase
         .from("payments")
         .update({ paid_at: new Date().toISOString(), status: "paid" })
-        .eq("id", paymentId);
+        .eq("id", payment.id);
 
       if (error) throw error;
 
-      toast({
-        title: "Éxito",
-        description: "Pago marcado como pagado",
-      });
+      // If recurring, create next payment
+      if (payment.recurrence_type !== "one_time" && patient) {
+        const nextDueDate = calculateNextDueDate(
+          new Date(payment.due_date),
+          payment.recurrence_type,
+          payment.anchor_day
+        );
+
+        const { error: insertError } = await supabase
+          .from("payments")
+          .insert({
+            business_id: patient.business_id,
+            patient_id: patient.id,
+            amount: payment.amount,
+            currency: payment.currency,
+            due_date: nextDueDate.toISOString(),
+            status: "pending",
+            recurrence_type: payment.recurrence_type,
+            anchor_day: payment.anchor_day,
+            method: payment.method,
+            notes: payment.notes,
+          });
+
+        if (insertError) {
+          console.error("Error creating next payment:", insertError);
+          toast({
+            title: "Aviso",
+            description: "Pago marcado como pagado, pero no se pudo crear el próximo vencimiento",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Éxito",
+            description: `Pago marcado como pagado. Próximo vencimiento: ${formatDate(nextDueDate.toISOString())}`,
+          });
+        }
+      } else {
+        toast({
+          title: "Éxito",
+          description: "Pago marcado como pagado",
+        });
+      }
+
       fetchData();
     } catch (error) {
       console.error("Error marking payment as paid:", error);
@@ -377,6 +424,12 @@ const PatientDetail = () => {
                         <Badge className={`${getPaymentStatusColor(payment.status)} rounded-full text-xs`}>
                           {getPaymentStatusLabel(payment.status)}
                         </Badge>
+                        {payment.recurrence_type !== "one_time" && (
+                          <Badge variant="outline" className="rounded-full text-xs gap-1">
+                            <RefreshCw className="h-3 w-3" />
+                            {getRecurrenceTypeLabel(payment.recurrence_type)}
+                          </Badge>
+                        )}
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
                         Vence: {formatDate(payment.due_date)}
@@ -397,17 +450,23 @@ const PatientDetail = () => {
                         </p>
                       )}
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-1 shrink-0">
                       {payment.status !== "paid" && payment.status !== "cancelled" && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleMarkAsPaid(payment.id)}
-                          className="rounded-lg h-8 px-2"
-                          title="Marcar como pagado"
-                        >
-                          <Check className="h-4 w-4" />
-                        </Button>
+                        <>
+                          <PaymentWhatsAppMenu
+                            patientPhone={patient.whatsapp_phone}
+                            patientName={patient.full_name}
+                          />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleMarkAsPaid(payment)}
+                            className="rounded-lg h-8 px-2"
+                            title="Marcar como pagado"
+                          >
+                            <Check className="h-4 w-4" />
+                          </Button>
+                        </>
                       )}
                     </div>
                   </div>
