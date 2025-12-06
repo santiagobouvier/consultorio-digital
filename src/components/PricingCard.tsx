@@ -21,7 +21,7 @@ const features = [
   "Agenda inteligente",
   "Pagos + alertas de vencimiento",
   "Dashboard financiero",
-  "Recordatorios automáticos por WhatsApp",
+  "Recordatorios semi-automáticos por WhatsApp",
 ];
 
 const PricingCard = ({
