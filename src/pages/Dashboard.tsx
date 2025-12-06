@@ -5,9 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "@/hooks/use-toast";
-import { Users, CalendarPlus, CalendarDays, UserPlus, Bell, LogOut, Camera } from "lucide-react";
+import { Users, CalendarPlus, CalendarDays, UserPlus, Bell, LogOut, Camera, CreditCard, AlertTriangle, Clock } from "lucide-react";
 import { PatientForm } from "@/components/PatientForm";
 import { CreateAppointmentModal } from "@/components/CreateAppointmentModal";
+import { calculatePaymentStatus, formatCurrency } from "@/lib/payments";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -19,6 +20,9 @@ const Dashboard = () => {
   const [activePatientsCount, setActivePatientsCount] = useState(0);
   const [todayAppointmentsCount, setTodayAppointmentsCount] = useState(0);
   const [todayAppointments, setTodayAppointments] = useState<any[]>([]);
+  const [overduePayments, setOverduePayments] = useState(0);
+  const [dueSoonPayments, setDueSoonPayments] = useState(0);
+  const [urgentPayments, setUrgentPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showPatientForm, setShowPatientForm] = useState(false);
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
@@ -109,6 +113,53 @@ const Dashboard = () => {
         .limit(5);
 
       setTodayAppointments(appointments || []);
+
+      // Fetch payments data
+      const { data: paymentsData } = await supabase
+        .from("payments")
+        .select("*")
+        .eq("business_id", business.id)
+        .is("paid_at", null)
+        .not("status", "eq", "cancelled");
+
+      if (paymentsData) {
+        // Calculate real-time status for each payment
+        const paymentsWithStatus = paymentsData.map((p) => ({
+          ...p,
+          calculatedStatus: calculatePaymentStatus(p),
+        }));
+
+        const overdue = paymentsWithStatus.filter((p) => p.calculatedStatus === "overdue");
+        const dueSoon = paymentsWithStatus.filter((p) => p.calculatedStatus === "due_soon");
+
+        setOverduePayments(overdue.length);
+        setDueSoonPayments(dueSoon.length);
+
+        // Get 5 most urgent payments (overdue first, then due_soon, ordered by due_date)
+        const urgent = [...overdue, ...dueSoon]
+          .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())
+          .slice(0, 5);
+
+        // Fetch patient names for urgent payments
+        if (urgent.length > 0) {
+          const patientIds = [...new Set(urgent.map((p) => p.patient_id))];
+          const { data: patientsForPayments } = await supabase
+            .from("patients")
+            .select("id, full_name")
+            .in("id", patientIds);
+
+          const patientsMap = new Map(
+            (patientsForPayments || []).map((p) => [p.id, p.full_name])
+          );
+
+          setUrgentPayments(
+            urgent.map((p) => ({
+              ...p,
+              patientName: patientsMap.get(p.patient_id) || "Desconocido",
+            }))
+          );
+        }
+      }
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
       toast({
@@ -326,6 +377,44 @@ const Dashboard = () => {
           </Card>
         </div>
 
+        {/* Payment Alerts */}
+        {(overduePayments > 0 || dueSoonPayments > 0) && (
+          <div className="grid grid-cols-2 gap-3">
+            {overduePayments > 0 && (
+              <Card 
+                className="mobile-card-compact border-destructive/50 bg-destructive/5 hover:bg-destructive/10 cursor-pointer transition-colors"
+                onClick={() => navigate("/pagos?status=overdue")}
+              >
+                <CardContent className="p-4 text-center">
+                  <AlertTriangle className="h-5 w-5 text-destructive mx-auto mb-1" />
+                  <p className="text-xs text-destructive font-semibold uppercase tracking-wide">
+                    Pagos vencidos
+                  </p>
+                  <p className="text-2xl font-bold text-destructive mt-1">
+                    {overduePayments}
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+            {dueSoonPayments > 0 && (
+              <Card 
+                className="mobile-card-compact border-orange-500/50 bg-orange-500/5 hover:bg-orange-500/10 cursor-pointer transition-colors"
+                onClick={() => navigate("/pagos?status=due_soon")}
+              >
+                <CardContent className="p-4 text-center">
+                  <Clock className="h-5 w-5 text-orange-500 mx-auto mb-1" />
+                  <p className="text-xs text-orange-600 font-semibold uppercase tracking-wide">
+                    Por vencer (4 días)
+                  </p>
+                  <p className="text-2xl font-bold text-orange-600 mt-1">
+                    {dueSoonPayments}
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        )}
+
         {/* Main Actions */}
         <div className="grid grid-cols-2 gap-3">
           <Card 
@@ -373,6 +462,18 @@ const Dashboard = () => {
                 <CalendarDays className="h-5 w-5 text-secondary-foreground" />
               </div>
               <p className="font-semibold text-sm text-foreground">Ver agenda</p>
+            </CardContent>
+          </Card>
+
+          <Card 
+            className="mobile-card-compact hover:shadow-md transition-all cursor-pointer group active:scale-[0.98]"
+            onClick={() => navigate("/pagos")}
+          >
+            <CardContent className="p-4 flex flex-col items-center justify-center text-center min-h-[100px]">
+              <div className="w-11 h-11 rounded-full bg-secondary flex items-center justify-center mb-2 group-hover:bg-secondary/80 transition-colors">
+                <CreditCard className="h-5 w-5 text-secondary-foreground" />
+              </div>
+              <p className="font-semibold text-sm text-foreground">Ver pagos</p>
             </CardContent>
           </Card>
         </div>

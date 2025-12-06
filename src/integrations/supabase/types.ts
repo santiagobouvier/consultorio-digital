@@ -329,6 +329,54 @@ export type Database = {
           },
         ]
       }
+      payments: {
+        Row: {
+          amount: number
+          appointment_id: string | null
+          business_id: string
+          created_at: string
+          currency: string
+          due_date: string
+          id: string
+          method: string | null
+          notes: string | null
+          paid_at: string | null
+          patient_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          appointment_id?: string | null
+          business_id: string
+          created_at?: string
+          currency?: string
+          due_date: string
+          id?: string
+          method?: string | null
+          notes?: string | null
+          paid_at?: string | null
+          patient_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          appointment_id?: string | null
+          business_id?: string
+          created_at?: string
+          currency?: string
+          due_date?: string
+          id?: string
+          method?: string | null
+          notes?: string | null
+          paid_at?: string | null
+          patient_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
