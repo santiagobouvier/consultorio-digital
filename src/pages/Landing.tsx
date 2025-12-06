@@ -310,6 +310,11 @@ const Landing = () => {
           <div className="animate-fade-in" style={{ animationDelay: '400ms', animationFillMode: 'both' }}>
             <PricingCard {...enterprisePlan} />
           </div>
+
+          {/* Payment Note */}
+          <p className="text-center text-gray-500 text-sm mt-10 font-light">
+            💳 Todos los planes anuales se pueden pagar en hasta 12 cuotas sin interés.
+          </p>
         </div>
       </section>
 
