@@ -5,10 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "@/hooks/use-toast";
-import { Users, CalendarPlus, CalendarDays, UserPlus, Bell, LogOut, Camera, CreditCard, AlertTriangle, Clock } from "lucide-react";
+import { Users, CalendarPlus, CalendarDays, UserPlus, Bell, LogOut, Camera, CreditCard, AlertTriangle, Clock, Plus, EyeOff, Eye } from "lucide-react";
 import { PatientForm } from "@/components/PatientForm";
 import { CreateAppointmentModal } from "@/components/CreateAppointmentModal";
+import { GlobalPaymentForm } from "@/components/GlobalPaymentForm";
 import { calculatePaymentStatus, formatCurrency } from "@/lib/payments";
+
+const PRIVACY_MODE_KEY = "privacy_mode_enabled";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -27,6 +30,12 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [showPatientForm, setShowPatientForm] = useState(false);
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const [businessId, setBusinessId] = useState<string | null>(null);
+  const [privacyMode, setPrivacyMode] = useState(() => {
+    const saved = localStorage.getItem(PRIVACY_MODE_KEY);
+    return saved === "true";
+  });
 
   const statusMap: Record<string, string> = {
     pending: "pendiente",
@@ -73,6 +82,8 @@ const Dashboard = () => {
         navigate("/configurar-negocio");
         return;
       }
+
+      setBusinessId(business.id);
 
       const { count: patientsCount } = await supabase
         .from("patients")
@@ -442,20 +453,44 @@ const Dashboard = () => {
                   Ingresos del mes
                 </p>
                 <p className="text-2xl font-bold text-green-600 mt-1">
-                  {formatCurrency(monthlyIncome, "UYU")}
+                  {privacyMode ? "•••• UYU" : formatCurrency(monthlyIncome, "UYU")}
                 </p>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-green-600 hover:bg-green-500/10"
-                onClick={() => navigate("/pagos?status=paid")}
-              >
-                Ver pagados
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-muted-foreground hover:text-foreground h-9 w-9"
+                  onClick={() => {
+                    const newValue = !privacyMode;
+                    setPrivacyMode(newValue);
+                    localStorage.setItem(PRIVACY_MODE_KEY, String(newValue));
+                  }}
+                  title={privacyMode ? "Mostrar montos" : "Ocultar montos"}
+                >
+                  {privacyMode ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-green-600 hover:bg-green-500/10"
+                  onClick={() => navigate("/pagos?status=paid")}
+                >
+                  Ver pagados
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
+
+        {/* Register Payment Button */}
+        <Button 
+          className="w-full h-12 rounded-xl font-semibold gap-2"
+          onClick={() => setShowPaymentForm(true)}
+        >
+          <Plus className="h-5 w-5" />
+          Registrar pago
+        </Button>
 
         {/* Main Actions */}
         <div className="grid grid-cols-2 gap-3">
@@ -599,6 +634,18 @@ const Dashboard = () => {
         patientId={null}
         onSuccess={fetchDashboardData}
       />
+
+      {businessId && (
+        <GlobalPaymentForm
+          open={showPaymentForm}
+          onOpenChange={setShowPaymentForm}
+          businessId={businessId}
+          onSuccess={() => {
+            setShowPaymentForm(false);
+            fetchDashboardData();
+          }}
+        />
+      )}
     </div>
   );
 };
