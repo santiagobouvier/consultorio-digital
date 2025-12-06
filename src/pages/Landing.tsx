@@ -638,6 +638,34 @@ const Landing = () => {
         </div>
       </section>
 
+      {/* Demo CTA Section */}
+      <section className="px-4 sm:px-6 py-16 sm:py-24 bg-black">
+        <div className="max-w-2xl mx-auto text-center">
+          <h2 className="text-xl sm:text-3xl md:text-4xl font-bold mb-4 sm:mb-6 tracking-tight">
+            ¿Querés ver cómo funciona por dentro?
+          </h2>
+          <p className="text-gray-500 text-sm sm:text-lg mb-8 sm:mb-10 font-light max-w-lg mx-auto">
+            Te muestro la demo en vivo en menos de 15 minutos y vemos si se adapta a tu consultorio.
+          </p>
+          <a 
+            href="https://wa.me/59891093977?text=Hola,%20quiero%20agendar%20una%20demo%20del%20sistema%20para%20consultorios."
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Button 
+              size="lg" 
+              className="h-12 sm:h-14 px-8 sm:px-12 text-sm sm:text-base font-semibold rounded-xl transition-all duration-300"
+              style={{ 
+                backgroundColor: '#00c78a',
+                boxShadow: '0 4px 30px rgba(0, 199, 138, 0.35)'
+              }}
+            >
+              Ver demo en vivo
+            </Button>
+          </a>
+        </div>
+      </section>
+
       {/* Footer */}
       <footer className="px-4 sm:px-6 py-8 sm:py-12 bg-black border-t border-white/5">
         <p className="text-center text-gray-600 text-xs sm:text-sm font-light">
