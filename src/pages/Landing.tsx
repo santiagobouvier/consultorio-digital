@@ -6,6 +6,7 @@ import PricingCard from "@/components/PricingCard";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import useEmblaCarousel from "embla-carousel-react";
 import dashboardMobile from "@/assets/screenshots/dashboard-mobile.png";
+import appointmentsMobile from "@/assets/screenshots/appointments-mobile.png";
 
 const screenshotSlides = [
   {
@@ -31,7 +32,7 @@ const screenshotSlides = [
   {
     title: "Portal de Reservas",
     description: "Tus pacientes pueden agendar citas desde tu página pública.",
-    placeholder: "🌐"
+    image: appointmentsMobile
   }
 ];
 
