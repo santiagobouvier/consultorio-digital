@@ -5,7 +5,7 @@ import { Users, MessageCircle, UserPlus, ClipboardList, CalendarCheck, Clock, Ey
 import PricingCard from "@/components/PricingCard";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import useEmblaCarousel from "embla-carousel-react";
-import dashboardMobile from "@/assets/screenshots/dashboard-mobile.png";
+import dashboardMobile from "@/assets/screenshots/dashboard-mobile.jpg";
 
 const screenshotSlides = [
   {
