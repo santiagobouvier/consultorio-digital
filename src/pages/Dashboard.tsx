@@ -23,6 +23,7 @@ const Dashboard = () => {
   const [overduePayments, setOverduePayments] = useState(0);
   const [dueSoonPayments, setDueSoonPayments] = useState(0);
   const [urgentPayments, setUrgentPayments] = useState<any[]>([]);
+  const [monthlyIncome, setMonthlyIncome] = useState(0);
   const [loading, setLoading] = useState(true);
   const [showPatientForm, setShowPatientForm] = useState(false);
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
@@ -114,17 +115,17 @@ const Dashboard = () => {
 
       setTodayAppointments(appointments || []);
 
-      // Fetch payments data
-      const { data: paymentsData } = await supabase
+      // Fetch unpaid payments for alerts
+      const { data: unpaidPaymentsData } = await supabase
         .from("payments")
         .select("*")
         .eq("business_id", business.id)
         .is("paid_at", null)
         .not("status", "eq", "cancelled");
 
-      if (paymentsData) {
+      if (unpaidPaymentsData) {
         // Calculate real-time status for each payment
-        const paymentsWithStatus = paymentsData.map((p) => ({
+        const paymentsWithStatus = unpaidPaymentsData.map((p) => ({
           ...p,
           calculatedStatus: calculatePaymentStatus(p),
         }));
@@ -159,6 +160,23 @@ const Dashboard = () => {
             }))
           );
         }
+      }
+
+      // Fetch monthly income (paid payments this month)
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0, 0, 0, 0);
+
+      const { data: paidPaymentsData } = await supabase
+        .from("payments")
+        .select("amount")
+        .eq("business_id", business.id)
+        .not("paid_at", "is", null)
+        .gte("paid_at", startOfMonth.toISOString());
+
+      if (paidPaymentsData) {
+        const totalIncome = paidPaymentsData.reduce((sum, p) => sum + (p.amount || 0), 0);
+        setMonthlyIncome(totalIncome);
       }
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
@@ -414,6 +432,30 @@ const Dashboard = () => {
             )}
           </div>
         )}
+
+        {/* Monthly Income */}
+        <Card className="mobile-card-compact bg-green-500/5 border-green-500/30">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wide">
+                  Ingresos del mes
+                </p>
+                <p className="text-2xl font-bold text-green-600 mt-1">
+                  {formatCurrency(monthlyIncome, "UYU")}
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-green-600 hover:bg-green-500/10"
+                onClick={() => navigate("/pagos?status=paid")}
+              >
+                Ver pagados
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Main Actions */}
         <div className="grid grid-cols-2 gap-3">
