@@ -78,15 +78,15 @@ const Landing = () => {
             }}
           >
             {/* Emoji with glow */}
-            <div className="flex justify-center mb-8">
+            <div className="flex justify-center mb-10">
               <div 
-                className="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl flex items-center justify-center relative"
+                className="w-28 h-28 sm:w-36 sm:h-36 rounded-3xl flex items-center justify-center relative"
                 style={{ 
                   backgroundColor: 'rgba(0, 199, 138, 0.12)',
-                  boxShadow: '0 0 60px rgba(0, 199, 138, 0.4), 0 0 30px rgba(0, 199, 138, 0.3)'
+                  boxShadow: '0 0 80px rgba(0, 199, 138, 0.5), 0 0 40px rgba(0, 199, 138, 0.3)'
                 }}
               >
-                <span className="text-4xl sm:text-5xl">🩺</span>
+                <span className="text-6xl sm:text-7xl">🗓️</span>
               </div>
             </div>
             
