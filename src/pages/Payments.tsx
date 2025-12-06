@@ -15,8 +15,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Search, Filter, RefreshCw } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { ArrowLeft, Search, Filter, RefreshCw, Pencil, Trash2 } from "lucide-react";
 import { PaymentWhatsAppMenu } from "@/components/PaymentWhatsAppMenu";
+import { PaymentForm } from "@/components/PaymentForm";
 import {
   calculatePaymentStatus,
   getPaymentStatusColor,
@@ -36,12 +47,16 @@ interface Patient {
 interface Payment {
   id: string;
   patient_id: string;
+  business_id: string;
   amount: number;
   currency: string;
   due_date: string;
   paid_at: string | null;
   status: PaymentStatus;
   recurrence_type: RecurrenceType;
+  anchor_day: number | null;
+  method: string | null;
+  notes: string | null;
   patients?: {
     full_name: string;
     whatsapp_phone: string | null;
@@ -59,6 +74,9 @@ const Payments = () => {
     searchParams.get("status") || "all"
   );
   const [patientFilter, setPatientFilter] = useState<string>("all");
+  const [businessId, setBusinessId] = useState<string | null>(null);
+  const [editingPayment, setEditingPayment] = useState<Payment | null>(null);
+  const [deletingPaymentId, setDeletingPaymentId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -92,10 +110,12 @@ const Payments = () => {
         return;
       }
 
+      setBusinessId(business.id);
+
       // Fetch payments
       const { data: paymentsData, error: paymentsError } = await supabase
         .from("payments")
-        .select("*, recurrence_type, anchor_day")
+        .select("*, recurrence_type, anchor_day, method, notes")
         .eq("business_id", business.id)
         .order("due_date", { ascending: true });
 
@@ -117,6 +137,7 @@ const Payments = () => {
         ...payment,
         status: calculatePaymentStatus(payment),
         recurrence_type: (payment.recurrence_type || 'one_time') as RecurrenceType,
+        business_id: business.id,
         patients: patientsMap.get(payment.patient_id) || { full_name: "Desconocido", whatsapp_phone: null },
       })) as Payment[];
 
@@ -133,6 +154,33 @@ const Payments = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeletePayment = async () => {
+    if (!deletingPaymentId) return;
+    
+    try {
+      const { error } = await supabase
+        .from("payments")
+        .delete()
+        .eq("id", deletingPaymentId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Éxito",
+        description: "Pago eliminado correctamente",
+      });
+      setDeletingPaymentId(null);
+      fetchData();
+    } catch (error) {
+      console.error("Error deleting payment:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo eliminar el pago",
+        variant: "destructive",
+      });
     }
   };
   const filteredPayments = payments.filter((payment) => {
@@ -292,6 +340,30 @@ const Payments = () => {
                       <Badge className={`${getPaymentStatusColor(payment.status)} rounded-full text-xs`}>
                         {getPaymentStatusLabel(payment.status)}
                       </Badge>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingPayment(payment);
+                        }}
+                        className="rounded-lg h-8 px-2"
+                        title="Editar pago"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeletingPaymentId(payment.id);
+                        }}
+                        className="rounded-lg h-8 px-2 text-destructive hover:text-destructive"
+                        title="Eliminar pago"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
                 ))}
@@ -300,6 +372,47 @@ const Payments = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Edit Payment Modal */}
+      {editingPayment && businessId && (
+        <PaymentForm
+          open={!!editingPayment}
+          onOpenChange={(open) => !open && setEditingPayment(null)}
+          patientId={editingPayment.patient_id}
+          businessId={businessId}
+          paymentId={editingPayment.id}
+          initialData={{
+            amount: editingPayment.amount,
+            due_date: editingPayment.due_date,
+            method: editingPayment.method,
+            notes: editingPayment.notes,
+            recurrence_type: editingPayment.recurrence_type,
+            anchor_day: editingPayment.anchor_day,
+          }}
+          onSuccess={() => {
+            setEditingPayment(null);
+            fetchData();
+          }}
+        />
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deletingPaymentId} onOpenChange={(open) => !open && setDeletingPaymentId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar pago?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. El pago será eliminado permanentemente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-xl">Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeletePayment} className="rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
