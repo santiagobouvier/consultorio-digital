@@ -10,6 +10,7 @@ import { PatientForm } from "@/components/PatientForm";
 import { CreateAppointmentModal } from "@/components/CreateAppointmentModal";
 import { WhatsAppButtons } from "@/components/WhatsAppButtons";
 import { ReminderModal } from "@/components/ReminderModal";
+import { PatientPayments } from "@/components/PatientPayments";
 import { ArrowLeft, Calendar, Edit, Bell } from "lucide-react";
 
 interface Patient {
@@ -479,6 +480,9 @@ const PatientDetail = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Payments Section */}
+        <PatientPayments patientId={patient.id} businessId={patient.business_id} />
       </div>
 
       {/* Modals */}
