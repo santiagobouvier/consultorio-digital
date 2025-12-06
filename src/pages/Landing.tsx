@@ -1,6 +1,61 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Users, MessageCircle, UserPlus, ClipboardList, CalendarCheck, Clock, Eye, Sparkles, Calendar } from "lucide-react";
+import PricingCard from "@/components/PricingCard";
+
+const pricingPlans = [
+  {
+    id: "individual",
+    name: "Consultorio Individual",
+    description: "Ideal para profesionales independientes",
+    professionals: "1 profesional",
+    patients: "Hasta 80 pacientes activos",
+    price: "1.500 UYU",
+    priceNote: "/ mes (pago anual)",
+    buttonText: "Elegir este plan",
+    buttonLink: "/pago-plan/individual",
+    isHighlighted: false,
+  },
+  {
+    id: "profesional",
+    name: "Consultorio Profesional",
+    description: "Para consultorios en crecimiento",
+    professionals: "Hasta 3 profesionales",
+    patients: "Hasta 300 pacientes activos",
+    price: "3.000 UYU",
+    priceNote: "/ mes (pago anual)",
+    buttonText: "Elegir este plan",
+    buttonLink: "/pago-plan/profesional",
+    isHighlighted: true,
+    highlightLabel: "Más elegido",
+  },
+  {
+    id: "avanzada",
+    name: "Clínica Avanzada",
+    description: "Para clínicas medianas",
+    professionals: "Hasta 7 profesionales",
+    patients: "Hasta 800 pacientes activos",
+    price: "5.500 UYU",
+    priceNote: "/ mes (pago anual)",
+    buttonText: "Elegir este plan",
+    buttonLink: "/pago-plan/avanzada",
+    isHighlighted: false,
+  },
+];
+
+const enterprisePlan = {
+  id: "enterprise",
+  name: "Plan Enterprise",
+  description: "Para grandes organizaciones con necesidades específicas",
+  professionals: "Profesionales ilimitados",
+  patients: "Pacientes ilimitados",
+  price: "Desde 9.000 UYU",
+  priceNote: "/ mes",
+  buttonText: "Hablar con ventas",
+  buttonLink: "https://api.whatsapp.com/send?phone=59891093977&text=Hola%2C+me+interesa+el+Plan+Enterprise+para+mi+organizaci%C3%B3n.",
+  isExternal: true,
+  isHighlighted: false,
+};
 
 const features = [
   {
@@ -221,6 +276,39 @@ const Landing = () => {
                 </p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Pricing Section */}
+      <section id="pricing" className="px-4 sm:px-6 py-28" style={{ backgroundColor: '#080808' }}>
+        <div className="max-w-6xl mx-auto">
+          {/* Section Header */}
+          <div className="text-center mb-16">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 tracking-tight">
+              Planes y Precios
+            </h2>
+            <p className="text-gray-500 text-base sm:text-lg max-w-2xl mx-auto font-light">
+              Pagás según el tamaño de tu consultorio. Todas las funciones están incluidas en todos los planes.
+            </p>
+          </div>
+
+          {/* Pricing Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            {pricingPlans.map((plan, index) => (
+              <div
+                key={plan.id}
+                className="animate-fade-in"
+                style={{ animationDelay: `${(index + 1) * 100}ms`, animationFillMode: 'both' }}
+              >
+                <PricingCard {...plan} />
+              </div>
+            ))}
+          </div>
+
+          {/* Enterprise Card - Full Width */}
+          <div className="animate-fade-in" style={{ animationDelay: '400ms', animationFillMode: 'both' }}>
+            <PricingCard {...enterprisePlan} />
           </div>
         </div>
       </section>
