@@ -5,12 +5,13 @@ import { Users, MessageCircle, UserPlus, ClipboardList, CalendarCheck, Clock, Ey
 import PricingCard from "@/components/PricingCard";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import useEmblaCarousel from "embla-carousel-react";
+import dashboardMobile from "@/assets/screenshots/dashboard-mobile.png";
 
 const screenshotSlides = [
   {
     title: "Dashboard Principal",
     description: "Visualizá todas tus citas del día y estadísticas importantes de un vistazo.",
-    placeholder: "📊"
+    image: dashboardMobile
   },
   {
     title: "Agenda Inteligente",
@@ -215,21 +216,30 @@ const ScreenshotsCarousel = () => {
                   className="flex-[0_0_100%] min-w-0 px-2 sm:px-4"
                 >
                   <div 
-                    className="aspect-video rounded-xl sm:rounded-2xl border border-white/10 flex flex-col items-center justify-center p-6 sm:p-10"
+                    className="aspect-[9/16] sm:aspect-video max-h-[500px] sm:max-h-none rounded-xl sm:rounded-2xl border border-white/10 flex flex-col items-center justify-center p-4 sm:p-10 overflow-hidden"
                     style={{ 
                       backgroundColor: '#111111',
                       boxShadow: selectedIndex === index ? '0 8px 40px rgba(0, 199, 138, 0.15)' : 'none'
                     }}
                   >
-                    {/* Placeholder - Reemplazar con capturas reales */}
-                    <span className="text-5xl sm:text-7xl mb-4 sm:mb-6">{slide.placeholder}</span>
-                    <h3 className="text-lg sm:text-xl font-semibold text-white mb-2 text-center">
-                      {slide.title}
-                    </h3>
-                    <p className="text-gray-400 text-sm sm:text-base text-center max-w-md font-light">
-                      {slide.description}
-                    </p>
-                    <p className="text-gray-600 text-xs mt-4 font-light">Captura próximamente</p>
+                    {slide.image ? (
+                      <img 
+                        src={slide.image} 
+                        alt={slide.title}
+                        className="h-full w-auto max-w-full object-contain rounded-lg"
+                      />
+                    ) : (
+                      <>
+                        <span className="text-5xl sm:text-7xl mb-4 sm:mb-6">{slide.placeholder}</span>
+                        <h3 className="text-lg sm:text-xl font-semibold text-white mb-2 text-center">
+                          {slide.title}
+                        </h3>
+                        <p className="text-gray-400 text-sm sm:text-base text-center max-w-md font-light">
+                          {slide.description}
+                        </p>
+                        <p className="text-gray-600 text-xs mt-4 font-light">Captura próximamente</p>
+                      </>
+                    )}
                   </div>
                 </div>
               ))}
