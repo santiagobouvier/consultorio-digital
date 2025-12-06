@@ -7,6 +7,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import useEmblaCarousel from "embla-carousel-react";
 import dashboardMobile from "@/assets/screenshots/dashboard-mobile.png";
 import appointmentsMobile from "@/assets/screenshots/appointments-mobile.png";
+import agendaMobile from "@/assets/screenshots/agenda-mobile.png";
 
 const screenshotSlides = [
   {
@@ -17,7 +18,7 @@ const screenshotSlides = [
   {
     title: "Agenda Inteligente",
     description: "Calendario visual para organizar tus citas por día, semana o mes.",
-    placeholder: "📅"
+    image: agendaMobile
   },
   {
     title: "Gestión de Pacientes",
