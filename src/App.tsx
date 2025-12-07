@@ -23,6 +23,7 @@ const PublicBooking = lazy(() => import("./pages/PublicBooking"));
 const AppointmentRequests = lazy(() => import("./pages/AppointmentRequests"));
 const PlanPayment = lazy(() => import("./pages/PlanPayment"));
 const Payments = lazy(() => import("./pages/Payments"));
+const PatientPortal = lazy(() => import("./pages/PatientPortal"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
@@ -51,6 +52,7 @@ const App = () => (
             <Route path="/consultorio/:slug/reservar" element={<PublicBooking />} />
             <Route path="/pago-plan/:planId" element={<PlanPayment />} />
             <Route path="/pagos" element={<Payments />} />
+            <Route path="/portal-paciente" element={<PatientPortal />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
