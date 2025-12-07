@@ -5,10 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Mail, Phone, Calendar, FileText, CreditCard, Plus, Check, RefreshCw, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, Mail, Phone, Calendar, FileText, CreditCard, Plus, Check, RefreshCw, Pencil, Trash2, UserPlus } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { PaymentForm } from "@/components/PaymentForm";
+import { PatientInviteModal } from "@/components/PatientInviteModal";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -85,6 +86,7 @@ const PatientDetail = () => {
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [editingPayment, setEditingPayment] = useState<Payment | null>(null);
   const [deletingPaymentId, setDeletingPaymentId] = useState<string | null>(null);
+  const [showInviteModal, setShowInviteModal] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -368,10 +370,18 @@ const PatientDetail = () => {
               </div>
             )}
 
-            <div className="pt-2 border-t border-border">
+            <div className="pt-4 border-t border-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <p className="text-xs text-muted-foreground">
                 Registrado el {formatDate(patient.created_at)}
               </p>
+              <Button
+                onClick={() => setShowInviteModal(true)}
+                variant="outline"
+                className="rounded-xl"
+              >
+                <UserPlus className="h-4 w-4 mr-2" />
+                Invitar al portal
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -589,6 +599,16 @@ const PatientDetail = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Patient Invite Modal */}
+      {patient && (
+        <PatientInviteModal
+          open={showInviteModal}
+          onOpenChange={setShowInviteModal}
+          patientId={patient.id}
+          patientName={patient.full_name}
+        />
+      )}
     </div>
   );
 };
