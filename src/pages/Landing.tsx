@@ -365,127 +365,75 @@ const Landing = () => {
     <div className="min-h-screen bg-black text-white">
       {/* Hero Section */}
       <section className="min-h-[85vh] sm:min-h-screen flex flex-col items-center justify-center px-4 sm:px-6 py-12 sm:py-24">
-        <div className="w-full max-w-5xl mx-auto animate-fade-in">
-          <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
-            {/* Left Column - Content */}
-            <div className="order-2 lg:order-1">
-              {/* Premium Hero Card */}
+        <div className="w-full max-w-3xl mx-auto animate-fade-in">
+          {/* Premium Hero Card */}
+          <div 
+            className="relative rounded-2xl sm:rounded-3xl p-5 sm:p-10 md:p-14"
+            style={{ 
+              backgroundColor: '#111111',
+              boxShadow: '0 8px 60px rgba(0, 199, 138, 0.15), 0 0 80px rgba(0, 199, 138, 0.08)'
+            }}
+          >
+            {/* Floating Mockup */}
+            <div className="flex justify-center mb-6 sm:mb-10">
               <div 
-                className="relative rounded-2xl sm:rounded-3xl p-5 sm:p-10 md:p-14"
-                style={{ 
-                  backgroundColor: '#111111',
-                  boxShadow: '0 8px 60px rgba(0, 199, 138, 0.15), 0 0 80px rgba(0, 199, 138, 0.08)'
-                }}
-              >
-                {/* Emoji */}
-                <div className="flex justify-center mb-6 sm:mb-10">
-                  <span className="text-6xl sm:text-8xl">🗓️</span>
-                </div>
-                
-                {/* Title */}
-                <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold tracking-tight text-center mb-4 sm:mb-6 leading-tight">
-                  Sistema de Gestión
-                  <span className="block" style={{ color: '#00c78a' }}>de Consultorio</span>
-                </h1>
-                
-                {/* Subtitle */}
-                <p className="text-sm sm:text-lg md:text-xl text-gray-400 text-center mb-6 sm:mb-10 max-w-xl mx-auto leading-relaxed font-light">
-                  Organizá pacientes, citas y recordatorios en un panel simple y profesional.
-                </p>
-                
-                {/* CTA Buttons */}
-                <div className="flex flex-col sm:flex-row justify-center gap-4">
-                  <Link to="/auth">
-                    <Button 
-                      size="lg" 
-                      className="w-full sm:w-auto h-12 sm:h-14 px-8 sm:px-12 text-sm sm:text-base font-semibold rounded-xl transition-all duration-300"
-                      style={{ 
-                        backgroundColor: '#00c78a',
-                        boxShadow: '0 4px 30px rgba(0, 199, 138, 0.35)'
-                      }}
-                    >
-                      Iniciar sesión
-                    </Button>
-                  </Link>
-                  <a 
-                    href="#conoce-el-sistema"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      document.getElementById('conoce-el-sistema')?.scrollIntoView({ behavior: 'smooth' });
-                    }}
-                  >
-                    <Button 
-                      variant="outline"
-                      size="lg" 
-                      className="w-full sm:w-auto h-12 sm:h-14 px-8 sm:px-12 text-sm sm:text-base font-semibold rounded-xl transition-all duration-300 bg-white text-black border-white hover:bg-gray-100"
-                    >
-                      Conoce el sistema
-                    </Button>
-                  </a>
-                </div>
-              </div>
-            </div>
-
-            {/* Right Column - Floating Mockup */}
-            <div className="order-1 lg:order-2 hidden lg:block">
-              <div 
-                className="relative"
+                className="relative w-full max-w-xs sm:max-w-sm"
                 style={{
                   animation: 'float 6s ease-in-out infinite'
                 }}
               >
                 {/* Browser Window Mockup */}
                 <div 
-                  className="rounded-2xl overflow-hidden border"
+                  className="rounded-xl sm:rounded-2xl overflow-hidden border"
                   style={{ 
                     backgroundColor: '#1a1a1a',
                     borderColor: 'rgba(255, 255, 255, 0.1)',
-                    boxShadow: '0 25px 80px -20px rgba(0, 0, 0, 0.5), 0 0 60px rgba(0, 199, 138, 0.1)'
+                    boxShadow: '0 25px 80px -20px rgba(0, 0, 0, 0.5), 0 0 40px rgba(0, 199, 138, 0.1)'
                   }}
                 >
                   {/* Browser bar */}
                   <div 
-                    className="flex items-center gap-2 px-4 py-2.5 border-b"
+                    className="flex items-center gap-2 px-3 py-2 border-b"
                     style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}
                   >
-                    <div className="flex gap-1.5">
-                      <div className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
-                      <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/80" />
-                      <div className="w-2.5 h-2.5 rounded-full bg-green-500/80" />
+                    <div className="flex gap-1">
+                      <div className="w-2 h-2 rounded-full bg-red-500/80" />
+                      <div className="w-2 h-2 rounded-full bg-yellow-500/80" />
+                      <div className="w-2 h-2 rounded-full bg-green-500/80" />
                     </div>
                     <div 
-                      className="flex-1 h-5 rounded-md ml-3"
+                      className="flex-1 h-4 rounded-md ml-2"
                       style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)' }}
                     />
                   </div>
 
                   {/* Dashboard Content */}
-                  <div className="p-6 grid grid-cols-5 gap-4">
+                  <div className="p-3 sm:p-4 grid grid-cols-5 gap-2 sm:gap-3">
                     {/* Mini Calendar - Left side */}
                     <div 
-                      className="col-span-3 rounded-xl p-4"
+                      className="col-span-3 rounded-lg p-2 sm:p-3"
                       style={{ backgroundColor: 'rgba(255, 255, 255, 0.03)' }}
                     >
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="text-xs font-medium text-gray-400">Diciembre 2025</span>
-                        <Calendar className="w-4 h-4 text-gray-500" />
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[9px] sm:text-[10px] font-medium text-gray-400">Diciembre 2025</span>
+                        <Calendar className="w-3 h-3 text-gray-500" />
                       </div>
                       
                       {/* Week days header */}
-                      <div className="grid grid-cols-7 gap-1 mb-2">
+                      <div className="grid grid-cols-7 gap-0.5 mb-1">
                         {['L', 'M', 'X', 'J', 'V', 'S', 'D'].map((d) => (
-                          <div key={d} className="text-[10px] text-gray-500 text-center">{d}</div>
+                          <div key={d} className="text-[7px] sm:text-[8px] text-gray-500 text-center">{d}</div>
                         ))}
                       </div>
                       
                       {/* Calendar days */}
-                      <div className="grid grid-cols-7 gap-1">
+                      <div className="grid grid-cols-7 gap-0.5">
                         {[...Array(7)].map((_, i) => (
                           <div 
                             key={i}
-                            className="aspect-square rounded-md flex items-center justify-center text-[11px]"
+                            className="aspect-square rounded flex items-center justify-center text-[8px] sm:text-[9px]"
                             style={{ 
-                              backgroundColor: [1, 3, 5].includes(i) ? 'rgba(0, 199, 138, 0.2)' : 'transparent',
+                              backgroundColor: [1, 3, 5].includes(i) ? 'rgba(0, 199, 138, 0.25)' : 'transparent',
                               color: [1, 3, 5].includes(i) ? '#00c78a' : '#888'
                             }}
                           >
@@ -493,13 +441,13 @@ const Landing = () => {
                           </div>
                         ))}
                       </div>
-                      <div className="grid grid-cols-7 gap-1 mt-1">
+                      <div className="grid grid-cols-7 gap-0.5 mt-0.5">
                         {[...Array(7)].map((_, i) => (
                           <div 
                             key={i}
-                            className="aspect-square rounded-md flex items-center justify-center text-[11px]"
+                            className="aspect-square rounded flex items-center justify-center text-[8px] sm:text-[9px]"
                             style={{ 
-                              backgroundColor: [0, 2, 4].includes(i) ? 'rgba(0, 199, 138, 0.2)' : 'transparent',
+                              backgroundColor: [0, 2, 4].includes(i) ? 'rgba(0, 199, 138, 0.25)' : 'transparent',
                               color: [0, 2, 4].includes(i) ? '#00c78a' : '#888'
                             }}
                           >
@@ -510,25 +458,67 @@ const Landing = () => {
                     </div>
 
                     {/* Metrics cards - Right side */}
-                    <div className="col-span-2 flex flex-col gap-3">
+                    <div className="col-span-2 flex flex-col gap-1.5 sm:gap-2">
                       <div 
-                        className="rounded-xl p-4 flex-1"
-                        style={{ backgroundColor: 'rgba(0, 199, 138, 0.1)' }}
+                        className="rounded-lg p-2 sm:p-2.5 flex-1"
+                        style={{ backgroundColor: 'rgba(0, 199, 138, 0.15)' }}
                       >
-                        <div className="text-xs text-gray-400 mb-1">Citas hoy</div>
-                        <div className="text-2xl font-bold" style={{ color: '#00c78a' }}>5</div>
+                        <div className="text-[8px] sm:text-[9px] text-gray-400 mb-0.5">Citas hoy</div>
+                        <div className="text-base sm:text-lg font-bold" style={{ color: '#00c78a' }}>5</div>
                       </div>
                       <div 
-                        className="rounded-xl p-4 flex-1"
+                        className="rounded-lg p-2 sm:p-2.5 flex-1"
                         style={{ backgroundColor: 'rgba(255, 255, 255, 0.03)' }}
                       >
-                        <div className="text-xs text-gray-400 mb-1">Pacientes activos</div>
-                        <div className="text-2xl font-bold text-white">47</div>
+                        <div className="text-[8px] sm:text-[9px] text-gray-400 mb-0.5">Pacientes</div>
+                        <div className="text-base sm:text-lg font-bold text-white">47</div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
+            </div>
+            
+            {/* Title */}
+            <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-center mb-4 sm:mb-6 leading-tight">
+              Sistema de Gestión
+              <span className="block" style={{ color: '#00c78a' }}>de Consultorio</span>
+            </h1>
+            
+            {/* Subtitle */}
+            <p className="text-sm sm:text-lg md:text-xl text-gray-400 text-center mb-6 sm:mb-10 max-w-xl mx-auto leading-relaxed font-light">
+              Organizá pacientes, citas y recordatorios en un panel simple y profesional.
+            </p>
+            
+            {/* CTA Buttons */}
+            <div className="flex flex-col sm:flex-row justify-center gap-4">
+              <Link to="/auth">
+                <Button 
+                  size="lg" 
+                  className="w-full sm:w-auto h-12 sm:h-14 px-8 sm:px-12 text-sm sm:text-base font-semibold rounded-xl transition-all duration-300"
+                  style={{ 
+                    backgroundColor: '#00c78a',
+                    boxShadow: '0 4px 30px rgba(0, 199, 138, 0.35)'
+                  }}
+                >
+                  Iniciar sesión
+                </Button>
+              </Link>
+              <a 
+                href="#conoce-el-sistema"
+                onClick={(e) => {
+                  e.preventDefault();
+                  document.getElementById('conoce-el-sistema')?.scrollIntoView({ behavior: 'smooth' });
+                }}
+              >
+                <Button 
+                  variant="outline"
+                  size="lg" 
+                  className="w-full sm:w-auto h-12 sm:h-14 px-8 sm:px-12 text-sm sm:text-base font-semibold rounded-xl transition-all duration-300 bg-white text-black border-white hover:bg-gray-100"
+                >
+                  Conoce el sistema
+                </Button>
+              </a>
             </div>
           </div>
         </div>
@@ -537,7 +527,7 @@ const Landing = () => {
         <style>{`
           @keyframes float {
             0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-10px); }
+            50% { transform: translateY(-8px); }
           }
         `}</style>
       </section>
