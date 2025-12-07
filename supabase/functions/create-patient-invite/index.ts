@@ -72,7 +72,45 @@ Deno.serve(async (req) => {
 
     let authUserId = patient.auth_user_id;
 
-    // If patient doesn't have an auth user, create one
+    // If patient doesn't have an auth user, check if one exists with that email first
+    if (!authUserId && patient.email) {
+      // Check if a user already exists with this email
+      const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
+      const existingUser = existingUsers?.users?.find(
+        u => u.email?.toLowerCase() === patient.email?.toLowerCase()
+      );
+
+      if (existingUser) {
+        // Use existing user
+        authUserId = existingUser.id;
+        console.log(`Found existing user for email ${patient.email}: ${authUserId}`);
+
+        // Update patient with auth_user_id
+        await supabaseAdmin
+          .from("patients")
+          .update({ auth_user_id: authUserId })
+          .eq("id", patientId);
+
+        // Check if patient role already exists
+        const { data: existingRole } = await supabaseAdmin
+          .from("user_roles")
+          .select("id")
+          .eq("user_id", authUserId)
+          .eq("role", "patient")
+          .maybeSingle();
+
+        if (!existingRole) {
+          await supabaseAdmin
+            .from("user_roles")
+            .insert({
+              user_id: authUserId,
+              role: "patient",
+            });
+        }
+      }
+    }
+
+    // If still no auth user, create one
     if (!authUserId) {
       // Generate a placeholder email if patient doesn't have one
       const patientEmail = patient.email || `patient-${patientId}@portal.interno`;
@@ -84,7 +122,7 @@ Deno.serve(async (req) => {
       const { data: newUser, error: createUserError } = await supabaseAdmin.auth.admin.createUser({
         email: patientEmail,
         password: tempPassword,
-        email_confirm: true, // Auto-confirm since they'll set password via invite
+        email_confirm: true,
         user_metadata: {
           full_name: patient.full_name,
           is_patient: true,

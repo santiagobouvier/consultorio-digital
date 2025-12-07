@@ -5,13 +5,26 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "@/hooks/use-toast";
-import { Users, CalendarPlus, CalendarDays, UserPlus, Bell, LogOut, Camera, CreditCard, AlertTriangle, Clock, Plus, EyeOff, Eye, Smartphone } from "lucide-react";
+import { Users, CalendarPlus, CalendarDays, UserPlus, Bell, LogOut, Camera, CreditCard, AlertTriangle, Clock, Plus, EyeOff, Eye, Smartphone, Building2, ChevronDown } from "lucide-react";
 import { PatientForm } from "@/components/PatientForm";
 import { CreateAppointmentModal } from "@/components/CreateAppointmentModal";
 import { GlobalPaymentForm } from "@/components/GlobalPaymentForm";
 import { calculatePaymentStatus, formatCurrency } from "@/lib/payments";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
 
 const PRIVACY_MODE_KEY = "privacy_mode_enabled";
+
+interface Business {
+  id: string;
+  name: string;
+  owner_user_id: string;
+}
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -37,6 +50,11 @@ const Dashboard = () => {
     const saved = localStorage.getItem(PRIVACY_MODE_KEY);
     return saved === "true";
   });
+  
+  // Super admin state
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [allBusinesses, setAllBusinesses] = useState<Business[]>([]);
+  const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
 
   const statusMap: Record<string, string> = {
     pending: "pendiente",
@@ -50,7 +68,7 @@ const Dashboard = () => {
     fetchDashboardData();
   }, []);
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = async (overrideBusinessId?: string) => {
     try {
       setLoading(true);
 
@@ -73,23 +91,86 @@ const Dashboard = () => {
         setAvatarUrl(profile.avatar_url);
       }
 
-      const { data: business } = await supabase
-        .from("businesses")
+      // Check if user is super_admin
+      const { data: superAdminRole } = await supabase
+        .from("user_roles")
         .select("id")
-        .eq("owner_user_id", user.id)
+        .eq("user_id", user.id)
+        .eq("role", "super_admin")
         .maybeSingle();
 
-      if (!business) {
+      const isAdmin = !!superAdminRole;
+      setIsSuperAdmin(isAdmin);
+
+      let currentBusinessId = overrideBusinessId || null;
+
+      if (isAdmin) {
+        // Super admin: load all businesses
+        const { data: businesses } = await supabase
+          .from("businesses")
+          .select("id, name, owner_user_id")
+          .order("name");
+
+        if (businesses && businesses.length > 0) {
+          setAllBusinesses(businesses);
+          
+          // Use override or first business
+          if (!currentBusinessId) {
+            currentBusinessId = businesses[0].id;
+          }
+          
+          const selected = businesses.find(b => b.id === currentBusinessId) || businesses[0];
+          setSelectedBusiness(selected);
+          currentBusinessId = selected.id;
+        }
+      } else {
+        // Regular user: check for owned or member business
+        let { data: business } = await supabase
+          .from("businesses")
+          .select("id, name, owner_user_id")
+          .eq("owner_user_id", user.id)
+          .maybeSingle();
+
+        if (!business) {
+          // Check if member via user_roles
+          const { data: userRole } = await supabase
+            .from("user_roles")
+            .select("business_id")
+            .eq("user_id", user.id)
+            .in("role", ["owner", "professional"])
+            .maybeSingle();
+
+          if (userRole?.business_id) {
+            const { data: memberBusiness } = await supabase
+              .from("businesses")
+              .select("id, name, owner_user_id")
+              .eq("id", userRole.business_id)
+              .single();
+            
+            business = memberBusiness;
+          }
+        }
+
+        if (!business) {
+          navigate("/configurar-negocio");
+          return;
+        }
+
+        currentBusinessId = business.id;
+        setSelectedBusiness(business);
+      }
+
+      if (!currentBusinessId) {
         navigate("/configurar-negocio");
         return;
       }
 
-      setBusinessId(business.id);
+      setBusinessId(currentBusinessId);
 
       const { count: patientsCount } = await supabase
         .from("patients")
         .select("*", { count: "exact", head: true })
-        .eq("business_id", business.id)
+        .eq("business_id", currentBusinessId)
         .eq("is_active", true);
 
       setActivePatientsCount(patientsCount || 0);
@@ -98,7 +179,7 @@ const Dashboard = () => {
       const { count: portalCount } = await supabase
         .from("patients")
         .select("*", { count: "exact", head: true })
-        .eq("business_id", business.id)
+        .eq("business_id", currentBusinessId)
         .not("auth_user_id", "is", null);
 
       setPortalPatientsCount(portalCount || 0);
@@ -111,7 +192,7 @@ const Dashboard = () => {
       const { count: appointmentsCount } = await supabase
         .from("appointments")
         .select("*", { count: "exact", head: true })
-        .eq("business_id", business.id)
+        .eq("business_id", currentBusinessId)
         .gte("start_at", today.toISOString())
         .lt("start_at", tomorrow.toISOString())
         .not("status", "in", '("cancelled","no_show")');
@@ -128,7 +209,7 @@ const Dashboard = () => {
           patient_id,
           patients (full_name)
         `)
-        .eq("business_id", business.id)
+        .eq("business_id", currentBusinessId)
         .gte("start_at", today.toISOString())
         .lt("start_at", tomorrow.toISOString())
         .order("start_at", { ascending: true })
@@ -140,7 +221,7 @@ const Dashboard = () => {
       const { data: unpaidPaymentsData } = await supabase
         .from("payments")
         .select("*")
-        .eq("business_id", business.id)
+        .eq("business_id", currentBusinessId)
         .is("paid_at", null)
         .not("status", "eq", "cancelled");
 
@@ -191,7 +272,7 @@ const Dashboard = () => {
       const { data: paidPaymentsData } = await supabase
         .from("payments")
         .select("amount")
-        .eq("business_id", business.id)
+        .eq("business_id", currentBusinessId)
         .not("paid_at", "is", null)
         .gte("paid_at", startOfMonth.toISOString());
 
@@ -331,6 +412,45 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-2xl mx-auto p-4 sm:p-6 space-y-6">
+        {/* Super Admin Business Selector */}
+        {isSuperAdmin && allBusinesses.length > 0 && (
+          <Card className="mobile-card-compact bg-primary/5 border-primary/30">
+            <CardContent className="p-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Badge variant="default" className="text-xs">Super Admin</Badge>
+                  <span className="text-xs text-muted-foreground">
+                    {allBusinesses.length} consultorios
+                  </span>
+                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="gap-2">
+                      <Building2 className="h-4 w-4" />
+                      <span className="truncate max-w-[150px]">{selectedBusiness?.name || "Seleccionar"}</span>
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="max-h-64 overflow-y-auto">
+                    {allBusinesses.map((business) => (
+                      <DropdownMenuItem
+                        key={business.id}
+                        onClick={() => {
+                          setSelectedBusiness(business);
+                          fetchDashboardData(business.id);
+                        }}
+                        className={business.id === selectedBusiness?.id ? "bg-accent" : ""}
+                      >
+                        {business.name}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -367,9 +487,6 @@ const Dashboard = () => {
               <h1 className="text-xl sm:text-2xl font-bold text-foreground">
                 Hola, {userName}
               </h1>
-              <p className="text-muted-foreground text-sm">
-                Bienvenido a tu panel
-              </p>
             </div>
           </div>
           <div className="flex items-center gap-2">

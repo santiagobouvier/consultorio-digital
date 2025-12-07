@@ -622,6 +622,7 @@ export type Database = {
     }
     Functions: {
       get_user_business_id: { Args: { _user_id: string }; Returns: string }
+      is_super_admin: { Args: { _user_id: string }; Returns: boolean }
       user_belongs_to_business: {
         Args: { _business_id: string; _user_id: string }
         Returns: boolean
