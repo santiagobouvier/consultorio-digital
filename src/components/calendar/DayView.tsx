@@ -38,13 +38,13 @@ export const DayView = ({
   const getPaymentBgColor = (color?: string) => {
     switch (color) {
       case "green":
-        return "bg-green-500/10 border-l-green-500";
+        return "bg-emerald-50 dark:bg-emerald-950/30 border-l-emerald-500";
       case "orange":
-        return "bg-orange-500/10 border-l-orange-500";
+        return "bg-amber-50 dark:bg-amber-950/30 border-l-amber-500";
       case "red":
-        return "bg-red-500/10 border-l-red-500";
+        return "bg-rose-50 dark:bg-rose-950/30 border-l-rose-500";
       default:
-        return "bg-accent/50 border-l-muted-foreground/30";
+        return "bg-card border-l-primary";
     }
   };
 
@@ -89,8 +89,8 @@ export const DayView = ({
                 key={apt.id}
                 onClick={() => onAppointmentClick(apt)}
                 className={cn(
-                  "p-4 rounded-xl cursor-pointer transition-colors hover:shadow-md border-l-4",
-                  selectedPatientId ? getPaymentBgColor(apt.paymentColor) : "bg-accent/50 border-l-primary"
+                  "p-4 rounded-xl cursor-pointer transition-all hover:shadow-md border-l-4 border border-border/50",
+                  selectedPatientId ? getPaymentBgColor(apt.paymentColor) : "bg-card border-l-primary"
                 )}
               >
                 <div className="flex items-start justify-between gap-3">
