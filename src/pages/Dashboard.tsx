@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "@/hooks/use-toast";
-import { Users, CalendarPlus, CalendarDays, UserPlus, Bell, LogOut, Camera, CreditCard, AlertTriangle, Clock, Plus, EyeOff, Eye } from "lucide-react";
+import { Users, CalendarPlus, CalendarDays, UserPlus, Bell, LogOut, Camera, CreditCard, AlertTriangle, Clock, Plus, EyeOff, Eye, Smartphone } from "lucide-react";
 import { PatientForm } from "@/components/PatientForm";
 import { CreateAppointmentModal } from "@/components/CreateAppointmentModal";
 import { GlobalPaymentForm } from "@/components/GlobalPaymentForm";
@@ -21,6 +21,7 @@ const Dashboard = () => {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [activePatientsCount, setActivePatientsCount] = useState(0);
+  const [portalPatientsCount, setPortalPatientsCount] = useState(0);
   const [todayAppointmentsCount, setTodayAppointmentsCount] = useState(0);
   const [todayAppointments, setTodayAppointments] = useState<any[]>([]);
   const [overduePayments, setOverduePayments] = useState(0);
@@ -92,6 +93,15 @@ const Dashboard = () => {
         .eq("is_active", true);
 
       setActivePatientsCount(patientsCount || 0);
+
+      // Count patients with portal access
+      const { count: portalCount } = await supabase
+        .from("patients")
+        .select("*", { count: "exact", head: true })
+        .eq("business_id", business.id)
+        .not("auth_user_id", "is", null);
+
+      setPortalPatientsCount(portalCount || 0);
 
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -551,6 +561,19 @@ const Dashboard = () => {
                 <CreditCard className="h-5 w-5 text-secondary-foreground" />
               </div>
               <p className="font-semibold text-sm text-foreground">Ver pagos</p>
+            </CardContent>
+          </Card>
+
+          <Card 
+            className="mobile-card-compact hover:shadow-md transition-all cursor-pointer group active:scale-[0.98] border-primary/30 bg-primary/5"
+            onClick={() => navigate("/patients?portal=true")}
+          >
+            <CardContent className="p-4 flex flex-col items-center justify-center text-center min-h-[100px]">
+              <div className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center mb-2 group-hover:bg-primary/20 transition-colors">
+                <Smartphone className="h-5 w-5 text-primary" />
+              </div>
+              <p className="font-semibold text-sm text-foreground">Portal pacientes</p>
+              <p className="text-xs text-muted-foreground mt-1">{portalPatientsCount} con acceso</p>
             </CardContent>
           </Card>
         </div>
