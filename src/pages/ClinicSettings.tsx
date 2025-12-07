@@ -8,7 +8,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, Copy, ExternalLink, RotateCcw } from "lucide-react";
+import { ArrowLeft, Save, Copy, ExternalLink, RotateCcw, UserPlus, Users, Crown, User } from "lucide-react";
+import { ProfessionalInviteModal } from "@/components/ProfessionalInviteModal";
+import { Badge } from "@/components/ui/badge";
 
 const DEFAULT_TEMPLATES = {
   reminder: "Hola {{paciente}}, te recuerdo tu sesión del {{fecha}} a las {{hora}}. Modalidad: {{modalidad}}. {{link}}. Cualquier cosa me escribís por acá.",
@@ -16,11 +18,20 @@ const DEFAULT_TEMPLATES = {
   postsession: "Hola {{paciente}}, gracias por tu sesión de hoy. Quedamos en contacto para la próxima. Saludos!"
 };
 
+interface TeamMember {
+  userId: string;
+  role: string;
+  name: string;
+  email: string;
+}
+
 const ClinicSettings = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [settingsId, setSettingsId] = useState<string | null>(null);
+  const [businessId, setBusinessId] = useState<string | null>(null);
+  const [isOwner, setIsOwner] = useState(false);
   
   const [clinicName, setClinicName] = useState("");
   const [specialty, setSpecialty] = useState("");
@@ -29,6 +40,11 @@ const ClinicSettings = () => {
   const [confirmationMessage, setConfirmationMessage] = useState(DEFAULT_TEMPLATES.confirmation);
   const [postsessionMessage, setPostsessionMessage] = useState(DEFAULT_TEMPLATES.postsession);
   const [logoUrl, setLogoUrl] = useState("");
+  
+  // Team management
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [loadingTeam, setLoadingTeam] = useState(false);
+  const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [coverImageUrl, setCoverImageUrl] = useState("");
   const [autoAcceptBookings, setAutoAcceptBookings] = useState(false);
   const [publicSlug, setPublicSlug] = useState("");
@@ -37,6 +53,12 @@ const ClinicSettings = () => {
     checkAuth();
     loadSettings();
   }, []);
+
+  useEffect(() => {
+    if (businessId && isOwner) {
+      loadTeamMembers();
+    }
+  }, [businessId, isOwner]);
 
   const checkAuth = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -51,14 +73,34 @@ const ClinicSettings = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Load or create business slug
+      // Load or create business - check both owner and member
       let { data: business } = await supabase
         .from("businesses")
-        .select("public_slug")
+        .select("id, public_slug, owner_user_id")
         .eq("owner_user_id", user.id)
         .maybeSingle();
 
-      // If no business exists, create one
+      // If no business as owner, check if member via user_roles
+      if (!business) {
+        const { data: userRole } = await supabase
+          .from("user_roles")
+          .select("business_id")
+          .eq("user_id", user.id)
+          .in("role", ["owner", "professional"])
+          .maybeSingle();
+
+        if (userRole?.business_id) {
+          const { data: memberBusiness } = await supabase
+            .from("businesses")
+            .select("id, public_slug, owner_user_id")
+            .eq("id", userRole.business_id)
+            .single();
+          
+          business = memberBusiness;
+        }
+      }
+
+      // If still no business exists, create one
       if (!business) {
         const slug = user.id.slice(0, 8);
         const { data: newBusiness, error: createError } = await supabase
@@ -70,7 +112,7 @@ const ClinicSettings = () => {
             contact_email: user.email || "",
             timezone: "America/Montevideo"
           })
-          .select("public_slug")
+          .select("id, public_slug, owner_user_id")
           .single();
 
         if (createError) {
@@ -88,6 +130,8 @@ const ClinicSettings = () => {
 
       if (business) {
         setPublicSlug(business.public_slug);
+        setBusinessId(business.id);
+        setIsOwner(business.owner_user_id === user.id);
       }
 
       const { data: settings, error } = await supabase
@@ -122,6 +166,73 @@ const ClinicSettings = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadTeamMembers = async () => {
+    if (!businessId) return;
+    
+    try {
+      setLoadingTeam(true);
+      
+      // Get the business owner info
+      const { data: business } = await supabase
+        .from("businesses")
+        .select("owner_user_id")
+        .eq("id", businessId)
+        .single();
+
+      if (!business) return;
+
+      // Get owner profile
+      const { data: ownerProfile } = await supabase
+        .from("profiles")
+        .select("id, name, email")
+        .eq("id", business.owner_user_id)
+        .maybeSingle();
+
+      const members: TeamMember[] = [];
+      
+      if (ownerProfile) {
+        members.push({
+          userId: ownerProfile.id,
+          role: "owner",
+          name: ownerProfile.name,
+          email: ownerProfile.email
+        });
+      }
+
+      // Get professionals from user_roles
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("user_id, role")
+        .eq("business_id", businessId)
+        .eq("role", "professional");
+
+      if (roles && roles.length > 0) {
+        const userIds = roles.map(r => r.user_id);
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id, name, email")
+          .in("id", userIds);
+
+        if (profiles) {
+          for (const profile of profiles) {
+            members.push({
+              userId: profile.id,
+              role: "professional",
+              name: profile.name,
+              email: profile.email
+            });
+          }
+        }
+      }
+
+      setTeamMembers(members);
+    } catch (error) {
+      console.error("Error loading team:", error);
+    } finally {
+      setLoadingTeam(false);
     }
   };
 
@@ -251,6 +362,61 @@ const ClinicSettings = () => {
                   <ExternalLink className="h-4 w-4" />
                 </Button>
               </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Profesionales del consultorio */}
+        {isOwner && (
+          <Card className="mobile-card">
+            <CardHeader className="px-0 pt-0 pb-4 sm:px-6 sm:pt-6">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg font-bold flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  Profesionales del consultorio
+                </CardTitle>
+                <Button
+                  size="sm"
+                  onClick={() => setInviteModalOpen(true)}
+                  className="gap-2"
+                >
+                  <UserPlus className="h-4 w-4" />
+                  Invitar
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="px-0 pb-0 sm:px-6 sm:pb-6 space-y-3">
+              {loadingTeam ? (
+                <p className="text-sm text-muted-foreground">Cargando equipo...</p>
+              ) : teamMembers.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No hay profesionales registrados.</p>
+              ) : (
+                <div className="space-y-2">
+                  {teamMembers.map((member) => (
+                    <div
+                      key={member.userId}
+                      className="flex items-center justify-between p-3 bg-muted/50 rounded-xl"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                          {member.role === "owner" ? (
+                            <Crown className="h-5 w-5 text-primary" />
+                          ) : (
+                            <User className="h-5 w-5 text-muted-foreground" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-medium text-sm">{member.name}</p>
+                          <p className="text-xs text-muted-foreground">{member.email}</p>
+                        </div>
+                      </div>
+                      <Badge variant={member.role === "owner" ? "default" : "secondary"}>
+                        {member.role === "owner" ? "Propietario" : "Profesional"}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
@@ -439,6 +605,16 @@ const ClinicSettings = () => {
           </Button>
         </div>
       </div>
+
+      {/* Modal para invitar profesionales */}
+      {businessId && (
+        <ProfessionalInviteModal
+          open={inviteModalOpen}
+          onOpenChange={setInviteModalOpen}
+          businessId={businessId}
+          onInviteCreated={loadTeamMembers}
+        />
+      )}
     </div>
   );
 };
