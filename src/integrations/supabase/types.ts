@@ -424,6 +424,50 @@ export type Database = {
         }
         Relationships: []
       }
+      professional_portal_invites: {
+        Row: {
+          auth_user_id: string | null
+          business_id: string
+          created_at: string
+          email: string
+          expires_at: string | null
+          id: string
+          name: string
+          token: string
+          used_at: string | null
+        }
+        Insert: {
+          auth_user_id?: string | null
+          business_id: string
+          created_at?: string
+          email: string
+          expires_at?: string | null
+          id?: string
+          name: string
+          token: string
+          used_at?: string | null
+        }
+        Update: {
+          auth_user_id?: string | null
+          business_id?: string
+          created_at?: string
+          email?: string
+          expires_at?: string | null
+          id?: string
+          name?: string
+          token?: string
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_portal_invites_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -542,31 +586,46 @@ export type Database = {
       }
       user_roles: {
         Row: {
+          business_id: string | null
           created_at: string
           id: string
           role: string
           user_id: string
         }
         Insert: {
+          business_id?: string | null
           created_at?: string
           id?: string
           role: string
           user_id: string
         }
         Update: {
+          business_id?: string | null
           created_at?: string
           id?: string
           role?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_business_id: { Args: { _user_id: string }; Returns: string }
+      user_belongs_to_business: {
+        Args: { _business_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
