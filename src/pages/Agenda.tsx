@@ -50,6 +50,7 @@ interface Payment {
   due_date: string;
   paid_at: string | null;
   status: string;
+  amount?: number;
 }
 
 type ViewType = "month" | "week" | "day";
@@ -79,10 +80,10 @@ const Agenda = () => {
   }, [currentDate, viewType, businessId]);
 
   useEffect(() => {
-    if (selectedPatientId && businessId) {
+    if (businessId) {
       fetchPatientPayments();
     }
-  }, [selectedPatientId, businessId]);
+  }, [selectedPatientId, businessId, currentDate]);
 
   const fetchInitialData = async () => {
     try {
@@ -199,14 +200,19 @@ const Agenda = () => {
   };
 
   const fetchPatientPayments = async () => {
-    if (!selectedPatientId || !businessId) return;
+    if (!businessId) return;
 
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from("payments")
-        .select("id, patient_id, due_date, paid_at, status")
-        .eq("business_id", businessId)
-        .eq("patient_id", selectedPatientId);
+        .select("id, patient_id, due_date, paid_at, status, amount")
+        .eq("business_id", businessId);
+      
+      if (selectedPatientId) {
+        query = query.eq("patient_id", selectedPatientId);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
 
@@ -457,6 +463,7 @@ const Agenda = () => {
               <CalendarGrid
                 currentDate={currentDate}
                 appointments={appointmentsWithPaymentColors}
+                payments={payments}
                 onDateClick={handleDateClick}
                 onAppointmentClick={handleAppointmentClick}
                 selectedPatientId={selectedPatientId}

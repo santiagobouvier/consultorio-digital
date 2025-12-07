@@ -1,9 +1,10 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, isToday } from "date-fns";
 import { es } from "date-fns/locale";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { DayDetailDrawer } from "./DayDetailDrawer";
 
 interface Appointment {
   id: string;
@@ -20,9 +21,19 @@ interface Appointment {
   paymentColor?: string;
 }
 
+interface Payment {
+  id: string;
+  patient_id: string;
+  due_date: string;
+  paid_at: string | null;
+  status: string;
+  amount?: number;
+}
+
 interface CalendarGridProps {
   currentDate: Date;
   appointments: Appointment[];
+  payments?: Payment[];
   onDateClick: (date: Date) => void;
   onAppointmentClick: (appointment: Appointment) => void;
   selectedPatientId: string | null;
@@ -31,11 +42,14 @@ interface CalendarGridProps {
 export const CalendarGrid = ({
   currentDate,
   appointments,
+  payments = [],
   onDateClick,
   onAppointmentClick,
   selectedPatientId,
 }: CalendarGridProps) => {
   const isMobile = useIsMobile();
+  const [selectedDay, setSelectedDay] = useState<Date | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   
   const days = useMemo(() => {
     const monthStart = startOfMonth(currentDate);
@@ -82,86 +96,102 @@ export const CalendarGrid = ({
     return format(new Date(datetime), "HH:mm");
   };
 
+  const handleDayClick = (day: Date) => {
+    if (isMobile) {
+      setSelectedDay(day);
+      setDrawerOpen(true);
+    } else {
+      onDateClick(day);
+    }
+  };
+
   const weekDays = isMobile ? ["L", "M", "X", "J", "V", "S", "D"] : ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 
-  // Mobile: Compact calendar with dots
+  // Mobile: Compact calendar with dots + drawer
   if (isMobile) {
     return (
-      <div className="bg-card rounded-2xl border overflow-hidden">
-        {/* Header */}
-        <div className="grid grid-cols-7 border-b bg-muted/30">
-          {weekDays.map((day) => (
-            <div
-              key={day}
-              className="p-2 text-center text-xs font-semibold text-muted-foreground"
-            >
-              {day}
-            </div>
-          ))}
-        </div>
-
-        {/* Days Grid - Compact for mobile */}
-        <div className="grid grid-cols-7">
-          {days.map((day, index) => {
-            const dayAppointments = getAppointmentsForDay(day);
-            const isCurrentMonth = isSameMonth(day, currentDate);
-            const isCurrentDay = isToday(day);
-
-            return (
+      <>
+        <div className="bg-card rounded-2xl border overflow-hidden">
+          {/* Header */}
+          <div className="grid grid-cols-7 border-b bg-muted/30">
+            {weekDays.map((day) => (
               <div
-                key={index}
-                className={cn(
-                  "min-h-[52px] border-b border-r p-1 cursor-pointer transition-colors active:bg-accent/70",
-                  !isCurrentMonth && "bg-muted/20",
-                  index % 7 === 6 && "border-r-0"
-                )}
-                onClick={() => onDateClick(day)}
+                key={day}
+                className="p-2 text-center text-xs font-semibold text-muted-foreground"
               >
-                <div className="flex flex-col items-center gap-1">
-                  <span
-                    className={cn(
-                      "text-sm font-medium w-7 h-7 flex items-center justify-center rounded-full",
-                      !isCurrentMonth && "text-muted-foreground/50",
-                      isCurrentDay && "bg-primary text-primary-foreground"
-                    )}
-                  >
-                    {format(day, "d")}
-                  </span>
-                  
-                  {/* Appointment dots */}
-                  {dayAppointments.length > 0 && (
-                    <div className="flex gap-0.5 flex-wrap justify-center max-w-full">
-                      {dayAppointments.slice(0, 3).map((apt) => (
-                        <div
-                          key={apt.id}
-                          className={cn(
-                            "w-1.5 h-1.5 rounded-full",
-                            selectedPatientId ? getPaymentDotColor(apt.paymentColor) : "bg-primary"
-                          )}
-                        />
-                      ))}
-                      {dayAppointments.length > 3 && (
-                        <span className="text-[8px] text-muted-foreground ml-0.5">
-                          +{dayAppointments.length - 3}
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </div>
+                {day}
               </div>
-            );
-          })}
+            ))}
+          </div>
+
+          {/* Days Grid - Compact for mobile */}
+          <div className="grid grid-cols-7">
+            {days.map((day, index) => {
+              const dayAppointments = getAppointmentsForDay(day);
+              const isCurrentMonth = isSameMonth(day, currentDate);
+              const isCurrentDay = isToday(day);
+
+              return (
+                <div
+                  key={index}
+                  className={cn(
+                    "min-h-[52px] border-b border-r p-1 cursor-pointer transition-colors active:bg-accent/70",
+                    !isCurrentMonth && "bg-muted/20",
+                    index % 7 === 6 && "border-r-0"
+                  )}
+                  onClick={() => handleDayClick(day)}
+                >
+                  <div className="flex flex-col items-center gap-1">
+                    <span
+                      className={cn(
+                        "text-sm font-medium w-7 h-7 flex items-center justify-center rounded-full",
+                        !isCurrentMonth && "text-muted-foreground/50",
+                        isCurrentDay && "bg-primary text-primary-foreground"
+                      )}
+                    >
+                      {format(day, "d")}
+                    </span>
+                    
+                    {/* Appointment dots */}
+                    {dayAppointments.length > 0 && (
+                      <div className="flex gap-0.5 flex-wrap justify-center max-w-full">
+                        {dayAppointments.slice(0, 3).map((apt) => (
+                          <div
+                            key={apt.id}
+                            className={cn(
+                              "w-1.5 h-1.5 rounded-full",
+                              selectedPatientId ? getPaymentDotColor(apt.paymentColor) : "bg-primary"
+                            )}
+                          />
+                        ))}
+                        {dayAppointments.length > 3 && (
+                          <span className="text-[8px] text-muted-foreground ml-0.5">
+                            +{dayAppointments.length - 3}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
-        {/* Mobile: Show today's or selected day's appointments below */}
-        <MobileAppointmentsList
+        {/* Day Detail Drawer */}
+        <DayDetailDrawer
+          open={drawerOpen}
+          onClose={() => setDrawerOpen(false)}
+          selectedDate={selectedDay || currentDate}
           appointments={appointments}
-          currentDate={currentDate}
-          onAppointmentClick={onAppointmentClick}
+          payments={payments}
+          onAppointmentClick={(apt) => {
+            setDrawerOpen(false);
+            onAppointmentClick(apt);
+          }}
           selectedPatientId={selectedPatientId}
-          getPaymentBorderColor={getPaymentBorderColor}
         />
-      </div>
+      </>
     );
   }
 
@@ -243,70 +273,6 @@ export const CalendarGrid = ({
           );
         })}
       </div>
-    </div>
-  );
-};
-
-// Mobile appointments list component
-const MobileAppointmentsList = ({
-  appointments,
-  currentDate,
-  onAppointmentClick,
-  selectedPatientId,
-  getPaymentBorderColor,
-}: {
-  appointments: Appointment[];
-  currentDate: Date;
-  onAppointmentClick: (apt: Appointment) => void;
-  selectedPatientId: string | null;
-  getPaymentBorderColor: (color?: string) => string;
-}) => {
-  const todayAppointments = appointments
-    .filter((apt) => isSameDay(new Date(apt.start_at), currentDate))
-    .sort((a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime());
-
-  const formatTime = (datetime: string) => format(new Date(datetime), "HH:mm");
-
-  return (
-    <div className="border-t bg-muted/10 p-3">
-      <h4 className="text-sm font-semibold mb-2 capitalize">
-        {format(currentDate, "EEEE d", { locale: es })}
-        <span className="text-muted-foreground font-normal ml-2">
-          {todayAppointments.length} cita{todayAppointments.length !== 1 ? "s" : ""}
-        </span>
-      </h4>
-      
-      {todayAppointments.length === 0 ? (
-        <p className="text-sm text-muted-foreground py-2">Sin citas para este día</p>
-      ) : (
-        <div className="space-y-2 max-h-[200px] overflow-y-auto">
-          {todayAppointments.map((apt) => (
-            <div
-              key={apt.id}
-              onClick={() => onAppointmentClick(apt)}
-              className={cn(
-                "p-3 rounded-xl bg-card border cursor-pointer active:scale-[0.98] transition-transform border-l-4",
-                selectedPatientId ? getPaymentBorderColor(apt.paymentColor) : "border-l-primary"
-              )}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-sm truncate">
-                    {apt.patients?.full_name || "Sin paciente"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatTime(apt.start_at)} - {formatTime(apt.end_at)}
-                    {apt.services?.name && ` · ${apt.services.name}`}
-                  </p>
-                </div>
-                <Badge variant="secondary" className="ml-2 shrink-0 text-[10px]">
-                  {apt.modality === "online" ? "Online" : "Presencial"}
-                </Badge>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 };
