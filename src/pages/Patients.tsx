@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,7 +22,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { PatientForm } from "@/components/PatientForm";
-import { Search, Plus, ArrowLeft, ChevronRight } from "lucide-react";
+import { Search, Plus, ArrowLeft, ChevronRight, Smartphone } from "lucide-react";
 
 interface Patient {
   id: string;
@@ -30,17 +30,21 @@ interface Patient {
   email: string | null;
   whatsapp_phone: string | null;
   is_active: boolean;
+  auth_user_id: string | null;
   last_appointment?: string | null;
   next_appointment?: string | null;
 }
 
 const Patients = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [patients, setPatients] = useState<Patient[]>([]);
   const [filteredPatients, setFilteredPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>(() => {
+    return searchParams.get("portal") === "true" ? "portal" : "all";
+  });
   const [showForm, setShowForm] = useState(false);
 
   useEffect(() => {
@@ -145,6 +149,8 @@ const Patients = () => {
       filtered = filtered.filter((p) => p.is_active);
     } else if (statusFilter === "inactive") {
       filtered = filtered.filter((p) => !p.is_active);
+    } else if (statusFilter === "portal") {
+      filtered = filtered.filter((p) => p.auth_user_id !== null);
     }
 
     setFilteredPatients(filtered);
@@ -209,14 +215,30 @@ const Patients = () => {
               className="pl-10 h-12 rounded-xl text-base"
             />
           </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-full sm:w-[180px] h-12 rounded-xl">
+          <Select 
+            value={statusFilter} 
+            onValueChange={(value) => {
+              setStatusFilter(value);
+              if (value === "portal") {
+                setSearchParams({ portal: "true" });
+              } else {
+                setSearchParams({});
+              }
+            }}
+          >
+            <SelectTrigger className="w-full sm:w-[200px] h-12 rounded-xl">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos</SelectItem>
               <SelectItem value="active">Solo activos</SelectItem>
               <SelectItem value="inactive">Solo inactivos</SelectItem>
+              <SelectItem value="portal">
+                <span className="flex items-center gap-2">
+                  <Smartphone className="h-4 w-4" />
+                  Con acceso al portal
+                </span>
+              </SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -244,6 +266,11 @@ const Patients = () => {
                         <p className="text-base font-semibold text-foreground truncate">
                           {patient.full_name}
                         </p>
+                        {patient.auth_user_id && (
+                          <span title="Tiene acceso al portal">
+                            <Smartphone className="h-4 w-4 text-primary shrink-0" />
+                          </span>
+                        )}
                         {!patient.is_active && (
                           <Badge variant="secondary" className="text-xs shrink-0 rounded-full">
                             Inactivo
@@ -270,6 +297,7 @@ const Patients = () => {
                     <TableHead>Nombre completo</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>WhatsApp</TableHead>
+                    <TableHead>Portal</TableHead>
                     <TableHead>Estado</TableHead>
                     <TableHead>Última consulta</TableHead>
                     <TableHead>Próxima consulta</TableHead>
@@ -284,6 +312,15 @@ const Patients = () => {
                       </TableCell>
                       <TableCell>{patient.email || "-"}</TableCell>
                       <TableCell>{patient.whatsapp_phone || "-"}</TableCell>
+                      <TableCell>
+                        {patient.auth_user_id ? (
+                          <span title="Tiene acceso al portal">
+                            <Smartphone className="h-4 w-4 text-primary" />
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
                       <TableCell>
                         <Badge variant={patient.is_active ? "default" : "secondary"}>
                           {patient.is_active ? "Activo" : "Inactivo"}
