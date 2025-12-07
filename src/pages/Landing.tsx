@@ -308,7 +308,7 @@ const ScreenshotsCarousel = () => {
 
 const Landing = () => {
   const [isAnnual, setIsAnnual] = useState(true);
-  const whatsappLink = "https://api.whatsapp.com/send?phone=59891093977&text=Hola%2C+me+gustar%C3%ADa+coordinar+una+demo+del+sistema+de+gesti%C3%B3n+para+profesionales+de+salud+mental.";
+  const whatsappLink = "https://api.whatsapp.com/send?phone=59891093977&text=Hola%2C+me+gustar%C3%ADa+agendar+una+reuni%C3%B3n+para+ver+la+demo+del+sistema.";
 
   const getPricingPlans = () => {
     const savingsNote = isAnnual ? "Ahorrás más del 50% pagando anual." : undefined;
