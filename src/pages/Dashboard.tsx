@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "@/hooks/use-toast";
-import { Users, CalendarPlus, CalendarDays, UserPlus, Bell, LogOut, Camera, CreditCard, AlertTriangle, Clock, Plus, EyeOff, Eye, Smartphone, Building2, ChevronDown } from "lucide-react";
+import { Users, CalendarPlus, CalendarDays, UserPlus, Bell, LogOut, Camera, CreditCard, AlertTriangle, Clock, Plus, EyeOff, Eye, Smartphone, Building2, ChevronDown, Shield } from "lucide-react";
 import { PatientForm } from "@/components/PatientForm";
 import { CreateAppointmentModal } from "@/components/CreateAppointmentModal";
 import { GlobalPaymentForm } from "@/components/GlobalPaymentForm";
@@ -65,7 +65,14 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
-    fetchDashboardData();
+    // Check if coming from SaaS admin with selected business
+    const saasSelectedBusiness = sessionStorage.getItem("saas_selected_business");
+    if (saasSelectedBusiness) {
+      sessionStorage.removeItem("saas_selected_business");
+      fetchDashboardData(saasSelectedBusiness);
+    } else {
+      fetchDashboardData();
+    }
   }, []);
 
   const fetchDashboardData = async (overrideBusinessId?: string) => {
@@ -749,13 +756,25 @@ const Dashboard = () => {
         )}
 
         {/* Settings Link */}
-        <Button
-          variant="outline"
-          className="w-full h-12 rounded-xl font-semibold"
-          onClick={() => navigate("/clinic-settings")}
-        >
-          Mi Consultorio
-        </Button>
+        <div className="flex gap-3">
+          <Button
+            variant="outline"
+            className="flex-1 h-12 rounded-xl font-semibold"
+            onClick={() => navigate("/mi-consultorio")}
+          >
+            Mi Consultorio
+          </Button>
+          {isSuperAdmin && (
+            <Button
+              variant="default"
+              className="h-12 rounded-xl font-semibold gap-2"
+              onClick={() => navigate("/saas-admin")}
+            >
+              <Shield className="h-4 w-4" />
+              Panel SaaS
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Modals */}
