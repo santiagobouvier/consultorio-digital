@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -10,94 +10,82 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Calendar as CalendarIcon } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, Calendar as CalendarIcon, Search } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { CalendarGrid } from "@/components/calendar/CalendarGrid";
+import { WeekView } from "@/components/calendar/WeekView";
+import { DayView } from "@/components/calendar/DayView";
+import { AppointmentDetailModal } from "@/components/calendar/AppointmentDetailModal";
+import { PatientSummary } from "@/components/calendar/PatientSummary";
+import { format, addMonths, subMonths, addWeeks, subWeeks, addDays, subDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek } from "date-fns";
+import { es } from "date-fns/locale";
+import { calculatePaymentStatus } from "@/lib/payments";
 
-interface AppointmentWithPatient {
+interface AppointmentWithRelations {
   id: string;
   start_at: string;
   end_at: string;
   status: string;
-  modality: string;
+  modality: string | null;
   location: string | null;
-  payment_status: string;
+  payment_status: string | null;
   patient_id: string | null;
-  patients: {
-    full_name: string;
-  } | null;
+  service_id: string | null;
+  patients: { full_name: string } | null;
+  services: { name: string } | null;
+  paymentColor?: string;
 }
 
-interface GroupedAppointments {
-  [date: string]: AppointmentWithPatient[];
+interface Patient {
+  id: string;
+  full_name: string;
 }
 
-type TimeRange = "today" | "week" | "month";
-type ViewType = "list" | "weekly";
+interface Payment {
+  id: string;
+  patient_id: string;
+  due_date: string;
+  paid_at: string | null;
+  status: string;
+}
+
+type ViewType = "month" | "week" | "day";
 
 const Agenda = () => {
   const navigate = useNavigate();
-  const [appointments, setAppointments] = useState<AppointmentWithPatient[]>([]);
+  const [appointments, setAppointments] = useState<AppointmentWithRelations[]>([]);
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [timeRange, setTimeRange] = useState<TimeRange>("week");
-  const [viewType, setViewType] = useState<ViewType>("list");
-
-  const statusMap: Record<string, string> = {
-    pending: "Programada",
-    confirmed: "Programada",
-    attended: "Realizada",
-    cancelled: "Cancelada",
-    no_show: "Ausente",
-  };
-
-  const paymentStatusMap: Record<string, string> = {
-    pendiente: "Pendiente",
-    pagado: "Pagado",
-    bonificado: "Bonificado",
-  };
+  const [viewType, setViewType] = useState<ViewType>("week");
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
+  const [patientSearch, setPatientSearch] = useState("");
+  const [selectedAppointment, setSelectedAppointment] = useState<AppointmentWithRelations | null>(null);
+  const [showAppointmentModal, setShowAppointmentModal] = useState(false);
+  const [businessId, setBusinessId] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchAppointments();
-  }, [timeRange]);
+    fetchInitialData();
+  }, []);
 
-  const getDateRange = () => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    let startDate: Date;
-    let endDate: Date;
-
-    switch (timeRange) {
-      case "today":
-        startDate = today;
-        endDate = new Date(today);
-        endDate.setDate(endDate.getDate() + 1);
-        break;
-      case "week":
-        startDate = today;
-        endDate = new Date(today);
-        endDate.setDate(endDate.getDate() + 7);
-        break;
-      case "month":
-        startDate = new Date(today.getFullYear(), today.getMonth(), 1);
-        endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-        endDate.setHours(23, 59, 59, 999);
-        break;
-      default:
-        startDate = today;
-        endDate = new Date(today);
-        endDate.setDate(endDate.getDate() + 7);
+  useEffect(() => {
+    if (businessId) {
+      fetchAppointments();
     }
+  }, [currentDate, viewType, businessId]);
 
-    return { startDate, endDate };
-  };
+  useEffect(() => {
+    if (selectedPatientId && businessId) {
+      fetchPatientPayments();
+    }
+  }, [selectedPatientId, businessId]);
 
-  const fetchAppointments = async () => {
+  const fetchInitialData = async () => {
     try {
-      setLoading(true);
-
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         navigate("/auth");
@@ -115,9 +103,61 @@ const Agenda = () => {
         return;
       }
 
+      setBusinessId(business.id);
+
+      // Fetch patients for the filter
+      const { data: patientsData } = await supabase
+        .from("patients")
+        .select("id, full_name")
+        .eq("business_id", business.id)
+        .eq("is_active", true)
+        .order("full_name");
+
+      setPatients(patientsData || []);
+    } catch (error) {
+      console.error("Error fetching initial data:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo cargar la información inicial",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const getDateRange = () => {
+    switch (viewType) {
+      case "month":
+        return {
+          startDate: startOfMonth(currentDate),
+          endDate: endOfMonth(currentDate),
+        };
+      case "week":
+        return {
+          startDate: startOfWeek(currentDate, { weekStartsOn: 1 }),
+          endDate: endOfWeek(currentDate, { weekStartsOn: 1 }),
+        };
+      case "day":
+        const dayStart = new Date(currentDate);
+        dayStart.setHours(0, 0, 0, 0);
+        const dayEnd = new Date(currentDate);
+        dayEnd.setHours(23, 59, 59, 999);
+        return { startDate: dayStart, endDate: dayEnd };
+      default:
+        return {
+          startDate: startOfWeek(currentDate, { weekStartsOn: 1 }),
+          endDate: endOfWeek(currentDate, { weekStartsOn: 1 }),
+        };
+    }
+  };
+
+  const fetchAppointments = async () => {
+    if (!businessId) return;
+
+    try {
+      setLoading(true);
       const { startDate, endDate } = getDateRange();
 
-      const { data, error } = await supabase
+      let query = supabase
         .from("appointments")
         .select(`
           id,
@@ -128,12 +168,20 @@ const Agenda = () => {
           location,
           payment_status,
           patient_id,
-          patients (full_name)
+          service_id,
+          patients (full_name),
+          services (name)
         `)
-        .eq("business_id", business.id)
+        .eq("business_id", businessId)
         .gte("start_at", startDate.toISOString())
-        .lt("start_at", endDate.toISOString())
+        .lte("start_at", endDate.toISOString())
         .order("start_at", { ascending: true });
+
+      if (selectedPatientId) {
+        query = query.eq("patient_id", selectedPatientId);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
 
@@ -150,251 +198,151 @@ const Agenda = () => {
     }
   };
 
-  const groupByDate = (appointments: AppointmentWithPatient[]): GroupedAppointments => {
-    return appointments.reduce((groups, appointment) => {
-      const date = new Date(appointment.start_at).toLocaleDateString("es-UY", {
-        weekday: "long",
-        day: "2-digit",
-        month: "long",
+  const fetchPatientPayments = async () => {
+    if (!selectedPatientId || !businessId) return;
+
+    try {
+      const { data, error } = await supabase
+        .from("payments")
+        .select("id, patient_id, due_date, paid_at, status")
+        .eq("business_id", businessId)
+        .eq("patient_id", selectedPatientId);
+
+      if (error) throw error;
+
+      setPayments(data || []);
+    } catch (error) {
+      console.error("Error fetching payments:", error);
+    }
+  };
+
+  // Calculate payment colors for appointments
+  const appointmentsWithPaymentColors = useMemo(() => {
+    if (!selectedPatientId || payments.length === 0) {
+      return appointments;
+    }
+
+    return appointments.map((apt) => {
+      // Find the most relevant payment for this appointment
+      const aptMonth = new Date(apt.start_at).getMonth();
+      const aptYear = new Date(apt.start_at).getFullYear();
+
+      const relevantPayment = payments.find((p) => {
+        const paymentMonth = new Date(p.due_date).getMonth();
+        const paymentYear = new Date(p.due_date).getFullYear();
+        return paymentMonth === aptMonth && paymentYear === aptYear;
       });
 
-      if (!groups[date]) {
-        groups[date] = [];
+      if (!relevantPayment) {
+        return { ...apt, paymentColor: "gray" };
       }
-      groups[date].push(appointment);
-      return groups;
-    }, {} as GroupedAppointments);
-  };
 
-  const formatTime = (datetime: string) => {
-    return new Date(datetime).toLocaleTimeString("es-UY", {
-      hour: "2-digit",
-      minute: "2-digit",
+      const status = calculatePaymentStatus({
+        due_date: relevantPayment.due_date,
+        paid_at: relevantPayment.paid_at,
+        status: relevantPayment.status,
+      });
+
+      let color = "gray";
+      if (status === "paid") color = "green";
+      else if (status === "due_soon") color = "orange";
+      else if (status === "overdue") color = "red";
+
+      return { ...apt, paymentColor: color };
     });
-  };
+  }, [appointments, payments, selectedPatientId]);
 
-  const getStatusVariant = (status: string) => {
-    if (status === "pending" || status === "confirmed") return "default";
-    if (status === "attended") return "secondary";
-    return "destructive";
-  };
+  // Calculate patient payment status
+  const patientPaymentStatus = useMemo(() => {
+    if (!selectedPatientId || payments.length === 0) return "sin_pagos";
 
-  const getPaymentVariant = (paymentStatus: string) => {
-    if (paymentStatus === "pagado") return "default";
-    if (paymentStatus === "bonificado") return "secondary";
-    return "outline";
-  };
+    const hasOverdue = payments.some((p) => {
+      const status = calculatePaymentStatus({
+        due_date: p.due_date,
+        paid_at: p.paid_at,
+        status: p.status,
+      });
+      return status === "overdue";
+    });
 
-  const groupedAppointments = groupByDate(appointments);
+    if (hasOverdue) return "vencido";
 
-  const renderMobileListView = () => {
-    if (Object.keys(groupedAppointments).length === 0) {
-      return (
-        <Card className="mobile-card">
-          <CardContent className="py-12">
-            <div className="text-center">
-              <CalendarIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">
-                No hay citas programadas
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      );
+    const hasDueSoon = payments.some((p) => {
+      const status = calculatePaymentStatus({
+        due_date: p.due_date,
+        paid_at: p.paid_at,
+        status: p.status,
+      });
+      return status === "due_soon";
+    });
+
+    if (hasDueSoon) return "por_vencer";
+
+    return "al_dia";
+  }, [payments, selectedPatientId]);
+
+  const selectedPatient = patients.find((p) => p.id === selectedPatientId);
+
+  const filteredPatients = patients.filter((p) =>
+    p.full_name.toLowerCase().includes(patientSearch.toLowerCase())
+  );
+
+  const navigateDate = (direction: "prev" | "next") => {
+    switch (viewType) {
+      case "month":
+        setCurrentDate(direction === "prev" ? subMonths(currentDate, 1) : addMonths(currentDate, 1));
+        break;
+      case "week":
+        setCurrentDate(direction === "prev" ? subWeeks(currentDate, 1) : addWeeks(currentDate, 1));
+        break;
+      case "day":
+        setCurrentDate(direction === "prev" ? subDays(currentDate, 1) : addDays(currentDate, 1));
+        break;
     }
-
-    return (
-      <div className="space-y-5">
-        {Object.entries(groupedAppointments).map(([date, dayAppointments]) => (
-          <div key={date}>
-            <h3 className="text-base font-bold text-foreground mb-3 capitalize px-1">
-              {date}
-            </h3>
-            <div className="space-y-3">
-              {dayAppointments.map((appointment) => (
-                <Card
-                  key={appointment.id}
-                  className="mobile-card-compact cursor-pointer hover:shadow-md transition-shadow"
-                  onClick={() => appointment.patient_id && navigate(`/patients/${appointment.patient_id}`)}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-lg font-bold text-primary">
-                          {formatTime(appointment.start_at)}
-                        </p>
-                        {appointment.patients ? (
-                          <p className="font-semibold text-foreground mt-1 truncate">
-                            {appointment.patients.full_name}
-                          </p>
-                        ) : (
-                          <p className="text-sm text-muted-foreground mt-1">Sin paciente</p>
-                        )}
-                        {appointment.location && (
-                          <p className="text-xs text-muted-foreground mt-1 truncate">
-                            📍 {appointment.location}
-                          </p>
-                        )}
-                      </div>
-                      <div className="flex flex-col items-end gap-2 shrink-0">
-                        <Badge variant="outline" className="rounded-full text-xs">
-                          {appointment.modality === "online" ? "Online" : "Presencial"}
-                        </Badge>
-                        <Badge variant={getStatusVariant(appointment.status)} className="rounded-full text-xs">
-                          {statusMap[appointment.status]}
-                        </Badge>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-    );
   };
 
-  const renderDesktopListView = () => {
-    if (Object.keys(groupedAppointments).length === 0) {
-      return (
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center py-8">
-              <CalendarIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">
-                No hay citas programadas para este período
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      );
+  const goToToday = () => {
+    setCurrentDate(new Date());
+  };
+
+  const handleDateClick = (date: Date) => {
+    setCurrentDate(date);
+    setViewType("day");
+  };
+
+  const handleAppointmentClick = (appointment: AppointmentWithRelations) => {
+    setSelectedAppointment(appointment);
+    setShowAppointmentModal(true);
+  };
+
+  const getDateRangeLabel = () => {
+    switch (viewType) {
+      case "month":
+        return format(currentDate, "MMMM yyyy", { locale: es });
+      case "week":
+        const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
+        const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
+        return `${format(weekStart, "d MMM", { locale: es })} - ${format(weekEnd, "d MMM yyyy", { locale: es })}`;
+      case "day":
+        return format(currentDate, "EEEE, d 'de' MMMM", { locale: es });
+      default:
+        return "";
     }
-
-    return (
-      <div className="space-y-6">
-        {Object.entries(groupedAppointments).map(([date, dayAppointments]) => (
-          <Card key={date}>
-            <CardHeader>
-              <CardTitle className="text-lg capitalize">{date}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {dayAppointments.map((appointment) => (
-                  <div
-                    key={appointment.id}
-                    className="flex items-center justify-between p-4 border rounded-xl hover:bg-accent/50 transition-colors"
-                  >
-                    <div className="flex-1 space-y-2">
-                      <div className="flex items-center gap-3 flex-wrap">
-                        <span className="font-semibold">
-                          {formatTime(appointment.start_at)} - {formatTime(appointment.end_at)}
-                        </span>
-                        <Badge variant="outline" className="rounded-full">
-                          {appointment.modality === "online" ? "Online" : "Presencial"}
-                        </Badge>
-                        <Badge variant={getPaymentVariant(appointment.payment_status)} className="rounded-full">
-                          {paymentStatusMap[appointment.payment_status] || appointment.payment_status}
-                        </Badge>
-                      </div>
-                      {appointment.patients ? (
-                        <button
-                          onClick={() => navigate(`/patients/${appointment.patient_id}`)}
-                          className="text-sm text-primary hover:underline font-medium"
-                        >
-                          {appointment.patients.full_name}
-                        </button>
-                      ) : (
-                        <p className="text-sm text-muted-foreground">Cita sin paciente asociado</p>
-                      )}
-                      {appointment.location && (
-                        <p className="text-sm text-muted-foreground">
-                          📍 {appointment.location}
-                        </p>
-                      )}
-                    </div>
-                    <Badge variant={getStatusVariant(appointment.status)} className="rounded-full">
-                      {statusMap[appointment.status] || appointment.status}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    );
   };
 
-  const renderWeeklyView = () => {
-    if (Object.keys(groupedAppointments).length === 0) {
-      return (
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center py-8">
-              <CalendarIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">
-                No hay citas programadas para este período
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      );
-    }
-
-    return (
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {Object.entries(groupedAppointments).map(([date, dayAppointments]) => (
-          <Card key={date} className="rounded-2xl">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-bold capitalize">{date}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {dayAppointments.map((appointment) => (
-                <div
-                  key={appointment.id}
-                  className="p-3 border rounded-xl space-y-1 hover:bg-accent/50 transition-colors cursor-pointer"
-                  onClick={() => appointment.patient_id && navigate(`/patients/${appointment.patient_id}`)}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-bold text-primary">
-                      {formatTime(appointment.start_at)}
-                    </span>
-                    <Badge variant={getStatusVariant(appointment.status)} className="text-xs rounded-full">
-                      {statusMap[appointment.status]}
-                    </Badge>
-                  </div>
-                  {appointment.patients ? (
-                    <p className="text-xs font-medium text-foreground truncate">
-                      {appointment.patients.full_name}
-                    </p>
-                  ) : (
-                    <p className="text-xs text-muted-foreground">Sin paciente</p>
-                  )}
-                  <Badge variant="outline" className="text-xs rounded-full">
-                    {appointment.modality === "online" ? "Online" : "Presencial"}
-                  </Badge>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    );
-  };
-
-  if (loading) {
+  if (loading && !businessId) {
     return (
       <div className="min-h-screen bg-background p-4 sm:p-6 lg:p-8">
         <div className="max-w-7xl mx-auto space-y-6">
           <div className="flex items-center gap-4">
             <Skeleton className="h-10 w-10 rounded-xl" />
-            <Skeleton className="h-8 w-32" />
+            <Skeleton className="h-8 w-48" />
           </div>
           <div className="flex gap-4">
-            <Skeleton className="h-11 w-full sm:w-48 rounded-xl" />
+            <Skeleton className="h-11 w-48 rounded-xl" />
+            <Skeleton className="h-11 w-48 rounded-xl" />
           </div>
-          <Skeleton className="h-64 w-full rounded-2xl" />
+          <Skeleton className="h-96 w-full rounded-2xl" />
         </div>
       </div>
     );
@@ -402,57 +350,146 @@ const Agenda = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-5 sm:space-y-6">
+      <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-5">
         {/* Header */}
-        <div className="flex items-center gap-3 sm:gap-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate("/dashboard")}
-            className="shrink-0"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div>
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">Agenda</h1>
-            <p className="text-sm text-muted-foreground">
-              {timeRange === "today" && "Citas de hoy"}
-              {timeRange === "week" && "Próximos 7 días"}
-              {timeRange === "month" && "Este mes"}
-            </p>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate("/dashboard")}
+              className="shrink-0"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">Calendario</h1>
+              <p className="text-sm text-muted-foreground capitalize">{getDateRangeLabel()}</p>
+            </div>
           </div>
+
+          <Button variant="outline" size="sm" onClick={goToToday} className="rounded-xl">
+            Hoy
+          </Button>
         </div>
 
         {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-3">
-          <Select value={timeRange} onValueChange={(value) => setTimeRange(value as TimeRange)}>
-            <SelectTrigger className="w-full sm:w-[200px] h-11 rounded-xl">
-              <SelectValue />
+          {/* Patient filter */}
+          <Select
+            value={selectedPatientId || "all"}
+            onValueChange={(value) => setSelectedPatientId(value === "all" ? null : value)}
+          >
+            <SelectTrigger className="w-full sm:w-[250px] h-11 rounded-xl">
+              <Search className="h-4 w-4 mr-2 text-muted-foreground" />
+              <SelectValue placeholder="Filtrar por paciente" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="today">Hoy</SelectItem>
-              <SelectItem value="week">Próximos 7 días</SelectItem>
-              <SelectItem value="month">Este mes</SelectItem>
+              <div className="p-2">
+                <Input
+                  placeholder="Buscar paciente..."
+                  value={patientSearch}
+                  onChange={(e) => setPatientSearch(e.target.value)}
+                  className="h-9 rounded-lg"
+                />
+              </div>
+              <SelectItem value="all">Todos los pacientes</SelectItem>
+              {filteredPatients.map((patient) => (
+                <SelectItem key={patient.id} value={patient.id}>
+                  {patient.full_name}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
 
-          <Tabs value={viewType} onValueChange={(value) => setViewType(value as ViewType)} className="hidden md:block">
-            <TabsList className="rounded-xl">
-              <TabsTrigger value="list" className="rounded-lg">Lista</TabsTrigger>
-              <TabsTrigger value="weekly" className="rounded-lg">Semanal</TabsTrigger>
+          {/* View type */}
+          <Tabs value={viewType} onValueChange={(value) => setViewType(value as ViewType)}>
+            <TabsList className="rounded-xl h-11">
+              <TabsTrigger value="day" className="rounded-lg px-4">Día</TabsTrigger>
+              <TabsTrigger value="week" className="rounded-lg px-4">Semana</TabsTrigger>
+              <TabsTrigger value="month" className="rounded-lg px-4">Mes</TabsTrigger>
             </TabsList>
           </Tabs>
+
+          {/* Navigation */}
+          <div className="flex items-center gap-1 sm:ml-auto">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigateDate("prev")}
+              className="rounded-xl"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigateDate("next")}
+              className="rounded-xl"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
 
-        {/* Mobile View */}
-        <div className="md:hidden">
-          {renderMobileListView()}
-        </div>
+        {/* Patient Summary (when filtered) */}
+        {selectedPatient && (
+          <PatientSummary
+            patientName={selectedPatient.full_name}
+            appointments={appointmentsWithPaymentColors}
+            paymentStatus={patientPaymentStatus as "al_dia" | "por_vencer" | "vencido" | "sin_pagos"}
+            currentDate={currentDate}
+          />
+        )}
 
-        {/* Desktop View */}
-        <div className="hidden md:block">
-          {viewType === "list" ? renderDesktopListView() : renderWeeklyView()}
-        </div>
+        {/* Calendar Views */}
+        {loading ? (
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <>
+            {viewType === "month" && (
+              <CalendarGrid
+                currentDate={currentDate}
+                appointments={appointmentsWithPaymentColors}
+                onDateClick={handleDateClick}
+                onAppointmentClick={handleAppointmentClick}
+                selectedPatientId={selectedPatientId}
+              />
+            )}
+            {viewType === "week" && (
+              <WeekView
+                currentDate={currentDate}
+                appointments={appointmentsWithPaymentColors}
+                onAppointmentClick={handleAppointmentClick}
+                selectedPatientId={selectedPatientId}
+              />
+            )}
+            {viewType === "day" && (
+              <DayView
+                currentDate={currentDate}
+                appointments={appointmentsWithPaymentColors}
+                onAppointmentClick={handleAppointmentClick}
+                selectedPatientId={selectedPatientId}
+              />
+            )}
+          </>
+        )}
+
+        {/* Appointment Detail Modal */}
+        <AppointmentDetailModal
+          appointment={selectedAppointment}
+          open={showAppointmentModal}
+          onClose={() => {
+            setShowAppointmentModal(false);
+            setSelectedAppointment(null);
+          }}
+        />
       </div>
     </div>
   );

@@ -1,0 +1,133 @@
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import { format, isSameDay } from "date-fns";
+import { es } from "date-fns/locale";
+
+interface Appointment {
+  id: string;
+  start_at: string;
+  end_at: string;
+  status: string;
+  modality: string | null;
+  location: string | null;
+  payment_status: string | null;
+  patient_id: string | null;
+  service_id: string | null;
+  patients: { full_name: string } | null;
+  services: { name: string } | null;
+  paymentColor?: string;
+}
+
+interface DayViewProps {
+  currentDate: Date;
+  appointments: Appointment[];
+  onAppointmentClick: (appointment: Appointment) => void;
+  selectedPatientId: string | null;
+}
+
+export const DayView = ({
+  currentDate,
+  appointments,
+  onAppointmentClick,
+  selectedPatientId,
+}: DayViewProps) => {
+  const dayAppointments = appointments
+    .filter((apt) => isSameDay(new Date(apt.start_at), currentDate))
+    .sort((a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime());
+
+  const getPaymentBgColor = (color?: string) => {
+    switch (color) {
+      case "green":
+        return "bg-green-500/10 border-l-green-500";
+      case "orange":
+        return "bg-orange-500/10 border-l-orange-500";
+      case "red":
+        return "bg-red-500/10 border-l-red-500";
+      default:
+        return "bg-accent/50 border-l-muted-foreground/30";
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    const statusMap: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+      pending: { label: "Programada", variant: "default" },
+      confirmed: { label: "Confirmada", variant: "default" },
+      attended: { label: "Realizada", variant: "secondary" },
+      cancelled: { label: "Cancelada", variant: "destructive" },
+      no_show: { label: "Ausente", variant: "destructive" },
+    };
+    return statusMap[status] || { label: status, variant: "outline" as const };
+  };
+
+  const formatTime = (datetime: string) => {
+    return format(new Date(datetime), "HH:mm");
+  };
+
+  return (
+    <div className="bg-card rounded-2xl border p-4">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h3 className="text-lg font-bold capitalize">
+            {format(currentDate, "EEEE, d 'de' MMMM", { locale: es })}
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            {dayAppointments.length} cita{dayAppointments.length !== 1 ? "s" : ""}
+          </p>
+        </div>
+      </div>
+
+      {dayAppointments.length === 0 ? (
+        <div className="text-center py-12">
+          <p className="text-muted-foreground">No hay citas programadas para este día</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {dayAppointments.map((apt) => {
+            const statusInfo = getStatusBadge(apt.status);
+            return (
+              <div
+                key={apt.id}
+                onClick={() => onAppointmentClick(apt)}
+                className={cn(
+                  "p-4 rounded-xl cursor-pointer transition-colors hover:shadow-md border-l-4",
+                  selectedPatientId ? getPaymentBgColor(apt.paymentColor) : "bg-accent/50 border-l-primary"
+                )}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-lg font-bold text-primary">
+                        {formatTime(apt.start_at)} - {formatTime(apt.end_at)}
+                      </span>
+                    </div>
+                    <p className="font-semibold text-foreground truncate">
+                      {apt.patients?.full_name || "Sin paciente"}
+                    </p>
+                    {apt.services?.name && (
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {apt.services.name}
+                      </p>
+                    )}
+                    {apt.location && (
+                      <p className="text-sm text-muted-foreground mt-1">
+                        📍 {apt.location}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex flex-col items-end gap-2 shrink-0">
+                    <Badge variant={statusInfo.variant} className="rounded-full">
+                      {statusInfo.label}
+                    </Badge>
+                    <Badge variant="outline" className="rounded-full">
+                      {apt.modality === "online" ? "Online" : "Presencial"}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
