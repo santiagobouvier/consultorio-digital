@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, isToday } from "date-fns";
 import { es } from "date-fns/locale";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface Appointment {
   id: string;
@@ -34,6 +35,8 @@ export const CalendarGrid = ({
   onAppointmentClick,
   selectedPatientId,
 }: CalendarGridProps) => {
+  const isMobile = useIsMobile();
+  
   const days = useMemo(() => {
     const monthStart = startOfMonth(currentDate);
     const monthEnd = endOfMonth(currentDate);
@@ -49,16 +52,29 @@ export const CalendarGrid = ({
     });
   };
 
+  const getPaymentDotColor = (color?: string) => {
+    switch (color) {
+      case "green":
+        return "bg-emerald-500";
+      case "orange":
+        return "bg-amber-500";
+      case "red":
+        return "bg-rose-500";
+      default:
+        return "bg-primary";
+    }
+  };
+
   const getPaymentBorderColor = (color?: string) => {
     switch (color) {
       case "green":
-        return "border-l-green-500";
+        return "border-l-emerald-500";
       case "orange":
-        return "border-l-orange-500";
+        return "border-l-amber-500";
       case "red":
-        return "border-l-red-500";
+        return "border-l-rose-500";
       default:
-        return "border-l-muted-foreground/30";
+        return "border-l-primary";
     }
   };
 
@@ -66,8 +82,90 @@ export const CalendarGrid = ({
     return format(new Date(datetime), "HH:mm");
   };
 
-  const weekDays = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
+  const weekDays = isMobile ? ["L", "M", "X", "J", "V", "S", "D"] : ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 
+  // Mobile: Compact calendar with dots
+  if (isMobile) {
+    return (
+      <div className="bg-card rounded-2xl border overflow-hidden">
+        {/* Header */}
+        <div className="grid grid-cols-7 border-b bg-muted/30">
+          {weekDays.map((day) => (
+            <div
+              key={day}
+              className="p-2 text-center text-xs font-semibold text-muted-foreground"
+            >
+              {day}
+            </div>
+          ))}
+        </div>
+
+        {/* Days Grid - Compact for mobile */}
+        <div className="grid grid-cols-7">
+          {days.map((day, index) => {
+            const dayAppointments = getAppointmentsForDay(day);
+            const isCurrentMonth = isSameMonth(day, currentDate);
+            const isCurrentDay = isToday(day);
+
+            return (
+              <div
+                key={index}
+                className={cn(
+                  "min-h-[52px] border-b border-r p-1 cursor-pointer transition-colors active:bg-accent/70",
+                  !isCurrentMonth && "bg-muted/20",
+                  index % 7 === 6 && "border-r-0"
+                )}
+                onClick={() => onDateClick(day)}
+              >
+                <div className="flex flex-col items-center gap-1">
+                  <span
+                    className={cn(
+                      "text-sm font-medium w-7 h-7 flex items-center justify-center rounded-full",
+                      !isCurrentMonth && "text-muted-foreground/50",
+                      isCurrentDay && "bg-primary text-primary-foreground"
+                    )}
+                  >
+                    {format(day, "d")}
+                  </span>
+                  
+                  {/* Appointment dots */}
+                  {dayAppointments.length > 0 && (
+                    <div className="flex gap-0.5 flex-wrap justify-center max-w-full">
+                      {dayAppointments.slice(0, 3).map((apt) => (
+                        <div
+                          key={apt.id}
+                          className={cn(
+                            "w-1.5 h-1.5 rounded-full",
+                            selectedPatientId ? getPaymentDotColor(apt.paymentColor) : "bg-primary"
+                          )}
+                        />
+                      ))}
+                      {dayAppointments.length > 3 && (
+                        <span className="text-[8px] text-muted-foreground ml-0.5">
+                          +{dayAppointments.length - 3}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Mobile: Show today's or selected day's appointments below */}
+        <MobileAppointmentsList
+          appointments={appointments}
+          currentDate={currentDate}
+          onAppointmentClick={onAppointmentClick}
+          selectedPatientId={selectedPatientId}
+          getPaymentBorderColor={getPaymentBorderColor}
+        />
+      </div>
+    );
+  }
+
+  // Desktop: Full calendar with appointment previews
   return (
     <div className="bg-card rounded-2xl border overflow-hidden">
       {/* Header */}
@@ -93,7 +191,7 @@ export const CalendarGrid = ({
             <div
               key={index}
               className={cn(
-                "min-h-[100px] md:min-h-[120px] border-b border-r p-1 cursor-pointer transition-colors hover:bg-accent/50",
+                "min-h-[120px] border-b border-r p-1.5 cursor-pointer transition-colors hover:bg-accent/50",
                 !isCurrentMonth && "bg-muted/20",
                 index % 7 === 6 && "border-r-0"
               )}
@@ -125,12 +223,12 @@ export const CalendarGrid = ({
                       onAppointmentClick(apt);
                     }}
                     className={cn(
-                      "text-[10px] md:text-xs p-1 rounded bg-primary/10 hover:bg-primary/20 cursor-pointer truncate border-l-2",
+                      "text-xs p-1 rounded bg-primary/10 hover:bg-primary/20 cursor-pointer truncate border-l-2",
                       selectedPatientId && getPaymentBorderColor(apt.paymentColor)
                     )}
                   >
                     <span className="font-medium">{formatTime(apt.start_at)}</span>
-                    <span className="hidden md:inline ml-1 text-muted-foreground">
+                    <span className="ml-1 text-muted-foreground">
                       {apt.patients?.full_name?.split(" ")[0] || "Sin paciente"}
                     </span>
                   </div>
@@ -145,6 +243,70 @@ export const CalendarGrid = ({
           );
         })}
       </div>
+    </div>
+  );
+};
+
+// Mobile appointments list component
+const MobileAppointmentsList = ({
+  appointments,
+  currentDate,
+  onAppointmentClick,
+  selectedPatientId,
+  getPaymentBorderColor,
+}: {
+  appointments: Appointment[];
+  currentDate: Date;
+  onAppointmentClick: (apt: Appointment) => void;
+  selectedPatientId: string | null;
+  getPaymentBorderColor: (color?: string) => string;
+}) => {
+  const todayAppointments = appointments
+    .filter((apt) => isSameDay(new Date(apt.start_at), currentDate))
+    .sort((a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime());
+
+  const formatTime = (datetime: string) => format(new Date(datetime), "HH:mm");
+
+  return (
+    <div className="border-t bg-muted/10 p-3">
+      <h4 className="text-sm font-semibold mb-2 capitalize">
+        {format(currentDate, "EEEE d", { locale: es })}
+        <span className="text-muted-foreground font-normal ml-2">
+          {todayAppointments.length} cita{todayAppointments.length !== 1 ? "s" : ""}
+        </span>
+      </h4>
+      
+      {todayAppointments.length === 0 ? (
+        <p className="text-sm text-muted-foreground py-2">Sin citas para este día</p>
+      ) : (
+        <div className="space-y-2 max-h-[200px] overflow-y-auto">
+          {todayAppointments.map((apt) => (
+            <div
+              key={apt.id}
+              onClick={() => onAppointmentClick(apt)}
+              className={cn(
+                "p-3 rounded-xl bg-card border cursor-pointer active:scale-[0.98] transition-transform border-l-4",
+                selectedPatientId ? getPaymentBorderColor(apt.paymentColor) : "border-l-primary"
+              )}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-sm truncate">
+                    {apt.patients?.full_name || "Sin paciente"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatTime(apt.start_at)} - {formatTime(apt.end_at)}
+                    {apt.services?.name && ` · ${apt.services.name}`}
+                  </p>
+                </div>
+                <Badge variant="secondary" className="ml-2 shrink-0 text-[10px]">
+                  {apt.modality === "online" ? "Online" : "Presencial"}
+                </Badge>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
