@@ -662,7 +662,7 @@ const Landing = () => {
           </div>
 
           {/* Billing Toggle */}
-          <div className="flex justify-center mb-8 sm:mb-12">
+          <div className="flex flex-col items-center gap-3 mb-8 sm:mb-12">
             <div className="inline-flex items-center gap-4 px-4">
               <span className={`text-sm font-medium transition-colors ${!isAnnual ? 'text-white' : 'text-gray-500'}`}>
                 Pago mensual
@@ -681,6 +681,19 @@ const Landing = () => {
                 Pago anual
               </span>
             </div>
+            
+            {/* Payment note - visible with annual */}
+            {isAnnual && (
+              <p 
+                className="text-xs sm:text-sm font-medium px-4 py-1.5 rounded-full animate-fade-in"
+                style={{ 
+                  backgroundColor: 'rgba(0, 199, 138, 0.1)',
+                  color: '#00c78a'
+                }}
+              >
+                💳 Hasta 12 cuotas sin interés
+              </p>
+            )}
           </div>
 
           {/* Pricing Cards Grid */}
@@ -700,11 +713,6 @@ const Landing = () => {
           <div className="animate-fade-in" style={{ animationDelay: '400ms', animationFillMode: 'both' }}>
             <PricingCard {...enterprisePlan} />
           </div>
-
-          {/* Payment Note */}
-          <p className="text-center text-gray-500 text-xs sm:text-sm mt-6 sm:mt-10 font-light">
-            💳 Todos los planes anuales se pueden pagar en hasta 12 cuotas sin interés.
-          </p>
         </div>
       </section>
 
