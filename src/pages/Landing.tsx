@@ -364,85 +364,49 @@ const Landing = () => {
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Hero Section */}
-      <section 
-        className="min-h-screen flex items-center justify-center px-4 sm:px-6 py-12 sm:py-16 relative overflow-hidden"
-        style={{
-          background: 'radial-gradient(ellipse 80% 60% at 50% 40%, rgba(0, 199, 138, 0.12) 0%, rgba(0, 0, 0, 1) 70%)'
-        }}
-      >
-        {/* Subtle ambient glow */}
-        <div 
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            background: 'radial-gradient(circle at 50% 50%, rgba(0, 199, 138, 0.05) 0%, transparent 50%)'
-          }}
-        />
-
-        <div className="w-full max-w-6xl mx-auto relative z-10">
-          {/* Premium Hero Card - Glassmorphism */}
-          <div 
-            className="relative rounded-3xl sm:rounded-[2rem] p-6 sm:p-10 lg:p-14 border animate-fade-in"
-            style={{ 
-              background: 'linear-gradient(135deg, rgba(17, 17, 17, 0.9) 0%, rgba(17, 17, 17, 0.7) 100%)',
-              backdropFilter: 'blur(20px)',
-              borderColor: 'rgba(0, 199, 138, 0.2)',
-              boxShadow: '0 0 80px rgba(0, 199, 138, 0.15), 0 8px 60px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05)'
-            }}
-          >
-            <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
-              {/* Left Column - Content */}
-              <div className="order-1">
-                {/* Badge */}
-                <div 
-                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium mb-6"
-                  style={{ 
-                    backgroundColor: 'rgba(0, 199, 138, 0.15)',
-                    color: '#00c78a'
-                  }}
-                >
-                  <Check className="w-3.5 h-3.5" />
-                  Sistema para consultorios
+      <section className="min-h-[85vh] sm:min-h-screen flex flex-col items-center justify-center px-4 sm:px-6 py-12 sm:py-24">
+        <div className="w-full max-w-5xl mx-auto animate-fade-in">
+          <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+            {/* Left Column - Content */}
+            <div className="order-2 lg:order-1">
+              {/* Premium Hero Card */}
+              <div 
+                className="relative rounded-2xl sm:rounded-3xl p-5 sm:p-10 md:p-14"
+                style={{ 
+                  backgroundColor: '#111111',
+                  boxShadow: '0 8px 60px rgba(0, 199, 138, 0.15), 0 0 80px rgba(0, 199, 138, 0.08)'
+                }}
+              >
+                {/* Emoji */}
+                <div className="flex justify-center mb-6 sm:mb-10">
+                  <span className="text-6xl sm:text-8xl">🗓️</span>
                 </div>
-
+                
                 {/* Title */}
-                <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-5 leading-[1.1]">
-                  <span className="text-white">Sistema de Gestión</span>
-                  <span 
-                    className="block mt-1"
-                    style={{ 
-                      background: 'linear-gradient(135deg, #00c78a 0%, #00e6a0 50%, #00c78a 100%)',
-                      WebkitBackgroundClip: 'text',
-                      WebkitTextFillColor: 'transparent',
-                      backgroundClip: 'text'
-                    }}
-                  >
-                    de Consultorio
-                  </span>
+                <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold tracking-tight text-center mb-4 sm:mb-6 leading-tight">
+                  Sistema de Gestión
+                  <span className="block" style={{ color: '#00c78a' }}>de Consultorio</span>
                 </h1>
                 
                 {/* Subtitle */}
-                <p className="text-base sm:text-lg text-gray-400 mb-8 max-w-lg leading-relaxed font-light">
-                  Organizá pacientes, citas y recordatorios en un panel simple, moderno y 100% online.
+                <p className="text-sm sm:text-lg md:text-xl text-gray-400 text-center mb-6 sm:mb-10 max-w-xl mx-auto leading-relaxed font-light">
+                  Organizá pacientes, citas y recordatorios en un panel simple y profesional.
                 </p>
-
-                {/* Benefits bullets */}
-                <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-6 mb-8">
-                  <div className="flex items-center gap-2.5 text-sm text-gray-300">
-                    <UserCheck className="w-4 h-4" style={{ color: '#00c78a' }} />
-                    <span>Agenda de pacientes clara</span>
-                  </div>
-                  <div className="flex items-center gap-2.5 text-sm text-gray-300">
-                    <CalendarDays className="w-4 h-4" style={{ color: '#00c78a' }} />
-                    <span>Calendario con recordatorios</span>
-                  </div>
-                  <div className="flex items-center gap-2.5 text-sm text-gray-300">
-                    <BarChart3 className="w-4 h-4" style={{ color: '#00c78a' }} />
-                    <span>Resumen de pagos y asistencias</span>
-                  </div>
-                </div>
                 
                 {/* CTA Buttons */}
-                <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-5">
+                <div className="flex flex-col sm:flex-row justify-center gap-4">
+                  <Link to="/auth">
+                    <Button 
+                      size="lg" 
+                      className="w-full sm:w-auto h-12 sm:h-14 px-8 sm:px-12 text-sm sm:text-base font-semibold rounded-xl transition-all duration-300"
+                      style={{ 
+                        backgroundColor: '#00c78a',
+                        boxShadow: '0 4px 30px rgba(0, 199, 138, 0.35)'
+                      }}
+                    >
+                      Iniciar sesión
+                    </Button>
+                  </Link>
                   <a 
                     href="#conoce-el-sistema"
                     onClick={(e) => {
@@ -451,135 +415,115 @@ const Landing = () => {
                     }}
                   >
                     <Button 
-                      size="lg" 
-                      className="w-full sm:w-auto h-12 sm:h-14 px-8 sm:px-10 text-sm sm:text-base font-semibold rounded-xl transition-all duration-300 hover:scale-[1.02] hover:brightness-110"
-                      style={{ 
-                        backgroundColor: '#00c78a',
-                        boxShadow: '0 4px 30px rgba(0, 199, 138, 0.4)'
-                      }}
-                    >
-                      Conocer el sistema
-                    </Button>
-                  </a>
-                  <Link to="/auth">
-                    <Button 
                       variant="outline"
                       size="lg" 
-                      className="w-full sm:w-auto h-12 sm:h-14 px-8 sm:px-10 text-sm sm:text-base font-semibold rounded-xl transition-all duration-300 hover:scale-[1.02] bg-transparent text-white border-white/30 hover:bg-white/10 hover:border-white/50"
+                      className="w-full sm:w-auto h-12 sm:h-14 px-8 sm:px-12 text-sm sm:text-base font-semibold rounded-xl transition-all duration-300 bg-white text-black border-white hover:bg-gray-100"
                     >
-                      Iniciar sesión
+                      Conoce el sistema
                     </Button>
-                  </Link>
+                  </a>
                 </div>
-
-                {/* Trust text */}
-                <p className="text-xs text-gray-500 flex items-center gap-2">
-                  <span className="inline-block w-1 h-1 rounded-full bg-gray-500" />
-                  Sin instalación
-                  <span className="inline-block w-1 h-1 rounded-full bg-gray-500" />
-                  Funciona en cualquier dispositivo
-                </p>
               </div>
+            </div>
 
-              {/* Right Column - Mockup */}
-              <div className="order-2 lg:order-2">
+            {/* Right Column - Floating Mockup */}
+            <div className="order-1 lg:order-2 hidden lg:block">
+              <div 
+                className="relative"
+                style={{
+                  animation: 'float 6s ease-in-out infinite'
+                }}
+              >
+                {/* Browser Window Mockup */}
                 <div 
-                  className="relative animate-[float_6s_ease-in-out_infinite]"
-                  style={{
-                    animation: 'float 6s ease-in-out infinite'
+                  className="rounded-2xl overflow-hidden border"
+                  style={{ 
+                    backgroundColor: '#1a1a1a',
+                    borderColor: 'rgba(255, 255, 255, 0.1)',
+                    boxShadow: '0 25px 80px -20px rgba(0, 0, 0, 0.5), 0 0 60px rgba(0, 199, 138, 0.1)'
                   }}
                 >
-                  {/* Browser Window Mockup */}
+                  {/* Browser bar */}
                   <div 
-                    className="rounded-xl sm:rounded-2xl overflow-hidden border"
-                    style={{ 
-                      backgroundColor: '#1a1a1a',
-                      borderColor: 'rgba(255, 255, 255, 0.1)',
-                      boxShadow: '0 25px 80px -20px rgba(0, 0, 0, 0.5)'
-                    }}
+                    className="flex items-center gap-2 px-4 py-2.5 border-b"
+                    style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}
                   >
-                    {/* Browser bar */}
+                    <div className="flex gap-1.5">
+                      <div className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
+                      <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/80" />
+                      <div className="w-2.5 h-2.5 rounded-full bg-green-500/80" />
+                    </div>
                     <div 
-                      className="flex items-center gap-2 px-4 py-2.5 border-b"
-                      style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}
+                      className="flex-1 h-5 rounded-md ml-3"
+                      style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)' }}
+                    />
+                  </div>
+
+                  {/* Dashboard Content */}
+                  <div className="p-6 grid grid-cols-5 gap-4">
+                    {/* Mini Calendar - Left side */}
+                    <div 
+                      className="col-span-3 rounded-xl p-4"
+                      style={{ backgroundColor: 'rgba(255, 255, 255, 0.03)' }}
                     >
-                      <div className="flex gap-1.5">
-                        <div className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
-                        <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/80" />
-                        <div className="w-2.5 h-2.5 rounded-full bg-green-500/80" />
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-xs font-medium text-gray-400">Diciembre 2025</span>
+                        <Calendar className="w-4 h-4 text-gray-500" />
                       </div>
-                      <div 
-                        className="flex-1 h-5 rounded-md ml-3"
-                        style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)' }}
-                      />
+                      
+                      {/* Week days header */}
+                      <div className="grid grid-cols-7 gap-1 mb-2">
+                        {['L', 'M', 'X', 'J', 'V', 'S', 'D'].map((d) => (
+                          <div key={d} className="text-[10px] text-gray-500 text-center">{d}</div>
+                        ))}
+                      </div>
+                      
+                      {/* Calendar days */}
+                      <div className="grid grid-cols-7 gap-1">
+                        {[...Array(7)].map((_, i) => (
+                          <div 
+                            key={i}
+                            className="aspect-square rounded-md flex items-center justify-center text-[11px]"
+                            style={{ 
+                              backgroundColor: [1, 3, 5].includes(i) ? 'rgba(0, 199, 138, 0.2)' : 'transparent',
+                              color: [1, 3, 5].includes(i) ? '#00c78a' : '#888'
+                            }}
+                          >
+                            {i + 8}
+                          </div>
+                        ))}
+                      </div>
+                      <div className="grid grid-cols-7 gap-1 mt-1">
+                        {[...Array(7)].map((_, i) => (
+                          <div 
+                            key={i}
+                            className="aspect-square rounded-md flex items-center justify-center text-[11px]"
+                            style={{ 
+                              backgroundColor: [0, 2, 4].includes(i) ? 'rgba(0, 199, 138, 0.2)' : 'transparent',
+                              color: [0, 2, 4].includes(i) ? '#00c78a' : '#888'
+                            }}
+                          >
+                            {i + 15}
+                          </div>
+                        ))}
+                      </div>
                     </div>
 
-                    {/* Dashboard Content */}
-                    <div className="p-4 sm:p-6 grid grid-cols-5 gap-3 sm:gap-4">
-                      {/* Mini Calendar - Left side */}
+                    {/* Metrics cards - Right side */}
+                    <div className="col-span-2 flex flex-col gap-3">
                       <div 
-                        className="col-span-3 rounded-xl p-3 sm:p-4"
+                        className="rounded-xl p-4 flex-1"
+                        style={{ backgroundColor: 'rgba(0, 199, 138, 0.1)' }}
+                      >
+                        <div className="text-xs text-gray-400 mb-1">Citas hoy</div>
+                        <div className="text-2xl font-bold" style={{ color: '#00c78a' }}>5</div>
+                      </div>
+                      <div 
+                        className="rounded-xl p-4 flex-1"
                         style={{ backgroundColor: 'rgba(255, 255, 255, 0.03)' }}
                       >
-                        <div className="flex items-center justify-between mb-3">
-                          <span className="text-[10px] sm:text-xs font-medium text-gray-400">Diciembre 2025</span>
-                          <Calendar className="w-3 h-3 sm:w-4 sm:h-4 text-gray-500" />
-                        </div>
-                        
-                        {/* Week days header */}
-                        <div className="grid grid-cols-7 gap-1 mb-2">
-                          {['L', 'M', 'X', 'J', 'V', 'S', 'D'].map((d) => (
-                            <div key={d} className="text-[8px] sm:text-[10px] text-gray-500 text-center">{d}</div>
-                          ))}
-                        </div>
-                        
-                        {/* Calendar days */}
-                        <div className="grid grid-cols-7 gap-1">
-                          {[...Array(7)].map((_, i) => (
-                            <div 
-                              key={i}
-                              className="aspect-square rounded-md flex items-center justify-center text-[9px] sm:text-[11px]"
-                              style={{ 
-                                backgroundColor: [1, 3, 5].includes(i) ? 'rgba(0, 199, 138, 0.2)' : 'transparent',
-                                color: [1, 3, 5].includes(i) ? '#00c78a' : '#888'
-                              }}
-                            >
-                              {i + 8}
-                            </div>
-                          ))}
-                        </div>
-                        <div className="grid grid-cols-7 gap-1 mt-1">
-                          {[...Array(7)].map((_, i) => (
-                            <div 
-                              key={i}
-                              className="aspect-square rounded-md flex items-center justify-center text-[9px] sm:text-[11px]"
-                              style={{ 
-                                backgroundColor: [0, 2, 4].includes(i) ? 'rgba(0, 199, 138, 0.2)' : 'transparent',
-                                color: [0, 2, 4].includes(i) ? '#00c78a' : '#888'
-                              }}
-                            >
-                              {i + 15}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Metrics cards - Right side */}
-                      <div className="col-span-2 flex flex-col gap-2 sm:gap-3">
-                        <div 
-                          className="rounded-xl p-3 sm:p-4 flex-1"
-                          style={{ backgroundColor: 'rgba(0, 199, 138, 0.1)' }}
-                        >
-                          <div className="text-[10px] sm:text-xs text-gray-400 mb-1">Citas hoy</div>
-                          <div className="text-xl sm:text-2xl font-bold" style={{ color: '#00c78a' }}>5</div>
-                        </div>
-                        <div 
-                          className="rounded-xl p-3 sm:p-4 flex-1"
-                          style={{ backgroundColor: 'rgba(255, 255, 255, 0.03)' }}
-                        >
-                          <div className="text-[10px] sm:text-xs text-gray-400 mb-1">Pacientes activos</div>
-                          <div className="text-xl sm:text-2xl font-bold text-white">47</div>
-                        </div>
+                        <div className="text-xs text-gray-400 mb-1">Pacientes activos</div>
+                        <div className="text-2xl font-bold text-white">47</div>
                       </div>
                     </div>
                   </div>
