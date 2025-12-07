@@ -284,6 +284,7 @@ export type Database = {
       }
       patients: {
         Row: {
+          auth_user_id: string | null
           business_id: string
           created_at: string
           email: string | null
@@ -296,6 +297,7 @@ export type Database = {
           whatsapp_phone: string | null
         }
         Insert: {
+          auth_user_id?: string | null
           business_id: string
           created_at?: string
           email?: string | null
@@ -308,6 +310,7 @@ export type Database = {
           whatsapp_phone?: string | null
         }
         Update: {
+          auth_user_id?: string | null
           business_id?: string
           created_at?: string
           email?: string | null

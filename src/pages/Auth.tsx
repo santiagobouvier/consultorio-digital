@@ -27,9 +27,22 @@ const Auth = () => {
         
         toast.success("¡Bienvenido de nuevo!");
         
-        // Check if user has a business configured
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
+          // Check if user has patient role
+          const { data: patientRole } = await supabase
+            .from("user_roles")
+            .select("role")
+            .eq("user_id", user.id)
+            .eq("role", "patient")
+            .maybeSingle();
+
+          if (patientRole) {
+            navigate("/portal-paciente");
+            return;
+          }
+
+          // Check if user has a business configured (professional flow)
           const { data: business } = await supabase
             .from("businesses")
             .select("id")
