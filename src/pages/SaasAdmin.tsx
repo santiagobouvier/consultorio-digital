@@ -42,7 +42,10 @@ import {
   Settings,
   Power,
   Loader2,
+  AlertTriangle,
 } from "lucide-react";
+import { getPlanName, getPlanConfig, checkProfessionalLimit } from "@/hooks/use-plan-limits";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface BusinessWithDetails {
   id: string;
@@ -53,8 +56,8 @@ interface BusinessWithDetails {
   ownerEmail?: string;
   professionalsCount: number;
   patientsCount: number;
-  plan?: string;
-  isActive?: boolean;
+  planCode: string;
+  isActive: boolean;
 }
 
 interface SaasMetrics {
@@ -63,6 +66,14 @@ interface SaasMetrics {
   totalPatients: number;
   estimatedRevenue: number;
 }
+
+// Plan pricing for revenue calculation
+const PLAN_PRICES: Record<string, number> = {
+  individual: 29,
+  professional: 59,
+  advanced: 99,
+  enterprise: 199,
+};
 
 const SUPER_ADMIN_EMAIL = "santib1997@gmail.com";
 
@@ -85,12 +96,13 @@ const SaasAdmin = () => {
   // Create business form state
   const [newBusinessName, setNewBusinessName] = useState("");
   const [newBusinessEmail, setNewBusinessEmail] = useState("");
-  const [newBusinessPlan, setNewBusinessPlan] = useState("free");
+  const [newBusinessPlan, setNewBusinessPlan] = useState("individual");
 
   // Create professional form state
   const [showAddProfessionalModal, setShowAddProfessionalModal] = useState(false);
   const [newProfName, setNewProfName] = useState("");
   const [newProfEmail, setNewProfEmail] = useState("");
+  const [professionalLimitError, setProfessionalLimitError] = useState<string | null>(null);
 
   useEffect(() => {
     checkAccessAndLoad();
@@ -180,21 +192,26 @@ const SaasAdmin = () => {
         ownerEmail: profileMap.get(b.owner_user_id) || "N/A",
         professionalsCount: profCountMap.get(b.id) || 0,
         patientsCount: patientCountMap.get(b.id) || 0,
-        plan: "free", // TODO: implement plans
-        isActive: true,
+        planCode: (b as any).plan_code || "individual",
+        isActive: (b as any).is_active !== false,
       }));
 
       setBusinesses(businessesWithDetails);
 
-      // Calculate metrics
+      // Calculate metrics including estimated revenue
       const totalProfessionals = rolesData?.length || 0;
       const totalPatients = patientsData?.length || 0;
+      
+      // Calculate estimated revenue based on plans
+      const estimatedRevenue = businessesWithDetails.reduce((sum, b) => {
+        return sum + (PLAN_PRICES[b.planCode] || 0);
+      }, 0);
 
       setMetrics({
         totalBusinesses: businessesWithDetails.length,
         totalProfessionals,
         totalPatients,
-        estimatedRevenue: 0, // TODO: calculate based on plans
+        estimatedRevenue,
       });
     } catch (error) {
       console.error("Error loading data:", error);
@@ -265,6 +282,7 @@ const SaasAdmin = () => {
           owner_user_id: ownerId,
           public_slug: slug,
           contact_email: newBusinessEmail.trim().toLowerCase(),
+          plan_code: newBusinessPlan,
         })
         .select()
         .single();
@@ -286,7 +304,7 @@ const SaasAdmin = () => {
       setShowCreateModal(false);
       setNewBusinessName("");
       setNewBusinessEmail("");
-      setNewBusinessPlan("free");
+      setNewBusinessPlan("individual");
       await loadData();
     } catch (error: any) {
       console.error("Error creating business:", error);
@@ -354,6 +372,15 @@ const SaasAdmin = () => {
 
     try {
       setCreating(true);
+      setProfessionalLimitError(null);
+
+      // Check plan limits first
+      const limitCheck = await checkProfessionalLimit(selectedBusiness.id);
+      if (!limitCheck.canAdd) {
+        setProfessionalLimitError(limitCheck.message || "Límite alcanzado");
+        setCreating(false);
+        return;
+      }
 
       const { data, error } = await supabase.functions.invoke("create-professional-invite", {
         body: {
@@ -375,6 +402,7 @@ const SaasAdmin = () => {
       setShowAddProfessionalModal(false);
       setNewProfName("");
       setNewProfEmail("");
+      setProfessionalLimitError(null);
       await loadProfessionals(selectedBusiness);
       await loadData();
     } catch (error: any) {
@@ -386,6 +414,31 @@ const SaasAdmin = () => {
       });
     } finally {
       setCreating(false);
+    }
+  };
+
+  const handleChangePlan = async (businessId: string, newPlanCode: string) => {
+    try {
+      const { error } = await supabase
+        .from("businesses")
+        .update({ plan_code: newPlanCode })
+        .eq("id", businessId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Plan actualizado",
+        description: `El plan ha sido cambiado a ${getPlanName(newPlanCode)}`,
+      });
+
+      await loadData();
+    } catch (error: any) {
+      console.error("Error changing plan:", error);
+      toast({
+        title: "Error",
+        description: error.message || "No se pudo cambiar el plan",
+        variant: "destructive",
+      });
     }
   };
 
@@ -531,15 +584,44 @@ const SaasAdmin = () => {
                         {business.ownerEmail}
                       </TableCell>
                       <TableCell className="hidden md:table-cell">
-                        <Badge variant="secondary" className="capitalize">
-                          {business.plan}
-                        </Badge>
+                        <Select
+                          value={business.planCode}
+                          onValueChange={(value) => handleChangePlan(business.id, value)}
+                        >
+                          <SelectTrigger className="h-8 text-xs w-36">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="individual">Individual</SelectItem>
+                            <SelectItem value="professional">Profesional</SelectItem>
+                            <SelectItem value="advanced">Avanzada</SelectItem>
+                            <SelectItem value="enterprise">Enterprise</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </TableCell>
                       <TableCell className="text-center">
-                        {business.professionalsCount}
+                        <span className={
+                          getPlanConfig(business.planCode).maxProfessionals !== null &&
+                          business.professionalsCount >= getPlanConfig(business.planCode).maxProfessionals!
+                            ? "text-destructive font-semibold"
+                            : ""
+                        }>
+                          {business.professionalsCount}
+                          {getPlanConfig(business.planCode).maxProfessionals !== null && 
+                            `/${getPlanConfig(business.planCode).maxProfessionals}`}
+                        </span>
                       </TableCell>
                       <TableCell className="text-center">
-                        {business.patientsCount}
+                        <span className={
+                          getPlanConfig(business.planCode).maxPatients !== null &&
+                          business.patientsCount >= getPlanConfig(business.planCode).maxPatients!
+                            ? "text-destructive font-semibold"
+                            : ""
+                        }>
+                          {business.patientsCount}
+                          {getPlanConfig(business.planCode).maxPatients !== null && 
+                            `/${getPlanConfig(business.planCode).maxPatients}`}
+                        </span>
                       </TableCell>
                       <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
                         {formatDate(business.created_at)}
@@ -621,9 +703,10 @@ const SaasAdmin = () => {
                   <SelectValue placeholder="Seleccionar plan" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="free">Gratuito</SelectItem>
-                  <SelectItem value="basic">Básico</SelectItem>
-                  <SelectItem value="pro">Profesional</SelectItem>
+                  <SelectItem value="individual">Consultorio Individual (1 prof, 80 pac)</SelectItem>
+                  <SelectItem value="professional">Consultorio Profesional (3 prof, 300 pac)</SelectItem>
+                  <SelectItem value="advanced">Clínica Avanzada (7 prof, 800 pac)</SelectItem>
+                  <SelectItem value="enterprise">Enterprise (ilimitado)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -702,6 +785,12 @@ const SaasAdmin = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
+            {professionalLimitError && (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>{professionalLimitError}</AlertDescription>
+              </Alert>
+            )}
             <div className="space-y-2">
               <Label htmlFor="profName">Nombre</Label>
               <Input

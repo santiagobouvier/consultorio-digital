@@ -3,6 +3,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { checkPatientLimit } from "@/hooks/use-plan-limits";
 import {
   Dialog,
   DialogContent,
@@ -95,6 +96,19 @@ export function PatientForm({
         });
         window.location.href = "/configurar-negocio";
         return;
+      }
+
+      // Check patient limit for new patients only
+      if (!patientId) {
+        const limitCheck = await checkPatientLimit(business.id);
+        if (!limitCheck.canAdd) {
+          toast({
+            title: "Límite de pacientes alcanzado",
+            description: limitCheck.message,
+            variant: "destructive",
+          });
+          return;
+        }
       }
 
       // Clean empty strings to null
