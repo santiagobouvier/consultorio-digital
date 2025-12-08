@@ -22,14 +22,22 @@ const PLAN_CONFIG: Record<string, { name: string; maxProfessionals: number | nul
   professional: { name: "Consultorio Profesional", maxProfessionals: 3, maxPatients: 300 },
   advanced: { name: "Clínica Avanzada", maxProfessionals: 7, maxPatients: 800 },
   enterprise: { name: "Enterprise", maxProfessionals: null, maxPatients: null },
+  custom: { name: "Personalizado", maxProfessionals: null, maxPatients: null },
 };
 
-export function getPlanConfig(planCode: string) {
+export function getPlanConfig(planCode: string, customLimits?: { maxProfessionals?: number | null; maxPatients?: number | null }) {
+  if (planCode === "custom" && customLimits) {
+    return {
+      name: "Personalizado",
+      maxProfessionals: customLimits.maxProfessionals ?? null,
+      maxPatients: customLimits.maxPatients ?? null,
+    };
+  }
   return PLAN_CONFIG[planCode] || PLAN_CONFIG.individual;
 }
 
 export function getPlanName(planCode: string): string {
-  return getPlanConfig(planCode).name;
+  return PLAN_CONFIG[planCode]?.name || PLAN_CONFIG.individual.name;
 }
 
 export function usePlanLimits(businessId: string | null) {
@@ -51,17 +59,21 @@ export function usePlanLimits(businessId: string | null) {
     }
 
     try {
-      // Fetch business plan code
+      // Fetch business plan code and custom limits
       const { data: business, error: bizError } = await supabase
         .from("businesses")
-        .select("plan_code")
+        .select("plan_code, custom_max_professionals, custom_max_patients")
         .eq("id", businessId)
         .single();
 
       if (bizError) throw bizError;
 
       const planCode = business?.plan_code || "individual";
-      const config = getPlanConfig(planCode);
+      const customLimits = planCode === "custom" ? {
+        maxProfessionals: (business as any)?.custom_max_professionals ?? null,
+        maxPatients: (business as any)?.custom_max_patients ?? null,
+      } : undefined;
+      const config = getPlanConfig(planCode, customLimits);
 
       // Count professionals
       const { count: profCount, error: profError } = await supabase
@@ -118,12 +130,16 @@ export function usePlanLimits(businessId: string | null) {
 export async function checkProfessionalLimit(businessId: string): Promise<{ canAdd: boolean; message?: string }> {
   const { data: business } = await supabase
     .from("businesses")
-    .select("plan_code")
+    .select("plan_code, custom_max_professionals, custom_max_patients")
     .eq("id", businessId)
     .single();
 
   const planCode = business?.plan_code || "individual";
-  const config = getPlanConfig(planCode);
+  const customLimits = planCode === "custom" ? {
+    maxProfessionals: (business as any)?.custom_max_professionals ?? null,
+    maxPatients: (business as any)?.custom_max_patients ?? null,
+  } : undefined;
+  const config = getPlanConfig(planCode, customLimits);
 
   if (config.maxProfessionals === null) {
     return { canAdd: true };
@@ -150,12 +166,16 @@ export async function checkProfessionalLimit(businessId: string): Promise<{ canA
 export async function checkPatientLimit(businessId: string): Promise<{ canAdd: boolean; message?: string }> {
   const { data: business } = await supabase
     .from("businesses")
-    .select("plan_code")
+    .select("plan_code, custom_max_professionals, custom_max_patients")
     .eq("id", businessId)
     .single();
 
   const planCode = business?.plan_code || "individual";
-  const config = getPlanConfig(planCode);
+  const customLimits = planCode === "custom" ? {
+    maxProfessionals: (business as any)?.custom_max_professionals ?? null,
+    maxPatients: (business as any)?.custom_max_patients ?? null,
+  } : undefined;
+  const config = getPlanConfig(planCode, customLimits);
 
   if (config.maxPatients === null) {
     return { canAdd: true };

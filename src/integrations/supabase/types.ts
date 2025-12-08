@@ -203,6 +203,8 @@ export type Database = {
           billing_period: string
           contact_email: string
           created_at: string
+          custom_max_patients: number | null
+          custom_max_professionals: number | null
           id: string
           is_active: boolean
           name: string
@@ -219,6 +221,8 @@ export type Database = {
           billing_period?: string
           contact_email: string
           created_at?: string
+          custom_max_patients?: number | null
+          custom_max_professionals?: number | null
           id?: string
           is_active?: boolean
           name: string
@@ -235,6 +239,8 @@ export type Database = {
           billing_period?: string
           contact_email?: string
           created_at?: string
+          custom_max_patients?: number | null
+          custom_max_professionals?: number | null
           id?: string
           is_active?: boolean
           name?: string
