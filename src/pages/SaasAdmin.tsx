@@ -53,6 +53,7 @@ import {
 } from "lucide-react";
 import { getPlanName, getPlanConfig, checkProfessionalLimit } from "@/hooks/use-plan-limits";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { PlanSelector } from "@/components/PlanSelector";
 
 interface BusinessWithDetails {
   id: string;
@@ -65,6 +66,8 @@ interface BusinessWithDetails {
   patientsCount: number;
   planCode: string;
   isActive: boolean;
+  customMaxProfessionals?: number | null;
+  customMaxPatients?: number | null;
 }
 
 interface SaasMetrics {
@@ -80,6 +83,7 @@ const PLAN_PRICES: Record<string, number> = {
   professional: 59,
   advanced: 99,
   enterprise: 199,
+  custom: 0, // Custom plans have variable pricing
 };
 
 const SUPER_ADMIN_EMAIL = "santib1997@gmail.com";
@@ -201,6 +205,8 @@ const SaasAdmin = () => {
         patientsCount: patientCountMap.get(b.id) || 0,
         planCode: (b as any).plan_code || "individual",
         isActive: (b as any).is_active !== false,
+        customMaxProfessionals: (b as any).custom_max_professionals,
+        customMaxPatients: (b as any).custom_max_patients,
       }));
 
       setBusinesses(businessesWithDetails);
@@ -424,11 +430,18 @@ const SaasAdmin = () => {
     }
   };
 
-  const handleChangePlan = async (businessId: string, newPlanCode: string) => {
+  const handleChangePlan = async (businessId: string, newPlanCode: string, customLimits?: { maxProfessionals?: number | null; maxPatients?: number | null }) => {
     try {
+      const updateData: any = { plan_code: newPlanCode };
+      
+      if (newPlanCode === "custom" && customLimits) {
+        updateData.custom_max_professionals = customLimits.maxProfessionals;
+        updateData.custom_max_patients = customLimits.maxPatients;
+      }
+
       const { error } = await supabase
         .from("businesses")
-        .update({ plan_code: newPlanCode })
+        .update(updateData)
         .eq("id", businessId);
 
       if (error) throw error;
@@ -540,44 +553,53 @@ const SaasAdmin = () => {
                         {business.ownerEmail}
                       </TableCell>
                       <TableCell className="hidden md:table-cell">
-                        <Select
-                          value={business.planCode}
-                          onValueChange={(value) => handleChangePlan(business.id, value)}
-                        >
-                          <SelectTrigger className="h-8 text-xs w-36">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="individual">Individual</SelectItem>
-                            <SelectItem value="professional">Profesional</SelectItem>
-                            <SelectItem value="advanced">Avanzada</SelectItem>
-                            <SelectItem value="enterprise">Enterprise</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <PlanSelector
+                          businessId={business.id}
+                          currentPlan={business.planCode}
+                          customMaxProfessionals={business.customMaxProfessionals}
+                          customMaxPatients={business.customMaxPatients}
+                          onChangePlan={handleChangePlan}
+                        />
                       </TableCell>
                       <TableCell className="text-center">
-                        <span className={
-                          getPlanConfig(business.planCode).maxProfessionals !== null &&
-                          business.professionalsCount >= getPlanConfig(business.planCode).maxProfessionals!
-                            ? "text-destructive font-semibold"
-                            : ""
-                        }>
-                          {business.professionalsCount}
-                          {getPlanConfig(business.planCode).maxProfessionals !== null && 
-                            `/${getPlanConfig(business.planCode).maxProfessionals}`}
-                        </span>
+                        {(() => {
+                          const customLimits = business.planCode === "custom" ? {
+                            maxProfessionals: business.customMaxProfessionals ?? null,
+                            maxPatients: business.customMaxPatients ?? null,
+                          } : undefined;
+                          const config = getPlanConfig(business.planCode, customLimits);
+                          return (
+                            <span className={
+                              config.maxProfessionals !== null &&
+                              business.professionalsCount >= config.maxProfessionals
+                                ? "text-destructive font-semibold"
+                                : ""
+                            }>
+                              {business.professionalsCount}
+                              {config.maxProfessionals !== null && `/${config.maxProfessionals}`}
+                            </span>
+                          );
+                        })()}
                       </TableCell>
                       <TableCell className="text-center">
-                        <span className={
-                          getPlanConfig(business.planCode).maxPatients !== null &&
-                          business.patientsCount >= getPlanConfig(business.planCode).maxPatients!
-                            ? "text-destructive font-semibold"
-                            : ""
-                        }>
-                          {business.patientsCount}
-                          {getPlanConfig(business.planCode).maxPatients !== null && 
-                            `/${getPlanConfig(business.planCode).maxPatients}`}
-                        </span>
+                        {(() => {
+                          const customLimits = business.planCode === "custom" ? {
+                            maxProfessionals: business.customMaxProfessionals ?? null,
+                            maxPatients: business.customMaxPatients ?? null,
+                          } : undefined;
+                          const config = getPlanConfig(business.planCode, customLimits);
+                          return (
+                            <span className={
+                              config.maxPatients !== null &&
+                              business.patientsCount >= config.maxPatients
+                                ? "text-destructive font-semibold"
+                                : ""
+                            }>
+                              {business.patientsCount}
+                              {config.maxPatients !== null && `/${config.maxPatients}`}
+                            </span>
+                          );
+                        })()}
                       </TableCell>
                       <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
                         {formatDate(business.created_at)}
@@ -727,6 +749,7 @@ const SaasAdmin = () => {
                   <SelectItem value="professional">Consultorio Profesional (3 prof, 300 pac)</SelectItem>
                   <SelectItem value="advanced">Clínica Avanzada (7 prof, 800 pac)</SelectItem>
                   <SelectItem value="enterprise">Enterprise (ilimitado)</SelectItem>
+                  <SelectItem value="custom">Personalizado (límites manuales)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
