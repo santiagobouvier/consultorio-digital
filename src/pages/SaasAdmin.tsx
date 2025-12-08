@@ -29,6 +29,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { toast } from "@/hooks/use-toast";
 import {
   Building2,
@@ -43,6 +48,8 @@ import {
   Power,
   Loader2,
   AlertTriangle,
+  ChevronDown,
+  BarChart3,
 } from "lucide-react";
 import { getPlanName, getPlanConfig, checkProfessionalLimit } from "@/hooks/use-plan-limits";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -490,57 +497,6 @@ const SaasAdmin = () => {
           </Badge>
         </div>
 
-        {/* Metrics */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="mobile-card-compact">
-            <CardContent className="p-4 text-center">
-              <Building2 className="h-8 w-8 mx-auto text-primary mb-2" />
-              <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wide">
-                Consultorios
-              </p>
-              <p className="text-3xl font-bold text-foreground mt-1">
-                {metrics.totalBusinesses}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="mobile-card-compact">
-            <CardContent className="p-4 text-center">
-              <UserCog className="h-8 w-8 mx-auto text-primary mb-2" />
-              <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wide">
-                Profesionales
-              </p>
-              <p className="text-3xl font-bold text-foreground mt-1">
-                {metrics.totalProfessionals}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="mobile-card-compact">
-            <CardContent className="p-4 text-center">
-              <Users className="h-8 w-8 mx-auto text-primary mb-2" />
-              <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wide">
-                Pacientes
-              </p>
-              <p className="text-3xl font-bold text-foreground mt-1">
-                {metrics.totalPatients}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="mobile-card-compact">
-            <CardContent className="p-4 text-center">
-              <DollarSign className="h-8 w-8 mx-auto text-green-600 mb-2" />
-              <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wide">
-                Ingresos est.
-              </p>
-              <p className="text-3xl font-bold text-green-600 mt-1">
-                ${metrics.estimatedRevenue}
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
         {/* Create Business Button */}
         <Button
           className="w-full h-12 rounded-xl font-semibold gap-2"
@@ -550,7 +506,7 @@ const SaasAdmin = () => {
           Crear nuevo consultorio
         </Button>
 
-        {/* Businesses Table */}
+        {/* Businesses Table - Now First */}
         <Card className="mobile-card">
           <CardHeader className="pb-4">
             <CardTitle className="text-lg font-bold">Consultorios</CardTitle>
@@ -662,6 +618,70 @@ const SaasAdmin = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Metrics - Now in Collapsible at the end */}
+        <Collapsible>
+          <CollapsibleTrigger asChild>
+            <Button variant="outline" className="w-full justify-between h-12 rounded-xl">
+              <div className="flex items-center gap-2">
+                <BarChart3 className="h-4 w-4" />
+                <span>Ver métricas del sistema</span>
+              </div>
+              <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="pt-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <Card className="mobile-card-compact">
+                <CardContent className="p-4 text-center">
+                  <Building2 className="h-8 w-8 mx-auto text-primary mb-2" />
+                  <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wide">
+                    Consultorios
+                  </p>
+                  <p className="text-3xl font-bold text-foreground mt-1">
+                    {metrics.totalBusinesses}
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="mobile-card-compact">
+                <CardContent className="p-4 text-center">
+                  <UserCog className="h-8 w-8 mx-auto text-primary mb-2" />
+                  <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wide">
+                    Profesionales
+                  </p>
+                  <p className="text-3xl font-bold text-foreground mt-1">
+                    {metrics.totalProfessionals}
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="mobile-card-compact">
+                <CardContent className="p-4 text-center">
+                  <Users className="h-8 w-8 mx-auto text-primary mb-2" />
+                  <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wide">
+                    Pacientes
+                  </p>
+                  <p className="text-3xl font-bold text-foreground mt-1">
+                    {metrics.totalPatients}
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="mobile-card-compact">
+                <CardContent className="p-4 text-center">
+                  <DollarSign className="h-8 w-8 mx-auto text-green-600 mb-2" />
+                  <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wide">
+                    Ingresos est.
+                  </p>
+                  <p className="text-3xl font-bold text-green-600 mt-1">
+                    ${metrics.estimatedRevenue}
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
       </div>
 
       {/* Create Business Modal */}
