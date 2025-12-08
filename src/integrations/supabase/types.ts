@@ -200,33 +200,48 @@ export type Database = {
       }
       businesses: {
         Row: {
+          billing_period: string
           contact_email: string
           created_at: string
           id: string
+          is_active: boolean
           name: string
           owner_user_id: string
+          plan_code: string
+          plan_expires_at: string | null
+          plan_started_at: string | null
           public_slug: string
           specialty: string | null
           timezone: string
           updated_at: string
         }
         Insert: {
+          billing_period?: string
           contact_email: string
           created_at?: string
           id?: string
+          is_active?: boolean
           name: string
           owner_user_id: string
+          plan_code?: string
+          plan_expires_at?: string | null
+          plan_started_at?: string | null
           public_slug: string
           specialty?: string | null
           timezone?: string
           updated_at?: string
         }
         Update: {
+          billing_period?: string
           contact_email?: string
           created_at?: string
           id?: string
+          is_active?: boolean
           name?: string
           owner_user_id?: string
+          plan_code?: string
+          plan_expires_at?: string | null
+          plan_started_at?: string | null
           public_slug?: string
           specialty?: string | null
           timezone?: string
@@ -621,6 +636,26 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_add_patient: { Args: { p_business_id: string }; Returns: boolean }
+      can_add_professional: {
+        Args: { p_business_id: string }
+        Returns: boolean
+      }
+      count_business_active_patients: {
+        Args: { p_business_id: string }
+        Returns: number
+      }
+      count_business_professionals: {
+        Args: { p_business_id: string }
+        Returns: number
+      }
+      get_plan_limits: {
+        Args: { p_plan_code: string }
+        Returns: {
+          max_patients: number
+          max_professionals: number
+        }[]
+      }
       get_user_business_id: { Args: { _user_id: string }; Returns: string }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
       user_belongs_to_business: {

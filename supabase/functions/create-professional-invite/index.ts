@@ -54,11 +54,11 @@ Deno.serve(async (req) => {
 
     const isSuperAdmin = !!superAdminRole;
 
-    // If businessId is provided, verify authorization
+    // If businessId is provided, verify authorization and check plan limits
     if (businessId) {
       const { data: business, error: businessError } = await supabase
         .from("businesses")
-        .select("id, owner_user_id")
+        .select("id, owner_user_id, plan_code")
         .eq("id", businessId)
         .single();
 
@@ -75,6 +75,43 @@ Deno.serve(async (req) => {
           status: 403,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
+      }
+
+      // Check plan limits
+      const planCode = (business as any).plan_code || "individual";
+      const planLimits: Record<string, number | null> = {
+        individual: 1,
+        professional: 3,
+        advanced: 7,
+        enterprise: null,
+      };
+      
+      const maxProfessionals = planLimits[planCode];
+      
+      if (maxProfessionals !== null) {
+        // Count current professionals
+        const { count } = await supabase
+          .from("user_roles")
+          .select("*", { count: "exact", head: true })
+          .eq("business_id", businessId)
+          .in("role", ["owner", "professional"]);
+        
+        const currentCount = count || 0;
+        
+        if (currentCount >= maxProfessionals) {
+          const planNames: Record<string, string> = {
+            individual: "Consultorio Individual",
+            professional: "Consultorio Profesional",
+            advanced: "Clínica Avanzada",
+            enterprise: "Enterprise",
+          };
+          return new Response(JSON.stringify({ 
+            error: `Límite alcanzado: Ya tenés ${currentCount}/${maxProfessionals} profesionales para el plan "${planNames[planCode]}". Actualizá el plan para agregar más.`
+          }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
       }
     } else if (!isSuperAdmin) {
       // Only super_admin can create users without a business (for new owner creation)

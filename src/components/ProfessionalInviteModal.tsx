@@ -5,7 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Copy, Check, UserPlus, Link } from "lucide-react";
+import { Copy, Check, UserPlus, Link, AlertTriangle } from "lucide-react";
+import { checkProfessionalLimit } from "@/hooks/use-plan-limits";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface ProfessionalInviteModalProps {
   open: boolean;
@@ -25,6 +27,7 @@ export function ProfessionalInviteModal({
   const [loading, setLoading] = useState(false);
   const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [limitError, setLimitError] = useState<string | null>(null);
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -40,8 +43,17 @@ export function ProfessionalInviteModal({
     }
 
     setLoading(true);
+    setLimitError(null);
 
     try {
+      // Check plan limits first
+      const limitCheck = await checkProfessionalLimit(businessId);
+      if (!limitCheck.canAdd) {
+        setLimitError(limitCheck.message || "Límite alcanzado");
+        setLoading(false);
+        return;
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
@@ -115,6 +127,7 @@ export function ProfessionalInviteModal({
     setEmail("");
     setInviteLink(null);
     setCopied(false);
+    setLimitError(null);
     onOpenChange(false);
   };
 
@@ -136,6 +149,13 @@ export function ProfessionalInviteModal({
 
         {!inviteLink ? (
           <form onSubmit={handleSubmit} className="space-y-4">
+            {limitError && (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>{limitError}</AlertDescription>
+              </Alert>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="name">Nombre del profesional</Label>
               <Input
