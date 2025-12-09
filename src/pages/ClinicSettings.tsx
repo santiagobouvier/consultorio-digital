@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, Copy, ExternalLink, RotateCcw, UserPlus, Users, Crown, User } from "lucide-react";
+import { ArrowLeft, Save, Copy, ExternalLink, RotateCcw, UserPlus, Users, Crown, User, Link, Check } from "lucide-react";
 import { ProfessionalInviteModal } from "@/components/ProfessionalInviteModal";
 import { Badge } from "@/components/ui/badge";
 import { PlanUsageCard } from "@/components/PlanUsageCard";
@@ -46,6 +46,7 @@ const ClinicSettings = () => {
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [loadingTeam, setLoadingTeam] = useState(false);
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
+  const [registrationLinkCopied, setRegistrationLinkCopied] = useState(false);
   const [coverImageUrl, setCoverImageUrl] = useState("");
   const [autoAcceptBookings, setAutoAcceptBookings] = useState(false);
   const [publicSlug, setPublicSlug] = useState("");
@@ -419,6 +420,48 @@ const ClinicSettings = () => {
                       </Badge>
                     </div>
                   ))}
+                </div>
+              )}
+
+              {/* Registration Link Section */}
+              {publicSlug && (
+                <div className="mt-4 pt-4 border-t border-border">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Link className="h-4 w-4 text-muted-foreground" />
+                      <p className="text-sm font-semibold">Enlace de registro para profesionales</p>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Compartí este enlace para que los profesionales creen su propia cuenta
+                    </p>
+                    <div className="flex gap-2">
+                      <Input
+                        value={`${window.location.origin}/registrarse-profesional?business=${publicSlug}`}
+                        readOnly
+                        className="font-mono text-xs h-11 rounded-xl flex-1"
+                      />
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => {
+                          navigator.clipboard.writeText(`${window.location.origin}/registrarse-profesional?business=${publicSlug}`);
+                          setRegistrationLinkCopied(true);
+                          toast({
+                            title: "Enlace copiado",
+                            description: "El enlace de registro se copió al portapapeles",
+                          });
+                          setTimeout(() => setRegistrationLinkCopied(false), 2000);
+                        }}
+                        className="h-11 w-11 rounded-xl shrink-0"
+                      >
+                        {registrationLinkCopied ? (
+                          <Check className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               )}
             </CardContent>
