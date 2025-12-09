@@ -179,15 +179,6 @@ const Patients = () => {
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6">
-        {/* DEBUG TEMP - Multi-tenant context */}
-        {isSuperAdmin && (
-          <div className="bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-400 text-yellow-800 dark:text-yellow-200 p-3 rounded-lg text-xs font-mono">
-            <strong>DEBUG (Super Admin)</strong><br />
-            currentBusinessId: {businessId || "NULL"}<br />
-            businessName: {businessName || "NULL"}<br />
-            sessionStorage: {typeof window !== "undefined" ? sessionStorage.getItem("saas_selected_business") || "NULL" : "N/A"}
-          </div>
-        )}
 
         {/* Header */}
         <div className="flex items-center justify-between gap-2">
