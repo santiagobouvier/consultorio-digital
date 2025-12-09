@@ -125,11 +125,15 @@ const Dashboard = () => {
           // Use override or first business
           if (!currentBusinessId) {
             currentBusinessId = businesses[0].id;
+            // Store in sessionStorage for other pages
+            sessionStorage.setItem("saas_selected_business", currentBusinessId);
           }
           
           const selected = businesses.find(b => b.id === currentBusinessId) || businesses[0];
           setSelectedBusiness(selected);
           currentBusinessId = selected.id;
+          // Ensure sessionStorage is always synced
+          sessionStorage.setItem("saas_selected_business", currentBusinessId);
         }
       } else {
         // Regular user: check for owned or member business
@@ -445,6 +449,8 @@ const Dashboard = () => {
                         key={business.id}
                         onClick={() => {
                           setSelectedBusiness(business);
+                          // Update sessionStorage so other pages use the same business
+                          sessionStorage.setItem("saas_selected_business", business.id);
                           fetchDashboardData(business.id);
                         }}
                         className={business.id === selectedBusiness?.id ? "bg-accent" : ""}

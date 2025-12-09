@@ -47,14 +47,26 @@ const Patients = () => {
     return searchParams.get("portal") === "true" ? "portal" : "all";
   });
   const [showForm, setShowForm] = useState(false);
+  const [businessName, setBusinessName] = useState<string | null>(null);
   
-  const { businessId, loading: businessLoading } = useBusinessId();
+  const { businessId, loading: businessLoading, isSuperAdmin } = useBusinessId();
 
   useEffect(() => {
     if (businessId) {
       fetchPatients();
+      fetchBusinessName();
     }
   }, [businessId]);
+
+  const fetchBusinessName = async () => {
+    if (!businessId) return;
+    const { data } = await supabase
+      .from("businesses")
+      .select("name")
+      .eq("id", businessId)
+      .maybeSingle();
+    setBusinessName(data?.name || null);
+  };
 
   useEffect(() => {
     filterPatients();
@@ -167,6 +179,16 @@ const Patients = () => {
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6">
+        {/* DEBUG TEMP - Multi-tenant context */}
+        {isSuperAdmin && (
+          <div className="bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-400 text-yellow-800 dark:text-yellow-200 p-3 rounded-lg text-xs font-mono">
+            <strong>DEBUG (Super Admin)</strong><br />
+            currentBusinessId: {businessId || "NULL"}<br />
+            businessName: {businessName || "NULL"}<br />
+            sessionStorage: {typeof window !== "undefined" ? sessionStorage.getItem("saas_selected_business") || "NULL" : "N/A"}
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-3 min-w-0">
@@ -181,7 +203,7 @@ const Patients = () => {
             <div>
               <h1 className="text-xl sm:text-2xl font-bold">Pacientes</h1>
               <p className="text-sm text-muted-foreground hidden sm:block">
-                {filteredPatients.length} {filteredPatients.length === 1 ? 'paciente' : 'pacientes'}
+                {filteredPatients.length} {filteredPatients.length === 1 ? 'paciente' : 'pacientes'}{businessName ? ` - ${businessName}` : ''}
               </p>
             </div>
           </div>
