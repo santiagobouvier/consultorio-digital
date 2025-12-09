@@ -83,11 +83,26 @@ export function PatientForm({
         return;
       }
 
-      const { data: business } = await supabase
+      // Get current user's business - check both owner and member
+      let { data: business } = await supabase
         .from("businesses")
         .select("id")
         .eq("owner_user_id", user.id)
         .maybeSingle();
+
+      // If no business as owner, check if member via user_roles
+      if (!business) {
+        const { data: userRole } = await supabase
+          .from("user_roles")
+          .select("business_id")
+          .eq("user_id", user.id)
+          .in("role", ["owner", "professional"])
+          .maybeSingle();
+
+        if (userRole?.business_id) {
+          business = { id: userRole.business_id };
+        }
+      }
 
       if (!business) {
         toast({
