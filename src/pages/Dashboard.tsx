@@ -520,201 +520,94 @@ const Dashboard = () => {
         {/* Plan Usage Card */}
         <PlanUsageCard businessId={businessId} />
 
-        {/* Metrics */}
-        <div className="grid grid-cols-2 gap-3">
+        {/* KPI Metrics Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <Card className="mobile-card-compact">
             <CardContent className="p-4 text-center">
+              <CalendarDays className="h-5 w-5 mx-auto text-primary mb-1" />
               <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wide">
-                Pacientes activos
+                Citas hoy
               </p>
-              <p className="text-3xl font-bold text-foreground mt-2">
-                {activePatientsCount}
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="mobile-card-compact">
-            <CardContent className="p-4 text-center">
-              <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wide">
-                Citas de hoy
-              </p>
-              <p className="text-3xl font-bold text-foreground mt-2">
+              <p className="text-2xl font-bold text-foreground mt-1">
                 {todayAppointmentsCount}
               </p>
             </CardContent>
           </Card>
+          <Card className="mobile-card-compact">
+            <CardContent className="p-4 text-center">
+              <Users className="h-5 w-5 mx-auto text-primary mb-1" />
+              <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wide">
+                Pacientes
+              </p>
+              <p className="text-2xl font-bold text-foreground mt-1">
+                {activePatientsCount}
+              </p>
+            </CardContent>
+          </Card>
+          <Card className="mobile-card-compact bg-green-500/5 border-green-500/30">
+            <CardContent className="p-4 text-center">
+              <CreditCard className="h-5 w-5 mx-auto text-green-600 mb-1" />
+              <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wide">
+                Cobrado mes
+              </p>
+              <p className="text-2xl font-bold text-green-600 mt-1">
+                {privacyMode ? "•••" : formatCurrency(monthlyIncome, "UYU")}
+              </p>
+            </CardContent>
+          </Card>
+          <Card 
+            className={`mobile-card-compact cursor-pointer transition-colors ${overduePayments > 0 ? 'bg-destructive/5 border-destructive/30 hover:bg-destructive/10' : ''}`}
+            onClick={() => overduePayments > 0 && navigate("/pagos?status=overdue")}
+          >
+            <CardContent className="p-4 text-center">
+              <AlertTriangle className={`h-5 w-5 mx-auto mb-1 ${overduePayments > 0 ? 'text-destructive' : 'text-muted-foreground'}`} />
+              <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wide">
+                Vencidos
+              </p>
+              <p className={`text-2xl font-bold mt-1 ${overduePayments > 0 ? 'text-destructive' : 'text-foreground'}`}>
+                {overduePayments}
+              </p>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Payment Alerts */}
-        {(overduePayments > 0 || dueSoonPayments > 0) && (
-          <div className="grid grid-cols-2 gap-3">
-            {overduePayments > 0 && (
-              <Card 
-                className="mobile-card-compact border-destructive/50 bg-destructive/5 hover:bg-destructive/10 cursor-pointer transition-colors"
-                onClick={() => navigate("/pagos?status=overdue")}
-              >
-                <CardContent className="p-4 text-center">
-                  <AlertTriangle className="h-5 w-5 text-destructive mx-auto mb-1" />
-                  <p className="text-xs text-destructive font-semibold uppercase tracking-wide">
-                    Pagos vencidos
-                  </p>
-                  <p className="text-2xl font-bold text-destructive mt-1">
-                    {overduePayments}
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-            {dueSoonPayments > 0 && (
-              <Card 
-                className="mobile-card-compact border-orange-500/50 bg-orange-500/5 hover:bg-orange-500/10 cursor-pointer transition-colors"
-                onClick={() => navigate("/pagos?status=due_soon")}
-              >
-                <CardContent className="p-4 text-center">
-                  <Clock className="h-5 w-5 text-orange-500 mx-auto mb-1" />
-                  <p className="text-xs text-orange-600 font-semibold uppercase tracking-wide">
-                    Por vencer (4 días)
-                  </p>
-                  <p className="text-2xl font-bold text-orange-600 mt-1">
-                    {dueSoonPayments}
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        )}
+        {/* Privacy Toggle for Income */}
+        <div className="flex justify-end -mt-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-xs text-muted-foreground gap-1.5 h-8"
+            onClick={() => {
+              const newValue = !privacyMode;
+              setPrivacyMode(newValue);
+              localStorage.setItem(PRIVACY_MODE_KEY, String(newValue));
+            }}
+          >
+            {privacyMode ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+            {privacyMode ? "Mostrar montos" : "Ocultar"}
+          </Button>
+        </div>
 
-        {/* Monthly Income */}
-        <Card className="mobile-card-compact bg-green-500/5 border-green-500/30">
-          <CardContent className="p-4">
+        {/* Today's Appointments Section */}
+        <Card className="mobile-card">
+          <CardHeader className="pb-3 px-0 pt-0 sm:px-6 sm:pt-6">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wide">
-                  Ingresos del mes
-                </p>
-                <p className="text-2xl font-bold text-green-600 mt-1">
-                  {privacyMode ? "•••• UYU" : formatCurrency(monthlyIncome, "UYU")}
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-muted-foreground hover:text-foreground h-9 w-9"
-                  onClick={() => {
-                    const newValue = !privacyMode;
-                    setPrivacyMode(newValue);
-                    localStorage.setItem(PRIVACY_MODE_KEY, String(newValue));
-                  }}
-                  title={privacyMode ? "Mostrar montos" : "Ocultar montos"}
-                >
-                  {privacyMode ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-green-600 hover:bg-green-500/10"
-                  onClick={() => navigate("/pagos?status=paid")}
-                >
-                  Ver pagados
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Register Payment Button */}
-        <Button 
-          className="w-full h-12 rounded-xl font-semibold gap-2"
-          onClick={() => setShowPaymentForm(true)}
-        >
-          <Plus className="h-5 w-5" />
-          Registrar pago
-        </Button>
-
-        {/* Main Actions */}
-        <div className="grid grid-cols-2 gap-3">
-          <Card 
-            className="mobile-card-compact hover:shadow-md transition-all cursor-pointer group active:scale-[0.98]"
-            onClick={() => setShowPatientForm(true)}
-          >
-            <CardContent className="p-4 flex flex-col items-center justify-center text-center min-h-[100px]">
-              <div className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center mb-2 group-hover:bg-primary/20 transition-colors">
-                <UserPlus className="h-5 w-5 text-primary" />
-              </div>
-              <p className="font-semibold text-sm text-foreground">Crear paciente</p>
-            </CardContent>
-          </Card>
-
-          <Card 
-            className="mobile-card-compact hover:shadow-md transition-all cursor-pointer group active:scale-[0.98]"
-            onClick={() => setShowAppointmentModal(true)}
-          >
-            <CardContent className="p-4 flex flex-col items-center justify-center text-center min-h-[100px]">
-              <div className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center mb-2 group-hover:bg-primary/20 transition-colors">
-                <CalendarPlus className="h-5 w-5 text-primary" />
-              </div>
-              <p className="font-semibold text-sm text-foreground">Crear cita</p>
-            </CardContent>
-          </Card>
-
-          <Card 
-            className="mobile-card-compact hover:shadow-md transition-all cursor-pointer group active:scale-[0.98]"
-            onClick={() => navigate("/patients")}
-          >
-            <CardContent className="p-4 flex flex-col items-center justify-center text-center min-h-[100px]">
-              <div className="w-11 h-11 rounded-full bg-secondary flex items-center justify-center mb-2 group-hover:bg-secondary/80 transition-colors">
-                <Users className="h-5 w-5 text-secondary-foreground" />
-              </div>
-              <p className="font-semibold text-sm text-foreground">Ver pacientes</p>
-            </CardContent>
-          </Card>
-
-          <Card 
-            className="mobile-card-compact hover:shadow-md transition-all cursor-pointer group active:scale-[0.98]"
-            onClick={() => navigate("/agenda")}
-          >
-            <CardContent className="p-4 flex flex-col items-center justify-center text-center min-h-[100px]">
-              <div className="w-11 h-11 rounded-full bg-secondary flex items-center justify-center mb-2 group-hover:bg-secondary/80 transition-colors">
-                <CalendarDays className="h-5 w-5 text-secondary-foreground" />
-              </div>
-              <p className="font-semibold text-sm text-foreground">Ver agenda</p>
-            </CardContent>
-          </Card>
-
-          <Card 
-            className="mobile-card-compact hover:shadow-md transition-all cursor-pointer group active:scale-[0.98]"
-            onClick={() => navigate("/pagos")}
-          >
-            <CardContent className="p-4 flex flex-col items-center justify-center text-center min-h-[100px]">
-              <div className="w-11 h-11 rounded-full bg-secondary flex items-center justify-center mb-2 group-hover:bg-secondary/80 transition-colors">
-                <CreditCard className="h-5 w-5 text-secondary-foreground" />
-              </div>
-              <p className="font-semibold text-sm text-foreground">Ver pagos</p>
-            </CardContent>
-          </Card>
-
-          <Card 
-            className="mobile-card-compact hover:shadow-md transition-all cursor-pointer group active:scale-[0.98] border-primary/30 bg-primary/5"
-            onClick={() => navigate("/patients?portal=true")}
-          >
-            <CardContent className="p-4 flex flex-col items-center justify-center text-center min-h-[100px]">
-              <div className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center mb-2 group-hover:bg-primary/20 transition-colors">
-                <Smartphone className="h-5 w-5 text-primary" />
-              </div>
-              <p className="font-semibold text-sm text-foreground">Portal pacientes</p>
-              <p className="text-xs text-muted-foreground mt-1">{portalPatientsCount} con acceso</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Today's Appointments */}
-        {todayAppointments.length > 0 && (
-          <Card className="mobile-card">
-            <CardHeader className="pb-3 px-0 pt-0 sm:px-6 sm:pt-6">
-              <CardTitle className="text-base font-bold">
-                Próximas citas de hoy
+              <CardTitle className="text-base font-bold flex items-center gap-2">
+                <CalendarDays className="h-5 w-5 text-primary" />
+                Hoy en el consultorio
               </CardTitle>
-            </CardHeader>
-            <CardContent className="px-0 pb-0 sm:px-6 sm:pb-6">
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs h-8"
+                onClick={() => navigate("/agenda")}
+              >
+                Ver agenda
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="px-0 pb-0 sm:px-6 sm:pb-6">
+            {todayAppointments.length > 0 ? (
               <div className="space-y-1">
                 {todayAppointments.map((appointment) => (
                   <div 
@@ -734,51 +627,219 @@ const Dashboard = () => {
                     </span>
                   </div>
                 ))}
+                {todayAppointmentsCount > 5 && (
+                  <Button 
+                    variant="ghost" 
+                    className="w-full mt-3 h-10 rounded-xl text-sm"
+                    onClick={() => navigate("/agenda")}
+                  >
+                    Ver todas las {todayAppointmentsCount} citas
+                  </Button>
+                )}
               </div>
-              {todayAppointmentsCount > 5 && (
+            ) : (
+              <div className="py-6 text-center">
+                <CalendarDays className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" />
+                <p className="text-sm text-muted-foreground">
+                  Hoy no tenés citas agendadas
+                </p>
                 <Button 
-                  variant="ghost" 
-                  className="w-full mt-3 h-11 rounded-xl text-sm font-semibold"
-                  onClick={() => navigate("/agenda")}
+                  variant="outline" 
+                  size="sm"
+                  className="mt-3"
+                  onClick={() => setShowAppointmentModal(true)}
                 >
-                  Ver todas las citas
+                  <CalendarPlus className="h-4 w-4 mr-2" />
+                  Agendar cita
                 </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Payment Alerts Section */}
+        {(overduePayments > 0 || dueSoonPayments > 0) && (
+          <Card className="mobile-card border-orange-500/30 bg-orange-500/5">
+            <CardHeader className="pb-3 px-0 pt-0 sm:px-6 sm:pt-6">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base font-bold flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-orange-500" />
+                  Alertas de pagos
+                </CardTitle>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-xs h-8"
+                  onClick={() => navigate("/pagos")}
+                >
+                  Ver pagos
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="px-0 pb-0 sm:px-6 sm:pb-6">
+              {/* Alert Summary */}
+              <div className="flex gap-4 mb-4">
+                {overduePayments > 0 && (
+                  <div 
+                    className="flex items-center gap-2 cursor-pointer hover:opacity-80"
+                    onClick={() => navigate("/pagos?status=overdue")}
+                  >
+                    <div className="w-3 h-3 rounded-full bg-destructive" />
+                    <span className="text-sm text-foreground">
+                      <span className="font-bold">{overduePayments}</span> vencidos
+                    </span>
+                  </div>
+                )}
+                {dueSoonPayments > 0 && (
+                  <div 
+                    className="flex items-center gap-2 cursor-pointer hover:opacity-80"
+                    onClick={() => navigate("/pagos?status=due_soon")}
+                  >
+                    <div className="w-3 h-3 rounded-full bg-orange-500" />
+                    <span className="text-sm text-foreground">
+                      <span className="font-bold">{dueSoonPayments}</span> por vencer
+                    </span>
+                  </div>
+                )}
+              </div>
+              
+              {/* Top 3 Urgent Payments */}
+              {urgentPayments.length > 0 && (
+                <div className="space-y-2">
+                  {urgentPayments.slice(0, 3).map((payment) => (
+                    <div 
+                      key={payment.id}
+                      className="flex items-center justify-between py-2 px-3 rounded-lg bg-background cursor-pointer hover:bg-muted transition-colors"
+                      onClick={() => navigate(`/patients/${payment.patient_id}`)}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${payment.calculatedStatus === 'overdue' ? 'bg-destructive' : 'bg-orange-500'}`} />
+                        <span className="text-sm text-foreground truncate font-medium">
+                          {payment.patientName}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 ml-2 flex-shrink-0">
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(payment.due_date).toLocaleDateString('es-UY', { day: 'numeric', month: 'short' })}
+                        </span>
+                        {!privacyMode && (
+                          <Badge variant="outline" className="text-xs">
+                            {formatCurrency(payment.amount, payment.currency)}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               )}
             </CardContent>
           </Card>
         )}
 
-        {todayAppointments.length === 0 && (
-          <Card className="mobile-card">
-            <CardContent className="py-8 text-center">
-              <CalendarDays className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
-              <p className="text-muted-foreground text-sm">
-                No hay citas programadas para hoy
-              </p>
+        {/* Quick Actions */}
+        <div>
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+            Accesos rápidos
+          </h3>
+          <div className="grid grid-cols-4 gap-2">
+            <Button
+              variant="outline"
+              className="h-20 flex flex-col items-center justify-center gap-1.5 rounded-xl"
+              onClick={() => setShowPatientForm(true)}
+            >
+              <UserPlus className="h-5 w-5 text-primary" />
+              <span className="text-xs font-medium">Paciente</span>
+            </Button>
+            <Button
+              variant="outline"
+              className="h-20 flex flex-col items-center justify-center gap-1.5 rounded-xl"
+              onClick={() => setShowAppointmentModal(true)}
+            >
+              <CalendarPlus className="h-5 w-5 text-primary" />
+              <span className="text-xs font-medium">Cita</span>
+            </Button>
+            <Button
+              variant="outline"
+              className="h-20 flex flex-col items-center justify-center gap-1.5 rounded-xl"
+              onClick={() => setShowPaymentForm(true)}
+            >
+              <Plus className="h-5 w-5 text-primary" />
+              <span className="text-xs font-medium">Pago</span>
+            </Button>
+            <Button
+              variant="outline"
+              className="h-20 flex flex-col items-center justify-center gap-1.5 rounded-xl"
+              onClick={() => navigate("/pagos")}
+            >
+              <CreditCard className="h-5 w-5 text-muted-foreground" />
+              <span className="text-xs font-medium">Pagos</span>
+            </Button>
+          </div>
+        </div>
+
+        {/* Main Navigation */}
+        <div className="grid grid-cols-2 gap-3">
+          <Card 
+            className="mobile-card-compact hover:shadow-md transition-all cursor-pointer group active:scale-[0.98]"
+            onClick={() => navigate("/patients")}
+          >
+            <CardContent className="p-4 flex flex-col items-center justify-center text-center min-h-[90px]">
+              <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center mb-2 group-hover:bg-secondary/80 transition-colors">
+                <Users className="h-5 w-5 text-secondary-foreground" />
+              </div>
+              <p className="font-semibold text-sm text-foreground">Pacientes</p>
             </CardContent>
           </Card>
-        )}
 
-        {/* Settings Link */}
-        <div className="flex gap-3">
-          <Button
-            variant="outline"
-            className="flex-1 h-12 rounded-xl font-semibold"
+          <Card 
+            className="mobile-card-compact hover:shadow-md transition-all cursor-pointer group active:scale-[0.98]"
+            onClick={() => navigate("/agenda")}
+          >
+            <CardContent className="p-4 flex flex-col items-center justify-center text-center min-h-[90px]">
+              <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center mb-2 group-hover:bg-secondary/80 transition-colors">
+                <CalendarDays className="h-5 w-5 text-secondary-foreground" />
+              </div>
+              <p className="font-semibold text-sm text-foreground">Agenda</p>
+            </CardContent>
+          </Card>
+
+          <Card 
+            className="mobile-card-compact hover:shadow-md transition-all cursor-pointer group active:scale-[0.98] border-primary/30 bg-primary/5"
+            onClick={() => navigate("/patients?portal=true")}
+          >
+            <CardContent className="p-4 flex flex-col items-center justify-center text-center min-h-[90px]">
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mb-2 group-hover:bg-primary/20 transition-colors">
+                <Smartphone className="h-5 w-5 text-primary" />
+              </div>
+              <p className="font-semibold text-sm text-foreground">Portal</p>
+              <p className="text-xs text-muted-foreground">{portalPatientsCount} activos</p>
+            </CardContent>
+          </Card>
+
+          <Card 
+            className="mobile-card-compact hover:shadow-md transition-all cursor-pointer group active:scale-[0.98]"
             onClick={() => navigate("/mi-consultorio")}
           >
-            Mi Consultorio
-          </Button>
-          {isSuperAdmin && (
-            <Button
-              variant="default"
-              className="h-12 rounded-xl font-semibold gap-2"
-              onClick={() => navigate("/saas-admin")}
-            >
-              <Shield className="h-4 w-4" />
-              Panel SaaS
-            </Button>
-          )}
+            <CardContent className="p-4 flex flex-col items-center justify-center text-center min-h-[90px]">
+              <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center mb-2 group-hover:bg-secondary/80 transition-colors">
+                <Settings className="h-5 w-5 text-secondary-foreground" />
+              </div>
+              <p className="font-semibold text-sm text-foreground">Consultorio</p>
+            </CardContent>
+          </Card>
         </div>
+
+        {/* Admin Panel Link */}
+        {isSuperAdmin && (
+          <Button
+            variant="default"
+            className="w-full h-12 rounded-xl font-semibold gap-2"
+            onClick={() => navigate("/saas-admin")}
+          >
+            <Shield className="h-4 w-4" />
+            Panel SaaS
+          </Button>
+        )}
       </div>
 
       {/* Modals */}
