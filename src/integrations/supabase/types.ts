@@ -208,6 +208,7 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
+          onboarding_completed: boolean
           owner_user_id: string
           plan_code: string
           plan_expires_at: string | null
@@ -226,6 +227,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name: string
+          onboarding_completed?: boolean
           owner_user_id: string
           plan_code?: string
           plan_expires_at?: string | null
@@ -244,6 +246,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+          onboarding_completed?: boolean
           owner_user_id?: string
           plan_code?: string
           plan_expires_at?: string | null

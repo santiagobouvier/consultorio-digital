@@ -29,6 +29,19 @@ const Auth = () => {
         
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
+          // Check if user is super_admin
+          const { data: superAdminRole } = await supabase
+            .from("user_roles")
+            .select("role")
+            .eq("user_id", user.id)
+            .eq("role", "super_admin")
+            .maybeSingle();
+
+          if (superAdminRole) {
+            navigate("/saas-admin");
+            return;
+          }
+
           // Check if user has patient role
           const { data: patientRole } = await supabase
             .from("user_roles")
@@ -42,15 +55,33 @@ const Auth = () => {
             return;
           }
 
-          // Check if user has a business configured (professional flow)
+          // Check if user is a professional (not owner)
+          const { data: professionalRole } = await supabase
+            .from("user_roles")
+            .select("role, business_id")
+            .eq("user_id", user.id)
+            .eq("role", "professional")
+            .maybeSingle();
+
+          if (professionalRole) {
+            navigate("/dashboard");
+            return;
+          }
+
+          // Check if user has a business configured (owner flow)
           const { data: business } = await supabase
             .from("businesses")
-            .select("id")
+            .select("id, onboarding_completed")
             .eq("owner_user_id", user.id)
             .maybeSingle();
           
           if (business) {
-            navigate("/dashboard");
+            // Check if onboarding is needed
+            if (!business.onboarding_completed) {
+              navigate("/onboarding-consultorio");
+            } else {
+              navigate("/dashboard");
+            }
           } else {
             navigate("/configurar-negocio");
           }

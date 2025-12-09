@@ -27,6 +27,7 @@ const PatientPortal = lazy(() => import("./pages/PatientPortal"));
 const PatientInvitation = lazy(() => import("./pages/PatientInvitation"));
 const ProfessionalInvitation = lazy(() => import("./pages/ProfessionalInvitation"));
 const ProfessionalRegister = lazy(() => import("./pages/ProfessionalRegister"));
+const ConsultorioOnboarding = lazy(() => import("./pages/ConsultorioOnboarding"));
 const SaasAdmin = lazy(() => import("./pages/SaasAdmin"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
@@ -60,6 +61,7 @@ const App = () => (
             <Route path="/portal-paciente/invitacion" element={<PatientInvitation />} />
             <Route path="/invitar-profesional" element={<ProfessionalInvitation />} />
             <Route path="/registrarse-profesional" element={<ProfessionalRegister />} />
+            <Route path="/onboarding-consultorio" element={<ConsultorioOnboarding />} />
             <Route path="/saas-admin" element={<SaasAdmin />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
