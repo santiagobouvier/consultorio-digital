@@ -11,6 +11,7 @@ import { toast } from "@/hooks/use-toast";
 import { ArrowLeft, Save, Copy, ExternalLink, RotateCcw, UserPlus, Users, Crown, User } from "lucide-react";
 import { ProfessionalInviteModal } from "@/components/ProfessionalInviteModal";
 import { Badge } from "@/components/ui/badge";
+import { PlanUsageCard } from "@/components/PlanUsageCard";
 
 const DEFAULT_TEMPLATES = {
   reminder: "Hola {{paciente}}, te recuerdo tu sesión del {{fecha}} a las {{hora}}. Modalidad: {{modalidad}}. {{link}}. Cualquier cosa me escribís por acá.",
@@ -330,6 +331,9 @@ const ClinicSettings = () => {
           </Button>
           <h1 className="text-xl sm:text-2xl font-bold">Mi Consultorio</h1>
         </div>
+
+        {/* Plan y Uso */}
+        <PlanUsageCard businessId={businessId} />
 
         {/* URL Pública */}
         {publicSlug && (
