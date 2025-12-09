@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -52,6 +52,8 @@ import {
   BarChart3,
   Copy,
   Check,
+  Filter,
+  X,
 } from "lucide-react";
 import { getPlanName, getPlanConfig, checkProfessionalLimit } from "@/hooks/use-plan-limits";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -90,6 +92,18 @@ const PLAN_PRICES: Record<string, number> = {
 
 const SUPER_ADMIN_EMAIL = "santib1997@gmail.com";
 
+type PlanFilter = "all" | "individual" | "professional" | "advanced" | "enterprise" | "custom";
+type UsageFilter = "all" | "near_limit" | "at_limit";
+
+// Helper to calculate usage percentage and status
+const getUsageStatus = (current: number, max: number | null): { percentage: number; status: "ok" | "warning" | "danger" } => {
+  if (max === null) return { percentage: 0, status: "ok" };
+  const percentage = (current / max) * 100;
+  if (percentage >= 100) return { percentage, status: "danger" };
+  if (percentage >= 70) return { percentage, status: "warning" };
+  return { percentage, status: "ok" };
+};
+
 const SaasAdmin = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -105,6 +119,10 @@ const SaasAdmin = () => {
   const [selectedBusiness, setSelectedBusiness] = useState<BusinessWithDetails | null>(null);
   const [professionals, setProfessionals] = useState<any[]>([]);
   const [creating, setCreating] = useState(false);
+
+  // Filters
+  const [planFilter, setPlanFilter] = useState<PlanFilter>("all");
+  const [usageFilter, setUsageFilter] = useState<UsageFilter>("all");
 
   // Create business form state
   const [newBusinessName, setNewBusinessName] = useState("");
@@ -489,6 +507,47 @@ const SaasAdmin = () => {
     });
   };
 
+  // Filter businesses
+  const filteredBusinesses = useMemo(() => {
+    return businesses.filter((business) => {
+      // Plan filter
+      if (planFilter !== "all" && business.planCode !== planFilter) {
+        return false;
+      }
+
+      // Usage filter
+      if (usageFilter !== "all") {
+        const customLimits = business.planCode === "custom" ? {
+          maxProfessionals: business.customMaxProfessionals ?? null,
+          maxPatients: business.customMaxPatients ?? null,
+        } : undefined;
+        const config = getPlanConfig(business.planCode, customLimits);
+        
+        const profStatus = getUsageStatus(business.professionalsCount, config.maxProfessionals);
+        const patientStatus = getUsageStatus(business.patientsCount, config.maxPatients);
+
+        if (usageFilter === "near_limit") {
+          // Show businesses with 70%+ usage in either category
+          return profStatus.status === "warning" || profStatus.status === "danger" || 
+                 patientStatus.status === "warning" || patientStatus.status === "danger";
+        }
+        if (usageFilter === "at_limit") {
+          // Show businesses at 100% usage
+          return profStatus.status === "danger" || patientStatus.status === "danger";
+        }
+      }
+
+      return true;
+    });
+  }, [businesses, planFilter, usageFilter]);
+
+  const hasActiveFilters = planFilter !== "all" || usageFilter !== "all";
+
+  const clearFilters = () => {
+    setPlanFilter("all");
+    setUsageFilter("all");
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -532,12 +591,58 @@ const SaasAdmin = () => {
           Crear nuevo consultorio
         </Button>
 
-        {/* Businesses Table - Now First */}
+        {/* Businesses Table with Filters */}
         <Card className="mobile-card">
           <CardHeader className="pb-4">
-            <CardTitle className="text-lg font-bold">Consultorios</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg font-bold">
+                Consultorios
+                {hasActiveFilters && (
+                  <Badge variant="secondary" className="ml-2">
+                    {filteredBusinesses.length} de {businesses.length}
+                  </Badge>
+                )}
+              </CardTitle>
+              {hasActiveFilters && (
+                <Button variant="ghost" size="sm" onClick={clearFilters} className="h-8 gap-1">
+                  <X className="h-3 w-3" />
+                  Limpiar
+                </Button>
+              )}
+            </div>
           </CardHeader>
-          <CardContent className="p-0 sm:p-6 sm:pt-0">
+          <CardContent className="p-4 sm:p-6 pt-0 space-y-4">
+            {/* Filters */}
+            <div className="flex flex-wrap gap-3 pb-4 border-b">
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">Filtros:</span>
+              </div>
+              <Select value={planFilter} onValueChange={(v) => setPlanFilter(v as PlanFilter)}>
+                <SelectTrigger className="w-[180px] h-8">
+                  <SelectValue placeholder="Plan" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos los planes</SelectItem>
+                  <SelectItem value="individual">Individual</SelectItem>
+                  <SelectItem value="professional">Profesional</SelectItem>
+                  <SelectItem value="advanced">Avanzada</SelectItem>
+                  <SelectItem value="enterprise">Enterprise</SelectItem>
+                  <SelectItem value="custom">Personalizado</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={usageFilter} onValueChange={(v) => setUsageFilter(v as UsageFilter)}>
+                <SelectTrigger className="w-[180px] h-8">
+                  <SelectValue placeholder="Uso del plan" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todo el uso</SelectItem>
+                  <SelectItem value="near_limit">Cerca del límite (≥70%)</SelectItem>
+                  <SelectItem value="at_limit">En el límite (100%)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
@@ -552,99 +657,109 @@ const SaasAdmin = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {businesses.map((business) => (
-                    <TableRow key={business.id}>
-                      <TableCell className="font-medium">
-                        <div>
-                          <p className="font-semibold">{business.name}</p>
-                          <p className="text-xs text-muted-foreground sm:hidden">
-                            {business.ownerEmail}
-                          </p>
-                        </div>
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell text-sm">
-                        {business.ownerEmail}
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell">
-                        <PlanSelector
-                          businessId={business.id}
-                          currentPlan={business.planCode}
-                          customMaxProfessionals={business.customMaxProfessionals}
-                          customMaxPatients={business.customMaxPatients}
-                          onChangePlan={handleChangePlan}
-                        />
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {(() => {
-                          const customLimits = business.planCode === "custom" ? {
-                            maxProfessionals: business.customMaxProfessionals ?? null,
-                            maxPatients: business.customMaxPatients ?? null,
-                          } : undefined;
-                          const config = getPlanConfig(business.planCode, customLimits);
-                          return (
-                            <span className={
-                              config.maxProfessionals !== null &&
-                              business.professionalsCount >= config.maxProfessionals
-                                ? "text-destructive font-semibold"
+                  {filteredBusinesses.map((business) => {
+                    const customLimits = business.planCode === "custom" ? {
+                      maxProfessionals: business.customMaxProfessionals ?? null,
+                      maxPatients: business.customMaxPatients ?? null,
+                    } : undefined;
+                    const config = getPlanConfig(business.planCode, customLimits);
+                    const profStatus = getUsageStatus(business.professionalsCount, config.maxProfessionals);
+                    const patientStatus = getUsageStatus(business.patientsCount, config.maxPatients);
+
+                    return (
+                      <TableRow key={business.id}>
+                        <TableCell className="font-medium">
+                          <div>
+                            <p className="font-semibold">{business.name}</p>
+                            <p className="text-xs text-muted-foreground sm:hidden">
+                              {business.ownerEmail}
+                            </p>
+                          </div>
+                        </TableCell>
+                        <TableCell className="hidden sm:table-cell text-sm">
+                          {business.ownerEmail}
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          <PlanSelector
+                            businessId={business.id}
+                            currentPlan={business.planCode}
+                            customMaxProfessionals={business.customMaxProfessionals}
+                            customMaxPatients={business.customMaxPatients}
+                            onChangePlan={handleChangePlan}
+                          />
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md ${
+                            profStatus.status === "danger" 
+                              ? "bg-destructive/10 text-destructive" 
+                              : profStatus.status === "warning"
+                                ? "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400"
                                 : ""
-                            }>
+                          }`}>
+                            {profStatus.status === "danger" && (
+                              <AlertTriangle className="h-3 w-3" />
+                            )}
+                            <span className="font-medium">
                               {business.professionalsCount}
-                              {config.maxProfessionals !== null && `/${config.maxProfessionals}`}
+                              {config.maxProfessionals !== null 
+                                ? `/${config.maxProfessionals}` 
+                                : " (∞)"}
                             </span>
-                          );
-                        })()}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {(() => {
-                          const customLimits = business.planCode === "custom" ? {
-                            maxProfessionals: business.customMaxProfessionals ?? null,
-                            maxPatients: business.customMaxPatients ?? null,
-                          } : undefined;
-                          const config = getPlanConfig(business.planCode, customLimits);
-                          return (
-                            <span className={
-                              config.maxPatients !== null &&
-                              business.patientsCount >= config.maxPatients
-                                ? "text-destructive font-semibold"
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md ${
+                            patientStatus.status === "danger" 
+                              ? "bg-destructive/10 text-destructive" 
+                              : patientStatus.status === "warning"
+                                ? "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400"
                                 : ""
-                            }>
+                          }`}>
+                            {patientStatus.status === "danger" && (
+                              <AlertTriangle className="h-3 w-3" />
+                            )}
+                            <span className="font-medium">
                               {business.patientsCount}
-                              {config.maxPatients !== null && `/${config.maxPatients}`}
+                              {config.maxPatients !== null 
+                                ? `/${config.maxPatients}` 
+                                : " (∞)"}
                             </span>
-                          );
-                        })()}
-                      </TableCell>
-                      <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
-                        {formatDate(business.created_at)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => enterBusiness(business.id)}
-                            title="Ingresar al consultorio"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => loadProfessionals(business)}
-                            title="Ver profesionales"
-                          >
-                            <UserCog className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {businesses.length === 0 && (
+                          </div>
+                        </TableCell>
+                        <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
+                          {formatDate(business.created_at)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => enterBusiness(business.id)}
+                              title="Ingresar al consultorio"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => loadProfessionals(business)}
+                              title="Ver profesionales"
+                            >
+                              <UserCog className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  {filteredBusinesses.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                        No hay consultorios registrados
+                        {hasActiveFilters 
+                          ? "No hay consultorios que coincidan con los filtros" 
+                          : "No hay consultorios registrados"}
                       </TableCell>
                     </TableRow>
                   )}
