@@ -2,6 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { format, isSameDay } from "date-fns";
 import { es } from "date-fns/locale";
+import { type PaymentStatus } from "@/lib/payments";
 
 interface Appointment {
   id: string;
@@ -16,6 +17,7 @@ interface Appointment {
   patients: { full_name: string } | null;
   services: { name: string } | null;
   paymentColor?: string;
+  patientPaymentStatus?: PaymentStatus;
 }
 
 interface DayViewProps {
@@ -45,6 +47,19 @@ export const DayView = ({
         return "bg-rose-50 dark:bg-rose-950/30 border-l-rose-500";
       default:
         return "bg-card border-l-primary";
+    }
+  };
+
+  const getPaymentBadgeInfo = (color?: string) => {
+    switch (color) {
+      case "green":
+        return { label: "Al día", bgColor: "bg-green-500" };
+      case "orange":
+        return { label: "Por vencer", bgColor: "bg-orange-500" };
+      case "red":
+        return { label: "Vencido", bgColor: "bg-red-500" };
+      default:
+        return null;
     }
   };
 
@@ -84,13 +99,16 @@ export const DayView = ({
         <div className="space-y-3">
           {dayAppointments.map((apt) => {
             const statusInfo = getStatusBadge(apt.status);
+            const showPaymentIndicator = apt.patient_id && apt.paymentColor;
+            const paymentBadgeInfo = getPaymentBadgeInfo(apt.paymentColor);
+            
             return (
               <div
                 key={apt.id}
                 onClick={() => onAppointmentClick(apt)}
                 className={cn(
                   "p-4 rounded-xl cursor-pointer transition-all hover:shadow-md border-l-4 border border-border/50",
-                  selectedPatientId ? getPaymentBgColor(apt.paymentColor) : "bg-card border-l-primary"
+                  showPaymentIndicator ? getPaymentBgColor(apt.paymentColor) : "bg-card border-l-primary"
                 )}
               >
                 <div className="flex items-start justify-between gap-3">
@@ -121,6 +139,13 @@ export const DayView = ({
                     <Badge variant="outline" className="rounded-full">
                       {apt.modality === "online" ? "Online" : "Presencial"}
                     </Badge>
+                    {/* Payment status badge */}
+                    {showPaymentIndicator && paymentBadgeInfo && (
+                      <Badge variant="outline" className="rounded-full text-xs flex items-center gap-1">
+                        <span className={cn("w-1.5 h-1.5 rounded-full", paymentBadgeInfo.bgColor)} />
+                        {paymentBadgeInfo.label}
+                      </Badge>
+                    )}
                   </div>
                 </div>
               </div>
