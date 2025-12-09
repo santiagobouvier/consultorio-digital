@@ -20,61 +20,15 @@ serve(async (req) => {
   }
 
   try {
-    const body = await req.json();
-    const { slug } = body ?? {};
-
-    if (!slug || typeof slug !== "string") {
-      return new Response(
-        JSON.stringify({ error: "missing_or_invalid_slug" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-
-    // Find business by public slug
-    const { data: business, error: businessError } = await supabase
-      .from("businesses")
-      .select("id")
-      .eq("public_slug", slug)
-      .maybeSingle();
-
-    if (businessError) {
-      console.error("Error loading business in public-get-availability-slots:", businessError);
-      return new Response(
-        JSON.stringify({ error: "business_lookup_failed" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-
-    if (!business) {
-      return new Response(
-        JSON.stringify({ error: "business_not_found" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-
-    // Get available future slots for this business
-    const today = new Date();
-    const todayStr = today.toISOString().slice(0, 10); // yyyy-mm-dd
-
-    const { data: slots, error: slotsError } = await supabase
-      .from("availability_slots")
-      .select("id, date, start_time, end_time, modality, price")
-      .eq("business_id", business.id)
-      .eq("status", "available")
-      .gte("date", todayStr)
-      .order("date", { ascending: true })
-      .order("start_time", { ascending: true });
-
-    if (slotsError) {
-      console.error("Error loading slots in public-get-availability-slots:", slotsError);
-      return new Response(
-        JSON.stringify({ error: "slots_lookup_failed" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
-    }
-
+    // PRIVACY: This endpoint no longer returns public availability
+    // Patients must be authenticated and use the client-side query with RLS
+    // This endpoint is kept for backwards compatibility but returns empty slots
+    
     return new Response(
-      JSON.stringify({ slots: slots ?? [] }),
+      JSON.stringify({ 
+        slots: [],
+        message: "La agenda es privada. Los pacientes registrados pueden reservar desde su portal."
+      }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (error) {
