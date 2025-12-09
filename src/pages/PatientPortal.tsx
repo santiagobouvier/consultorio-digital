@@ -20,11 +20,13 @@ import {
   CheckCircle2,
   AlertCircle,
   XCircle,
-  LogOut
+  LogOut,
+  Plus
 } from "lucide-react";
 import { format, parseISO, differenceInDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { calculatePaymentStatus, formatCurrency, getRecurrenceTypeLabel, PaymentStatus, RecurrenceType } from "@/lib/payments";
+import { PatientBookingModal } from "@/components/PatientBookingModal";
 
 interface PatientData {
   id: string;
@@ -73,6 +75,7 @@ const PatientPortal = () => {
   const [pastAppointments, setPastAppointments] = useState<Appointment[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [showBookingModal, setShowBookingModal] = useState(false);
 
   useEffect(() => {
     const checkAccessAndLoadData = async () => {
@@ -344,6 +347,15 @@ const PatientPortal = () => {
 
           {/* Próximas Citas */}
           <TabsContent value="citas" className="space-y-4">
+            {/* Book appointment button */}
+            <Button
+              onClick={() => setShowBookingModal(true)}
+              className="w-full gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              Reservar una cita
+            </Button>
+
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-base flex items-center gap-2">
@@ -358,6 +370,15 @@ const PatientPortal = () => {
                     <p className="text-sm text-muted-foreground">
                       No tenés próximas citas agendadas
                     </p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowBookingModal(true)}
+                      className="mt-4 gap-2"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Reservar ahora
+                    </Button>
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -580,6 +601,28 @@ const PatientPortal = () => {
             )}
           </TabsContent>
         </Tabs>
+
+        {/* Booking Modal */}
+        {patient && business && (
+          <PatientBookingModal
+            open={showBookingModal}
+            onOpenChange={setShowBookingModal}
+            businessId={business.id}
+            patientId={patient.id}
+            onSuccess={() => {
+              // Reload appointments
+              const now = new Date().toISOString();
+              supabase
+                .from("appointments")
+                .select("id, start_at, end_at, status, modality, location, notes")
+                .eq("patient_id", patient.id)
+                .gte("start_at", now)
+                .neq("status", "cancelled")
+                .order("start_at", { ascending: true })
+                .then(({ data }) => setUpcomingAppointments(data || []));
+            }}
+          />
+        )}
       </main>
     </div>
   );
