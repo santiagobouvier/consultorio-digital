@@ -29,6 +29,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { useBusinessId } from "@/hooks/use-business-id";
 
 interface AppointmentWithRelations {
   id: string;
@@ -70,21 +71,24 @@ const Agenda = () => {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [allPayments, setAllPayments] = useState<Payment[]>([]);
   const [selectedPatientPayments, setSelectedPatientPayments] = useState<Payment[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true);
   const [viewType, setViewType] = useState<ViewType>("week");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
   const [patientSearch, setPatientSearch] = useState("");
   const [selectedAppointment, setSelectedAppointment] = useState<AppointmentWithRelations | null>(null);
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
-  const [businessId, setBusinessId] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [statusFilter, setStatusFilter] = useState<AppointmentStatusFilter>("all");
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<PaymentStatusFilter>("all");
+  
+  const { businessId, loading: businessLoading } = useBusinessId();
 
   useEffect(() => {
-    fetchInitialData();
-  }, []);
+    if (businessId) {
+      fetchPatients();
+    }
+  }, [businessId]);
 
   useEffect(() => {
     if (businessId) {
@@ -101,37 +105,20 @@ const Agenda = () => {
     }
   }, [selectedPatientId, businessId]);
 
-  const fetchInitialData = async () => {
+  const fetchPatients = async () => {
+    if (!businessId) return;
+    
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        navigate("/auth");
-        return;
-      }
-
-      const { data: business } = await supabase
-        .from("businesses")
-        .select("id")
-        .eq("owner_user_id", user.id)
-        .maybeSingle();
-
-      if (!business) {
-        navigate("/configurar-negocio");
-        return;
-      }
-
-      setBusinessId(business.id);
-
       const { data: patientsData } = await supabase
         .from("patients")
         .select("id, full_name")
-        .eq("business_id", business.id)
+        .eq("business_id", businessId)
         .eq("is_active", true)
         .order("full_name");
 
       setPatients(patientsData || []);
     } catch (error) {
-      console.error("Error fetching initial data:", error);
+      console.error("Error fetching patients:", error);
       toast({
         title: "Error",
         description: "No se pudo cargar la información inicial",
@@ -139,6 +126,8 @@ const Agenda = () => {
       });
     }
   };
+
+  const loading = businessLoading || dataLoading;
 
   const getDateRange = () => {
     switch (viewType) {
@@ -170,7 +159,7 @@ const Agenda = () => {
     if (!businessId) return;
 
     try {
-      setLoading(true);
+      setDataLoading(true);
       const { startDate, endDate } = getDateRange();
 
       let query = supabase
@@ -206,7 +195,7 @@ const Agenda = () => {
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setDataLoading(false);
     }
   };
 

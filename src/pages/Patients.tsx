@@ -23,6 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { PatientForm } from "@/components/PatientForm";
 import { Search, Plus, ArrowLeft, ChevronRight, Smartphone } from "lucide-react";
+import { useBusinessId } from "@/hooks/use-business-id";
 
 interface Patient {
   id: string;
@@ -40,46 +41,35 @@ const Patients = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [patients, setPatients] = useState<Patient[]>([]);
   const [filteredPatients, setFilteredPatients] = useState<Patient[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>(() => {
     return searchParams.get("portal") === "true" ? "portal" : "all";
   });
   const [showForm, setShowForm] = useState(false);
+  
+  const { businessId, loading: businessLoading } = useBusinessId();
 
   useEffect(() => {
-    fetchPatients();
-  }, []);
+    if (businessId) {
+      fetchPatients();
+    }
+  }, [businessId]);
 
   useEffect(() => {
     filterPatients();
   }, [patients, searchTerm, statusFilter]);
 
   const fetchPatients = async () => {
+    if (!businessId) return;
+    
     try {
-      setLoading(true);
-
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        navigate("/auth");
-        return;
-      }
-
-      const { data: business } = await supabase
-        .from("businesses")
-        .select("id")
-        .eq("owner_user_id", user.id)
-        .maybeSingle();
-
-      if (!business) {
-        navigate("/configurar-negocio");
-        return;
-      }
+      setDataLoading(true);
 
       const { data: patientsData } = await supabase
         .from("patients")
         .select("*")
-        .eq("business_id", business.id)
+        .eq("business_id", businessId)
         .order("full_name", { ascending: true });
 
       if (!patientsData) {
@@ -129,7 +119,7 @@ const Patients = () => {
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setDataLoading(false);
     }
   };
 
@@ -166,7 +156,7 @@ const Patients = () => {
     });
   };
 
-  if (loading) {
+  if (businessLoading || dataLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <p className="text-muted-foreground">Cargando...</p>
