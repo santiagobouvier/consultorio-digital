@@ -4,10 +4,27 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { User, Calendar, CreditCard, Clock, AlertTriangle } from "lucide-react";
-import { format, isPast, parseISO } from "date-fns";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { 
+  User, 
+  Calendar, 
+  CreditCard, 
+  Clock, 
+  AlertTriangle,
+  MapPin,
+  Video,
+  Phone,
+  Mail,
+  Building2,
+  CheckCircle2,
+  AlertCircle,
+  XCircle,
+  LogOut
+} from "lucide-react";
+import { format, parseISO, differenceInDays } from "date-fns";
 import { es } from "date-fns/locale";
-import { calculatePaymentStatus, formatCurrency } from "@/lib/payments";
+import { calculatePaymentStatus, formatCurrency, getRecurrenceTypeLabel, PaymentStatus, RecurrenceType } from "@/lib/payments";
 
 interface PatientData {
   id: string;
@@ -16,6 +33,14 @@ interface PatientData {
   whatsapp_phone: string | null;
   reason_for_consultation: string | null;
   created_at: string;
+  business_id: string;
+}
+
+interface BusinessData {
+  id: string;
+  name: string;
+  specialty: string | null;
+  contact_email: string;
 }
 
 interface Appointment {
@@ -35,12 +60,15 @@ interface Payment {
   due_date: string;
   status: string;
   paid_at: string | null;
+  recurrence_type: string;
+  notes: string | null;
 }
 
 const PatientPortal = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [patient, setPatient] = useState<PatientData | null>(null);
+  const [business, setBusiness] = useState<BusinessData | null>(null);
   const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>([]);
   const [pastAppointments, setPastAppointments] = useState<Appointment[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -65,7 +93,6 @@ const PatientPortal = () => {
           .maybeSingle();
 
         if (!roleData) {
-          // Not a patient, redirect to dashboard
           navigate("/dashboard");
           return;
         }
@@ -87,6 +114,17 @@ const PatientPortal = () => {
 
         setPatient(patientData);
 
+        // Load business data
+        const { data: businessData } = await supabase
+          .from("businesses")
+          .select("id, name, specialty, contact_email")
+          .eq("id", patientData.business_id)
+          .maybeSingle();
+
+        if (businessData) {
+          setBusiness(businessData);
+        }
+
         // Load appointments
         const now = new Date().toISOString();
         
@@ -95,6 +133,7 @@ const PatientPortal = () => {
           .select("id, start_at, end_at, status, modality, location, notes")
           .eq("patient_id", patientData.id)
           .gte("start_at", now)
+          .neq("status", "cancelled")
           .order("start_at", { ascending: true });
 
         setUpcomingAppointments(upcomingData || []);
@@ -105,17 +144,17 @@ const PatientPortal = () => {
           .eq("patient_id", patientData.id)
           .lt("start_at", now)
           .order("start_at", { ascending: false })
-          .limit(10);
+          .limit(20);
 
         setPastAppointments(pastData || []);
 
         // Load payments
         const { data: paymentsData } = await supabase
           .from("payments")
-          .select("id, amount, currency, due_date, status, paid_at")
+          .select("id, amount, currency, due_date, status, paid_at, recurrence_type, notes")
           .eq("patient_id", patientData.id)
           .order("due_date", { ascending: false })
-          .limit(10);
+          .limit(20);
 
         if (paymentsData) {
           const paymentsWithStatus = paymentsData.map(p => ({
@@ -140,34 +179,95 @@ const PatientPortal = () => {
     checkAccessAndLoadData();
   }, [navigate]);
 
-  const getStatusBadge = (status: string) => {
-    const variants: Record<string, { variant: "default" | "secondary" | "destructive" | "outline"; label: string }> = {
-      pending: { variant: "secondary", label: "Pendiente" },
-      confirmed: { variant: "default", label: "Confirmada" },
-      cancelled: { variant: "destructive", label: "Cancelada" },
-      completed: { variant: "outline", label: "Completada" },
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate("/auth");
+  };
+
+  const getAppointmentStatusBadge = (status: string) => {
+    const variants: Record<string, { variant: "default" | "secondary" | "destructive" | "outline"; label: string; icon: React.ReactNode }> = {
+      pending: { variant: "secondary", label: "Pendiente", icon: <Clock className="h-3 w-3" /> },
+      confirmed: { variant: "default", label: "Confirmada", icon: <CheckCircle2 className="h-3 w-3" /> },
+      cancelled: { variant: "destructive", label: "Cancelada", icon: <XCircle className="h-3 w-3" /> },
+      completed: { variant: "outline", label: "Completada", icon: <CheckCircle2 className="h-3 w-3" /> },
+      no_show: { variant: "destructive", label: "Ausente", icon: <XCircle className="h-3 w-3" /> },
     };
-    const config = variants[status] || { variant: "secondary", label: status };
-    return <Badge variant={config.variant}>{config.label}</Badge>;
+    const config = variants[status] || { variant: "secondary", label: status, icon: null };
+    return (
+      <Badge variant={config.variant} className="gap-1">
+        {config.icon}
+        {config.label}
+      </Badge>
+    );
   };
 
   const getPaymentStatusBadge = (status: string) => {
-    const variants: Record<string, { variant: "default" | "secondary" | "destructive" | "outline"; label: string }> = {
-      paid: { variant: "default", label: "Pagado" },
-      pending: { variant: "secondary", label: "Pendiente" },
-      due_soon: { variant: "outline", label: "Por vencer" },
-      overdue: { variant: "destructive", label: "Vencido" },
+    const variants: Record<string, { className: string; label: string; icon: React.ReactNode }> = {
+      paid: { className: "bg-green-600 text-white hover:bg-green-600", label: "Pagado", icon: <CheckCircle2 className="h-3 w-3" /> },
+      pending: { className: "bg-secondary text-secondary-foreground", label: "Pendiente", icon: <Clock className="h-3 w-3" /> },
+      due_soon: { className: "bg-orange-500 text-white hover:bg-orange-500", label: "Por vencer", icon: <AlertCircle className="h-3 w-3" /> },
+      overdue: { className: "bg-destructive text-destructive-foreground hover:bg-destructive", label: "Vencido", icon: <AlertTriangle className="h-3 w-3" /> },
+      cancelled: { className: "bg-muted text-muted-foreground", label: "Cancelado", icon: <XCircle className="h-3 w-3" /> },
     };
-    const config = variants[status] || { variant: "secondary", label: status };
-    return <Badge variant={config.variant}>{config.label}</Badge>;
+    const config = variants[status] || { className: "bg-secondary", label: status, icon: null };
+    return (
+      <Badge className={`gap-1 ${config.className}`}>
+        {config.icon}
+        {config.label}
+      </Badge>
+    );
   };
 
-  const hasOverduePayments = payments.some(p => p.status === "overdue");
+  const getModalityIcon = (modality: string | null) => {
+    if (modality === "online" || modality === "virtual") {
+      return <Video className="h-4 w-4 text-muted-foreground" />;
+    }
+    return <MapPin className="h-4 w-4 text-muted-foreground" />;
+  };
+
+  // Calculate overall payment status
+  const getOverallPaymentStatus = (): { status: PaymentStatus; message: string; color: string } => {
+    const pendingPayments = payments.filter(p => p.status !== 'paid' && p.status !== 'cancelled');
+    
+    if (pendingPayments.length === 0) {
+      return { 
+        status: 'paid', 
+        message: "Estás al día con tus pagos", 
+        color: "bg-green-50 border-green-200 text-green-800" 
+      };
+    }
+
+    const hasOverdue = pendingPayments.some(p => p.status === 'overdue');
+    if (hasOverdue) {
+      return { 
+        status: 'overdue', 
+        message: "Tenés pagos vencidos", 
+        color: "bg-destructive/10 border-destructive/20 text-destructive" 
+      };
+    }
+
+    const hasDueSoon = pendingPayments.some(p => p.status === 'due_soon');
+    if (hasDueSoon) {
+      return { 
+        status: 'due_soon', 
+        message: "Tenés un pago próximo a vencer", 
+        color: "bg-orange-50 border-orange-200 text-orange-800" 
+      };
+    }
+
+    return { 
+      status: 'pending', 
+      message: "Tenés pagos pendientes", 
+      color: "bg-secondary border-border text-secondary-foreground" 
+    };
+  };
+
+  const overallPaymentStatus = getOverallPaymentStatus();
 
   if (loading) {
     return (
       <div className="min-h-screen bg-background p-4 space-y-4">
-        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-12 w-full" />
         <Skeleton className="h-32 w-full" />
         <Skeleton className="h-48 w-full" />
         <Skeleton className="h-48 w-full" />
@@ -182,6 +282,9 @@ const PatientPortal = () => {
           <CardContent className="pt-6 text-center">
             <AlertTriangle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <p className="text-muted-foreground">{error}</p>
+            <Button variant="outline" className="mt-4" onClick={() => navigate("/auth")}>
+              Volver al inicio
+            </Button>
           </CardContent>
         </Card>
       </div>
@@ -190,154 +293,293 @@ const PatientPortal = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b bg-card">
-        <div className="container max-w-2xl mx-auto px-4 py-4">
-          <h1 className="text-xl font-semibold">Mi Portal</h1>
+      {/* Header */}
+      <header className="border-b bg-card sticky top-0 z-10">
+        <div className="container max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
+          <div>
+            <h1 className="text-lg font-semibold">Mi Portal</h1>
+            {business && (
+              <p className="text-xs text-muted-foreground">{business.name}</p>
+            )}
+          </div>
+          <Button variant="ghost" size="sm" onClick={handleLogout} className="gap-2">
+            <LogOut className="h-4 w-4" />
+            <span className="hidden sm:inline">Salir</span>
+          </Button>
         </div>
       </header>
 
-      <main className="container max-w-2xl mx-auto px-4 py-6 space-y-6">
-        {/* Patient Info */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <User className="h-5 w-5" />
-              Mis datos
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <p className="font-medium">{patient?.full_name}</p>
-            {patient?.email && (
-              <p className="text-sm text-muted-foreground">{patient.email}</p>
-            )}
-            {patient?.whatsapp_phone && (
-              <p className="text-sm text-muted-foreground">{patient.whatsapp_phone}</p>
-            )}
-            {patient?.reason_for_consultation && (
-              <p className="text-sm text-muted-foreground mt-2">
-                <span className="font-medium">Motivo: </span>
-                {patient.reason_for_consultation}
-              </p>
-            )}
-            {patient?.created_at && (
-              <p className="text-xs text-muted-foreground mt-2">
-                Paciente desde {format(parseISO(patient.created_at), "MMMM yyyy", { locale: es })}
-              </p>
-            )}
-          </CardContent>
-        </Card>
+      <main className="container max-w-2xl mx-auto px-4 py-4">
+        {/* Quick Status Banner */}
+        <div className={`rounded-lg border p-3 mb-4 ${overallPaymentStatus.color}`}>
+          <div className="flex items-center gap-2">
+            {overallPaymentStatus.status === 'paid' && <CheckCircle2 className="h-5 w-5" />}
+            {overallPaymentStatus.status === 'overdue' && <AlertTriangle className="h-5 w-5" />}
+            {overallPaymentStatus.status === 'due_soon' && <AlertCircle className="h-5 w-5" />}
+            {overallPaymentStatus.status === 'pending' && <Clock className="h-5 w-5" />}
+            <span className="font-medium text-sm">{overallPaymentStatus.message}</span>
+          </div>
+        </div>
 
-        {/* Upcoming Appointments */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
-              Próximas citas
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {upcomingAppointments.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No tenés próximas citas agendadas.</p>
-            ) : (
-              <div className="space-y-3">
-                {upcomingAppointments.map((apt) => (
-                  <div key={apt.id} className="border rounded-lg p-3 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium">
-                        {format(parseISO(apt.start_at), "EEEE d 'de' MMMM", { locale: es })}
-                      </span>
-                      {getStatusBadge(apt.status)}
-                    </div>
+        {/* Tabs Navigation */}
+        <Tabs defaultValue="citas" className="w-full">
+          <TabsList className="w-full grid grid-cols-4 mb-4">
+            <TabsTrigger value="citas" className="text-xs sm:text-sm">
+              <Calendar className="h-4 w-4 sm:mr-1" />
+              <span className="hidden sm:inline">Citas</span>
+            </TabsTrigger>
+            <TabsTrigger value="historial" className="text-xs sm:text-sm">
+              <Clock className="h-4 w-4 sm:mr-1" />
+              <span className="hidden sm:inline">Historial</span>
+            </TabsTrigger>
+            <TabsTrigger value="pagos" className="text-xs sm:text-sm">
+              <CreditCard className="h-4 w-4 sm:mr-1" />
+              <span className="hidden sm:inline">Pagos</span>
+            </TabsTrigger>
+            <TabsTrigger value="perfil" className="text-xs sm:text-sm">
+              <User className="h-4 w-4 sm:mr-1" />
+              <span className="hidden sm:inline">Perfil</span>
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Próximas Citas */}
+          <TabsContent value="citas" className="space-y-4">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  Próximas citas
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {upcomingAppointments.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-3 opacity-50" />
                     <p className="text-sm text-muted-foreground">
-                      {format(parseISO(apt.start_at), "HH:mm")} - {format(parseISO(apt.end_at), "HH:mm")}
+                      No tenés próximas citas agendadas
                     </p>
-                    {apt.modality && (
-                      <p className="text-sm text-muted-foreground capitalize">
-                        Modalidad: {apt.modality}
-                      </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {upcomingAppointments.map((apt) => (
+                      <div key={apt.id} className="border rounded-lg p-4 space-y-2 bg-card">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <p className="font-medium">
+                              {format(parseISO(apt.start_at), "EEEE d 'de' MMMM", { locale: es })}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {format(parseISO(apt.start_at), "HH:mm")} - {format(parseISO(apt.end_at), "HH:mm")} hs
+                            </p>
+                          </div>
+                          {getAppointmentStatusBadge(apt.status)}
+                        </div>
+                        
+                        {(apt.modality || apt.location) && (
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            {getModalityIcon(apt.modality)}
+                            <span className="capitalize">
+                              {apt.modality === "online" || apt.modality === "virtual" 
+                                ? "Sesión online" 
+                                : apt.location || "Presencial"}
+                            </span>
+                          </div>
+                        )}
+
+                        {apt.notes && (
+                          <p className="text-xs text-muted-foreground border-t pt-2 mt-2">
+                            {apt.notes}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Historial */}
+          <TabsContent value="historial" className="space-y-4">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  Historial de citas
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {pastAppointments.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-3 opacity-50" />
+                    <p className="text-sm text-muted-foreground">
+                      No tenés citas anteriores
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {pastAppointments.map((apt) => (
+                      <div key={apt.id} className="border rounded-lg p-3 flex items-center justify-between bg-muted/30">
+                        <div>
+                          <p className="font-medium text-sm">
+                            {format(parseISO(apt.start_at), "d 'de' MMMM yyyy", { locale: es })}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {format(parseISO(apt.start_at), "HH:mm")} - {format(parseISO(apt.end_at), "HH:mm")} hs
+                          </p>
+                        </div>
+                        {getAppointmentStatusBadge(apt.status)}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Pagos */}
+          <TabsContent value="pagos" className="space-y-4">
+            {/* Status Summary */}
+            <div className={`rounded-lg border p-4 ${overallPaymentStatus.color}`}>
+              <div className="flex items-center gap-3">
+                {overallPaymentStatus.status === 'paid' && <CheckCircle2 className="h-6 w-6" />}
+                {overallPaymentStatus.status === 'overdue' && <AlertTriangle className="h-6 w-6" />}
+                {overallPaymentStatus.status === 'due_soon' && <AlertCircle className="h-6 w-6" />}
+                {overallPaymentStatus.status === 'pending' && <Clock className="h-6 w-6" />}
+                <div>
+                  <p className="font-semibold">{overallPaymentStatus.message}</p>
+                  {payments.length > 0 && (
+                    <p className="text-xs opacity-80">
+                      {payments.filter(p => p.status === 'paid').length} de {payments.length} pagos realizados
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <CreditCard className="h-4 w-4" />
+                  Detalle de pagos
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {payments.length === 0 ? (
+                  <div className="text-center py-8">
+                    <CreditCard className="h-12 w-12 text-muted-foreground mx-auto mb-3 opacity-50" />
+                    <p className="text-sm text-muted-foreground">
+                      No hay pagos registrados
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {payments.map((payment) => (
+                      <div key={payment.id} className="border rounded-lg p-3 space-y-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <p className="font-semibold">
+                              {formatCurrency(payment.amount, payment.currency)}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Vence: {format(parseISO(payment.due_date), "d 'de' MMMM yyyy", { locale: es })}
+                            </p>
+                          </div>
+                          {getPaymentStatusBadge(payment.status)}
+                        </div>
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span>{getRecurrenceTypeLabel(payment.recurrence_type as RecurrenceType)}</span>
+                          {payment.paid_at && (
+                            <span>
+                              Pagado: {format(parseISO(payment.paid_at), "d MMM yyyy", { locale: es })}
+                            </span>
+                          )}
+                        </div>
+                        {payment.notes && (
+                          <p className="text-xs text-muted-foreground border-t pt-2">
+                            {payment.notes}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Perfil */}
+          <TabsContent value="perfil" className="space-y-4">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  Mi perfil
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center gap-3 pb-3 border-b">
+                  <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                    <User className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-semibold">{patient?.full_name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Paciente desde {patient?.created_at && format(parseISO(patient.created_at), "MMMM yyyy", { locale: es })}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  {patient?.email && (
+                    <div className="flex items-center gap-3 text-sm">
+                      <Mail className="h-4 w-4 text-muted-foreground" />
+                      <span>{patient.email}</span>
+                    </div>
+                  )}
+                  {patient?.whatsapp_phone && (
+                    <div className="flex items-center gap-3 text-sm">
+                      <Phone className="h-4 w-4 text-muted-foreground" />
+                      <span>{patient.whatsapp_phone}</span>
+                    </div>
+                  )}
+                  {patient?.reason_for_consultation && (
+                    <div className="pt-2 border-t">
+                      <p className="text-xs text-muted-foreground mb-1">Motivo de consulta</p>
+                      <p className="text-sm">{patient.reason_for_consultation}</p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Consultorio Info */}
+            {business && (
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Building2 className="h-4 w-4" />
+                    Mi consultorio
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div>
+                    <p className="font-medium">{business.name}</p>
+                    {business.specialty && (
+                      <p className="text-sm text-muted-foreground capitalize">{business.specialty}</p>
                     )}
                   </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Past Appointments */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Clock className="h-5 w-5" />
-              Historial de citas
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {pastAppointments.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No tenés citas anteriores.</p>
-            ) : (
-              <div className="space-y-3">
-                {pastAppointments.map((apt) => (
-                  <div key={apt.id} className="border rounded-lg p-3 space-y-1 opacity-75">
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-sm">
-                        {format(parseISO(apt.start_at), "d MMM yyyy", { locale: es })}
-                      </span>
-                      {getStatusBadge(apt.status)}
+                  {business.contact_email && (
+                    <div className="flex items-center gap-3 text-sm">
+                      <Mail className="h-4 w-4 text-muted-foreground" />
+                      <span>{business.contact_email}</span>
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      {format(parseISO(apt.start_at), "HH:mm")} - {format(parseISO(apt.end_at), "HH:mm")}
-                    </p>
-                  </div>
-                ))}
-              </div>
+                  )}
+                </CardContent>
+              </Card>
             )}
-          </CardContent>
-        </Card>
-
-        {/* Payments */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <CreditCard className="h-5 w-5" />
-              Pagos
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {hasOverduePayments && (
-              <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 mb-4">
-                <p className="text-sm text-destructive font-medium">
-                  Tenés pagos vencidos
-                </p>
-              </div>
-            )}
-            {!hasOverduePayments && payments.length > 0 && (
-              <div className="bg-primary/10 border border-primary/20 rounded-lg p-3 mb-4">
-                <p className="text-sm text-primary font-medium">
-                  Al día con tus pagos
-                </p>
-              </div>
-            )}
-            {payments.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No hay pagos registrados.</p>
-            ) : (
-              <div className="space-y-3">
-                {payments.map((payment) => (
-                  <div key={payment.id} className="border rounded-lg p-3 flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">
-                        {formatCurrency(payment.amount, payment.currency)}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Vence: {format(parseISO(payment.due_date), "d MMM yyyy", { locale: es })}
-                      </p>
-                    </div>
-                    {getPaymentStatusBadge(payment.status)}
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );
