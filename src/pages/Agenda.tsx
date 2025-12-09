@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -12,17 +12,23 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, ChevronLeft, ChevronRight, Calendar as CalendarIcon, Search } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, Search, Filter } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { CalendarGrid } from "@/components/calendar/CalendarGrid";
 import { WeekView } from "@/components/calendar/WeekView";
 import { DayView } from "@/components/calendar/DayView";
 import { AppointmentDetailModal } from "@/components/calendar/AppointmentDetailModal";
 import { PatientSummary } from "@/components/calendar/PatientSummary";
-import { format, addMonths, subMonths, addWeeks, subWeeks, addDays, subDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek } from "date-fns";
+import { format, addMonths, subMonths, addWeeks, subWeeks, addDays, subDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek, subMonths as subMonthsFn } from "date-fns";
 import { es } from "date-fns/locale";
-import { calculatePaymentStatus } from "@/lib/payments";
+import { calculatePaymentStatus, type PaymentStatus } from "@/lib/payments";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 interface AppointmentWithRelations {
   id: string;
@@ -37,6 +43,7 @@ interface AppointmentWithRelations {
   patients: { full_name: string } | null;
   services: { name: string } | null;
   paymentColor?: string;
+  patientPaymentStatus?: PaymentStatus;
 }
 
 interface Patient {
@@ -50,16 +57,19 @@ interface Payment {
   due_date: string;
   paid_at: string | null;
   status: string;
-  amount?: number;
+  amount: number;
 }
 
 type ViewType = "month" | "week" | "day";
+type AppointmentStatusFilter = "all" | "pending" | "confirmed" | "attended" | "cancelled" | "no_show";
+type PaymentStatusFilter = "all" | "al_dia" | "por_vencer" | "vencido";
 
 const Agenda = () => {
   const navigate = useNavigate();
   const [appointments, setAppointments] = useState<AppointmentWithRelations[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
-  const [payments, setPayments] = useState<Payment[]>([]);
+  const [allPayments, setAllPayments] = useState<Payment[]>([]);
+  const [selectedPatientPayments, setSelectedPatientPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewType, setViewType] = useState<ViewType>("week");
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -68,6 +78,9 @@ const Agenda = () => {
   const [selectedAppointment, setSelectedAppointment] = useState<AppointmentWithRelations | null>(null);
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
   const [businessId, setBusinessId] = useState<string | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<AppointmentStatusFilter>("all");
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState<PaymentStatusFilter>("all");
 
   useEffect(() => {
     fetchInitialData();
@@ -76,14 +89,17 @@ const Agenda = () => {
   useEffect(() => {
     if (businessId) {
       fetchAppointments();
+      fetchAllPayments();
     }
   }, [currentDate, viewType, businessId]);
 
   useEffect(() => {
-    if (businessId) {
-      fetchPatientPayments();
+    if (businessId && selectedPatientId) {
+      fetchSelectedPatientPayments();
+    } else {
+      setSelectedPatientPayments([]);
     }
-  }, [selectedPatientId, businessId, currentDate]);
+  }, [selectedPatientId, businessId]);
 
   const fetchInitialData = async () => {
     try {
@@ -106,7 +122,6 @@ const Agenda = () => {
 
       setBusinessId(business.id);
 
-      // Fetch patients for the filter
       const { data: patientsData } = await supabase
         .from("patients")
         .select("id, full_name")
@@ -178,10 +193,6 @@ const Agenda = () => {
         .lte("start_at", endDate.toISOString())
         .order("start_at", { ascending: true });
 
-      if (selectedPatientId) {
-        query = query.eq("patient_id", selectedPatientId);
-      }
-
       const { data, error } = await query;
 
       if (error) throw error;
@@ -199,70 +210,146 @@ const Agenda = () => {
     }
   };
 
-  const fetchPatientPayments = async () => {
+  // Fetch all pending payments for all patients (for coloring appointments)
+  const fetchAllPayments = async () => {
     if (!businessId) return;
 
     try {
-      let query = supabase
+      const { data, error } = await supabase
         .from("payments")
         .select("id, patient_id, due_date, paid_at, status, amount")
-        .eq("business_id", businessId);
-      
-      if (selectedPatientId) {
-        query = query.eq("patient_id", selectedPatientId);
-      }
-
-      const { data, error } = await query;
+        .eq("business_id", businessId)
+        .neq("status", "cancelled");
 
       if (error) throw error;
-
-      setPayments(data || []);
+      setAllPayments(data || []);
     } catch (error) {
-      console.error("Error fetching payments:", error);
+      console.error("Error fetching all payments:", error);
     }
   };
 
-  // Calculate payment colors for appointments
-  const appointmentsWithPaymentColors = useMemo(() => {
-    if (!selectedPatientId || payments.length === 0) {
-      return appointments;
+  // Fetch detailed payments for selected patient
+  const fetchSelectedPatientPayments = async () => {
+    if (!businessId || !selectedPatientId) return;
+
+    try {
+      const { data, error } = await supabase
+        .from("payments")
+        .select("id, patient_id, due_date, paid_at, status, amount")
+        .eq("business_id", businessId)
+        .eq("patient_id", selectedPatientId)
+        .order("due_date", { ascending: false });
+
+      if (error) throw error;
+      setSelectedPatientPayments(data || []);
+    } catch (error) {
+      console.error("Error fetching patient payments:", error);
+    }
+  };
+
+  // Calculate payment status for a patient based on their pending payments
+  const getPatientPaymentStatus = useCallback((patientId: string): PaymentStatus => {
+    const patientPayments = allPayments.filter(p => p.patient_id === patientId);
+    
+    if (patientPayments.length === 0) {
+      return 'pending'; // No payments = treat as pending (green)
     }
 
-    return appointments.map((apt) => {
-      // Find the most relevant payment for this appointment
-      const aptMonth = new Date(apt.start_at).getMonth();
-      const aptYear = new Date(apt.start_at).getFullYear();
+    // Find pending/unpaid payments
+    const pendingPayments = patientPayments.filter(p => !p.paid_at && p.status !== 'cancelled');
+    
+    if (pendingPayments.length === 0) {
+      return 'paid'; // All paid = green
+    }
 
-      const relevantPayment = payments.find((p) => {
-        const paymentMonth = new Date(p.due_date).getMonth();
-        const paymentYear = new Date(p.due_date).getFullYear();
-        return paymentMonth === aptMonth && paymentYear === aptYear;
+    // Check for overdue or due_soon
+    let hasOverdue = false;
+    let hasDueSoon = false;
+
+    for (const payment of pendingPayments) {
+      const status = calculatePaymentStatus({
+        due_date: payment.due_date,
+        paid_at: payment.paid_at,
+        status: payment.status,
       });
+      
+      if (status === 'overdue') {
+        hasOverdue = true;
+        break; // No need to continue, overdue is the worst status
+      } else if (status === 'due_soon') {
+        hasDueSoon = true;
+      }
+    }
 
-      if (!relevantPayment) {
-        return { ...apt, paymentColor: "gray" };
+    if (hasOverdue) return 'overdue';
+    if (hasDueSoon) return 'due_soon';
+    return 'pending'; // Has pending payments but not due soon
+  }, [allPayments]);
+
+  // Calculate payment colors for ALL appointments based on patient payment status
+  const appointmentsWithPaymentColors = useMemo(() => {
+    return appointments.map((apt) => {
+      if (!apt.patient_id) {
+        return { ...apt, paymentColor: "gray", patientPaymentStatus: undefined };
       }
 
-      const status = calculatePaymentStatus({
-        due_date: relevantPayment.due_date,
-        paid_at: relevantPayment.paid_at,
-        status: relevantPayment.status,
-      });
+      const patientStatus = getPatientPaymentStatus(apt.patient_id);
+      
+      let color = "green";
+      if (patientStatus === "overdue") color = "red";
+      else if (patientStatus === "due_soon") color = "orange";
+      else if (patientStatus === "pending" || patientStatus === "paid") color = "green";
 
-      let color = "gray";
-      if (status === "paid") color = "green";
-      else if (status === "due_soon") color = "orange";
-      else if (status === "overdue") color = "red";
-
-      return { ...apt, paymentColor: color };
+      return { ...apt, paymentColor: color, patientPaymentStatus: patientStatus };
     });
-  }, [appointments, payments, selectedPatientId]);
+  }, [appointments, getPatientPaymentStatus]);
 
-  // Calculate patient payment status
+  // Apply filters
+  const filteredAppointments = useMemo(() => {
+    let result = appointmentsWithPaymentColors;
+
+    // Filter by patient
+    if (selectedPatientId) {
+      result = result.filter(apt => apt.patient_id === selectedPatientId);
+    }
+
+    // Filter by appointment status
+    if (statusFilter !== "all") {
+      result = result.filter(apt => apt.status === statusFilter);
+    }
+
+    // Filter by payment status
+    if (paymentStatusFilter !== "all") {
+      result = result.filter(apt => {
+        if (!apt.patient_id) return false;
+        
+        const patientStatus = apt.patientPaymentStatus;
+        
+        switch (paymentStatusFilter) {
+          case "al_dia":
+            return patientStatus === "paid" || patientStatus === "pending";
+          case "por_vencer":
+            return patientStatus === "due_soon";
+          case "vencido":
+            return patientStatus === "overdue";
+          default:
+            return true;
+        }
+      });
+    }
+
+    return result;
+  }, [appointmentsWithPaymentColors, selectedPatientId, statusFilter, paymentStatusFilter]);
+
+  // Calculate patient payment status for PatientSummary
   const patientPaymentStatus = useMemo(() => {
-    if (!selectedPatientId || payments.length === 0) return "sin_pagos";
+    if (!selectedPatientId || selectedPatientPayments.length === 0) return "sin_pagos";
 
-    const hasOverdue = payments.some((p) => {
+    const pendingPayments = selectedPatientPayments.filter(p => !p.paid_at && p.status !== 'cancelled');
+    
+    if (pendingPayments.length === 0) return "al_dia";
+
+    const hasOverdue = pendingPayments.some((p) => {
       const status = calculatePaymentStatus({
         due_date: p.due_date,
         paid_at: p.paid_at,
@@ -273,7 +360,7 @@ const Agenda = () => {
 
     if (hasOverdue) return "vencido";
 
-    const hasDueSoon = payments.some((p) => {
+    const hasDueSoon = pendingPayments.some((p) => {
       const status = calculatePaymentStatus({
         due_date: p.due_date,
         paid_at: p.paid_at,
@@ -285,7 +372,29 @@ const Agenda = () => {
     if (hasDueSoon) return "por_vencer";
 
     return "al_dia";
-  }, [payments, selectedPatientId]);
+  }, [selectedPatientPayments, selectedPatientId]);
+
+  // Get next due date for selected patient
+  const nextDueDate = useMemo(() => {
+    if (!selectedPatientId || selectedPatientPayments.length === 0) return null;
+
+    const pendingPayments = selectedPatientPayments
+      .filter(p => !p.paid_at && p.status !== 'cancelled')
+      .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime());
+
+    return pendingPayments.length > 0 ? pendingPayments[0].due_date : null;
+  }, [selectedPatientPayments, selectedPatientId]);
+
+  // Count paid payments in last 6 months
+  const paidPaymentsLast6Months = useMemo(() => {
+    if (!selectedPatientId || selectedPatientPayments.length === 0) return 0;
+
+    const sixMonthsAgo = subMonthsFn(new Date(), 6);
+
+    return selectedPatientPayments.filter(p => 
+      p.paid_at && new Date(p.paid_at) >= sixMonthsAgo
+    ).length;
+  }, [selectedPatientPayments, selectedPatientId]);
 
   const selectedPatient = patients.find((p) => p.id === selectedPatientId);
 
@@ -336,6 +445,16 @@ const Agenda = () => {
     }
   };
 
+  const hasActiveFilters = statusFilter !== "all" || paymentStatusFilter !== "all" || selectedPatientId !== null;
+
+  const handleRefreshData = () => {
+    fetchAppointments();
+    fetchAllPayments();
+    if (selectedPatientId) {
+      fetchSelectedPatientPayments();
+    }
+  };
+
   if (loading && !businessId) {
     return (
       <div className="min-h-screen bg-background p-4 sm:p-6 lg:p-8">
@@ -374,41 +493,143 @@ const Agenda = () => {
             </div>
           </div>
 
-          <Button variant="outline" size="sm" onClick={goToToday} className="rounded-xl">
-            Hoy
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant={hasActiveFilters ? "default" : "outline"} 
+              size="sm" 
+              onClick={() => setShowFilters(!showFilters)} 
+              className="rounded-xl gap-1"
+            >
+              <Filter className="h-4 w-4" />
+              <span className="hidden sm:inline">Filtros</span>
+              {hasActiveFilters && (
+                <Badge variant="secondary" className="ml-1 rounded-full h-5 w-5 p-0 text-xs flex items-center justify-center">
+                  {(statusFilter !== "all" ? 1 : 0) + (paymentStatusFilter !== "all" ? 1 : 0) + (selectedPatientId ? 1 : 0)}
+                </Badge>
+              )}
+            </Button>
+            <Button variant="outline" size="sm" onClick={goToToday} className="rounded-xl">
+              Hoy
+            </Button>
+          </div>
         </div>
 
-        {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          {/* Patient filter */}
-          <Select
-            value={selectedPatientId || "all"}
-            onValueChange={(value) => setSelectedPatientId(value === "all" ? null : value)}
-          >
-            <SelectTrigger className="w-full sm:w-[250px] h-11 rounded-xl">
-              <Search className="h-4 w-4 mr-2 text-muted-foreground" />
-              <SelectValue placeholder="Filtrar por paciente" />
-            </SelectTrigger>
-            <SelectContent>
-              <div className="p-2">
-                <Input
-                  placeholder="Buscar paciente..."
-                  value={patientSearch}
-                  onChange={(e) => setPatientSearch(e.target.value)}
-                  className="h-9 rounded-lg"
-                />
-              </div>
-              <SelectItem value="all">Todos los pacientes</SelectItem>
-              {filteredPatients.map((patient) => (
-                <SelectItem key={patient.id} value={patient.id}>
-                  {patient.full_name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        {/* Filters Section */}
+        <Collapsible open={showFilters} onOpenChange={setShowFilters}>
+          <CollapsibleContent className="space-y-3">
+            <Card className="border-dashed">
+              <CardContent className="p-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  {/* Patient filter */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-muted-foreground">Paciente</label>
+                    <Select
+                      value={selectedPatientId || "all"}
+                      onValueChange={(value) => setSelectedPatientId(value === "all" ? null : value)}
+                    >
+                      <SelectTrigger className="h-10 rounded-xl">
+                        <Search className="h-4 w-4 mr-2 text-muted-foreground" />
+                        <SelectValue placeholder="Todos" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <div className="p-2">
+                          <Input
+                            placeholder="Buscar paciente..."
+                            value={patientSearch}
+                            onChange={(e) => setPatientSearch(e.target.value)}
+                            className="h-9 rounded-lg"
+                          />
+                        </div>
+                        <SelectItem value="all">Todos los pacientes</SelectItem>
+                        {filteredPatients.map((patient) => (
+                          <SelectItem key={patient.id} value={patient.id}>
+                            {patient.full_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-          {/* View type */}
+                  {/* Appointment status filter */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-muted-foreground">Estado de cita</label>
+                    <Select
+                      value={statusFilter}
+                      onValueChange={(value) => setStatusFilter(value as AppointmentStatusFilter)}
+                    >
+                      <SelectTrigger className="h-10 rounded-xl">
+                        <SelectValue placeholder="Todos" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos los estados</SelectItem>
+                        <SelectItem value="pending">Programada</SelectItem>
+                        <SelectItem value="confirmed">Confirmada</SelectItem>
+                        <SelectItem value="attended">Realizada</SelectItem>
+                        <SelectItem value="cancelled">Cancelada</SelectItem>
+                        <SelectItem value="no_show">Ausente</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Payment status filter */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-muted-foreground">Estado de pago</label>
+                    <Select
+                      value={paymentStatusFilter}
+                      onValueChange={(value) => setPaymentStatusFilter(value as PaymentStatusFilter)}
+                    >
+                      <SelectTrigger className="h-10 rounded-xl">
+                        <SelectValue placeholder="Todos" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos</SelectItem>
+                        <SelectItem value="al_dia">
+                          <div className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-green-500" />
+                            Al día
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="por_vencer">
+                          <div className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-orange-500" />
+                            Por vencer (≤4 días)
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="vencido">
+                          <div className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-red-500" />
+                            Vencido
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Clear filters */}
+                  <div className="flex items-end">
+                    {hasActiveFilters && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="rounded-xl text-muted-foreground"
+                        onClick={() => {
+                          setSelectedPatientId(null);
+                          setStatusFilter("all");
+                          setPaymentStatusFilter("all");
+                        }}
+                      >
+                        Limpiar filtros
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </CollapsibleContent>
+        </Collapsible>
+
+        {/* View type & Navigation */}
+        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
           <Tabs value={viewType} onValueChange={(value) => setViewType(value as ViewType)}>
             <TabsList className="rounded-xl h-11">
               <TabsTrigger value="day" className="rounded-lg px-4">Día</TabsTrigger>
@@ -417,8 +638,7 @@ const Agenda = () => {
             </TabsList>
           </Tabs>
 
-          {/* Navigation */}
-          <div className="flex items-center gap-1 sm:ml-auto">
+          <div className="flex items-center gap-1">
             <Button
               variant="ghost"
               size="icon"
@@ -441,10 +661,16 @@ const Agenda = () => {
         {/* Patient Summary (when filtered) */}
         {selectedPatient && (
           <PatientSummary
+            patientId={selectedPatientId!}
             patientName={selectedPatient.full_name}
-            appointments={appointmentsWithPaymentColors}
+            appointments={filteredAppointments}
+            payments={selectedPatientPayments}
             paymentStatus={patientPaymentStatus as "al_dia" | "por_vencer" | "vencido" | "sin_pagos"}
+            nextDueDate={nextDueDate}
+            paidPaymentsLast6Months={paidPaymentsLast6Months}
             currentDate={currentDate}
+            businessId={businessId!}
+            onRefresh={handleRefreshData}
           />
         )}
 
@@ -462,8 +688,8 @@ const Agenda = () => {
             {viewType === "month" && (
               <CalendarGrid
                 currentDate={currentDate}
-                appointments={appointmentsWithPaymentColors}
-                payments={payments}
+                appointments={filteredAppointments}
+                payments={selectedPatientPayments}
                 onDateClick={handleDateClick}
                 onAppointmentClick={handleAppointmentClick}
                 selectedPatientId={selectedPatientId}
@@ -472,7 +698,7 @@ const Agenda = () => {
             {viewType === "week" && (
               <WeekView
                 currentDate={currentDate}
-                appointments={appointmentsWithPaymentColors}
+                appointments={filteredAppointments}
                 onAppointmentClick={handleAppointmentClick}
                 selectedPatientId={selectedPatientId}
               />
@@ -480,7 +706,7 @@ const Agenda = () => {
             {viewType === "day" && (
               <DayView
                 currentDate={currentDate}
-                appointments={appointmentsWithPaymentColors}
+                appointments={filteredAppointments}
                 onAppointmentClick={handleAppointmentClick}
                 selectedPatientId={selectedPatientId}
               />
@@ -496,6 +722,8 @@ const Agenda = () => {
             setShowAppointmentModal(false);
             setSelectedAppointment(null);
           }}
+          businessId={businessId}
+          onPaymentRegistered={handleRefreshData}
         />
       </div>
     </div>

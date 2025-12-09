@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, isToday } from "date-fns";
 import { es } from "date-fns/locale";
+import { type PaymentStatus } from "@/lib/payments";
 
 interface Appointment {
   id: string;
@@ -17,6 +18,7 @@ interface Appointment {
   patients: { full_name: string } | null;
   services: { name: string } | null;
   paymentColor?: string;
+  patientPaymentStatus?: PaymentStatus;
 }
 
 interface WeekViewProps {
@@ -54,6 +56,19 @@ export const WeekView = ({
         return "border-l-red-500";
       default:
         return "border-l-muted-foreground/30";
+    }
+  };
+
+  const getPaymentDotColor = (color?: string) => {
+    switch (color) {
+      case "green":
+        return "bg-green-500";
+      case "orange":
+        return "bg-orange-500";
+      case "red":
+        return "bg-red-500";
+      default:
+        return "bg-muted-foreground/30";
     }
   };
 
@@ -115,25 +130,43 @@ export const WeekView = ({
               ) : (
                 dayAppointments.map((apt) => {
                   const statusInfo = getStatusBadge(apt.status);
+                  const showPaymentIndicator = apt.patient_id && apt.paymentColor;
+                  
                   return (
                     <div
                       key={apt.id}
                       onClick={() => onAppointmentClick(apt)}
                       className={cn(
                         "p-2 rounded-xl bg-accent/50 hover:bg-accent cursor-pointer transition-colors border-l-3",
-                        selectedPatientId && getPaymentBorderColor(apt.paymentColor)
+                        showPaymentIndicator ? getPaymentBorderColor(apt.paymentColor) : "border-l-primary"
                       )}
                     >
                       <div className="flex items-center justify-between gap-1 mb-1">
                         <span className="text-sm font-bold text-primary">
                           {formatTime(apt.start_at)}
                         </span>
-                        <Badge
-                          variant={statusInfo.variant}
-                          className="text-[10px] rounded-full px-1.5 py-0"
-                        >
-                          {statusInfo.label}
-                        </Badge>
+                        <div className="flex items-center gap-1">
+                          {/* Payment indicator dot */}
+                          {showPaymentIndicator && (
+                            <span 
+                              className={cn(
+                                "w-2 h-2 rounded-full shrink-0",
+                                getPaymentDotColor(apt.paymentColor)
+                              )}
+                              title={
+                                apt.paymentColor === "green" ? "Al día" :
+                                apt.paymentColor === "orange" ? "Por vencer" :
+                                apt.paymentColor === "red" ? "Vencido" : ""
+                              }
+                            />
+                          )}
+                          <Badge
+                            variant={statusInfo.variant}
+                            className="text-[10px] rounded-full px-1.5 py-0"
+                          >
+                            {statusInfo.label}
+                          </Badge>
+                        </div>
                       </div>
                       <p className="text-xs font-medium truncate">
                         {apt.patients?.full_name || "Sin paciente"}
