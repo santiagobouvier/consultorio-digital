@@ -50,6 +50,8 @@ import {
   AlertTriangle,
   ChevronDown,
   BarChart3,
+  Copy,
+  Check,
 } from "lucide-react";
 import { getPlanName, getPlanConfig, checkProfessionalLimit } from "@/hooks/use-plan-limits";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -114,6 +116,8 @@ const SaasAdmin = () => {
   const [newProfName, setNewProfName] = useState("");
   const [newProfEmail, setNewProfEmail] = useState("");
   const [professionalLimitError, setProfessionalLimitError] = useState<string | null>(null);
+  const [inviteLink, setInviteLink] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     checkAccessAndLoad();
@@ -405,17 +409,26 @@ const SaasAdmin = () => {
 
       if (error) throw error;
 
-      toast({
-        title: "Profesional agregado",
-        description: newProfEmail
-          ? "Se ha creado el profesional y generado un link de invitación"
-          : "El profesional ha sido agregado al consultorio",
-      });
-
-      setShowAddProfessionalModal(false);
-      setNewProfName("");
-      setNewProfEmail("");
-      setProfessionalLimitError(null);
+      // If email was provided, show the invite link
+      if (newProfEmail && data?.token) {
+        const baseUrl = window.location.origin;
+        const link = `${baseUrl}/invitar-profesional?token=${data.token}`;
+        setInviteLink(link);
+        toast({
+          title: "Invitación creada",
+          description: "Copia el enlace y envíalo al profesional.",
+        });
+      } else {
+        toast({
+          title: "Profesional agregado",
+          description: "El profesional ha sido agregado al consultorio",
+        });
+        setShowAddProfessionalModal(false);
+        setNewProfName("");
+        setNewProfEmail("");
+        setProfessionalLimitError(null);
+      }
+      
       await loadProfessionals(selectedBusiness);
       await loadData();
     } catch (error: any) {
@@ -819,61 +832,139 @@ const SaasAdmin = () => {
       </Dialog>
 
       {/* Add Professional Modal */}
-      <Dialog open={showAddProfessionalModal} onOpenChange={setShowAddProfessionalModal}>
+      <Dialog 
+        open={showAddProfessionalModal} 
+        onOpenChange={(open) => {
+          if (!open) {
+            setInviteLink(null);
+            setCopied(false);
+            setNewProfName("");
+            setNewProfEmail("");
+            setProfessionalLimitError(null);
+          }
+          setShowAddProfessionalModal(open);
+        }}
+      >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Agregar profesional</DialogTitle>
+            <DialogTitle>
+              {inviteLink ? "Enlace de invitación" : "Agregar profesional"}
+            </DialogTitle>
             <DialogDescription>
-              Agrega un nuevo profesional a {selectedBusiness?.name}
+              {inviteLink 
+                ? "Copia el enlace y envíalo al profesional por WhatsApp o email."
+                : `Agrega un nuevo profesional a ${selectedBusiness?.name}`
+              }
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            {professionalLimitError && (
-              <Alert variant="destructive">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertDescription>{professionalLimitError}</AlertDescription>
-              </Alert>
-            )}
-            <div className="space-y-2">
-              <Label htmlFor="profName">Nombre</Label>
-              <Input
-                id="profName"
-                value={newProfName}
-                onChange={(e) => setNewProfName(e.target.value)}
-                placeholder="Nombre completo"
-              />
+
+          {!inviteLink ? (
+            <>
+              <div className="space-y-4 py-4">
+                {professionalLimitError && (
+                  <Alert variant="destructive">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription>{professionalLimitError}</AlertDescription>
+                  </Alert>
+                )}
+                <div className="space-y-2">
+                  <Label htmlFor="profName">Nombre</Label>
+                  <Input
+                    id="profName"
+                    value={newProfName}
+                    onChange={(e) => setNewProfName(e.target.value)}
+                    placeholder="Nombre completo"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="profEmail">Email (opcional)</Label>
+                  <Input
+                    id="profEmail"
+                    type="email"
+                    value={newProfEmail}
+                    onChange={(e) => setNewProfEmail(e.target.value)}
+                    placeholder="email@ejemplo.com"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Si se proporciona email, se generará un link de invitación
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => setShowAddProfessionalModal(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  className="flex-1"
+                  onClick={handleAddProfessional}
+                  disabled={creating}
+                >
+                  {creating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  Agregar
+                </Button>
+              </div>
+            </>
+          ) : (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Enlace de invitación</Label>
+                <div className="p-3 bg-muted rounded-md text-sm break-all font-mono">
+                  {inviteLink}
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-4">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setShowAddProfessionalModal(false);
+                    setInviteLink(null);
+                    setCopied(false);
+                    setNewProfName("");
+                    setNewProfEmail("");
+                  }}
+                >
+                  Cerrar
+                </Button>
+                <Button 
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(inviteLink);
+                      setCopied(true);
+                      toast({
+                        title: "Enlace copiado",
+                        description: "El enlace ha sido copiado al portapapeles.",
+                      });
+                      setTimeout(() => setCopied(false), 2000);
+                    } catch {
+                      toast({
+                        title: "Error",
+                        description: "No se pudo copiar el enlace.",
+                        variant: "destructive",
+                      });
+                    }
+                  }} 
+                  className="gap-2"
+                >
+                  {copied ? (
+                    <>
+                      <Check className="h-4 w-4" />
+                      Copiado
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-4 w-4" />
+                      Copiar enlace
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="profEmail">Email (opcional)</Label>
-              <Input
-                id="profEmail"
-                type="email"
-                value={newProfEmail}
-                onChange={(e) => setNewProfEmail(e.target.value)}
-                placeholder="email@ejemplo.com"
-              />
-              <p className="text-xs text-muted-foreground">
-                Si se proporciona email, se generará un link de invitación
-              </p>
-            </div>
-          </div>
-          <div className="flex gap-3">
-            <Button
-              variant="outline"
-              className="flex-1"
-              onClick={() => setShowAddProfessionalModal(false)}
-            >
-              Cancelar
-            </Button>
-            <Button
-              className="flex-1"
-              onClick={handleAddProfessional}
-              disabled={creating}
-            >
-              {creating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Agregar
-            </Button>
-          </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
