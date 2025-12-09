@@ -493,9 +493,9 @@ const SaasAdmin = () => {
     }
   };
 
-  const enterBusiness = (businessId: string) => {
+  const enterBusiness = (businessIdToEnter: string) => {
     // Store the selected business and redirect to dashboard
-    sessionStorage.setItem("saas_selected_business", businessId);
+    sessionStorage.setItem("saas_selected_business", businessIdToEnter);
     navigate("/dashboard");
   };
 

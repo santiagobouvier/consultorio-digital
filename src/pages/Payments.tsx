@@ -37,6 +37,7 @@ import {
   type PaymentStatus,
   type RecurrenceType,
 } from "@/lib/payments";
+import { useBusinessId } from "@/hooks/use-business-id";
 
 interface Patient {
   id: string;
@@ -68,19 +69,22 @@ const Payments = () => {
   const [searchParams] = useSearchParams();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>(
     searchParams.get("status") || "all"
   );
   const [patientFilter, setPatientFilter] = useState<string>("all");
-  const [businessId, setBusinessId] = useState<string | null>(null);
   const [editingPayment, setEditingPayment] = useState<Payment | null>(null);
   const [deletingPaymentId, setDeletingPaymentId] = useState<string | null>(null);
+  
+  const { businessId, loading: businessLoading } = useBusinessId();
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (businessId) {
+      fetchData();
+    }
+  }, [businessId]);
 
   useEffect(() => {
     const status = searchParams.get("status");
@@ -90,33 +94,16 @@ const Payments = () => {
   }, [searchParams]);
 
   const fetchData = async () => {
+    if (!businessId) return;
+    
     try {
-      setLoading(true);
-
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        navigate("/auth");
-        return;
-      }
-
-      const { data: business } = await supabase
-        .from("businesses")
-        .select("id")
-        .eq("owner_user_id", user.id)
-        .maybeSingle();
-
-      if (!business) {
-        navigate("/configurar-negocio");
-        return;
-      }
-
-      setBusinessId(business.id);
+      setDataLoading(true);
 
       // Fetch payments
       const { data: paymentsData, error: paymentsError } = await supabase
         .from("payments")
         .select("*, recurrence_type, anchor_day, method, notes")
-        .eq("business_id", business.id)
+        .eq("business_id", businessId)
         .order("due_date", { ascending: true });
 
       if (paymentsError) throw paymentsError;
@@ -125,7 +112,7 @@ const Payments = () => {
       const { data: patientsData } = await supabase
         .from("patients")
         .select("id, full_name, whatsapp_phone")
-        .eq("business_id", business.id)
+        .eq("business_id", businessId)
         .order("full_name");
 
       const patientsMap = new Map(
@@ -137,7 +124,7 @@ const Payments = () => {
         ...payment,
         status: calculatePaymentStatus(payment),
         recurrence_type: (payment.recurrence_type || 'one_time') as RecurrenceType,
-        business_id: business.id,
+        business_id: businessId,
         patients: patientsMap.get(payment.patient_id) || { full_name: "Desconocido", whatsapp_phone: null },
       })) as Payment[];
 
@@ -153,9 +140,11 @@ const Payments = () => {
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setDataLoading(false);
     }
   };
+
+  const loading = businessLoading || dataLoading;
 
   const handleDeletePayment = async () => {
     if (!deletingPaymentId) return;

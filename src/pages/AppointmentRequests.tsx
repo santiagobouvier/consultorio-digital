@@ -22,27 +22,24 @@ import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { ArrowLeft, Check, X, MessageCircle } from "lucide-react";
+import { useBusinessId } from "@/hooks/use-business-id";
 
 const AppointmentRequests = () => {
   const navigate = useNavigate();
   const [requests, setRequests] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true);
+  
+  const { businessId, loading: businessLoading } = useBusinessId();
 
   useEffect(() => {
-    checkAuth();
-    loadRequests();
-  }, []);
-
-  const checkAuth = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      navigate("/auth");
+    if (businessId) {
+      loadRequests();
     }
-  };
+  }, [businessId]);
 
   const loadRequests = async () => {
     try {
-      setLoading(true);
+      setDataLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) return;
@@ -63,9 +60,11 @@ const AppointmentRequests = () => {
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setDataLoading(false);
     }
   };
+
+  const loading = businessLoading || dataLoading;
 
   const handleAccept = async (request: any) => {
     try {

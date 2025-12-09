@@ -69,7 +69,7 @@ const Dashboard = () => {
     // Check if coming from SaaS admin with selected business
     const saasSelectedBusiness = sessionStorage.getItem("saas_selected_business");
     if (saasSelectedBusiness) {
-      sessionStorage.removeItem("saas_selected_business");
+      // Keep the business ID in session for other pages to use
       fetchDashboardData(saasSelectedBusiness);
     } else {
       fetchDashboardData();

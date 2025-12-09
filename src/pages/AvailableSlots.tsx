@@ -12,6 +12,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { ArrowLeft, Plus, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useBusinessId } from "@/hooks/use-business-id";
 
 interface AvailabilitySlot {
   id: string;
@@ -26,9 +27,8 @@ interface AvailabilitySlot {
 
 const AvailableSlots = () => {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true);
   const [slots, setSlots] = useState<AvailabilitySlot[]>([]);
-  const [businessId, setBusinessId] = useState<string>("");
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
     date: "",
@@ -38,48 +38,24 @@ const AvailableSlots = () => {
     price: "",
     notes: "",
   });
+  
+  const { businessId, loading: businessLoading } = useBusinessId();
 
   useEffect(() => {
-    checkAuth();
-    loadSlots();
-  }, []);
-
-  const checkAuth = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      navigate("/auth");
-      return;
+    if (businessId) {
+      loadSlots();
     }
-
-    const { data: business } = await supabase
-      .from("businesses")
-      .select("id")
-      .eq("owner_user_id", user.id)
-      .single();
-
-    if (business) {
-      setBusinessId(business.id);
-    }
-  };
+  }, [businessId]);
 
   const loadSlots = async () => {
-    setLoading(true);
+    if (!businessId) return;
+    
+    setDataLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: business } = await supabase
-        .from("businesses")
-        .select("id")
-        .eq("owner_user_id", user.id)
-        .single();
-
-      if (!business) return;
-
       const { data, error } = await supabase
         .from("availability_slots")
         .select("*")
-        .eq("business_id", business.id)
+        .eq("business_id", businessId)
         .order("date", { ascending: true })
         .order("start_time", { ascending: true });
 
@@ -93,13 +69,16 @@ const AvailableSlots = () => {
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setDataLoading(false);
     }
   };
 
+  const loading = businessLoading || dataLoading;
+  const [saving, setSaving] = useState(false);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setSaving(true);
 
     try {
       const duration = parseInt(formData.duration);
@@ -144,7 +123,7 @@ const AvailableSlots = () => {
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
