@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import {
   Table,
   TableBody,
@@ -54,6 +55,8 @@ import {
   Check,
   Filter,
   X,
+  Globe,
+  Shield,
 } from "lucide-react";
 import { getPlanName, getPlanConfig, checkProfessionalLimit } from "@/hooks/use-plan-limits";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -73,6 +76,10 @@ interface BusinessWithDetails {
   customMaxProfessionals?: number | null;
   customMaxPatients?: number | null;
   billingPeriod: string;
+  // Private clinic fields - used for custom domain/subdomain patient portal add-on
+  isPrivateClinic: boolean;
+  customSubdomain?: string | null;
+  customDomain?: string | null;
 }
 
 interface SaasMetrics {
@@ -137,6 +144,15 @@ const SaasAdmin = () => {
   const [professionalLimitError, setProfessionalLimitError] = useState<string | null>(null);
   const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+
+  // Private clinic modal state
+  const [showPrivateClinicModal, setShowPrivateClinicModal] = useState(false);
+  const [editingPrivateClinic, setEditingPrivateClinic] = useState<{
+    isPrivateClinic: boolean;
+    customSubdomain: string;
+    customDomain: string;
+  }>({ isPrivateClinic: false, customSubdomain: "", customDomain: "" });
+  const [savingPrivateClinic, setSavingPrivateClinic] = useState(false);
 
   useEffect(() => {
     checkAccessAndLoad();
@@ -231,6 +247,10 @@ const SaasAdmin = () => {
         customMaxProfessionals: (b as any).custom_max_professionals,
         customMaxPatients: (b as any).custom_max_patients,
         billingPeriod: (b as any).billing_period || "annual",
+        // Private clinic fields for custom domain patient portal
+        isPrivateClinic: (b as any).is_private_clinic || false,
+        customSubdomain: (b as any).custom_subdomain || null,
+        customDomain: (b as any).custom_domain || null,
       }));
 
       setBusinesses(businessesWithDetails);
@@ -495,6 +515,66 @@ const SaasAdmin = () => {
     }
   };
 
+  // Open private clinic modal with business data
+  const openPrivateClinicModal = (business: BusinessWithDetails) => {
+    setSelectedBusiness(business);
+    setEditingPrivateClinic({
+      isPrivateClinic: business.isPrivateClinic,
+      customSubdomain: business.customSubdomain || "",
+      customDomain: business.customDomain || "",
+    });
+    setShowPrivateClinicModal(true);
+  };
+
+  // Helper to compute portal URL based on private clinic settings
+  const getPortalUrl = (business: BusinessWithDetails): string => {
+    if (business.customDomain) {
+      return `https://${business.customDomain}`;
+    }
+    if (business.customSubdomain) {
+      // TODO: Replace with actual SaaS base domain when configured
+      return `https://${business.customSubdomain}.tudominio.com`;
+    }
+    return `${window.location.origin}/portal-paciente`;
+  };
+
+  // Save private clinic settings
+  const handleSavePrivateClinic = async () => {
+    if (!selectedBusiness) return;
+
+    try {
+      setSavingPrivateClinic(true);
+
+      const { error } = await supabase
+        .from("businesses")
+        .update({
+          is_private_clinic: editingPrivateClinic.isPrivateClinic,
+          custom_subdomain: editingPrivateClinic.customSubdomain.trim() || null,
+          custom_domain: editingPrivateClinic.customDomain.trim() || null,
+        })
+        .eq("id", selectedBusiness.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Configuración guardada",
+        description: "Los datos del consultorio privado se actualizaron correctamente",
+      });
+
+      setShowPrivateClinicModal(false);
+      await loadData();
+    } catch (error: any) {
+      console.error("Error saving private clinic settings:", error);
+      toast({
+        title: "Error",
+        description: error.message || "No se pudo guardar la configuración",
+        variant: "destructive",
+      });
+    } finally {
+      setSavingPrivateClinic(false);
+    }
+  };
+
   const enterBusiness = (businessIdToEnter: string) => {
     // Store the selected business and redirect to dashboard
     sessionStorage.setItem("saas_selected_business", businessIdToEnter);
@@ -654,6 +734,7 @@ const SaasAdmin = () => {
                     <TableHead className="hidden md:table-cell">Plan</TableHead>
                     <TableHead className="text-center">Profs.</TableHead>
                     <TableHead className="text-center">Pacientes</TableHead>
+                    <TableHead className="hidden lg:table-cell text-center">Privado</TableHead>
                     <TableHead className="hidden lg:table-cell text-center">Estado</TableHead>
                     <TableHead className="hidden lg:table-cell">Creado</TableHead>
                     <TableHead className="text-right">Acciones</TableHead>
@@ -759,6 +840,26 @@ const SaasAdmin = () => {
                           </div>
                         </TableCell>
                         <TableCell className="hidden lg:table-cell text-center">
+                          {business.isPrivateClinic ? (
+                            <Badge 
+                              variant="default" 
+                              className="bg-primary/10 text-primary hover:bg-primary/20 cursor-pointer gap-1"
+                              onClick={() => openPrivateClinicModal(business)}
+                            >
+                              <Shield className="h-3 w-3" />
+                              Sí
+                            </Badge>
+                          ) : (
+                            <Badge 
+                              variant="secondary" 
+                              className="cursor-pointer"
+                              onClick={() => openPrivateClinicModal(business)}
+                            >
+                              No
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="hidden lg:table-cell text-center">
                           <Badge 
                             variant={overallStatus === "ok" ? "default" : "secondary"}
                             className={
@@ -785,6 +886,15 @@ const SaasAdmin = () => {
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8"
+                              onClick={() => openPrivateClinicModal(business)}
+                              title="Configurar dominio privado"
+                            >
+                              <Globe className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
                               onClick={() => enterBusiness(business.id)}
                               title="Ingresar al consultorio"
                             >
@@ -806,7 +916,7 @@ const SaasAdmin = () => {
                   })}
                   {filteredBusinesses.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                         {hasActiveFilters 
                           ? "No hay consultorios que coincidan con los filtros" 
                           : "No hay consultorios registrados"}
@@ -1130,6 +1240,109 @@ const SaasAdmin = () => {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Private Clinic Settings Modal */}
+      <Dialog open={showPrivateClinicModal} onOpenChange={setShowPrivateClinicModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Globe className="h-5 w-5" />
+              Consultorio Privado
+            </DialogTitle>
+            <DialogDescription>
+              Configura el dominio personalizado para el portal de pacientes de {selectedBusiness?.name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {/* Private Clinic Toggle */}
+            <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+              <div className="space-y-0.5">
+                <Label className="text-sm font-semibold">Consultorio privado</Label>
+                <p className="text-xs text-muted-foreground">
+                  Activa para habilitar dominio personalizado
+                </p>
+              </div>
+              <Switch
+                checked={editingPrivateClinic.isPrivateClinic}
+                onCheckedChange={(checked) =>
+                  setEditingPrivateClinic({ ...editingPrivateClinic, isPrivateClinic: checked })
+                }
+              />
+            </div>
+
+            {/* Subdomain */}
+            <div className="space-y-2">
+              <Label htmlFor="customSubdomain">Subdominio personalizado</Label>
+              <div className="flex items-center gap-1">
+                <Input
+                  id="customSubdomain"
+                  value={editingPrivateClinic.customSubdomain}
+                  onChange={(e) =>
+                    setEditingPrivateClinic({ ...editingPrivateClinic, customSubdomain: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "") })
+                  }
+                  placeholder="psilaura"
+                  className="flex-1"
+                />
+                <span className="text-sm text-muted-foreground whitespace-nowrap">.tudominio.com</span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Solo letras minúsculas, números y guiones
+              </p>
+            </div>
+
+            {/* Custom Domain */}
+            <div className="space-y-2">
+              <Label htmlFor="customDomain">Dominio propio (opcional)</Label>
+              <Input
+                id="customDomain"
+                value={editingPrivateClinic.customDomain}
+                onChange={(e) =>
+                  setEditingPrivateClinic({ ...editingPrivateClinic, customDomain: e.target.value.toLowerCase() })
+                }
+                placeholder="psicologalaura.com"
+              />
+              <p className="text-xs text-muted-foreground">
+                Dominio completo si el cliente tiene uno propio
+              </p>
+            </div>
+
+            {/* Computed Portal URL (read-only) */}
+            {selectedBusiness && (editingPrivateClinic.customDomain || editingPrivateClinic.customSubdomain) && (
+              <div className="space-y-2">
+                <Label>URL del portal (calculada)</Label>
+                <div className="p-3 bg-muted rounded-md text-sm font-mono break-all">
+                  {editingPrivateClinic.customDomain 
+                    ? `https://${editingPrivateClinic.customDomain}`
+                    : editingPrivateClinic.customSubdomain
+                      ? `https://${editingPrivateClinic.customSubdomain}.tudominio.com`
+                      : "—"
+                  }
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  ⚠️ Esta URL es solo informativa. La configuración real de DNS se hará más adelante.
+                </p>
+              </div>
+            )}
+          </div>
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => setShowPrivateClinicModal(false)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              className="flex-1"
+              onClick={handleSavePrivateClinic}
+              disabled={savingPrivateClinic}
+            >
+              {savingPrivateClinic && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Guardar
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
