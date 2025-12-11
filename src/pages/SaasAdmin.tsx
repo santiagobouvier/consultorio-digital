@@ -72,6 +72,7 @@ interface BusinessWithDetails {
   isActive: boolean;
   customMaxProfessionals?: number | null;
   customMaxPatients?: number | null;
+  billingPeriod: string;
 }
 
 interface SaasMetrics {
@@ -229,6 +230,7 @@ const SaasAdmin = () => {
         isActive: (b as any).is_active !== false,
         customMaxProfessionals: (b as any).custom_max_professionals,
         customMaxPatients: (b as any).custom_max_patients,
+        billingPeriod: (b as any).billing_period || "annual",
       }));
 
       setBusinesses(businessesWithDetails);
@@ -652,6 +654,7 @@ const SaasAdmin = () => {
                     <TableHead className="hidden md:table-cell">Plan</TableHead>
                     <TableHead className="text-center">Profs.</TableHead>
                     <TableHead className="text-center">Pacientes</TableHead>
+                    <TableHead className="hidden lg:table-cell text-center">Estado</TableHead>
                     <TableHead className="hidden lg:table-cell">Creado</TableHead>
                     <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
@@ -665,28 +668,57 @@ const SaasAdmin = () => {
                     const config = getPlanConfig(business.planCode, customLimits);
                     const profStatus = getUsageStatus(business.professionalsCount, config.maxProfessionals);
                     const patientStatus = getUsageStatus(business.patientsCount, config.maxPatients);
+                    
+                    // Overall status: worst of prof and patient status
+                    const overallStatus = profStatus.status === "danger" || patientStatus.status === "danger" 
+                      ? "danger" 
+                      : profStatus.status === "warning" || patientStatus.status === "warning"
+                        ? "warning"
+                        : "ok";
 
                     return (
-                      <TableRow key={business.id}>
+                      <TableRow key={business.id} className={!business.isActive ? "opacity-60" : ""}>
                         <TableCell className="font-medium">
-                          <div>
-                            <p className="font-semibold">{business.name}</p>
-                            <p className="text-xs text-muted-foreground sm:hidden">
-                              {business.ownerEmail}
-                            </p>
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <p className="font-semibold truncate">{business.name}</p>
+                                {!business.isActive && (
+                                  <Badge variant="secondary" className="text-xs shrink-0">
+                                    Inactivo
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-xs text-muted-foreground sm:hidden truncate">
+                                {business.ownerEmail}
+                              </p>
+                              <div className="flex items-center gap-2 mt-0.5 md:hidden">
+                                <Badge variant="outline" className="text-xs">
+                                  {getPlanName(business.planCode)}
+                                </Badge>
+                                <span className="text-xs text-muted-foreground">
+                                  {business.billingPeriod === "monthly" ? "Mensual" : "Anual"}
+                                </span>
+                              </div>
+                            </div>
                           </div>
                         </TableCell>
                         <TableCell className="hidden sm:table-cell text-sm">
                           {business.ownerEmail}
                         </TableCell>
                         <TableCell className="hidden md:table-cell">
-                          <PlanSelector
-                            businessId={business.id}
-                            currentPlan={business.planCode}
-                            customMaxProfessionals={business.customMaxProfessionals}
-                            customMaxPatients={business.customMaxPatients}
-                            onChangePlan={handleChangePlan}
-                          />
+                          <div className="space-y-1">
+                            <PlanSelector
+                              businessId={business.id}
+                              currentPlan={business.planCode}
+                              customMaxProfessionals={business.customMaxProfessionals}
+                              customMaxPatients={business.customMaxPatients}
+                              onChangePlan={handleChangePlan}
+                            />
+                            <p className="text-xs text-muted-foreground">
+                              {business.billingPeriod === "monthly" ? "Mensual" : "Anual"}
+                            </p>
+                          </div>
                         </TableCell>
                         <TableCell className="text-center">
                           <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md ${
@@ -694,16 +726,16 @@ const SaasAdmin = () => {
                               ? "bg-destructive/10 text-destructive" 
                               : profStatus.status === "warning"
                                 ? "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400"
-                                : ""
+                                : "bg-green-500/10 text-green-700 dark:text-green-400"
                           }`}>
                             {profStatus.status === "danger" && (
                               <AlertTriangle className="h-3 w-3" />
                             )}
-                            <span className="font-medium">
+                            <span className="font-medium text-sm">
                               {business.professionalsCount}
                               {config.maxProfessionals !== null 
                                 ? `/${config.maxProfessionals}` 
-                                : " (∞)"}
+                                : " ∞"}
                             </span>
                           </div>
                         </TableCell>
@@ -713,18 +745,36 @@ const SaasAdmin = () => {
                               ? "bg-destructive/10 text-destructive" 
                               : patientStatus.status === "warning"
                                 ? "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400"
-                                : ""
+                                : "bg-green-500/10 text-green-700 dark:text-green-400"
                           }`}>
                             {patientStatus.status === "danger" && (
                               <AlertTriangle className="h-3 w-3" />
                             )}
-                            <span className="font-medium">
+                            <span className="font-medium text-sm">
                               {business.patientsCount}
                               {config.maxPatients !== null 
                                 ? `/${config.maxPatients}` 
-                                : " (∞)"}
+                                : " ∞"}
                             </span>
                           </div>
+                        </TableCell>
+                        <TableCell className="hidden lg:table-cell text-center">
+                          <Badge 
+                            variant={overallStatus === "ok" ? "default" : "secondary"}
+                            className={
+                              overallStatus === "danger" 
+                                ? "bg-destructive/10 text-destructive hover:bg-destructive/20"
+                                : overallStatus === "warning"
+                                  ? "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 hover:bg-yellow-500/20"
+                                  : "bg-green-500/10 text-green-700 dark:text-green-400 hover:bg-green-500/20"
+                            }
+                          >
+                            {overallStatus === "danger" 
+                              ? "Límite" 
+                              : overallStatus === "warning" 
+                                ? "Cerca" 
+                                : "OK"}
+                          </Badge>
                         </TableCell>
                         <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
                           {formatDate(business.created_at)}
@@ -756,7 +806,7 @@ const SaasAdmin = () => {
                   })}
                   {filteredBusinesses.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                         {hasActiveFilters 
                           ? "No hay consultorios que coincidan con los filtros" 
                           : "No hay consultorios registrados"}
