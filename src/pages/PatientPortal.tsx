@@ -128,13 +128,14 @@ const PatientPortal = () => {
           setBusiness(businessData);
         }
 
-        // Load appointments
+        // Load appointments - always filter by both patient_id AND business_id for multi-tenant security
         const now = new Date().toISOString();
         
         const { data: upcomingData } = await supabase
           .from("appointments")
           .select("id, start_at, end_at, status, modality, location, notes")
           .eq("patient_id", patientData.id)
+          .eq("business_id", patientData.business_id)
           .gte("start_at", now)
           .neq("status", "cancelled")
           .order("start_at", { ascending: true });
@@ -145,17 +146,19 @@ const PatientPortal = () => {
           .from("appointments")
           .select("id, start_at, end_at, status, modality, location, notes")
           .eq("patient_id", patientData.id)
+          .eq("business_id", patientData.business_id)
           .lt("start_at", now)
           .order("start_at", { ascending: false })
           .limit(20);
 
         setPastAppointments(pastData || []);
 
-        // Load payments
+        // Load payments - always filter by both patient_id AND business_id for multi-tenant security
         const { data: paymentsData } = await supabase
           .from("payments")
           .select("id, amount, currency, due_date, status, paid_at, recurrence_type, notes")
           .eq("patient_id", patientData.id)
+          .eq("business_id", patientData.business_id)
           .order("due_date", { ascending: false })
           .limit(20);
 
