@@ -203,10 +203,13 @@ export type Database = {
           billing_period: string
           contact_email: string
           created_at: string
+          custom_domain: string | null
           custom_max_patients: number | null
           custom_max_professionals: number | null
+          custom_subdomain: string | null
           id: string
           is_active: boolean
+          is_private_clinic: boolean
           name: string
           onboarding_completed: boolean
           owner_user_id: string
@@ -222,10 +225,13 @@ export type Database = {
           billing_period?: string
           contact_email: string
           created_at?: string
+          custom_domain?: string | null
           custom_max_patients?: number | null
           custom_max_professionals?: number | null
+          custom_subdomain?: string | null
           id?: string
           is_active?: boolean
+          is_private_clinic?: boolean
           name: string
           onboarding_completed?: boolean
           owner_user_id: string
@@ -241,10 +247,13 @@ export type Database = {
           billing_period?: string
           contact_email?: string
           created_at?: string
+          custom_domain?: string | null
           custom_max_patients?: number | null
           custom_max_professionals?: number | null
+          custom_subdomain?: string | null
           id?: string
           is_active?: boolean
+          is_private_clinic?: boolean
           name?: string
           onboarding_completed?: boolean
           owner_user_id?: string

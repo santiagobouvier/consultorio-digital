@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, Copy, ExternalLink, RotateCcw, UserPlus, Users, Crown, User, Link, Check } from "lucide-react";
+import { ArrowLeft, Save, Copy, ExternalLink, RotateCcw, UserPlus, Users, Crown, User, Link, Check, Globe, Shield } from "lucide-react";
 import { ProfessionalInviteModal } from "@/components/ProfessionalInviteModal";
 import { Badge } from "@/components/ui/badge";
 import { PlanUsageCard } from "@/components/PlanUsageCard";
@@ -51,6 +51,11 @@ const ClinicSettings = () => {
   const [autoAcceptBookings, setAutoAcceptBookings] = useState(false);
   const [publicSlug, setPublicSlug] = useState("");
 
+  // Private clinic info (read-only display)
+  const [isPrivateClinic, setIsPrivateClinic] = useState(false);
+  const [customSubdomain, setCustomSubdomain] = useState<string | null>(null);
+  const [customDomain, setCustomDomain] = useState<string | null>(null);
+
   useEffect(() => {
     checkAuth();
     loadSettings();
@@ -76,9 +81,10 @@ const ClinicSettings = () => {
       if (!user) return;
 
       // Load or create business - check both owner and member
+      // Include private clinic fields for display
       let { data: business } = await supabase
         .from("businesses")
-        .select("id, public_slug, owner_user_id")
+        .select("id, public_slug, owner_user_id, is_private_clinic, custom_subdomain, custom_domain")
         .eq("owner_user_id", user.id)
         .maybeSingle();
 
@@ -94,7 +100,7 @@ const ClinicSettings = () => {
         if (userRole?.business_id) {
           const { data: memberBusiness } = await supabase
             .from("businesses")
-            .select("id, public_slug, owner_user_id")
+            .select("id, public_slug, owner_user_id, is_private_clinic, custom_subdomain, custom_domain")
             .eq("id", userRole.business_id)
             .single();
           
@@ -114,7 +120,7 @@ const ClinicSettings = () => {
             contact_email: user.email || "",
             timezone: "America/Montevideo"
           })
-          .select("id, public_slug, owner_user_id")
+          .select("id, public_slug, owner_user_id, is_private_clinic, custom_subdomain, custom_domain")
           .single();
 
         if (createError) {
@@ -134,6 +140,10 @@ const ClinicSettings = () => {
         setPublicSlug(business.public_slug);
         setBusinessId(business.id);
         setIsOwner(business.owner_user_id === user.id);
+        // Load private clinic info for display
+        setIsPrivateClinic((business as any).is_private_clinic || false);
+        setCustomSubdomain((business as any).custom_subdomain || null);
+        setCustomDomain((business as any).custom_domain || null);
       }
 
       const { data: settings, error } = await supabase
@@ -367,6 +377,80 @@ const ClinicSettings = () => {
                   <ExternalLink className="h-4 w-4" />
                 </Button>
               </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Consultorio Privado Info (read-only) */}
+        {/* This section shows private clinic configuration set by super_admin */}
+        {isPrivateClinic && (
+          <Card className="mobile-card border-primary/30 bg-primary/5">
+            <CardContent className="p-4 sm:p-5 space-y-3">
+              <div className="flex items-center gap-2">
+                <Shield className="h-5 w-5 text-primary" />
+                <p className="text-sm font-semibold text-foreground">Consultorio Privado</p>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Tu consultorio tiene habilitado el portal de pacientes con dominio personalizado.
+              </p>
+              
+              {/* Display custom domain or subdomain */}
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold text-muted-foreground">URL del portal de pacientes</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={
+                      customDomain 
+                        ? `https://${customDomain}`
+                        : customSubdomain
+                          ? `https://${customSubdomain}.tudominio.com`
+                          : `${window.location.origin}/portal-paciente`
+                    }
+                    readOnly
+                    className="font-mono text-xs h-11 rounded-xl flex-1"
+                  />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => {
+                      const url = customDomain 
+                        ? `https://${customDomain}`
+                        : customSubdomain
+                          ? `https://${customSubdomain}.tudominio.com`
+                          : `${window.location.origin}/portal-paciente`;
+                      navigator.clipboard.writeText(url);
+                      toast({
+                        title: "URL copiada",
+                        description: "La URL del portal se copió al portapapeles",
+                      });
+                    }}
+                    className="h-11 w-11 rounded-xl shrink-0"
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  ⚠️ Esta URL es informativa. La configuración real de DNS la gestiona el administrador del sistema.
+                </p>
+              </div>
+
+              {/* Show details */}
+              {(customSubdomain || customDomain) && (
+                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-border/50">
+                  {customSubdomain && (
+                    <div>
+                      <p className="text-xs text-muted-foreground">Subdominio</p>
+                      <p className="text-sm font-medium">{customSubdomain}</p>
+                    </div>
+                  )}
+                  {customDomain && (
+                    <div>
+                      <p className="text-xs text-muted-foreground">Dominio propio</p>
+                      <p className="text-sm font-medium">{customDomain}</p>
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
