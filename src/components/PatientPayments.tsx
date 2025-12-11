@@ -46,6 +46,7 @@ export function PatientPayments({ patientId, businessId }: PatientPaymentsProps)
         .from("payments")
         .select("*")
         .eq("patient_id", patientId)
+        .eq("business_id", businessId)
         .order("due_date", { ascending: false });
 
       if (error) throw error;
