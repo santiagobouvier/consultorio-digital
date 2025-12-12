@@ -28,6 +28,7 @@ import appointmentsMobile from "@/assets/screenshots/appointments-mobile.png";
 import agendaMobile from "@/assets/screenshots/agenda-mobile.png";
 import patientsMobile from "@/assets/screenshots/patients-mobile.png";
 import remindersMobile from "@/assets/screenshots/reminders-mobile.png";
+import { PLAN_DEFINITIONS, PLAN_ORDER, formatPrice } from "@/lib/plan-definitions";
 
 // Screenshot slides for carousel
 const screenshotSlides = [
@@ -81,21 +82,6 @@ const faqItems = [
     answer: "No. Cada paciente accede solo a su propia información: sus citas, su historial y su estado de pagos. La privacidad está garantizada."
   },
 ];
-
-// Enterprise plan
-const enterprisePlan = {
-  id: "enterprise",
-  name: "Plan Enterprise",
-  description: "Para grandes organizaciones con necesidades específicas",
-  professionals: "Profesionales ilimitados",
-  patients: "Pacientes ilimitados",
-  price: "Desde 12.000 UYU",
-  priceNote: "/ mes",
-  buttonText: "Hablar con ventas",
-  buttonLink: "https://wa.me/59891093977?text=Hola,%20quiero%20hablar%20sobre%20el%20Plan%20Enterprise%20para%20mi%20organización.",
-  isExternal: true,
-  isHighlighted: false,
-};
 
 // Current real features
 const currentFeatures = [
@@ -338,56 +324,52 @@ const Landing = () => {
   const [isAnnual, setIsAnnual] = useState(true);
   const whatsappDemo = "https://wa.me/59891093977?text=Hola,%20quiero%20ver%20una%20demo%20del%20sistema%20para%20consultorios.";
   const whatsappContact = "https://wa.me/59891093977?text=Hola,%20tengo%20una%20consulta%20sobre%20el%20sistema.";
+  const whatsappPersonalizado = "https://wa.me/59891093977?text=Hola,%20quiero%20un%20plan%20personalizado%20para%20mi%20consultorio.";
 
   const getPricingPlans = () => {
-    const savingsNote = isAnnual ? "Ahorrás más del 50% pagando anual." : undefined;
     const paymentType = isAnnual ? "pago anual" : "pago mensual";
     
-    return [
-      {
-        id: "individual",
-        name: "Consultorio Individual",
-        description: "Ideal para profesionales independientes",
-        professionals: "1 profesional",
-        patients: "Hasta 80 pacientes activos",
-        price: isAnnual ? "1.900 UYU" : "3.000 UYU",
+    // Get visible plans (exclude personalizado for cards, show separately)
+    const visiblePlans = PLAN_ORDER.filter(code => code !== "personalizado");
+    
+    return visiblePlans.map(planCode => {
+      const plan = PLAN_DEFINITIONS[planCode];
+      const price = isAnnual ? plan.priceAnnual : plan.priceMonthly;
+      const profText = plan.maxProfessionals === 1 
+        ? "1 profesional" 
+        : `Hasta ${plan.maxProfessionals} profesionales`;
+      const patText = `Hasta ${plan.maxPatients} pacientes activos`;
+      
+      return {
+        id: planCode,
+        name: plan.name,
+        description: plan.description,
+        professionals: profText,
+        patients: patText,
+        price: `${formatPrice(price)} UYU`,
         priceNote: isAnnual ? "/ mes (pago anual)" : "/ mes",
-        savingsNote,
+        savingsNote: isAnnual ? "Recomendado: ahorrás pagando anual" : undefined,
         buttonText: "Quiero este plan",
-        buttonLink: `https://wa.me/59891093977?text=Hola,%20quiero%20contratar%20el%20Plan%20Consultorio%20Individual%20(${isAnnual ? "1.900" : "3.000"}%20UYU/mes%20-%20${encodeURIComponent(paymentType)}).`,
+        buttonLink: `https://wa.me/59891093977?text=Hola,%20quiero%20contratar%20el%20${encodeURIComponent(plan.name)}%20(${formatPrice(price)}%20UYU/mes%20-%20${encodeURIComponent(paymentType)}).`,
         isExternal: true,
-        isHighlighted: false,
-      },
-      {
-        id: "profesional",
-        name: "Consultorio Profesional",
-        description: "Para consultorios en crecimiento",
-        professionals: "Hasta 3 profesionales",
-        patients: "Hasta 300 pacientes activos",
-        price: isAnnual ? "3.900 UYU" : "6.200 UYU",
-        priceNote: isAnnual ? "/ mes (pago anual)" : "/ mes",
-        savingsNote,
-        buttonText: "Quiero este plan",
-        buttonLink: `https://wa.me/59891093977?text=Hola,%20quiero%20contratar%20el%20Plan%20Consultorio%20Profesional%20(${isAnnual ? "3.900" : "6.200"}%20UYU/mes%20-%20${encodeURIComponent(paymentType)}).`,
-        isExternal: true,
-        isHighlighted: true,
-        highlightLabel: "Más elegido",
-      },
-      {
-        id: "avanzada",
-        name: "Clínica Avanzada",
-        description: "Para clínicas medianas",
-        professionals: "Hasta 7 profesionales",
-        patients: "Hasta 800 pacientes activos",
-        price: isAnnual ? "6.900 UYU" : "9.500 UYU",
-        priceNote: isAnnual ? "/ mes (pago anual)" : "/ mes",
-        savingsNote,
-        buttonText: "Quiero este plan",
-        buttonLink: `https://wa.me/59891093977?text=Hola,%20quiero%20contratar%20el%20Plan%20Clínica%20Avanzada%20(${isAnnual ? "6.900" : "9.500"}%20UYU/mes%20-%20${encodeURIComponent(paymentType)}).`,
-        isExternal: true,
-        isHighlighted: false,
-      },
-    ];
+        isHighlighted: plan.isHighlighted || false,
+        highlightLabel: plan.highlightLabel,
+      };
+    });
+  };
+
+  const personalizadoPlan = {
+    id: "personalizado",
+    name: "Plan Personalizado",
+    description: "A medida para tus necesidades específicas",
+    professionals: "Profesionales a medida",
+    patients: "Pacientes a medida",
+    price: "Hablemos",
+    priceNote: "",
+    buttonText: "Hablemos",
+    buttonLink: whatsappPersonalizado,
+    isExternal: true,
+    isHighlighted: false,
   };
 
   return (
@@ -748,9 +730,9 @@ const Landing = () => {
             )}
           </div>
 
-          {/* Pricing Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-4 sm:mb-8">
-            {getPricingPlans().map((plan, index) => (
+          {/* Pricing Cards Grid - Show first 3 plans on desktop */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-4 sm:mb-6">
+            {getPricingPlans().slice(0, 3).map((plan, index) => (
               <div
                 key={plan.id}
                 className="animate-fade-in"
@@ -761,9 +743,21 @@ const Landing = () => {
             ))}
           </div>
 
-          {/* Enterprise Card */}
-          <div className="animate-fade-in" style={{ animationDelay: '400ms', animationFillMode: 'both' }}>
-            <PricingCard {...enterprisePlan} />
+          {/* More plans - 2 columns */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-4 sm:mb-6">
+            {getPricingPlans().slice(3).map((plan, index) => (
+              <div
+                key={plan.id}
+                className="animate-fade-in"
+                style={{ animationDelay: `${(index + 4) * 100}ms`, animationFillMode: 'both' }}
+              >
+                <PricingCard {...plan} />
+              </div>
+            ))}
+            {/* Personalizado Card */}
+            <div className="animate-fade-in" style={{ animationDelay: '600ms', animationFillMode: 'both' }}>
+              <PricingCard {...personalizadoPlan} />
+            </div>
           </div>
         </div>
       </section>
