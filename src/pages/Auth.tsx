@@ -55,7 +55,7 @@ const Auth = () => {
             return;
           }
 
-          // Check if user is a professional (not owner)
+          // Check if user is a professional (not owner) - goes straight to dashboard
           const { data: professionalRole } = await supabase
             .from("user_roles")
             .select("role, business_id")
@@ -71,18 +71,19 @@ const Auth = () => {
           // Check if user has a business configured (owner flow)
           const { data: business } = await supabase
             .from("businesses")
-            .select("id, onboarding_completed")
+            .select("id, onboarding_completed, name")
             .eq("owner_user_id", user.id)
             .maybeSingle();
           
           if (business) {
-            // Check if onboarding is needed
+            // Owner: check if onboarding is complete
             if (!business.onboarding_completed) {
               navigate("/onboarding-consultorio");
             } else {
               navigate("/dashboard");
             }
           } else {
+            // New user without business - create one first
             navigate("/configurar-negocio");
           }
         }
