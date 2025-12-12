@@ -69,6 +69,7 @@ export type Database = {
           notes: string | null
           patient_id: string | null
           payment_status: string | null
+          professional_id: string | null
           service_id: string | null
           source: string
           start_at: string
@@ -90,6 +91,7 @@ export type Database = {
           notes?: string | null
           patient_id?: string | null
           payment_status?: string | null
+          professional_id?: string | null
           service_id?: string | null
           source?: string
           start_at: string
@@ -111,6 +113,7 @@ export type Database = {
           notes?: string | null
           patient_id?: string | null
           payment_status?: string | null
+          professional_id?: string | null
           service_id?: string | null
           source?: string
           start_at?: string
@@ -218,6 +221,7 @@ export type Database = {
           plan_expires_at: string | null
           plan_started_at: string | null
           public_slug: string
+          shared_calendar: boolean
           specialty: string | null
           timezone: string
           updated_at: string
@@ -241,6 +245,7 @@ export type Database = {
           plan_expires_at?: string | null
           plan_started_at?: string | null
           public_slug: string
+          shared_calendar?: boolean
           specialty?: string | null
           timezone?: string
           updated_at?: string
@@ -264,6 +269,7 @@ export type Database = {
           plan_expires_at?: string | null
           plan_started_at?: string | null
           public_slug?: string
+          shared_calendar?: boolean
           specialty?: string | null
           timezone?: string
           updated_at?: string
@@ -623,6 +629,7 @@ export type Database = {
       user_roles: {
         Row: {
           business_id: string | null
+          calendar_color: string | null
           created_at: string
           id: string
           role: string
@@ -630,6 +637,7 @@ export type Database = {
         }
         Insert: {
           business_id?: string | null
+          calendar_color?: string | null
           created_at?: string
           id?: string
           role: string
@@ -637,6 +645,7 @@ export type Database = {
         }
         Update: {
           business_id?: string | null
+          calendar_color?: string | null
           created_at?: string
           id?: string
           role?: string
