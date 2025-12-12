@@ -139,9 +139,15 @@ const Dashboard = () => {
         // Regular user: check for owned or member business
         let { data: business } = await supabase
           .from("businesses")
-          .select("id, name, owner_user_id")
+          .select("id, name, owner_user_id, onboarding_completed")
           .eq("owner_user_id", user.id)
           .maybeSingle();
+
+        // Check if this is the owner and onboarding is pending
+        if (business && !business.onboarding_completed && business.owner_user_id === user.id) {
+          navigate("/onboarding-consultorio");
+          return;
+        }
 
         if (!business) {
           // Check if member via user_roles
@@ -155,7 +161,7 @@ const Dashboard = () => {
           if (userRole?.business_id) {
             const { data: memberBusiness } = await supabase
               .from("businesses")
-              .select("id, name, owner_user_id")
+              .select("id, name, owner_user_id, onboarding_completed")
               .eq("id", userRole.business_id)
               .single();
             
