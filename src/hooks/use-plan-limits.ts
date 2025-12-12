@@ -1,5 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { 
+  getPlanDefinition, 
+  getPlanLimits as getDefinitionLimits,
+  getPlanName as getDefinitionName,
+  normalizePlanCode 
+} from "@/lib/plan-definitions";
 
 export interface PlanLimits {
   maxProfessionals: number | null;
@@ -17,34 +23,33 @@ export interface BusinessPlanInfo {
   loading: boolean;
 }
 
-const PLAN_CONFIG: Record<string, { name: string; maxProfessionals: number | null; maxPatients: number | null }> = {
-  individual: { name: "Consultorio Individual", maxProfessionals: 1, maxPatients: 80 },
-  professional: { name: "Consultorio Profesional", maxProfessionals: 3, maxPatients: 300 },
-  advanced: { name: "Clínica Avanzada", maxProfessionals: 7, maxPatients: 800 },
-  enterprise: { name: "Enterprise", maxProfessionals: null, maxPatients: null },
-  custom: { name: "Personalizado", maxProfessionals: null, maxPatients: null },
-};
-
+// Re-export for backwards compatibility
 export function getPlanConfig(planCode: string, customLimits?: { maxProfessionals?: number | null; maxPatients?: number | null }) {
-  if (planCode === "custom" && customLimits) {
+  const normalizedCode = normalizePlanCode(planCode);
+  if (normalizedCode === "personalizado" && customLimits) {
     return {
       name: "Personalizado",
       maxProfessionals: customLimits.maxProfessionals ?? null,
       maxPatients: customLimits.maxPatients ?? null,
     };
   }
-  return PLAN_CONFIG[planCode] || PLAN_CONFIG.individual;
+  const plan = getPlanDefinition(normalizedCode);
+  return {
+    name: plan.name,
+    maxProfessionals: plan.maxProfessionals,
+    maxPatients: plan.maxPatients,
+  };
 }
 
 export function getPlanName(planCode: string): string {
-  return PLAN_CONFIG[planCode]?.name || PLAN_CONFIG.individual.name;
+  return getDefinitionName(normalizePlanCode(planCode));
 }
 
 export function usePlanLimits(businessId: string | null) {
   const [planInfo, setPlanInfo] = useState<BusinessPlanInfo>({
-    planCode: "individual",
-    planName: "Consultorio Individual",
-    limits: { maxProfessionals: 1, maxPatients: 80 },
+    planCode: "inicial",
+    planName: "Plan Inicial",
+    limits: { maxProfessionals: 1, maxPatients: 25 },
     currentProfessionals: 0,
     currentPatients: 0,
     canAddProfessional: true,
@@ -68,12 +73,13 @@ export function usePlanLimits(businessId: string | null) {
 
       if (bizError) throw bizError;
 
-      const planCode = business?.plan_code || "individual";
-      const customLimits = planCode === "custom" ? {
+      const rawPlanCode = business?.plan_code || "inicial";
+      const planCode = normalizePlanCode(rawPlanCode);
+      const customLimits = planCode === "personalizado" ? {
         maxProfessionals: (business as any)?.custom_max_professionals ?? null,
         maxPatients: (business as any)?.custom_max_patients ?? null,
       } : undefined;
-      const config = getPlanConfig(planCode, customLimits);
+      const config = getPlanConfig(rawPlanCode, customLimits);
 
       // Count professionals
       const { count: profCount, error: profError } = await supabase
@@ -134,12 +140,13 @@ export async function checkProfessionalLimit(businessId: string): Promise<{ canA
     .eq("id", businessId)
     .single();
 
-  const planCode = business?.plan_code || "individual";
-  const customLimits = planCode === "custom" ? {
+  const rawPlanCode = business?.plan_code || "inicial";
+  const planCode = normalizePlanCode(rawPlanCode);
+  const customLimits = planCode === "personalizado" ? {
     maxProfessionals: (business as any)?.custom_max_professionals ?? null,
     maxPatients: (business as any)?.custom_max_patients ?? null,
   } : undefined;
-  const config = getPlanConfig(planCode, customLimits);
+  const config = getPlanConfig(rawPlanCode, customLimits);
 
   if (config.maxProfessionals === null) {
     return { canAdd: true };
@@ -170,12 +177,13 @@ export async function checkPatientLimit(businessId: string): Promise<{ canAdd: b
     .eq("id", businessId)
     .single();
 
-  const planCode = business?.plan_code || "individual";
-  const customLimits = planCode === "custom" ? {
+  const rawPlanCode = business?.plan_code || "inicial";
+  const planCode = normalizePlanCode(rawPlanCode);
+  const customLimits = planCode === "personalizado" ? {
     maxProfessionals: (business as any)?.custom_max_professionals ?? null,
     maxPatients: (business as any)?.custom_max_patients ?? null,
   } : undefined;
-  const config = getPlanConfig(planCode, customLimits);
+  const config = getPlanConfig(rawPlanCode, customLimits);
 
   if (config.maxPatients === null) {
     return { canAdd: true };

@@ -61,6 +61,13 @@ import {
   Play,
 } from "lucide-react";
 import { getPlanName, getPlanConfig, checkProfessionalLimit } from "@/hooks/use-plan-limits";
+import { 
+  PLAN_DEFINITIONS, 
+  PLAN_ORDER, 
+  getPlanPrice, 
+  formatPrice, 
+  normalizePlanCode 
+} from "@/lib/plan-definitions";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { PlanSelector } from "@/components/PlanSelector";
 
@@ -93,18 +100,15 @@ interface SaasMetrics {
   estimatedRevenue: number;
 }
 
-// Plan pricing for revenue calculation
-const PLAN_PRICES: Record<string, number> = {
-  individual: 29,
-  professional: 59,
-  advanced: 99,
-  enterprise: 199,
-  custom: 0, // Custom plans have variable pricing
+// Plan pricing for revenue calculation - now uses PLAN_DEFINITIONS
+const getPlanMonthlyRevenue = (planCode: string, billingCycle: string): number => {
+  const normalizedCode = normalizePlanCode(planCode);
+  return getPlanPrice(normalizedCode, billingCycle === "monthly" ? "monthly" : "annual");
 };
 
 const SUPER_ADMIN_EMAIL = "santib1997@gmail.com";
 
-type PlanFilter = "all" | "individual" | "professional" | "advanced" | "enterprise" | "custom";
+type PlanFilter = "all" | "esencial" | "inicial" | "profesional" | "equipo" | "clinica" | "personalizado";
 type UsageFilter = "all" | "near_limit" | "at_limit";
 
 // Helper to calculate usage percentage and status
@@ -139,7 +143,7 @@ const SaasAdmin = () => {
   // Create business form state
   const [newBusinessName, setNewBusinessName] = useState("");
   const [newBusinessEmail, setNewBusinessEmail] = useState("");
-  const [newBusinessPlan, setNewBusinessPlan] = useState("individual");
+  const [newBusinessPlan, setNewBusinessPlan] = useState("inicial");
 
   // Create professional form state
   const [showAddProfessionalModal, setShowAddProfessionalModal] = useState(false);
@@ -270,7 +274,7 @@ const SaasAdmin = () => {
       
       // Calculate estimated revenue based on plans
       const estimatedRevenue = businessesWithDetails.reduce((sum, b) => {
-        return sum + (PLAN_PRICES[b.planCode] || 0);
+        return sum + getPlanMonthlyRevenue(b.planCode, b.billingPeriod);
       }, 0);
 
       setMetrics({
@@ -370,7 +374,7 @@ const SaasAdmin = () => {
       setShowCreateModal(false);
       setNewBusinessName("");
       setNewBusinessEmail("");
-      setNewBusinessPlan("individual");
+      setNewBusinessPlan("inicial");
       await loadData();
     } catch (error: any) {
       console.error("Error creating business:", error);
@@ -906,11 +910,11 @@ const SaasAdmin = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos los planes</SelectItem>
-                  <SelectItem value="individual">Individual</SelectItem>
-                  <SelectItem value="professional">Profesional</SelectItem>
-                  <SelectItem value="advanced">Avanzada</SelectItem>
-                  <SelectItem value="enterprise">Enterprise</SelectItem>
-                  <SelectItem value="custom">Personalizado</SelectItem>
+                  {PLAN_ORDER.map(code => (
+                    <SelectItem key={code} value={code}>
+                      {PLAN_DEFINITIONS[code].name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <Select value={usageFilter} onValueChange={(v) => setUsageFilter(v as UsageFilter)}>
@@ -1239,11 +1243,17 @@ const SaasAdmin = () => {
                   <SelectValue placeholder="Seleccionar plan" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="individual">Consultorio Individual (1 prof, 80 pac)</SelectItem>
-                  <SelectItem value="professional">Consultorio Profesional (3 prof, 300 pac)</SelectItem>
-                  <SelectItem value="advanced">Clínica Avanzada (7 prof, 800 pac)</SelectItem>
-                  <SelectItem value="enterprise">Enterprise (ilimitado)</SelectItem>
-                  <SelectItem value="custom">Personalizado (límites manuales)</SelectItem>
+                  {PLAN_ORDER.map(code => {
+                    const plan = PLAN_DEFINITIONS[code];
+                    const limitsText = plan.maxProfessionals === null 
+                      ? "(a medida)" 
+                      : `(${plan.maxProfessionals} prof, ${plan.maxPatients} pac)`;
+                    return (
+                      <SelectItem key={code} value={code}>
+                        {plan.name} {limitsText}
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>

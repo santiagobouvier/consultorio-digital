@@ -16,8 +16,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { getPlanName } from "@/hooks/use-plan-limits";
 import { Loader2 } from "lucide-react";
+import { PLAN_DEFINITIONS, PLAN_ORDER, getPlanName, normalizePlanCode } from "@/lib/plan-definitions";
 
 interface PlanSelectorProps {
   businessId: string;
@@ -39,8 +39,11 @@ export function PlanSelector({
   const [customPat, setCustomPat] = useState<string>(customMaxPatients?.toString() || "");
   const [saving, setSaving] = useState(false);
 
+  // Normalize legacy plan codes
+  const normalizedPlan = normalizePlanCode(currentPlan);
+
   const handlePlanChange = async (newPlan: string) => {
-    if (newPlan === "custom") {
+    if (newPlan === "personalizado") {
       // Open custom modal
       setCustomProf(customMaxProfessionals?.toString() || "");
       setCustomPat(customMaxPatients?.toString() || "");
@@ -56,7 +59,7 @@ export function PlanSelector({
       const profLimit = customProf.trim() === "" ? null : parseInt(customProf, 10);
       const patLimit = customPat.trim() === "" ? null : parseInt(customPat, 10);
       
-      await onChangePlan(businessId, "custom", {
+      await onChangePlan(businessId, "personalizado", {
         maxProfessionals: profLimit,
         maxPatients: patLimit,
       });
@@ -67,7 +70,7 @@ export function PlanSelector({
   };
 
   const getDisplayValue = () => {
-    if (currentPlan === "custom") {
+    if (normalizedPlan === "personalizado") {
       const profStr = customMaxProfessionals === null || customMaxProfessionals === undefined 
         ? "∞" 
         : customMaxProfessionals.toString();
@@ -76,21 +79,21 @@ export function PlanSelector({
         : customMaxPatients.toString();
       return `Personalizado (${profStr}p/${patStr}pac)`;
     }
-    return getPlanName(currentPlan);
+    return getPlanName(normalizedPlan);
   };
 
   return (
     <>
-      <Select value={currentPlan} onValueChange={handlePlanChange}>
+      <Select value={normalizedPlan} onValueChange={handlePlanChange}>
         <SelectTrigger className="h-8 text-xs w-44">
           <SelectValue>{getDisplayValue()}</SelectValue>
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="individual">Individual</SelectItem>
-          <SelectItem value="professional">Profesional</SelectItem>
-          <SelectItem value="advanced">Avanzada</SelectItem>
-          <SelectItem value="enterprise">Enterprise</SelectItem>
-          <SelectItem value="custom">Personalizado</SelectItem>
+          {PLAN_ORDER.map(planCode => (
+            <SelectItem key={planCode} value={planCode}>
+              {PLAN_DEFINITIONS[planCode].name}
+            </SelectItem>
+          ))}
         </SelectContent>
       </Select>
 
