@@ -57,6 +57,8 @@ import {
   X,
   Globe,
   Shield,
+  Sparkles,
+  Play,
 } from "lucide-react";
 import { getPlanName, getPlanConfig, checkProfessionalLimit } from "@/hooks/use-plan-limits";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -80,6 +82,8 @@ interface BusinessWithDetails {
   isPrivateClinic: boolean;
   customSubdomain?: string | null;
   customDomain?: string | null;
+  // Demo flag
+  isDemo: boolean;
 }
 
 interface SaasMetrics {
@@ -153,6 +157,9 @@ const SaasAdmin = () => {
     customDomain: string;
   }>({ isPrivateClinic: false, customSubdomain: "", customDomain: "" });
   const [savingPrivateClinic, setSavingPrivateClinic] = useState(false);
+
+  // Demo creation state
+  const [creatingDemo, setCreatingDemo] = useState(false);
 
   useEffect(() => {
     checkAccessAndLoad();
@@ -251,6 +258,8 @@ const SaasAdmin = () => {
         isPrivateClinic: (b as any).is_private_clinic || false,
         customSubdomain: (b as any).custom_subdomain || null,
         customDomain: (b as any).custom_domain || null,
+        // Demo flag
+        isDemo: (b as any).is_demo || false,
       }));
 
       setBusinesses(businessesWithDetails);
@@ -581,6 +590,169 @@ const SaasAdmin = () => {
     navigate("/dashboard");
   };
 
+  // Check if demo business exists
+  const demoBusinessExists = businesses.some(b => b.isDemo);
+  const demoBusiness = businesses.find(b => b.isDemo);
+
+  // Create demo business with all sample data
+  const handleCreateDemo = async () => {
+    try {
+      setCreatingDemo(true);
+
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("No user");
+
+      // 1. Create demo business
+      const { data: business, error: bizError } = await supabase
+        .from("businesses")
+        .insert({
+          name: "Demo Psicología",
+          owner_user_id: user.id,
+          public_slug: "demo-psicologia-" + Date.now().toString(36),
+          contact_email: "demo@demo.local",
+          plan_code: "professional",
+          specialty: "Psicología",
+          timezone: "America/Montevideo",
+          is_active: true,
+          onboarding_completed: true,
+          is_demo: true,
+        })
+        .select()
+        .single();
+
+      if (bizError) throw bizError;
+      const businessId = business.id;
+
+      // 2. Create clinic settings
+      await supabase.from("clinic_settings").insert({
+        user_id: user.id,
+        clinic_name: "Demo Psicología",
+        specialty: "Psicología clínica y terapia",
+        welcome_message: "Bienvenido/a al consultorio demo. Este es un espacio de demostración para explorar todas las funcionalidades del sistema.",
+      });
+
+      // 3. Create demo patients
+      const patients = [
+        { full_name: "Sofía Martínez", email: "sofia.demo@demo.local", whatsapp_phone: "+598991111111" },
+        { full_name: "Juan Rodríguez", email: "juan.demo@demo.local", whatsapp_phone: "+598992222222" },
+        { full_name: "Camila Fernández", email: "camila.demo@demo.local", whatsapp_phone: "+598993333333" },
+      ];
+
+      const { data: createdPatients, error: patErr } = await supabase
+        .from("patients")
+        .insert(patients.map(p => ({ ...p, business_id: businessId, is_active: true })))
+        .select();
+
+      if (patErr) throw patErr;
+
+      // 4. Create appointments (mix of statuses)
+      const now = new Date();
+      const tomorrow = new Date(now);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const dayAfter = new Date(now);
+      dayAfter.setDate(dayAfter.getDate() + 3);
+      const lastWeek1 = new Date(now);
+      lastWeek1.setDate(lastWeek1.getDate() - 5);
+      const lastWeek2 = new Date(now);
+      lastWeek2.setDate(lastWeek2.getDate() - 7);
+      const lastWeek3 = new Date(now);
+      lastWeek3.setDate(lastWeek3.getDate() - 3);
+
+      const setTime = (d: Date, h: number, m: number) => {
+        const nd = new Date(d);
+        nd.setHours(h, m, 0, 0);
+        return nd;
+      };
+
+      const appointments = [
+        // Future appointments
+        { patient_id: createdPatients[0].id, start_at: setTime(tomorrow, 10, 0).toISOString(), end_at: setTime(tomorrow, 11, 0).toISOString(), status: "confirmed", modality: "presencial" },
+        { patient_id: createdPatients[1].id, start_at: setTime(dayAfter, 15, 0).toISOString(), end_at: setTime(dayAfter, 16, 0).toISOString(), status: "pending", modality: "online" },
+        // Past appointments
+        { patient_id: createdPatients[0].id, start_at: setTime(lastWeek1, 11, 0).toISOString(), end_at: setTime(lastWeek1, 12, 0).toISOString(), status: "attended", modality: "presencial" },
+        { patient_id: createdPatients[2].id, start_at: setTime(lastWeek2, 9, 0).toISOString(), end_at: setTime(lastWeek2, 10, 0).toISOString(), status: "attended", modality: "online" },
+        // Cancelled
+        { patient_id: createdPatients[1].id, start_at: setTime(lastWeek3, 14, 0).toISOString(), end_at: setTime(lastWeek3, 15, 0).toISOString(), status: "cancelled", modality: "presencial" },
+      ];
+
+      await supabase.from("appointments").insert(
+        appointments.map(a => ({ ...a, business_id: businessId }))
+      );
+
+      // 5. Create payments with varied statuses
+      const dueGreen = new Date(now);
+      dueGreen.setDate(dueGreen.getDate() + 15);
+      const dueOrange = new Date(now);
+      dueOrange.setDate(dueOrange.getDate() + 3);
+      const dueRed = new Date(now);
+      dueRed.setDate(dueRed.getDate() - 5);
+
+      const payments = [
+        // Green - Al día (paid)
+        { patient_id: createdPatients[0].id, amount: 1500, due_date: dueGreen.toISOString(), status: "paid", paid_at: new Date().toISOString(), currency: "UYU" },
+        // Orange - Por vencer
+        { patient_id: createdPatients[1].id, amount: 1500, due_date: dueOrange.toISOString(), status: "pending", paid_at: null, currency: "UYU" },
+        // Red - Vencido
+        { patient_id: createdPatients[2].id, amount: 1500, due_date: dueRed.toISOString(), status: "pending", paid_at: null, currency: "UYU" },
+      ];
+
+      await supabase.from("payments").insert(
+        payments.map(p => ({ ...p, business_id: businessId, recurrence_type: "one_time" }))
+      );
+
+      // 6. Create availability slots for next 7 days (weekdays only)
+      const slots: any[] = [];
+      for (let i = 1; i <= 7; i++) {
+        const slotDate = new Date(now);
+        slotDate.setDate(slotDate.getDate() + i);
+        const dayOfWeek = slotDate.getDay();
+        // Skip weekends (0 = Sunday, 6 = Saturday)
+        if (dayOfWeek === 0 || dayOfWeek === 6) continue;
+
+        const dateStr = slotDate.toISOString().split("T")[0];
+        // Morning slot
+        slots.push({
+          business_id: businessId,
+          date: dateStr,
+          start_time: "09:00",
+          end_time: "12:00",
+          modality: "presencial",
+          status: "available",
+        });
+        // Afternoon slot
+        slots.push({
+          business_id: businessId,
+          date: dateStr,
+          start_time: "14:00",
+          end_time: "18:00",
+          modality: "online",
+          status: "available",
+        });
+      }
+
+      if (slots.length > 0) {
+        await supabase.from("availability_slots").insert(slots);
+      }
+
+      toast({
+        title: "Demo creado",
+        description: "El consultorio demo ha sido creado con todos los datos de ejemplo.",
+      });
+
+      await loadData();
+    } catch (error: any) {
+      console.error("Error creating demo:", error);
+      toast({
+        title: "Error",
+        description: error.message || "No se pudo crear el demo",
+        variant: "destructive",
+      });
+    } finally {
+      setCreatingDemo(false);
+    }
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("es-UY", {
       year: "numeric",
@@ -664,14 +836,42 @@ const SaasAdmin = () => {
           </Badge>
         </div>
 
-        {/* Create Business Button */}
-        <Button
-          className="w-full h-12 rounded-xl font-semibold gap-2"
-          onClick={() => setShowCreateModal(true)}
-        >
-          <Plus className="h-5 w-5" />
-          Crear nuevo consultorio
-        </Button>
+        {/* Action Buttons */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <Button
+            className="flex-1 h-12 rounded-xl font-semibold gap-2"
+            onClick={() => setShowCreateModal(true)}
+          >
+            <Plus className="h-5 w-5" />
+            Crear nuevo consultorio
+          </Button>
+          
+          {/* Demo Button */}
+          {demoBusinessExists ? (
+            <Button
+              variant="outline"
+              className="flex-1 h-12 rounded-xl font-semibold gap-2 border-amber-500/50 text-amber-600 hover:bg-amber-500/10"
+              onClick={() => demoBusiness && enterBusiness(demoBusiness.id)}
+            >
+              <Play className="h-5 w-5" />
+              Entrar a DEMO
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              className="flex-1 h-12 rounded-xl font-semibold gap-2 border-amber-500/50 text-amber-600 hover:bg-amber-500/10"
+              onClick={handleCreateDemo}
+              disabled={creatingDemo}
+            >
+              {creatingDemo ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <Sparkles className="h-5 w-5" />
+              )}
+              {creatingDemo ? "Creando demo..." : "Crear consultorio DEMO"}
+            </Button>
+          )}
+        </div>
 
         {/* Businesses Table with Filters */}
         <Card className="mobile-card">
@@ -762,8 +962,14 @@ const SaasAdmin = () => {
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-2">
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 flex-wrap">
                                 <p className="font-semibold truncate">{business.name}</p>
+                                {business.isDemo && (
+                                  <Badge className="text-xs shrink-0 bg-amber-500/20 text-amber-600 hover:bg-amber-500/30 border-amber-500/30">
+                                    <Sparkles className="h-3 w-3 mr-1" />
+                                    DEMO
+                                  </Badge>
+                                )}
                                 {!business.isActive && (
                                   <Badge variant="secondary" className="text-xs shrink-0">
                                     Inactivo

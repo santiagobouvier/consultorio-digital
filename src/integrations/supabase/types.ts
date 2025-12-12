@@ -209,6 +209,7 @@ export type Database = {
           custom_subdomain: string | null
           id: string
           is_active: boolean
+          is_demo: boolean
           is_private_clinic: boolean
           name: string
           onboarding_completed: boolean
@@ -231,6 +232,7 @@ export type Database = {
           custom_subdomain?: string | null
           id?: string
           is_active?: boolean
+          is_demo?: boolean
           is_private_clinic?: boolean
           name: string
           onboarding_completed?: boolean
@@ -253,6 +255,7 @@ export type Database = {
           custom_subdomain?: string | null
           id?: string
           is_active?: boolean
+          is_demo?: boolean
           is_private_clinic?: boolean
           name?: string
           onboarding_completed?: boolean
