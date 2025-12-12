@@ -1,7 +1,25 @@
-import { Link } from "react-router-dom";
 import { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Users, MessageCircle, UserPlus, ClipboardList, CalendarCheck, Clock, Eye, Sparkles, Calendar, HelpCircle, ChevronLeft, ChevronRight, Check, CalendarDays, BarChart3, UserCheck } from "lucide-react";
+import { 
+  Users, 
+  MessageCircle, 
+  Calendar, 
+  HelpCircle, 
+  ChevronLeft, 
+  ChevronRight, 
+  Check, 
+  Shield, 
+  CreditCard, 
+  Bell, 
+  UserCheck, 
+  Lock, 
+  Globe,
+  ClipboardList,
+  Eye,
+  Clock,
+  Sparkles,
+  AlertTriangle
+} from "lucide-react";
 import PricingCard from "@/components/PricingCard";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import useEmblaCarousel from "embla-carousel-react";
@@ -11,42 +29,40 @@ import agendaMobile from "@/assets/screenshots/agenda-mobile.png";
 import patientsMobile from "@/assets/screenshots/patients-mobile.png";
 import remindersMobile from "@/assets/screenshots/reminders-mobile.png";
 
+// Screenshot slides for carousel
 const screenshotSlides = [
   {
     title: "Dashboard Principal",
-    description: "Visualizá todas tus citas del día y estadísticas importantes de un vistazo. Accedé rápidamente a pacientes activos, citas pendientes y acciones frecuentes.",
+    description: "Visualizá citas del día, pagos pendientes y acciones rápidas. Todo lo importante en un solo lugar.",
     image: dashboardMobile
   },
   {
-    title: "Agenda Inteligente",
-    description: "Calendario visual para organizar tus citas por día, semana o mes. Filtrá por modalidad y estado para tener todo bajo control.",
+    title: "Agenda Privada",
+    description: "Calendario visual solo accesible para vos y tus pacientes. Control total de horarios y disponibilidad.",
     image: agendaMobile
   },
   {
-    title: "Gestión de Pacientes",
-    description: "Fichas completas con historial, notas privadas y datos de contacto. Todo organizado para que encuentres la información que necesitás.",
+    title: "Fichas de Pacientes",
+    description: "Historial completo, notas privadas, estado de pagos y próximas citas de cada paciente.",
     image: patientsMobile
   },
   {
     title: "Recordatorios WhatsApp",
-    description: "Enviá recordatorios con un solo click, sin salir del sistema. Mantené a tus pacientes informados de sus próximas citas.",
+    description: "Enviá recordatorios de citas y pagos con un solo click. Menos ausencias, más control.",
     image: remindersMobile
   },
   {
-    title: "Portal de Reservas",
-    description: "Tus pacientes pueden agendar citas desde tu página pública. Ahorrá tiempo y dejá que ellos elijan el horario que les convenga.",
+    title: "Portal del Paciente",
+    description: "Cada paciente accede con su usuario, ve sus citas y puede reservar turnos disponibles.",
     image: appointmentsMobile
   }
 ];
 
+// FAQ items
 const faqItems = [
   {
     question: "¿Qué incluye cada plan?",
-    answer: "Todos los planes incluyen las mismas funcionalidades: portal del paciente, agenda inteligente, recordatorios por WhatsApp, dashboard financiero y alertas de vencimiento. La diferencia está en la cantidad de profesionales y pacientes activos."
-  },
-  {
-    question: "¿Cómo funciona el pago anual en cuotas?",
-    answer: "Podés pagar el plan anual en hasta 12 cuotas sin interés con tarjeta de crédito. El acceso se activa inmediatamente después de confirmar el pago."
+    answer: "Todos los planes incluyen las mismas funcionalidades: gestión de pacientes, agenda privada, portal del paciente, recordatorios por WhatsApp, gestión de pagos y alertas. La diferencia está en la cantidad de profesionales y pacientes activos."
   },
   {
     question: "¿Puedo cambiar de plan en cualquier momento?",
@@ -54,15 +70,19 @@ const faqItems = [
   },
   {
     question: "¿Qué pasa si supero el límite de pacientes?",
-    answer: "Te avisaremos cuando estés cerca del límite. Para superarlo, debés solicitar un upgrade de plan manualmente, nunca se te cobrará nada sin tu autorización."
+    answer: "Te avisaremos cuando estés cerca del límite. Para superarlo, debés solicitar un upgrade de plan manualmente."
   },
   {
     question: "¿Los recordatorios por WhatsApp tienen costo adicional?",
-    answer: "No, los recordatorios semi-automáticos están incluidos en todos los planes sin límite de envíos."
+    answer: "No, los recordatorios están incluidos en todos los planes sin límite de envíos."
+  },
+  {
+    question: "¿Mis pacientes pueden ver información de otros pacientes?",
+    answer: "No. Cada paciente accede solo a su propia información: sus citas, su historial y su estado de pagos. La privacidad está garantizada."
   },
 ];
 
-
+// Enterprise plan
 const enterprisePlan = {
   id: "enterprise",
   name: "Plan Enterprise",
@@ -77,65 +97,73 @@ const enterprisePlan = {
   isHighlighted: false,
 };
 
-const features = [
+// Current real features
+const currentFeatures = [
   {
     icon: Users,
     title: "Gestión de Pacientes",
-    description: "Administrá tu cartera de pacientes con fichas completas y notas privadas.",
+    description: "Ficha completa por paciente con historial de citas, notas privadas y estado de pagos.",
   },
   {
     icon: Calendar,
-    title: "Agenda Profesional",
-    description: "Organizá tus citas con un calendario intuitivo y fácil de usar.",
+    title: "Agenda Privada",
+    description: "Solo accesible para vos y tus pacientes. Control total de horarios y disponibilidad.",
   },
   {
-    icon: MessageCircle,
-    title: "Recordatorios por WhatsApp",
-    description: "Enviá recordatorios semi-automáticos a tus pacientes con un solo click.",
+    icon: UserCheck,
+    title: "Portal del Paciente",
+    description: "Cada paciente accede con su usuario, ve sus citas, historial y puede reservar turnos.",
+  },
+  {
+    icon: CreditCard,
+    title: "Gestión de Pagos",
+    description: "Registro de pagos mensuales o por cita. Alertas de vencidos y por vencer.",
+  },
+  {
+    icon: Bell,
+    title: "Recordatorios",
+    description: "Recordatorios de citas y pagos. Envío manual por WhatsApp desde el sistema.",
+  },
+  {
+    icon: Shield,
+    title: "Multi-profesional",
+    description: "Agregá profesionales a tu consultorio. Cada uno con su acceso a la agenda compartida.",
   },
 ];
 
-const steps = [
-  {
-    icon: UserPlus,
-    title: "Creá tu cuenta",
-    description: "Configurá tu consultorio en minutos.",
-  },
-  {
-    icon: ClipboardList,
-    title: "Cargá pacientes y horarios",
-    description: "Organizá todo desde un panel simple.",
-  },
-  {
-    icon: CalendarCheck,
-    title: "Gestioná tu agenda",
-    description: "Enviá recordatorios y controlá tus citas.",
-  },
+// Problems section
+const problems = [
+  { icon: AlertTriangle, text: "Agenda desordenada entre cuadernos y apps" },
+  { icon: AlertTriangle, text: "Pagos que se olvidan o no se registran" },
+  { icon: AlertTriangle, text: "Pacientes que no recuerdan sus turnos" },
+  { icon: AlertTriangle, text: "Información repartida en WhatsApp y Excel" },
 ];
 
+// Benefits section
 const benefits = [
   {
-    icon: Clock,
-    title: "Ahorro de tiempo",
-    description: "Evitá mensajes repetitivos.",
+    icon: Lock,
+    title: "Privacidad total",
+    description: "Tu agenda no es pública. Solo tus pacientes acceden.",
   },
   {
     icon: Eye,
-    title: "Agenda clara",
-    description: "Visualizá tus citas por día o semana.",
+    title: "Todo centralizado",
+    description: "Pacientes, citas, pagos y recordatorios en un solo lugar.",
   },
   {
-    icon: MessageCircle,
-    title: "Recordatorios por WhatsApp",
-    description: "Semi-automáticos y fáciles de usar.",
+    icon: Clock,
+    title: "Ahorro de tiempo",
+    description: "Menos mensajes sueltos, menos olvidos, menos errores.",
   },
   {
     icon: Sparkles,
-    title: "Diseño profesional",
-    description: "Interfaz moderna y clara.",
+    title: "Imagen profesional",
+    description: "Un sistema propio que transmite orden y seriedad.",
   },
 ];
 
+// Screenshots Carousel Component
 const ScreenshotsCarousel = () => {
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, align: "center" });
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -160,10 +188,10 @@ const ScreenshotsCarousel = () => {
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-10 sm:mb-16">
           <h2 className="text-xl sm:text-3xl md:text-4xl font-bold mb-3 sm:mb-4 tracking-tight">
-            Conocé el sistema
+            Conocé el sistema por dentro
           </h2>
           <p className="text-gray-500 text-sm sm:text-lg font-light">
-            Todo lo que necesitás para gestionar tu consultorio.
+            Así se ve tu consultorio organizado.
           </p>
         </div>
 
@@ -308,7 +336,8 @@ const ScreenshotsCarousel = () => {
 
 const Landing = () => {
   const [isAnnual, setIsAnnual] = useState(true);
-  const whatsappLink = "https://api.whatsapp.com/send?phone=59891093977&text=Hola%2C+me+gustar%C3%ADa+agendar+una+reuni%C3%B3n+para+ver+la+demo+del+sistema.";
+  const whatsappDemo = "https://wa.me/59891093977?text=Hola,%20quiero%20ver%20una%20demo%20del%20sistema%20para%20consultorios.";
+  const whatsappContact = "https://wa.me/59891093977?text=Hola,%20tengo%20una%20consulta%20sobre%20el%20sistema.";
 
   const getPricingPlans = () => {
     const savingsNote = isAnnual ? "Ahorrás más del 50% pagando anual." : undefined;
@@ -324,7 +353,7 @@ const Landing = () => {
         price: isAnnual ? "1.900 UYU" : "3.000 UYU",
         priceNote: isAnnual ? "/ mes (pago anual)" : "/ mes",
         savingsNote,
-        buttonText: "Elegir este plan",
+        buttonText: "Quiero este plan",
         buttonLink: `https://wa.me/59891093977?text=Hola,%20quiero%20contratar%20el%20Plan%20Consultorio%20Individual%20(${isAnnual ? "1.900" : "3.000"}%20UYU/mes%20-%20${encodeURIComponent(paymentType)}).`,
         isExternal: true,
         isHighlighted: false,
@@ -338,7 +367,7 @@ const Landing = () => {
         price: isAnnual ? "3.900 UYU" : "6.200 UYU",
         priceNote: isAnnual ? "/ mes (pago anual)" : "/ mes",
         savingsNote,
-        buttonText: "Elegir este plan",
+        buttonText: "Quiero este plan",
         buttonLink: `https://wa.me/59891093977?text=Hola,%20quiero%20contratar%20el%20Plan%20Consultorio%20Profesional%20(${isAnnual ? "3.900" : "6.200"}%20UYU/mes%20-%20${encodeURIComponent(paymentType)}).`,
         isExternal: true,
         isHighlighted: true,
@@ -353,7 +382,7 @@ const Landing = () => {
         price: isAnnual ? "6.900 UYU" : "9.500 UYU",
         priceNote: isAnnual ? "/ mes (pago anual)" : "/ mes",
         savingsNote,
-        buttonText: "Elegir este plan",
+        buttonText: "Quiero este plan",
         buttonLink: `https://wa.me/59891093977?text=Hola,%20quiero%20contratar%20el%20Plan%20Clínica%20Avanzada%20(${isAnnual ? "6.900" : "9.500"}%20UYU/mes%20-%20${encodeURIComponent(paymentType)}).`,
         isExternal: true,
         isHighlighted: false,
@@ -366,133 +395,45 @@ const Landing = () => {
       {/* Hero Section */}
       <section className="min-h-[85vh] sm:min-h-screen flex flex-col items-center justify-center px-4 sm:px-6 py-12 sm:py-24">
         <div className="w-full max-w-3xl mx-auto animate-fade-in">
-          {/* Premium Hero Card */}
           <div 
-            className="relative rounded-2xl sm:rounded-3xl p-5 sm:p-10 md:p-14"
+            className="relative rounded-2xl sm:rounded-3xl p-6 sm:p-10 md:p-14"
             style={{ 
               backgroundColor: '#111111',
               boxShadow: '0 8px 60px rgba(0, 199, 138, 0.15), 0 0 80px rgba(0, 199, 138, 0.08)'
             }}
           >
-            {/* Floating Mockup */}
-            <div className="flex justify-center mb-6 sm:mb-10">
-              <div 
-                className="relative w-full max-w-xs sm:max-w-sm"
-                style={{
-                  animation: 'float 6s ease-in-out infinite'
+            {/* Badge */}
+            <div className="flex justify-center mb-6">
+              <span 
+                className="px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium"
+                style={{ 
+                  backgroundColor: 'rgba(0, 199, 138, 0.1)',
+                  color: '#00c78a'
                 }}
               >
-                {/* Browser Window Mockup */}
-                <div 
-                  className="rounded-xl sm:rounded-2xl overflow-hidden border"
-                  style={{ 
-                    backgroundColor: '#1a1a1a',
-                    borderColor: 'rgba(255, 255, 255, 0.1)',
-                    boxShadow: '0 25px 80px -20px rgba(0, 0, 0, 0.5), 0 0 40px rgba(0, 199, 138, 0.1)'
-                  }}
-                >
-                  {/* Browser bar */}
-                  <div 
-                    className="flex items-center gap-2 px-3 py-2 border-b"
-                    style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}
-                  >
-                    <div className="flex gap-1">
-                      <div className="w-2 h-2 rounded-full bg-red-500/80" />
-                      <div className="w-2 h-2 rounded-full bg-yellow-500/80" />
-                      <div className="w-2 h-2 rounded-full bg-green-500/80" />
-                    </div>
-                    <div 
-                      className="flex-1 h-4 rounded-md ml-2"
-                      style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)' }}
-                    />
-                  </div>
-
-                  {/* Dashboard Content */}
-                  <div className="p-3 sm:p-4 grid grid-cols-5 gap-2 sm:gap-3">
-                    {/* Mini Calendar - Left side */}
-                    <div 
-                      className="col-span-3 rounded-lg p-2 sm:p-3"
-                      style={{ backgroundColor: 'rgba(255, 255, 255, 0.03)' }}
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-[9px] sm:text-[10px] font-medium text-gray-400">Diciembre 2025</span>
-                        <Calendar className="w-3 h-3 text-gray-500" />
-                      </div>
-                      
-                      {/* Week days header */}
-                      <div className="grid grid-cols-7 gap-0.5 mb-1">
-                        {['L', 'M', 'X', 'J', 'V', 'S', 'D'].map((d) => (
-                          <div key={d} className="text-[7px] sm:text-[8px] text-gray-500 text-center">{d}</div>
-                        ))}
-                      </div>
-                      
-                      {/* Calendar days */}
-                      <div className="grid grid-cols-7 gap-0.5">
-                        {[...Array(7)].map((_, i) => (
-                          <div 
-                            key={i}
-                            className="aspect-square rounded flex items-center justify-center text-[8px] sm:text-[9px]"
-                            style={{ 
-                              backgroundColor: [1, 3, 5].includes(i) ? 'rgba(0, 199, 138, 0.25)' : 'transparent',
-                              color: [1, 3, 5].includes(i) ? '#00c78a' : '#888'
-                            }}
-                          >
-                            {i + 8}
-                          </div>
-                        ))}
-                      </div>
-                      <div className="grid grid-cols-7 gap-0.5 mt-0.5">
-                        {[...Array(7)].map((_, i) => (
-                          <div 
-                            key={i}
-                            className="aspect-square rounded flex items-center justify-center text-[8px] sm:text-[9px]"
-                            style={{ 
-                              backgroundColor: [0, 2, 4].includes(i) ? 'rgba(0, 199, 138, 0.25)' : 'transparent',
-                              color: [0, 2, 4].includes(i) ? '#00c78a' : '#888'
-                            }}
-                          >
-                            {i + 15}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Metrics cards - Right side */}
-                    <div className="col-span-2 flex flex-col gap-1.5 sm:gap-2">
-                      <div 
-                        className="rounded-lg p-2 sm:p-2.5 flex-1"
-                        style={{ backgroundColor: 'rgba(0, 199, 138, 0.15)' }}
-                      >
-                        <div className="text-[8px] sm:text-[9px] text-gray-400 mb-0.5">Citas hoy</div>
-                        <div className="text-base sm:text-lg font-bold" style={{ color: '#00c78a' }}>5</div>
-                      </div>
-                      <div 
-                        className="rounded-lg p-2 sm:p-2.5 flex-1"
-                        style={{ backgroundColor: 'rgba(255, 255, 255, 0.03)' }}
-                      >
-                        <div className="text-[8px] sm:text-[9px] text-gray-400 mb-0.5">Pacientes</div>
-                        <div className="text-base sm:text-lg font-bold text-white">47</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+                Para psicólogos y profesionales de la salud
+              </span>
             </div>
             
             {/* Title */}
-            <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-center mb-4 sm:mb-6 leading-tight">
-              Sistema de Gestión
-              <span className="block" style={{ color: '#00c78a' }}>de Consultorio</span>
+            <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold tracking-tight text-center mb-4 sm:mb-6 leading-tight">
+              Tu consultorio ordenado:
+              <span className="block" style={{ color: '#00c78a' }}>pacientes, agenda y pagos</span>
+              <span className="block">en un solo lugar</span>
             </h1>
             
             {/* Subtitle */}
-            <p className="text-sm sm:text-lg md:text-xl text-gray-400 text-center mb-6 sm:mb-10 max-w-xl mx-auto leading-relaxed font-light">
-              Organizá pacientes, citas y recordatorios en un panel simple y profesional.
+            <p className="text-sm sm:text-lg md:text-xl text-gray-400 text-center mb-8 sm:mb-10 max-w-xl mx-auto leading-relaxed font-light">
+              Gestioná pacientes, agenda privada, pagos y recordatorios sin planillas ni mensajes sueltos.
             </p>
             
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row justify-center gap-4">
-              <Link to="/auth">
+              <a 
+                href={whatsappDemo}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
                 <Button 
                   size="lg" 
                   className="w-full sm:w-auto h-12 sm:h-14 px-8 sm:px-12 text-sm sm:text-base font-semibold rounded-xl transition-all duration-300"
@@ -501,90 +442,107 @@ const Landing = () => {
                     boxShadow: '0 4px 30px rgba(0, 199, 138, 0.35)'
                   }}
                 >
-                  Iniciar sesión
+                  Ver demo
                 </Button>
-              </Link>
+              </a>
               <a 
-                href="#conoce-el-sistema"
-                onClick={(e) => {
-                  e.preventDefault();
-                  document.getElementById('conoce-el-sistema')?.scrollIntoView({ behavior: 'smooth' });
-                }}
+                href={whatsappContact}
+                target="_blank"
+                rel="noopener noreferrer"
               >
                 <Button 
                   variant="outline"
                   size="lg" 
-                  className="w-full sm:w-auto h-12 sm:h-14 px-8 sm:px-12 text-sm sm:text-base font-semibold rounded-xl transition-all duration-300 bg-white text-black border-white hover:bg-gray-100"
+                  className="w-full sm:w-auto h-12 sm:h-14 px-8 sm:px-12 text-sm sm:text-base font-semibold rounded-xl transition-all duration-300 bg-transparent text-white border-white/20 hover:bg-white/5"
                 >
-                  Conoce el sistema
+                  <MessageCircle className="w-4 h-4 mr-2" />
+                  Hablar por WhatsApp
                 </Button>
               </a>
             </div>
           </div>
         </div>
+      </section>
 
-        {/* Float animation keyframes */}
-        <style>{`
-          @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-8px); }
-          }
-        `}</style>
+      {/* Problem → Solution Section */}
+      <section className="px-4 sm:px-6 py-14 sm:py-24 bg-black">
+        <div className="max-w-5xl mx-auto">
+          <div className="grid md:grid-cols-2 gap-8 md:gap-16">
+            {/* Problems */}
+            <div>
+              <h2 className="text-xl sm:text-2xl font-bold mb-6 text-gray-300">
+                ¿Te suena familiar?
+              </h2>
+              <div className="space-y-4">
+                {problems.map((problem, index) => (
+                  <div 
+                    key={index}
+                    className="flex items-center gap-3 p-4 rounded-xl border border-red-500/20"
+                    style={{ backgroundColor: 'rgba(239, 68, 68, 0.05)' }}
+                  >
+                    <problem.icon className="w-5 h-5 text-red-400 flex-shrink-0" />
+                    <span className="text-gray-300 text-sm sm:text-base">{problem.text}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Solution */}
+            <div>
+              <h2 className="text-xl sm:text-2xl font-bold mb-6" style={{ color: '#00c78a' }}>
+                La solución
+              </h2>
+              <div 
+                className="p-6 rounded-xl border"
+                style={{ 
+                  backgroundColor: 'rgba(0, 199, 138, 0.05)',
+                  borderColor: 'rgba(0, 199, 138, 0.2)'
+                }}
+              >
+                <ul className="space-y-4">
+                  <li className="flex items-start gap-3">
+                    <Check className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: '#00c78a' }} />
+                    <span className="text-gray-300">Un sistema privado para tu consultorio</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <Check className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: '#00c78a' }} />
+                    <span className="text-gray-300">Todo centralizado y claro</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <Check className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: '#00c78a' }} />
+                    <span className="text-gray-300">Acceso para vos, tu equipo y tus pacientes</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <Check className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: '#00c78a' }} />
+                    <span className="text-gray-300">Alertas automáticas de pagos y citas</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
 
       {/* Screenshots Carousel Section */}
       <ScreenshotsCarousel />
 
-      {/* How it Works Section */}
+      {/* Features Section - Current Real Features */}
       <section className="px-4 sm:px-6 py-14 sm:py-28 bg-black">
         <div className="max-w-5xl mx-auto">
-          <h2 className="text-xl sm:text-3xl md:text-4xl font-bold text-center mb-10 sm:mb-20 tracking-tight">
-            Cómo funciona
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
-            {steps.map((step, index) => (
-              <div
-                key={step.title}
-                className="text-center animate-fade-in"
-                style={{ animationDelay: `${(index + 1) * 100}ms`, animationFillMode: 'both' }}
-              >
-                {/* Step icon with glow */}
-                <div 
-                  className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 sm:mb-6 rounded-xl sm:rounded-2xl flex items-center justify-center"
-                  style={{ 
-                    backgroundColor: 'rgba(0, 199, 138, 0.1)',
-                    boxShadow: '0 0 30px rgba(0, 199, 138, 0.2)'
-                  }}
-                >
-                  <step.icon className="w-5 h-5 sm:w-7 sm:h-7" style={{ color: '#00c78a' }} />
-                </div>
-                
-                {/* Title */}
-                <h3 className="text-base sm:text-lg font-semibold text-white mb-2 sm:mb-3 tracking-tight">
-                  {step.title}
-                </h3>
-                
-                {/* Description */}
-                <p className="text-gray-500 text-xs sm:text-sm leading-relaxed font-light">
-                  {step.description}
-                </p>
-              </div>
-            ))}
+          <div className="text-center mb-10 sm:mb-16">
+            <h2 className="text-xl sm:text-3xl md:text-4xl font-bold mb-3 sm:mb-4 tracking-tight">
+              Todo lo que necesitás
+            </h2>
+            <p className="text-gray-500 text-sm sm:text-lg font-light max-w-2xl mx-auto">
+              Funcionalidades diseñadas para el día a día de tu consultorio.
+            </p>
           </div>
-        </div>
-      </section>
 
-      {/* Benefits Section */}
-      <section className="px-4 sm:px-6 py-14 sm:py-28" style={{ backgroundColor: '#080808' }}>
-        <div className="max-w-4xl mx-auto">
-          <h2 className="text-xl sm:text-3xl md:text-4xl font-bold text-center mb-8 sm:mb-20 tracking-tight">
-            Beneficios
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
-            {benefits.map((benefit, index) => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            {currentFeatures.map((feature, index) => (
               <div
-                key={benefit.title}
-                className="flex items-start gap-3 sm:gap-5 p-4 sm:p-6 rounded-xl sm:rounded-2xl border border-white/5 animate-fade-in transition-all duration-300 hover:border-white/10"
+                key={feature.title}
+                className="p-5 sm:p-7 rounded-xl sm:rounded-2xl border border-white/5 animate-fade-in transition-all duration-300 hover:border-white/10"
                 style={{ 
                   backgroundColor: '#111111',
                   animationDelay: `${(index + 1) * 100}ms`, 
@@ -592,10 +550,77 @@ const Landing = () => {
                 }}
               >
                 <div 
-                  className="w-9 h-9 sm:w-11 sm:h-11 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0"
+                  className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl flex items-center justify-center mb-4 sm:mb-5"
                   style={{ backgroundColor: 'rgba(0, 199, 138, 0.1)' }}
                 >
-                  <benefit.icon className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: '#00c78a' }} />
+                  <feature.icon className="w-5 h-5 sm:w-6 sm:h-6" style={{ color: '#00c78a' }} />
+                </div>
+                <h3 className="text-base sm:text-lg font-semibold text-white mb-2 tracking-tight">
+                  {feature.title}
+                </h3>
+                <p className="text-gray-500 text-xs sm:text-sm leading-relaxed font-light">
+                  {feature.description}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Key Differentiator Section */}
+      <section className="px-4 sm:px-6 py-14 sm:py-24" style={{ backgroundColor: '#080808' }}>
+        <div className="max-w-4xl mx-auto">
+          <div 
+            className="rounded-2xl sm:rounded-3xl p-8 sm:p-12 text-center border"
+            style={{ 
+              backgroundColor: '#111111',
+              borderColor: 'rgba(0, 199, 138, 0.2)',
+              boxShadow: '0 0 60px rgba(0, 199, 138, 0.1)'
+            }}
+          >
+            <div 
+              className="w-14 h-14 sm:w-16 sm:h-16 mx-auto mb-6 rounded-2xl flex items-center justify-center"
+              style={{ backgroundColor: 'rgba(0, 199, 138, 0.1)' }}
+            >
+              <Lock className="w-7 h-7 sm:w-8 sm:h-8" style={{ color: '#00c78a' }} />
+            </div>
+            
+            <h2 className="text-xl sm:text-3xl md:text-4xl font-bold mb-4 tracking-tight">
+              Tu consultorio, tu sistema
+            </h2>
+            <p className="text-lg sm:text-xl mb-6" style={{ color: '#00c78a' }}>
+              Un sistema privado, no una agenda pública
+            </p>
+            <p className="text-gray-400 text-sm sm:text-base max-w-2xl mx-auto leading-relaxed font-light">
+              A diferencia de plataformas públicas donde cualquiera puede agendar, acá solo tus pacientes acceden a tu agenda. 
+              Más control, menos cancelaciones, imagen más profesional.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Benefits Section */}
+      <section className="px-4 sm:px-6 py-14 sm:py-28 bg-black">
+        <div className="max-w-4xl mx-auto">
+          <h2 className="text-xl sm:text-3xl md:text-4xl font-bold text-center mb-8 sm:mb-16 tracking-tight">
+            Por qué elegir este sistema
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+            {benefits.map((benefit, index) => (
+              <div
+                key={benefit.title}
+                className="flex items-start gap-4 sm:gap-5 p-5 sm:p-6 rounded-xl sm:rounded-2xl border border-white/5 animate-fade-in transition-all duration-300 hover:border-white/10"
+                style={{ 
+                  backgroundColor: '#111111',
+                  animationDelay: `${(index + 1) * 100}ms`, 
+                  animationFillMode: 'both' 
+                }}
+              >
+                <div 
+                  className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0"
+                  style={{ backgroundColor: 'rgba(0, 199, 138, 0.1)' }}
+                >
+                  <benefit.icon className="w-5 h-5 sm:w-6 sm:h-6" style={{ color: '#00c78a' }} />
                 </div>
                 <div>
                   <h3 className="text-sm sm:text-base text-white font-semibold mb-1 tracking-tight">
@@ -611,53 +636,81 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* Features Section */}
-      <section className="px-4 sm:px-6 py-14 sm:py-28 bg-black">
-        <div className="max-w-5xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-5">
-            {features.map((feature, index) => (
-              <div
-                key={feature.title}
-                className="p-5 sm:p-7 md:p-8 rounded-xl sm:rounded-2xl border border-white/5 animate-fade-in transition-all duration-300 hover:border-white/10"
+      {/* Private Clinic Premium Feature */}
+      <section className="px-4 sm:px-6 py-14 sm:py-24" style={{ backgroundColor: '#080808' }}>
+        <div className="max-w-4xl mx-auto">
+          <div 
+            className="rounded-2xl sm:rounded-3xl p-8 sm:p-12 border relative overflow-hidden"
+            style={{ 
+              backgroundColor: '#111111',
+              borderColor: 'rgba(255, 255, 255, 0.1)'
+            }}
+          >
+            {/* Premium badge */}
+            <div className="absolute top-4 right-4">
+              <span 
+                className="px-3 py-1 rounded-full text-xs font-medium"
                 style={{ 
-                  backgroundColor: '#111111',
-                  animationDelay: `${(index + 1) * 100}ms`, 
-                  animationFillMode: 'both' 
+                  backgroundColor: 'rgba(147, 51, 234, 0.2)',
+                  color: '#a78bfa'
                 }}
               >
-                {/* Icon */}
-                <div 
-                  className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl flex items-center justify-center mb-4 sm:mb-6"
-                  style={{ backgroundColor: 'rgba(0, 199, 138, 0.1)' }}
-                >
-                  <feature.icon className="w-5 h-5 sm:w-6 sm:h-6" style={{ color: '#00c78a' }} />
-                </div>
-                
-                {/* Title */}
-                <h3 className="text-base sm:text-lg font-semibold text-white mb-2 sm:mb-3 tracking-tight">
-                  {feature.title}
+                Opcional
+              </span>
+            </div>
+
+            <div className="flex items-center gap-4 mb-6">
+              <div 
+                className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center"
+                style={{ backgroundColor: 'rgba(147, 51, 234, 0.1)' }}
+              >
+                <Globe className="w-6 h-6 sm:w-7 sm:h-7" style={{ color: '#a78bfa' }} />
+              </div>
+              <div>
+                <h3 className="text-lg sm:text-xl font-bold text-white">
+                  Consultorio Privado
                 </h3>
-                
-                {/* Description */}
-                <p className="text-gray-500 text-xs sm:text-sm leading-relaxed font-light">
-                  {feature.description}
+                <p className="text-gray-500 text-sm">
+                  Portal personalizado para tus pacientes
                 </p>
               </div>
-            ))}
+            </div>
+
+            <ul className="space-y-3 mb-6">
+              <li className="flex items-center gap-3 text-gray-300 text-sm sm:text-base">
+                <Check className="w-4 h-4 flex-shrink-0" style={{ color: '#a78bfa' }} />
+                Portal exclusivo para tus pacientes
+              </li>
+              <li className="flex items-center gap-3 text-gray-300 text-sm sm:text-base">
+                <Check className="w-4 h-4 flex-shrink-0" style={{ color: '#a78bfa' }} />
+                Acceso privado y seguro
+              </li>
+              <li className="flex items-center gap-3 text-gray-300 text-sm sm:text-base">
+                <Check className="w-4 h-4 flex-shrink-0" style={{ color: '#a78bfa' }} />
+                Preparado para dominio o subdominio propio
+              </li>
+              <li className="flex items-center gap-3 text-gray-300 text-sm sm:text-base">
+                <Check className="w-4 h-4 flex-shrink-0" style={{ color: '#a78bfa' }} />
+                Imagen profesional frente a tus pacientes
+              </li>
+            </ul>
+
+            <p className="text-gray-500 text-xs sm:text-sm font-light">
+              Próximamente disponible como add-on para todos los planes.
+            </p>
           </div>
         </div>
       </section>
 
       {/* Pricing Section */}
-      <section id="pricing" className="px-4 sm:px-6 py-14 sm:py-28" style={{ backgroundColor: '#080808' }}>
+      <section id="pricing" className="px-4 sm:px-6 py-14 sm:py-28 bg-black">
         <div className="max-w-6xl mx-auto">
-          {/* Section Header */}
-          <div className="text-center mb-8 sm:mb-16">
+          <div className="text-center mb-8 sm:mb-12">
             <h2 className="text-xl sm:text-3xl md:text-4xl font-bold mb-3 sm:mb-4 tracking-tight">
-              Planes y Precios
+              Planes según tu consultorio
             </h2>
             <p className="text-gray-500 text-sm sm:text-lg max-w-2xl mx-auto font-light">
-              Pagás según el tamaño de tu consultorio. Todas las funciones están incluidas en todos los planes.
+              Elegí el plan según la cantidad de pacientes que manejás hoy. Podés cambiarlo cuando quieras.
             </p>
           </div>
 
@@ -682,7 +735,6 @@ const Landing = () => {
               </span>
             </div>
             
-            {/* Payment note - visible with annual */}
             {isAnnual && (
               <p 
                 className="text-xs sm:text-sm font-medium px-4 py-1.5 rounded-full animate-fade-in"
@@ -709,7 +761,7 @@ const Landing = () => {
             ))}
           </div>
 
-          {/* Enterprise Card - Full Width */}
+          {/* Enterprise Card */}
           <div className="animate-fade-in" style={{ animationDelay: '400ms', animationFillMode: 'both' }}>
             <PricingCard {...enterprisePlan} />
           </div>
@@ -717,7 +769,7 @@ const Landing = () => {
       </section>
 
       {/* FAQ Section */}
-      <section className="px-4 sm:px-6 py-14 sm:py-28 bg-black">
+      <section className="px-4 sm:px-6 py-14 sm:py-28" style={{ backgroundColor: '#080808' }}>
         <div className="max-w-3xl mx-auto">
           <div className="text-center mb-10 sm:mb-16">
             <div className="flex justify-center mb-4">
@@ -760,32 +812,46 @@ const Landing = () => {
       </section>
 
       {/* Final CTA Section */}
-
-      {/* Demo CTA Section */}
       <section className="px-4 sm:px-6 py-16 sm:py-24 bg-black">
         <div className="max-w-2xl mx-auto text-center">
           <h2 className="text-xl sm:text-3xl md:text-4xl font-bold mb-4 sm:mb-6 tracking-tight">
-            ¿Querés ver cómo funciona por dentro?
+            ¿Querés ver cómo funciona?
           </h2>
           <p className="text-gray-500 text-sm sm:text-lg mb-8 sm:mb-10 font-light max-w-lg mx-auto">
-            Te muestro la demo en vivo en menos de 15 minutos y vemos si se adapta a tu consultorio.
+            Te muestro el sistema funcionando con un consultorio real en pocos minutos.
           </p>
-          <a 
-            href="https://wa.me/59891093977?text=Hola,%20quiero%20agendar%20una%20demo%20del%20sistema%20para%20consultorios."
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Button 
-              size="lg" 
-              className="h-12 sm:h-14 px-8 sm:px-12 text-sm sm:text-base font-semibold rounded-xl transition-all duration-300"
-              style={{ 
-                backgroundColor: '#00c78a',
-                boxShadow: '0 4px 30px rgba(0, 199, 138, 0.35)'
-              }}
+          <div className="flex flex-col sm:flex-row justify-center gap-4">
+            <a 
+              href={whatsappDemo}
+              target="_blank"
+              rel="noopener noreferrer"
             >
-              Ver demo en vivo
-            </Button>
-          </a>
+              <Button 
+                size="lg" 
+                className="w-full sm:w-auto h-12 sm:h-14 px-8 sm:px-12 text-sm sm:text-base font-semibold rounded-xl transition-all duration-300"
+                style={{ 
+                  backgroundColor: '#00c78a',
+                  boxShadow: '0 4px 30px rgba(0, 199, 138, 0.35)'
+                }}
+              >
+                Ver demo
+              </Button>
+            </a>
+            <a 
+              href={whatsappContact}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Button 
+                variant="outline"
+                size="lg" 
+                className="w-full sm:w-auto h-12 sm:h-14 px-8 sm:px-12 text-sm sm:text-base font-semibold rounded-xl transition-all duration-300 bg-transparent text-white border-white/20 hover:bg-white/5"
+              >
+                <MessageCircle className="w-4 h-4 mr-2" />
+                Hablar por WhatsApp
+              </Button>
+            </a>
+          </div>
         </div>
       </section>
 
@@ -798,7 +864,7 @@ const Landing = () => {
 
       {/* Floating WhatsApp Button */}
       <a
-        href={whatsappLink}
+        href={whatsappDemo}
         target="_blank"
         rel="noopener noreferrer"
         className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110"
