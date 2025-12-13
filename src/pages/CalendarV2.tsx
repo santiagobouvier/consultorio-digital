@@ -489,15 +489,12 @@ const CalendarV2 = () => {
         />
 
         {/* Create appointment modal */}
-        {businessId && (
-          <CreateAppointmentModal
-            open={showCreateModal}
-            onOpenChange={setShowCreateModal}
-            businessId={businessId}
-            onSuccess={handleRefresh}
-            defaultDate={currentDate}
-          />
-        )}
+        <CreateAppointmentModal
+          open={showCreateModal}
+          onOpenChange={setShowCreateModal}
+          patientId={null}
+          onSuccess={handleRefresh}
+        />
       </div>
     </div>
   );
