@@ -5,12 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "@/hooks/use-toast";
-import { Users, CalendarPlus, CalendarDays, UserPlus, Bell, LogOut, Camera, CreditCard, AlertTriangle, Clock, Plus, EyeOff, Eye, Smartphone, Building2, ChevronDown, Shield, Settings } from "lucide-react";
+import { Users, CalendarPlus, CalendarDays, UserPlus, Bell, LogOut, Camera, CreditCard, AlertTriangle, Clock, Plus, EyeOff, Eye, Smartphone, Building2, ChevronDown, Shield, Settings, ArrowRight } from "lucide-react";
 import { PlanUsageCard } from "@/components/PlanUsageCard";
 import { PatientForm } from "@/components/PatientForm";
 import { CreateAppointmentModal } from "@/components/CreateAppointmentModal";
 import { GlobalPaymentForm } from "@/components/GlobalPaymentForm";
 import { calculatePaymentStatus, formatCurrency } from "@/lib/payments";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,6 +30,7 @@ interface Business {
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [userName, setUserName] = useState("");
   const [userId, setUserId] = useState<string | null>(null);

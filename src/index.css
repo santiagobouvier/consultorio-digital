@@ -39,6 +39,12 @@ All colors MUST be HSL.
     --radius: 0.75rem;
     --radius-mobile: 1rem;
 
+    /* Premium design tokens */
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
     --sidebar-primary: 240 5.9% 10%;
@@ -77,6 +83,12 @@ All colors MUST be HSL.
     --border: 220 15% 20%;
     --input: 220 15% 20%;
     --ring: 186 80% 55%;
+
+    --success: 142 70% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 85% 55%;
+    --warning-foreground: 0 0% 100%;
+
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
@@ -139,5 +151,137 @@ All colors MUST be HSL.
   /* Tap highlight for interactive elements */
   .tap-highlight {
     @apply active:scale-[0.98] transition-transform;
+  }
+
+  /* Desktop premium styles */
+  .desktop-card {
+    @apply bg-card rounded-xl border border-border;
+    box-shadow: 0 1px 3px 0 hsl(var(--foreground) / 0.03),
+                0 1px 2px -1px hsl(var(--foreground) / 0.03);
+    transition: box-shadow 0.15s ease, transform 0.15s ease;
+  }
+
+  .desktop-card:hover {
+    box-shadow: 0 4px 12px -2px hsl(var(--foreground) / 0.08),
+                0 2px 4px -1px hsl(var(--foreground) / 0.04);
+  }
+
+  .desktop-card-interactive {
+    @apply desktop-card cursor-pointer;
+  }
+
+  .desktop-card-interactive:hover {
+    transform: translateY(-1px);
+  }
+
+  /* Data table premium styles */
+  .data-table-header {
+    @apply sticky top-0 z-10 bg-muted/50 backdrop-blur-sm;
+  }
+
+  .data-table-row {
+    @apply transition-colors duration-150;
+  }
+
+  .data-table-row:hover {
+    @apply bg-muted/50;
+  }
+
+  /* Side panel styles */
+  .side-panel {
+    @apply fixed right-0 top-0 h-full w-[400px] max-w-full bg-card border-l border-border shadow-xl z-50;
+    animation: slideInRight 0.2s ease-out;
+  }
+
+  @keyframes slideInRight {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  /* Empty state styles */
+  .empty-state {
+    @apply flex flex-col items-center justify-center py-16 px-8 text-center;
+  }
+
+  .empty-state-icon {
+    @apply h-16 w-16 text-muted-foreground/30 mb-4;
+  }
+
+  .empty-state-title {
+    @apply text-lg font-semibold text-foreground mb-2;
+  }
+
+  .empty-state-description {
+    @apply text-sm text-muted-foreground max-w-sm mb-6;
+  }
+
+  /* Stat card styles */
+  .stat-card {
+    @apply desktop-card p-5;
+  }
+
+  .stat-card-value {
+    @apply text-3xl font-bold text-foreground tabular-nums;
+  }
+
+  .stat-card-label {
+    @apply text-sm font-medium text-muted-foreground mt-1;
+  }
+
+  .stat-card-trend {
+    @apply text-xs font-medium mt-2;
+  }
+
+  .stat-card-trend-up {
+    @apply text-green-600 dark:text-green-400;
+  }
+
+  .stat-card-trend-down {
+    @apply text-red-600 dark:text-red-400;
+  }
+
+  /* Progress bar styles */
+  .usage-bar {
+    @apply h-2 rounded-full bg-muted overflow-hidden;
+  }
+
+  .usage-bar-fill {
+    @apply h-full rounded-full transition-all duration-300;
+  }
+
+  .usage-bar-ok {
+    @apply bg-green-500;
+  }
+
+  .usage-bar-warning {
+    @apply bg-yellow-500;
+  }
+
+  .usage-bar-danger {
+    @apply bg-red-500;
+  }
+
+  /* Quick action button desktop */
+  .quick-action-btn {
+    @apply flex items-center gap-3 p-4 rounded-xl border border-border bg-card hover:bg-muted/50 transition-all duration-150;
+  }
+
+  .quick-action-btn:hover {
+    @apply border-primary/30;
+  }
+
+  /* Skeleton loading */
+  .skeleton-row {
+    @apply flex items-center gap-4 p-4 animate-pulse;
+  }
+
+  .skeleton-row > * {
+    @apply bg-muted rounded;
   }
 }
