@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, isToday } from "date-fns";
 import { es } from "date-fns/locale";
@@ -75,17 +74,38 @@ export const CalendarGrid = ({
     });
   };
 
-  const getPaymentDotColor = (color?: string) => {
-    switch (color) {
-      case "green":
-        return "bg-emerald-500";
-      case "orange":
-        return "bg-amber-500";
-      case "red":
-        return "bg-rose-500";
-      default:
-        return "bg-primary";
-    }
+  const getPaymentsForDay = (date: Date) => {
+    return payments.filter((payment) => {
+      const dueDate = new Date(payment.due_date);
+      return isSameDay(dueDate, date);
+    });
+  };
+
+  const getPaymentStats = (date: Date) => {
+    const dayPayments = getPaymentsForDay(date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    let paid = 0;
+    let pending = 0;
+    let overdue = 0;
+
+    dayPayments.forEach(payment => {
+      if (payment.paid_at || payment.status === 'paid') {
+        paid++;
+      } else {
+        const dueDate = new Date(payment.due_date);
+        dueDate.setHours(0, 0, 0, 0);
+        
+        if (dueDate < today) {
+          overdue++;
+        } else {
+          pending++;
+        }
+      }
+    });
+
+    return { paid, pending, overdue, total: dayPayments.length };
   };
 
   const getPaymentBorderColor = (color?: string) => {
@@ -116,7 +136,7 @@ export const CalendarGrid = ({
 
   const weekDays = isMobile ? ["L", "M", "X", "J", "V", "S", "D"] : ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 
-  // Mobile: Compact calendar with dots + drawer
+  // Mobile: Compact calendar with indicators + drawer
   if (isMobile) {
     return (
       <>
@@ -133,52 +153,78 @@ export const CalendarGrid = ({
             ))}
           </div>
 
-          {/* Days Grid - Premium mobile */}
+          {/* Days Grid */}
           <div className="grid grid-cols-7 gap-px bg-border/50">
             {days.map((day, index) => {
               const dayAppointments = getAppointmentsForDay(day);
+              const paymentStats = getPaymentStats(day);
               const isCurrentMonth = isSameMonth(day, currentDate);
               const isCurrentDay = isToday(day);
               const hasAppointments = dayAppointments.length > 0;
+              const hasPayments = paymentStats.total > 0;
+              const hasActivity = hasAppointments || hasPayments;
 
               return (
                 <div
                   key={index}
                   className={cn(
-                    "min-h-[76px] p-1.5 cursor-pointer transition-all active:scale-95",
-                    // Días del mes actual: fondo limpio
+                    "min-h-[88px] p-1 cursor-pointer transition-all active:scale-95",
                     isCurrentMonth ? "bg-card" : "bg-muted/30",
-                    // Días con citas: sutil highlight
-                    hasAppointments && isCurrentMonth && "bg-primary/5"
+                    hasActivity && isCurrentMonth && "bg-primary/5",
+                    paymentStats.overdue > 0 && isCurrentMonth && "bg-rose-50 dark:bg-rose-950/20"
                   )}
                   onClick={() => handleDayClick(day)}
                 >
-                  <div className="flex flex-col items-center gap-1 h-full justify-center">
+                  <div className="flex flex-col items-center gap-0.5 h-full">
                     {/* Day number */}
                     <span
                       className={cn(
-                        "text-lg font-bold w-10 h-10 flex items-center justify-center rounded-xl transition-all",
-                        // Días fuera del mes: muy atenuados
+                        "text-base font-bold w-8 h-8 flex items-center justify-center rounded-lg transition-all",
                         !isCurrentMonth && "text-muted-foreground/30 font-normal",
-                        // Días del mes actual: visibles
                         isCurrentMonth && "text-foreground",
-                        // Hoy: protagonista con borde y fondo
-                        isCurrentDay && "bg-primary text-primary-foreground ring-2 ring-primary/30 ring-offset-2 ring-offset-background shadow-lg"
+                        isCurrentDay && "bg-primary text-primary-foreground ring-2 ring-primary/30 ring-offset-1 ring-offset-background shadow-lg"
                       )}
                     >
                       {format(day, "d")}
                     </span>
                     
-                    {/* Appointment badge */}
-                    {hasAppointments && isCurrentMonth && (
-                      <span 
-                        className={cn(
-                          "min-w-[22px] h-5 px-1.5 rounded-full text-xs font-bold flex items-center justify-center",
-                          "bg-primary/15 text-primary"
+                    {/* Indicators */}
+                    {isCurrentMonth && hasActivity && (
+                      <div className="flex flex-col gap-0.5 items-center w-full">
+                        {/* Appointments */}
+                        {hasAppointments && (
+                          <div className="flex items-center gap-0.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                            <span className="text-[10px] font-semibold text-primary">
+                              {dayAppointments.length}
+                            </span>
+                          </div>
                         )}
-                      >
-                        {dayAppointments.length > 9 ? "9+" : dayAppointments.length}
-                      </span>
+                        
+                        {/* Payments */}
+                        {hasPayments && (
+                          <div className="flex items-center gap-1">
+                            {paymentStats.paid > 0 && (
+                              <span className="flex items-center gap-0.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                <span className="text-[10px] font-semibold text-emerald-600">{paymentStats.paid}</span>
+                              </span>
+                            )}
+                            {paymentStats.pending > 0 && (
+                              <span className="flex items-center gap-0.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                                <span className="text-[10px] font-semibold text-amber-600">{paymentStats.pending}</span>
+                              </span>
+                            )}
+                            {paymentStats.overdue > 0 && (
+                              <span className="flex items-center gap-0.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+                                <span className="text-[10px] font-bold text-rose-600">{paymentStats.overdue}</span>
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>
@@ -259,15 +305,18 @@ export const CalendarGrid = ({
       <div className="grid grid-cols-7 gap-px bg-border/50">
         {days.map((day, index) => {
           const dayAppointments = getAppointmentsForDay(day);
+          const paymentStats = getPaymentStats(day);
           const isCurrentMonth = isSameMonth(day, currentDate);
           const isCurrentDay = isToday(day);
+          const hasPayments = paymentStats.total > 0;
 
           return (
             <div
               key={index}
               className={cn(
                 "min-h-[130px] p-2 cursor-pointer transition-all hover:bg-accent/30",
-                isCurrentMonth ? "bg-card" : "bg-muted/30"
+                isCurrentMonth ? "bg-card" : "bg-muted/30",
+                paymentStats.overdue > 0 && isCurrentMonth && "bg-rose-50 dark:bg-rose-950/20"
               )}
               onClick={() => onDateClick(day)}
             >
@@ -282,10 +331,29 @@ export const CalendarGrid = ({
                 >
                   {format(day, "d")}
                 </span>
-                {dayAppointments.length > 0 && isCurrentMonth && (
-                  <span className="text-[10px] font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded-full">
-                    {dayAppointments.length}
-                  </span>
+                
+                {/* Day summary badges */}
+                {isCurrentMonth && (
+                  <div className="flex items-center gap-1">
+                    {dayAppointments.length > 0 && (
+                      <span className="text-[10px] font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded-full">
+                        {dayAppointments.length} cita{dayAppointments.length > 1 ? 's' : ''}
+                      </span>
+                    )}
+                    {hasPayments && (
+                      <div className="flex items-center gap-0.5">
+                        {paymentStats.paid > 0 && (
+                          <span className="w-2 h-2 rounded-full bg-emerald-500" title={`${paymentStats.paid} pagado(s)`} />
+                        )}
+                        {paymentStats.pending > 0 && (
+                          <span className="w-2 h-2 rounded-full bg-amber-500" title={`${paymentStats.pending} pendiente(s)`} />
+                        )}
+                        {paymentStats.overdue > 0 && (
+                          <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" title={`${paymentStats.overdue} vencido(s)`} />
+                        )}
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
 
