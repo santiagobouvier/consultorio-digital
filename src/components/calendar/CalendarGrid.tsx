@@ -109,15 +109,14 @@ export const CalendarGrid = ({
   };
 
   // Límite de indicadores por día
-  const MAX_BADGES_MOBILE = 3;
-  const MAX_BADGES_DESKTOP = 4;
+  const MAX_BADGES = 5;
 
   // Genera badges ordenados por prioridad: rojo > naranja > verde > azul (citas)
   const getPriorityBadges = (
     appointmentsCount: number,
     paymentStats: { paid: number; pending: number; overdue: number }
   ) => {
-    const maxBadges = isMobile ? MAX_BADGES_MOBILE : MAX_BADGES_DESKTOP;
+    const maxBadges = MAX_BADGES;
     
     type Badge = { type: 'overdue' | 'pending' | 'paid' | 'appointments'; count: number; priority: number };
     const allBadges: Badge[] = [];
