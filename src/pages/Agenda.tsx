@@ -686,48 +686,6 @@ const Agenda = () => {
           </CardContent>
         </Card>
 
-        {/* Calendar Views */}
-        {loading ? (
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <>
-            {viewType === "month" && (
-              <CalendarGrid
-                currentDate={currentDate}
-                appointments={filteredAppointments}
-                payments={selectedPatientPayments}
-                onDateClick={handleDateClick}
-                onAppointmentClick={handleAppointmentClick}
-                selectedPatientId={selectedPatientId}
-                businessId={businessId}
-                onAppointmentCreated={handleRefreshData}
-              />
-            )}
-            {viewType === "week" && (
-              <WeekView
-                currentDate={currentDate}
-                appointments={filteredAppointments}
-                onAppointmentClick={handleAppointmentClick}
-                selectedPatientId={selectedPatientId}
-              />
-            )}
-            {viewType === "day" && (
-              <DayView
-                currentDate={currentDate}
-                appointments={filteredAppointments}
-                onAppointmentClick={handleAppointmentClick}
-                selectedPatientId={selectedPatientId}
-              />
-            )}
-          </>
-        )}
-
         {/* Appointment Detail Modal */}
         <AppointmentDetailModal
           appointment={selectedAppointment}
