@@ -1065,60 +1065,105 @@ const SaasAdmin = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+      <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+        {/* Header - Desktop Premium */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-4">
             <Button
               variant="ghost"
               size="icon"
               onClick={() => navigate("/dashboard")}
-              className="h-10 w-10"
+              className="h-10 w-10 shrink-0"
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
-              <h1 className="text-2xl font-bold text-foreground">Panel SaaS</h1>
-              <p className="text-sm text-muted-foreground">
+              <h1 className="text-2xl lg:text-3xl font-bold text-foreground">Panel SaaS</h1>
+              <p className="text-sm text-muted-foreground mt-0.5">
                 Administración global del sistema
               </p>
             </div>
           </div>
-          <Badge variant="default" className="bg-primary">
-            Super Admin
-          </Badge>
+          <div className="flex items-center gap-3">
+            <Badge variant="default" className="bg-primary h-7 px-3">
+              <Shield className="h-3.5 w-3.5 mr-1.5" />
+              Super Admin
+            </Badge>
+          </div>
         </div>
 
-        {/* Action Buttons - Sticky on mobile */}
+        {/* Stats Cards - Desktop Grid */}
+        {!isMobile && (
+          <div className="grid grid-cols-4 gap-4">
+            <div className="stat-card">
+              <div className="flex items-center justify-between">
+                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Building2 className="h-5 w-5 text-primary" />
+                </div>
+              </div>
+              <p className="stat-card-value mt-4">{metrics.totalBusinesses}</p>
+              <p className="stat-card-label">Consultorios</p>
+            </div>
+            <div className="stat-card">
+              <div className="flex items-center justify-between">
+                <div className="h-10 w-10 rounded-lg bg-secondary flex items-center justify-center">
+                  <UserCog className="h-5 w-5 text-secondary-foreground" />
+                </div>
+              </div>
+              <p className="stat-card-value mt-4">{metrics.totalProfessionals}</p>
+              <p className="stat-card-label">Profesionales</p>
+            </div>
+            <div className="stat-card">
+              <div className="flex items-center justify-between">
+                <div className="h-10 w-10 rounded-lg bg-secondary flex items-center justify-center">
+                  <Users className="h-5 w-5 text-secondary-foreground" />
+                </div>
+              </div>
+              <p className="stat-card-value mt-4">{metrics.totalPatients}</p>
+              <p className="stat-card-label">Pacientes</p>
+            </div>
+            <div className="stat-card">
+              <div className="flex items-center justify-between">
+                <div className="h-10 w-10 rounded-lg bg-green-500/10 flex items-center justify-center">
+                  <DollarSign className="h-5 w-5 text-green-600" />
+                </div>
+              </div>
+              <p className="stat-card-value mt-4 text-green-600">${metrics.estimatedRevenue.toLocaleString()}</p>
+              <p className="stat-card-label">MRR Estimado</p>
+            </div>
+          </div>
+        )}
+
+        {/* Action Buttons */}
         <div className={`flex flex-col sm:flex-row gap-3 ${isMobile ? 'sticky top-0 z-10 bg-background pb-3 -mx-4 px-4 pt-2 border-b' : ''}`}>
           <Button
-            className="flex-1 h-12 rounded-xl font-semibold gap-2"
+            className={`${isMobile ? 'flex-1 h-12 rounded-xl' : 'h-10 px-5'} font-semibold gap-2`}
             onClick={() => setShowCreateModal(true)}
           >
-            <Plus className="h-5 w-5" />
+            <Plus className="h-4 w-4" />
             Crear nuevo consultorio
           </Button>
           
           {demoBusinessExists ? (
             <Button
               variant="outline"
-              className="flex-1 h-12 rounded-xl font-semibold gap-2 border-amber-500/50 text-amber-600 hover:bg-amber-500/10"
+              className={`${isMobile ? 'flex-1 h-12 rounded-xl' : 'h-10 px-5'} font-semibold gap-2 border-amber-500/50 text-amber-600 hover:bg-amber-500/10`}
               onClick={() => demoBusiness && enterBusiness(demoBusiness.id)}
             >
-              <Play className="h-5 w-5" />
+              <Play className="h-4 w-4" />
               Entrar a DEMO
             </Button>
           ) : (
             <Button
               variant="outline"
-              className="flex-1 h-12 rounded-xl font-semibold gap-2 border-amber-500/50 text-amber-600 hover:bg-amber-500/10"
+              className={`${isMobile ? 'flex-1 h-12 rounded-xl' : 'h-10 px-5'} font-semibold gap-2 border-amber-500/50 text-amber-600 hover:bg-amber-500/10`}
               onClick={handleCreateDemo}
               disabled={creatingDemo}
             >
               {creatingDemo ? (
-                <Loader2 className="h-5 w-5 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <Sparkles className="h-5 w-5" />
+                <Sparkles className="h-4 w-4" />
               )}
               {creatingDemo ? "Creando demo..." : "Crear consultorio DEMO"}
             </Button>
@@ -1126,30 +1171,31 @@ const SaasAdmin = () => {
         </div>
 
         {/* Businesses Section */}
-        <Card className="mobile-card">
-          <CardHeader className="pb-4">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg font-bold">
-                Consultorios
+        <div className={isMobile ? "mobile-card" : "desktop-card"}>
+          <div className="p-4 lg:p-6 border-b border-border">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <h2 className="text-lg font-semibold text-foreground">
+                  Consultorios
+                </h2>
                 {hasActiveFilters && (
-                  <Badge variant="secondary" className="ml-2">
+                  <Badge variant="secondary" className="text-xs">
                     {filteredBusinesses.length} de {businesses.length}
                   </Badge>
                 )}
-              </CardTitle>
+              </div>
               {hasActiveFilters && (
-                <Button variant="ghost" size="sm" onClick={clearFilters} className="h-8 gap-1">
-                  <X className="h-3 w-3" />
-                  Limpiar
+                <Button variant="ghost" size="sm" onClick={clearFilters} className="h-8 gap-1 text-muted-foreground">
+                  <X className="h-3.5 w-3.5" />
+                  Limpiar filtros
                 </Button>
               )}
             </div>
-          </CardHeader>
-          <CardContent className="p-4 sm:p-6 pt-0 space-y-4">
+            
             {/* Search + Filters */}
-            <div className="space-y-3 pb-4 border-b">
+            <div className="flex flex-col sm:flex-row gap-3">
               {/* Search */}
-              <div className="relative">
+              <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Buscar por nombre o email..."
@@ -1160,10 +1206,9 @@ const SaasAdmin = () => {
               </div>
               
               {/* Filters */}
-              <div className="flex flex-wrap gap-2 items-center">
-                <Filter className="h-4 w-4 text-muted-foreground" />
+              <div className="flex gap-2 items-center">
                 <Select value={planFilter} onValueChange={(v) => setPlanFilter(v as PlanFilter)}>
-                  <SelectTrigger className="w-[140px] sm:w-[180px] h-9">
+                  <SelectTrigger className="w-[160px] h-10">
                     <SelectValue placeholder="Plan" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1176,7 +1221,7 @@ const SaasAdmin = () => {
                   </SelectContent>
                 </Select>
                 <Select value={usageFilter} onValueChange={(v) => setUsageFilter(v as UsageFilter)}>
-                  <SelectTrigger className="w-[140px] sm:w-[180px] h-9">
+                  <SelectTrigger className="w-[160px] h-10">
                     <SelectValue placeholder="Uso" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1187,40 +1232,75 @@ const SaasAdmin = () => {
                 </Select>
               </div>
             </div>
+          </div>
 
+          <div className="p-4 lg:p-6 pt-0 lg:pt-0">
             {/* Mobile: Cards View */}
             {isMobile ? (
-              <div className="space-y-3">
+              <div className="space-y-3 pt-4">
                 {filteredBusinesses.map((business) => (
                   <BusinessCard key={business.id} business={business} />
                 ))}
                 {filteredBusinesses.length === 0 && (
-                  <div className="text-center py-8 text-muted-foreground">
-                    {hasActiveFilters 
-                      ? "No hay consultorios que coincidan con los filtros" 
-                      : "No hay consultorios registrados"}
+                  <div className="empty-state">
+                    <Building2 className="empty-state-icon" />
+                    <p className="empty-state-title">
+                      {hasActiveFilters ? "Sin resultados" : "Sin consultorios"}
+                    </p>
+                    <p className="empty-state-description">
+                      {hasActiveFilters 
+                        ? "No hay consultorios que coincidan con los filtros aplicados" 
+                        : "Aún no hay consultorios registrados en el sistema"}
+                    </p>
+                    {!hasActiveFilters && (
+                      <Button onClick={() => setShowCreateModal(true)} className="gap-2">
+                        <Plus className="h-4 w-4" />
+                        Crear primer consultorio
+                      </Button>
+                    )}
                   </div>
                 )}
               </div>
             ) : (
-              /* Desktop: Table View */
-              <div className="overflow-x-auto">
+              /* Desktop: Premium Table View */
+              <div className="overflow-x-auto -mx-4 lg:-mx-6 pt-4">
                 <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Consultorio</TableHead>
-                      <TableHead className="hidden sm:table-cell">Dueño</TableHead>
-                      <TableHead className="hidden md:table-cell">Plan</TableHead>
-                      <TableHead className="text-center">Profs.</TableHead>
-                      <TableHead className="text-center">Pacientes</TableHead>
-                      <TableHead className="hidden lg:table-cell text-center">Privado</TableHead>
-                      <TableHead className="hidden lg:table-cell text-center">Estado</TableHead>
-                      <TableHead className="hidden lg:table-cell">Creado</TableHead>
-                      <TableHead className="text-right">Acciones</TableHead>
+                  <TableHeader className="data-table-header">
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead className="pl-6 font-semibold">Consultorio</TableHead>
+                      <TableHead className="font-semibold">Dueño</TableHead>
+                      <TableHead className="font-semibold">Plan</TableHead>
+                      <TableHead className="text-center font-semibold">Profesionales</TableHead>
+                      <TableHead className="text-center font-semibold">Pacientes</TableHead>
+                      <TableHead className="text-center font-semibold">Estado</TableHead>
+                      <TableHead className="font-semibold">Creado</TableHead>
+                      <TableHead className="pr-6 text-right font-semibold">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredBusinesses.map((business) => {
+                    {filteredBusinesses.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={8} className="h-48">
+                          <div className="empty-state py-8">
+                            <Building2 className="empty-state-icon" />
+                            <p className="empty-state-title">
+                              {hasActiveFilters ? "Sin resultados" : "Sin consultorios"}
+                            </p>
+                            <p className="empty-state-description">
+                              {hasActiveFilters 
+                                ? "No hay consultorios que coincidan con los filtros" 
+                                : "Crea tu primer consultorio para empezar"}
+                            </p>
+                            {!hasActiveFilters && (
+                              <Button onClick={() => setShowCreateModal(true)} className="gap-2">
+                                <Plus className="h-4 w-4" />
+                                Crear consultorio
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ) : filteredBusinesses.map((business) => {
                       const customLimits = business.planCode === "custom" ? {
                         maxProfessionals: business.customMaxProfessionals ?? null,
                         maxPatients: business.customMaxPatients ?? null,
@@ -1228,136 +1308,130 @@ const SaasAdmin = () => {
                       const config = getPlanConfig(business.planCode, customLimits);
                       const profStatus = getUsageStatus(business.professionalsCount, config.maxProfessionals);
                       const patientStatus = getUsageStatus(business.patientsCount, config.maxPatients);
-                      const overallStatus = profStatus.status === "danger" || patientStatus.status === "danger"
-                        ? "danger"
-                        : profStatus.status === "warning" || patientStatus.status === "warning"
-                          ? "warning"
-                          : "ok";
 
                       return (
-                        <TableRow key={business.id}>
+                        <TableRow key={business.id} className="data-table-row group">
+                          <TableCell className="pl-6">
+                            <div className="flex items-center gap-3">
+                              <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                                <Building2 className="h-4 w-4 text-primary" />
+                              </div>
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium text-foreground truncate">{business.name}</span>
+                                  {business.isDemo && (
+                                    <Badge variant="outline" className="text-xs border-amber-500 text-amber-600 shrink-0">
+                                      Demo
+                                    </Badge>
+                                  )}
+                                  {!business.isActive && (
+                                    <Badge variant="secondary" className="text-xs shrink-0">
+                                      Inactivo
+                                    </Badge>
+                                  )}
+                                </div>
+                                {business.isPrivateClinic && (
+                                  <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+                                    <Shield className="h-3 w-3" />
+                                    <span>Privado</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </TableCell>
                           <TableCell>
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium">{business.name}</span>
-                              {business.isDemo && (
-                                <Badge variant="outline" className="text-xs border-amber-500 text-amber-600">
-                                  Demo
-                                </Badge>
-                              )}
-                              {!business.isActive && (
-                                <Badge variant="secondary" className="text-xs">
-                                  Inactivo
-                                </Badge>
-                              )}
-                            </div>
+                            <span className="text-sm text-muted-foreground">{business.ownerEmail}</span>
                           </TableCell>
-                          <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">
-                            {business.ownerEmail}
+                          <TableCell>
+                            <PlanSelector
+                              businessId={business.id}
+                              currentPlan={business.planCode}
+                              customMaxProfessionals={business.customMaxProfessionals}
+                              customMaxPatients={business.customMaxPatients}
+                              onChangePlan={handleChangePlan}
+                            />
                           </TableCell>
-                          <TableCell className="hidden md:table-cell">
-                            <div className="space-y-1">
-                              <PlanSelector
-                                businessId={business.id}
-                                currentPlan={business.planCode}
-                                customMaxProfessionals={business.customMaxProfessionals}
-                                customMaxPatients={business.customMaxPatients}
-                                onChangePlan={handleChangePlan}
-                              />
-                              <p className="text-xs text-muted-foreground">
-                                {business.billingPeriod === "monthly" ? "Mensual" : "Anual"}
-                              </p>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md ${
-                              profStatus.status === "danger" 
-                                ? "bg-destructive/10 text-destructive" 
-                                : profStatus.status === "warning"
-                                  ? "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400"
-                                  : "bg-green-500/10 text-green-700 dark:text-green-400"
-                            }`}>
-                              {profStatus.status === "danger" && (
-                                <AlertTriangle className="h-3 w-3" />
-                              )}
-                              <span className="font-medium text-sm">
+                          <TableCell>
+                            <div className="flex flex-col items-center gap-1.5">
+                              <span className={`text-sm font-medium tabular-nums ${
+                                profStatus.status === "danger" ? "text-destructive" 
+                                : profStatus.status === "warning" ? "text-warning"
+                                : "text-foreground"
+                              }`}>
                                 {business.professionalsCount}
-                                {config.maxProfessionals !== null 
-                                  ? `/${config.maxProfessionals}` 
-                                  : " ∞"}
+                                <span className="text-muted-foreground font-normal">
+                                  {config.maxProfessionals !== null ? `/${config.maxProfessionals}` : ""}
+                                </span>
                               </span>
+                              {config.maxProfessionals !== null && (
+                                <div className="usage-bar w-16">
+                                  <div 
+                                    className={`usage-bar-fill ${
+                                      profStatus.status === "danger" ? "usage-bar-danger" 
+                                      : profStatus.status === "warning" ? "usage-bar-warning"
+                                      : "usage-bar-ok"
+                                    }`}
+                                    style={{ width: `${Math.min(profStatus.percentage, 100)}%` }}
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-col items-center gap-1.5">
+                              <span className={`text-sm font-medium tabular-nums ${
+                                patientStatus.status === "danger" ? "text-destructive" 
+                                : patientStatus.status === "warning" ? "text-warning"
+                                : "text-foreground"
+                              }`}>
+                                {business.patientsCount}
+                                <span className="text-muted-foreground font-normal">
+                                  {config.maxPatients !== null ? `/${config.maxPatients}` : ""}
+                                </span>
+                              </span>
+                              {config.maxPatients !== null && (
+                                <div className="usage-bar w-16">
+                                  <div 
+                                    className={`usage-bar-fill ${
+                                      patientStatus.status === "danger" ? "usage-bar-danger" 
+                                      : patientStatus.status === "warning" ? "usage-bar-warning"
+                                      : "usage-bar-ok"
+                                    }`}
+                                    style={{ width: `${Math.min(patientStatus.percentage, 100)}%` }}
+                                  />
+                                </div>
+                              )}
                             </div>
                           </TableCell>
                           <TableCell className="text-center">
-                            <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md ${
-                              patientStatus.status === "danger" 
-                                ? "bg-destructive/10 text-destructive" 
-                                : patientStatus.status === "warning"
-                                  ? "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400"
-                                  : "bg-green-500/10 text-green-700 dark:text-green-400"
-                            }`}>
-                              {patientStatus.status === "danger" && (
-                                <AlertTriangle className="h-3 w-3" />
-                              )}
-                              <span className="font-medium text-sm">
-                                {business.patientsCount}
-                                {config.maxPatients !== null 
-                                  ? `/${config.maxPatients}` 
-                                  : " ∞"}
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="hidden lg:table-cell text-center">
-                            {business.isPrivateClinic ? (
-                              <Badge 
-                                variant="default" 
-                                className="bg-primary/10 text-primary hover:bg-primary/20 cursor-pointer gap-1"
-                                onClick={() => openPrivateClinicModal(business)}
-                              >
-                                <Shield className="h-3 w-3" />
-                                Sí
-                              </Badge>
-                            ) : (
-                              <Badge 
-                                variant="secondary" 
-                                className="cursor-pointer"
-                                onClick={() => openPrivateClinicModal(business)}
-                              >
-                                No
-                              </Badge>
-                            )}
-                          </TableCell>
-                          <TableCell className="hidden lg:table-cell text-center">
                             <Badge 
-                              variant={overallStatus === "ok" ? "default" : "secondary"}
-                              className={
-                                overallStatus === "danger" 
-                                  ? "bg-destructive/10 text-destructive hover:bg-destructive/20"
-                                  : overallStatus === "warning"
-                                    ? "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 hover:bg-yellow-500/20"
-                                    : "bg-green-500/10 text-green-700 dark:text-green-400 hover:bg-green-500/20"
-                              }
+                              variant="secondary"
+                              className={`${
+                                !business.isActive 
+                                  ? "bg-muted text-muted-foreground"
+                                  : profStatus.status === "danger" || patientStatus.status === "danger"
+                                    ? "bg-destructive/10 text-destructive"
+                                    : profStatus.status === "warning" || patientStatus.status === "warning"
+                                      ? "bg-warning/10 text-warning"
+                                      : "bg-green-500/10 text-green-600 dark:text-green-400"
+                              }`}
                             >
-                              {overallStatus === "danger" 
-                                ? "Límite" 
-                                : overallStatus === "warning" 
-                                  ? "Cerca" 
-                                  : "OK"}
+                              {!business.isActive 
+                                ? "Inactivo"
+                                : profStatus.status === "danger" || patientStatus.status === "danger"
+                                  ? "Límite"
+                                  : profStatus.status === "warning" || patientStatus.status === "warning"
+                                    ? "Cerca"
+                                    : "OK"}
                             </Badge>
                           </TableCell>
-                          <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
-                            {formatDate(business.created_at)}
+                          <TableCell>
+                            <span className="text-sm text-muted-foreground tabular-nums">
+                              {formatDate(business.created_at)}
+                            </span>
                           </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-1">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8"
-                                onClick={() => openPrivateClinicModal(business)}
-                                title="Configurar dominio privado"
-                              >
-                                <Globe className="h-4 w-4" />
-                              </Button>
+                          <TableCell className="pr-6">
+                            <div className="flex items-center justify-end gap-1 opacity-70 group-hover:opacity-100 transition-opacity">
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -1366,6 +1440,15 @@ const SaasAdmin = () => {
                                 title="Ingresar al consultorio"
                               >
                                 <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => openEditModal(business)}
+                                title="Editar"
+                              >
+                                <Pencil className="h-4 w-4" />
                               </Button>
                               <Button
                                 variant="ghost"
@@ -1380,17 +1463,17 @@ const SaasAdmin = () => {
                                 variant="ghost"
                                 size="icon"
                                 className="h-8 w-8"
-                                onClick={() => openEditModal(business)}
-                                title="Editar consultorio"
+                                onClick={() => openPrivateClinicModal(business)}
+                                title="Configurar dominio"
                               >
-                                <Pencil className="h-4 w-4" />
+                                <Globe className="h-4 w-4" />
                               </Button>
                               <Button
                                 variant="ghost"
                                 size="icon"
                                 className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
                                 onClick={() => openDeleteModal(business)}
-                                title="Eliminar consultorio"
+                                title="Eliminar"
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
@@ -1399,21 +1482,12 @@ const SaasAdmin = () => {
                         </TableRow>
                       );
                     })}
-                    {filteredBusinesses.length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
-                          {hasActiveFilters 
-                            ? "No hay consultorios que coincidan con los filtros" 
-                            : "No hay consultorios registrados"}
-                        </TableCell>
-                      </TableRow>
-                    )}
                   </TableBody>
                 </Table>
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Metrics - Collapsible */}
         <Collapsible>
