@@ -4,7 +4,7 @@ import { es } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
-import { Calendar, CreditCard, Clock, MapPin, User, X } from "lucide-react";
+import { Calendar, CreditCard, Clock, MapPin, User, X, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Appointment {
@@ -39,6 +39,7 @@ interface DayDetailDrawerProps {
   payments: Payment[];
   onAppointmentClick: (appointment: Appointment) => void;
   selectedPatientId: string | null;
+  onCreateAppointment?: (date: Date) => void;
 }
 
 export const DayDetailDrawer = ({
@@ -49,6 +50,7 @@ export const DayDetailDrawer = ({
   payments,
   onAppointmentClick,
   selectedPatientId,
+  onCreateAppointment,
 }: DayDetailDrawerProps) => {
   const dayAppointments = useMemo(() => {
     return appointments
@@ -125,6 +127,17 @@ export const DayDetailDrawer = ({
         </DrawerHeader>
 
         <div className="overflow-y-auto p-4 space-y-6">
+          {/* Create Appointment Button */}
+          {onCreateAppointment && (
+            <Button 
+              onClick={() => onCreateAppointment(selectedDate)}
+              className="w-full h-12 rounded-xl text-base font-semibold gap-2"
+            >
+              <Plus className="w-5 h-5" />
+              Crear cita
+            </Button>
+          )}
+
           {/* Appointments Section */}
           <div>
             <div className="flex items-center gap-2 mb-3">
