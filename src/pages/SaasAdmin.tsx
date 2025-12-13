@@ -42,6 +42,19 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { toast } from "@/hooks/use-toast";
 import {
   Building2,
@@ -67,6 +80,11 @@ import {
   Trash2,
   Pencil,
   Search,
+  MoreHorizontal,
+  LogIn,
+  Calendar,
+  Rows3,
+  LayoutGrid,
 } from "lucide-react";
 import { getPlanName, getPlanConfig, checkProfessionalLimit } from "@/hooks/use-plan-limits";
 import { 
@@ -142,6 +160,7 @@ const SaasAdmin = () => {
   // Filters
   const [planFilter, setPlanFilter] = useState<PlanFilter>("all");
   const [usageFilter, setUsageFilter] = useState<UsageFilter>("all");
+  const [compactMode, setCompactMode] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
 
   // Create business form state
@@ -1171,116 +1190,166 @@ const SaasAdmin = () => {
         </div>
 
         {/* Businesses Section */}
-        <div className={isMobile ? "mobile-card" : "desktop-card"}>
-          <div className="p-4 lg:p-6 border-b border-border">
-            <div className="flex items-center justify-between mb-4">
+        <TooltipProvider>
+        <div className={isMobile ? "mobile-card" : "desktop-card overflow-hidden"}>
+          {/* Premium Header Bar */}
+          <div className="p-4 lg:px-6 lg:py-5 border-b border-border bg-muted/30">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+              {/* Left side: Title + Counter */}
               <div className="flex items-center gap-3">
                 <h2 className="text-lg font-semibold text-foreground">
                   Consultorios
                 </h2>
-                {hasActiveFilters && (
-                  <Badge variant="secondary" className="text-xs">
-                    {filteredBusinesses.length} de {businesses.length}
-                  </Badge>
-                )}
-              </div>
-              {hasActiveFilters && (
-                <Button variant="ghost" size="sm" onClick={clearFilters} className="h-8 gap-1 text-muted-foreground">
-                  <X className="h-3.5 w-3.5" />
-                  Limpiar filtros
-                </Button>
-              )}
-            </div>
-            
-            {/* Search + Filters */}
-            <div className="flex flex-col sm:flex-row gap-3">
-              {/* Search */}
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar por nombre o email..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 h-10"
-                />
+                <span className="text-sm text-muted-foreground">
+                  Mostrando {filteredBusinesses.length} {filteredBusinesses.length === 1 ? 'consultorio' : 'consultorios'}
+                  {hasActiveFilters && ` de ${businesses.length}`}
+                </span>
               </div>
               
-              {/* Filters */}
-              <div className="flex gap-2 items-center">
-                <Select value={planFilter} onValueChange={(v) => setPlanFilter(v as PlanFilter)}>
-                  <SelectTrigger className="w-[160px] h-10">
-                    <SelectValue placeholder="Plan" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos los planes</SelectItem>
-                    {PLAN_ORDER.map(code => (
-                      <SelectItem key={code} value={code}>
-                        {PLAN_DEFINITIONS[code].name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select value={usageFilter} onValueChange={(v) => setUsageFilter(v as UsageFilter)}>
-                  <SelectTrigger className="w-[160px] h-10">
-                    <SelectValue placeholder="Uso" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todo el uso</SelectItem>
-                    <SelectItem value="near_limit">Cerca del límite (≥70%)</SelectItem>
-                    <SelectItem value="at_limit">En el límite (100%)</SelectItem>
-                  </SelectContent>
-                </Select>
+              {/* Right side: Search + Filters + Density Toggle */}
+              <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+                {/* Search */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9 h-9 w-full sm:w-[200px] bg-background"
+                  />
+                </div>
+                
+                {/* Filters */}
+                <div className="flex gap-2 items-center">
+                  <Select value={planFilter} onValueChange={(v) => setPlanFilter(v as PlanFilter)}>
+                    <SelectTrigger className="w-[140px] h-9 bg-background">
+                      <SelectValue placeholder="Plan" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      {PLAN_ORDER.map(code => (
+                        <SelectItem key={code} value={code}>
+                          {PLAN_DEFINITIONS[code].name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={usageFilter} onValueChange={(v) => setUsageFilter(v as UsageFilter)}>
+                    <SelectTrigger className="w-[130px] h-9 bg-background">
+                      <SelectValue placeholder="Estado" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      <SelectItem value="near_limit">Cerca del límite</SelectItem>
+                      <SelectItem value="at_limit">En el límite</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  
+                  {hasActiveFilters && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={clearFilters} 
+                      className="h-9 px-2 text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                  
+                  {/* Density Toggle - Desktop only */}
+                  {!isMobile && (
+                    <div className="hidden lg:flex items-center border-l border-border pl-3 ml-1">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant={compactMode ? "secondary" : "ghost"}
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => setCompactMode(true)}
+                          >
+                            <Rows3 className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Compacto</TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant={!compactMode ? "secondary" : "ghost"}
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => setCompactMode(false)}
+                          >
+                            <LayoutGrid className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Cómodo</TooltipContent>
+                      </Tooltip>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="p-4 lg:p-6 pt-0 lg:pt-0">
+          {/* Table Content */}
+          <div className="p-0">
             {/* Mobile: Cards View */}
             {isMobile ? (
-              <div className="space-y-3 pt-4">
+              <div className="space-y-3 p-4">
                 {filteredBusinesses.map((business) => (
                   <BusinessCard key={business.id} business={business} />
                 ))}
                 {filteredBusinesses.length === 0 && (
-                  <div className="empty-state">
+                  <div className="empty-state py-12">
                     <Building2 className="empty-state-icon" />
                     <p className="empty-state-title">
                       {hasActiveFilters ? "Sin resultados" : "Sin consultorios"}
                     </p>
                     <p className="empty-state-description">
                       {hasActiveFilters 
-                        ? "No hay consultorios que coincidan con los filtros aplicados" 
-                        : "Aún no hay consultorios registrados en el sistema"}
+                        ? "No hay consultorios que coincidan con los filtros" 
+                        : "Aún no hay consultorios registrados"}
                     </p>
                     {!hasActiveFilters && (
-                      <Button onClick={() => setShowCreateModal(true)} className="gap-2">
+                      <Button onClick={() => setShowCreateModal(true)} className="gap-2 mt-4">
                         <Plus className="h-4 w-4" />
-                        Crear primer consultorio
+                        Crear consultorio
                       </Button>
                     )}
                   </div>
                 )}
               </div>
             ) : (
-              /* Desktop: Premium Table View */
-              <div className="overflow-x-auto -mx-4 lg:-mx-6 pt-4">
+              /* Desktop: Premium DataGrid */
+              <div className="overflow-x-auto">
                 <Table>
-                  <TableHeader className="data-table-header">
-                    <TableRow className="hover:bg-transparent">
-                      <TableHead className="pl-6 font-semibold">Consultorio</TableHead>
-                      <TableHead className="font-semibold">Dueño</TableHead>
-                      <TableHead className="font-semibold">Plan</TableHead>
-                      <TableHead className="text-center font-semibold">Profesionales</TableHead>
-                      <TableHead className="text-center font-semibold">Pacientes</TableHead>
-                      <TableHead className="text-center font-semibold">Estado</TableHead>
-                      <TableHead className="font-semibold">Creado</TableHead>
-                      <TableHead className="pr-6 text-right font-semibold">Acciones</TableHead>
+                  <TableHeader className="sticky top-0 z-10 bg-muted/80 backdrop-blur-sm shadow-[0_1px_0_0_hsl(var(--border))]">
+                    <TableRow className="hover:bg-transparent border-0">
+                      <TableHead className={`pl-6 font-semibold text-xs uppercase tracking-wide text-muted-foreground ${compactMode ? 'py-2.5' : 'py-3.5'}`}>
+                        Consultorio
+                      </TableHead>
+                      <TableHead className={`font-semibold text-xs uppercase tracking-wide text-muted-foreground ${compactMode ? 'py-2.5' : 'py-3.5'}`}>
+                        Dueño
+                      </TableHead>
+                      <TableHead className={`font-semibold text-xs uppercase tracking-wide text-muted-foreground ${compactMode ? 'py-2.5' : 'py-3.5'}`}>
+                        Plan
+                      </TableHead>
+                      <TableHead className={`font-semibold text-xs uppercase tracking-wide text-muted-foreground ${compactMode ? 'py-2.5' : 'py-3.5'}`}>
+                        Uso
+                      </TableHead>
+                      <TableHead className={`text-center font-semibold text-xs uppercase tracking-wide text-muted-foreground ${compactMode ? 'py-2.5' : 'py-3.5'}`}>
+                        Estado
+                      </TableHead>
+                      <TableHead className={`pr-6 text-right font-semibold text-xs uppercase tracking-wide text-muted-foreground ${compactMode ? 'py-2.5' : 'py-3.5'}`}>
+                        Acciones
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredBusinesses.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={8} className="h-48">
+                        <TableCell colSpan={6} className="h-48">
                           <div className="empty-state py-8">
                             <Building2 className="empty-state-icon" />
                             <p className="empty-state-title">
@@ -1292,7 +1361,7 @@ const SaasAdmin = () => {
                                 : "Crea tu primer consultorio para empezar"}
                             </p>
                             {!hasActiveFilters && (
-                              <Button onClick={() => setShowCreateModal(true)} className="gap-2">
+                              <Button onClick={() => setShowCreateModal(true)} className="gap-2 mt-4">
                                 <Plus className="h-4 w-4" />
                                 Crear consultorio
                               </Button>
@@ -1308,41 +1377,61 @@ const SaasAdmin = () => {
                       const config = getPlanConfig(business.planCode, customLimits);
                       const profStatus = getUsageStatus(business.professionalsCount, config.maxProfessionals);
                       const patientStatus = getUsageStatus(business.patientsCount, config.maxPatients);
+                      const worstStatus = profStatus.status === "danger" || patientStatus.status === "danger" 
+                        ? "danger" 
+                        : profStatus.status === "warning" || patientStatus.status === "warning"
+                          ? "warning"
+                          : "ok";
 
                       return (
-                        <TableRow key={business.id} className="data-table-row group">
-                          <TableCell className="pl-6">
-                            <div className="flex items-center gap-3">
-                              <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                                <Building2 className="h-4 w-4 text-primary" />
-                              </div>
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium text-foreground truncate">{business.name}</span>
-                                  {business.isDemo && (
-                                    <Badge variant="outline" className="text-xs border-amber-500 text-amber-600 shrink-0">
-                                      Demo
-                                    </Badge>
-                                  )}
-                                  {!business.isActive && (
-                                    <Badge variant="secondary" className="text-xs shrink-0">
-                                      Inactivo
-                                    </Badge>
-                                  )}
-                                </div>
-                                {business.isPrivateClinic && (
-                                  <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
-                                    <Shield className="h-3 w-3" />
-                                    <span>Privado</span>
+                        <TableRow 
+                          key={business.id} 
+                          className={`group border-b border-border/50 transition-colors hover:bg-muted/40 ${compactMode ? '' : ''}`}
+                        >
+                          {/* Consultorio */}
+                          <TableCell className={`pl-6 ${compactMode ? 'py-2.5' : 'py-4'}`}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="flex items-center gap-3 cursor-default">
+                                  <div className={`rounded-lg bg-primary/10 flex items-center justify-center shrink-0 ${compactMode ? 'h-8 w-8' : 'h-10 w-10'}`}>
+                                    <Building2 className={`text-primary ${compactMode ? 'h-4 w-4' : 'h-5 w-5'}`} />
                                   </div>
-                                )}
-                              </div>
-                            </div>
+                                  <div className="min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <span className={`font-medium text-foreground truncate max-w-[200px] ${compactMode ? 'text-sm' : 'text-base'}`}>
+                                        {business.name}
+                                      </span>
+                                      {business.isDemo && (
+                                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-500 text-amber-600 shrink-0">
+                                          Demo
+                                        </Badge>
+                                      )}
+                                      {business.isPrivateClinic && (
+                                        <Shield className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent side="bottom" align="start" className="max-w-xs">
+                                <div className="text-xs space-y-1">
+                                  <p><strong>Creado:</strong> {formatDate(business.created_at)}</p>
+                                  {business.isPrivateClinic && <p><strong>Tipo:</strong> Privado</p>}
+                                  {business.customSubdomain && <p><strong>Subdominio:</strong> {business.customSubdomain}</p>}
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
                           </TableCell>
-                          <TableCell>
-                            <span className="text-sm text-muted-foreground">{business.ownerEmail}</span>
+                          
+                          {/* Dueño */}
+                          <TableCell className={compactMode ? 'py-2.5' : 'py-4'}>
+                            <span className={`text-muted-foreground truncate block max-w-[180px] ${compactMode ? 'text-xs' : 'text-sm'}`}>
+                              {business.ownerEmail}
+                            </span>
                           </TableCell>
-                          <TableCell>
+                          
+                          {/* Plan */}
+                          <TableCell className={compactMode ? 'py-2.5' : 'py-4'}>
                             <PlanSelector
                               businessId={business.id}
                               currentPlan={business.planCode}
@@ -1351,133 +1440,119 @@ const SaasAdmin = () => {
                               onChangePlan={handleChangePlan}
                             />
                           </TableCell>
-                          <TableCell>
-                            <div className="flex flex-col items-center gap-1.5">
-                              <span className={`text-sm font-medium tabular-nums ${
-                                profStatus.status === "danger" ? "text-destructive" 
-                                : profStatus.status === "warning" ? "text-warning"
-                                : "text-foreground"
-                              }`}>
-                                {business.professionalsCount}
-                                <span className="text-muted-foreground font-normal">
-                                  {config.maxProfessionals !== null ? `/${config.maxProfessionals}` : ""}
-                                </span>
-                              </span>
-                              {config.maxProfessionals !== null && (
-                                <div className="usage-bar w-16">
+                          
+                          {/* Uso - Combined column */}
+                          <TableCell className={compactMode ? 'py-2.5' : 'py-4'}>
+                            <div className="flex flex-col gap-1.5 min-w-[120px]">
+                              {/* Profesionales */}
+                              <div className="flex items-center gap-2">
+                                <span className={`text-[10px] text-muted-foreground w-8 shrink-0`}>Profs</span>
+                                <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
                                   <div 
-                                    className={`usage-bar-fill ${
-                                      profStatus.status === "danger" ? "usage-bar-danger" 
-                                      : profStatus.status === "warning" ? "usage-bar-warning"
-                                      : "usage-bar-ok"
+                                    className={`h-full rounded-full transition-all ${
+                                      profStatus.status === "danger" ? "bg-destructive" 
+                                      : profStatus.status === "warning" ? "bg-warning"
+                                      : "bg-success"
                                     }`}
                                     style={{ width: `${Math.min(profStatus.percentage, 100)}%` }}
                                   />
                                 </div>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex flex-col items-center gap-1.5">
-                              <span className={`text-sm font-medium tabular-nums ${
-                                patientStatus.status === "danger" ? "text-destructive" 
-                                : patientStatus.status === "warning" ? "text-warning"
-                                : "text-foreground"
-                              }`}>
-                                {business.patientsCount}
-                                <span className="text-muted-foreground font-normal">
-                                  {config.maxPatients !== null ? `/${config.maxPatients}` : ""}
+                                <span className={`text-[10px] tabular-nums w-10 text-right ${
+                                  profStatus.status === "danger" ? "text-destructive font-medium" 
+                                  : profStatus.status === "warning" ? "text-warning font-medium"
+                                  : "text-muted-foreground"
+                                }`}>
+                                  {business.professionalsCount}/{config.maxProfessionals ?? "∞"}
                                 </span>
-                              </span>
-                              {config.maxPatients !== null && (
-                                <div className="usage-bar w-16">
+                              </div>
+                              {/* Pacientes */}
+                              <div className="flex items-center gap-2">
+                                <span className={`text-[10px] text-muted-foreground w-8 shrink-0`}>Pac</span>
+                                <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
                                   <div 
-                                    className={`usage-bar-fill ${
-                                      patientStatus.status === "danger" ? "usage-bar-danger" 
-                                      : patientStatus.status === "warning" ? "usage-bar-warning"
-                                      : "usage-bar-ok"
+                                    className={`h-full rounded-full transition-all ${
+                                      patientStatus.status === "danger" ? "bg-destructive" 
+                                      : patientStatus.status === "warning" ? "bg-warning"
+                                      : "bg-success"
                                     }`}
                                     style={{ width: `${Math.min(patientStatus.percentage, 100)}%` }}
                                   />
                                 </div>
-                              )}
+                                <span className={`text-[10px] tabular-nums w-10 text-right ${
+                                  patientStatus.status === "danger" ? "text-destructive font-medium" 
+                                  : patientStatus.status === "warning" ? "text-warning font-medium"
+                                  : "text-muted-foreground"
+                                }`}>
+                                  {business.patientsCount}/{config.maxPatients ?? "∞"}
+                                </span>
+                              </div>
                             </div>
                           </TableCell>
-                          <TableCell className="text-center">
+                          
+                          {/* Estado */}
+                          <TableCell className={`text-center ${compactMode ? 'py-2.5' : 'py-4'}`}>
                             <Badge 
                               variant="secondary"
-                              className={`${
+                              className={`text-[10px] px-2 py-0.5 ${
                                 !business.isActive 
                                   ? "bg-muted text-muted-foreground"
-                                  : profStatus.status === "danger" || patientStatus.status === "danger"
+                                  : worstStatus === "danger"
                                     ? "bg-destructive/10 text-destructive"
-                                    : profStatus.status === "warning" || patientStatus.status === "warning"
+                                    : worstStatus === "warning"
                                       ? "bg-warning/10 text-warning"
-                                      : "bg-green-500/10 text-green-600 dark:text-green-400"
+                                      : "bg-success/10 text-success"
                               }`}
                             >
                               {!business.isActive 
                                 ? "Inactivo"
-                                : profStatus.status === "danger" || patientStatus.status === "danger"
+                                : worstStatus === "danger"
                                   ? "Límite"
-                                  : profStatus.status === "warning" || patientStatus.status === "warning"
+                                  : worstStatus === "warning"
                                     ? "Cerca"
                                     : "OK"}
                             </Badge>
                           </TableCell>
-                          <TableCell>
-                            <span className="text-sm text-muted-foreground tabular-nums">
-                              {formatDate(business.created_at)}
-                            </span>
-                          </TableCell>
-                          <TableCell className="pr-6">
-                            <div className="flex items-center justify-end gap-1 opacity-70 group-hover:opacity-100 transition-opacity">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8"
-                                onClick={() => enterBusiness(business.id)}
-                                title="Ingresar al consultorio"
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8"
-                                onClick={() => openEditModal(business)}
-                                title="Editar"
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8"
-                                onClick={() => loadProfessionals(business)}
-                                title="Ver profesionales"
-                              >
-                                <UserCog className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8"
-                                onClick={() => openPrivateClinicModal(business)}
-                                title="Configurar dominio"
-                              >
-                                <Globe className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                onClick={() => openDeleteModal(business)}
-                                title="Eliminar"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
+                          
+                          {/* Acciones - Dropdown Menu */}
+                          <TableCell className={`pr-6 text-right ${compactMode ? 'py-2.5' : 'py-4'}`}>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon"
+                                  className="h-8 w-8 opacity-60 group-hover:opacity-100 transition-opacity"
+                                >
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-48">
+                                <DropdownMenuItem onClick={() => loadProfessionals(business)}>
+                                  <UserCog className="h-4 w-4 mr-2" />
+                                  Ver detalle
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => enterBusiness(business.id)}>
+                                  <LogIn className="h-4 w-4 mr-2" />
+                                  Entrar al consultorio
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => openEditModal(business)}>
+                                  <Pencil className="h-4 w-4 mr-2" />
+                                  Editar
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => openPrivateClinicModal(business)}>
+                                  <Globe className="h-4 w-4 mr-2" />
+                                  Configurar dominio
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem 
+                                  onClick={() => openDeleteModal(business)}
+                                  className="text-destructive focus:text-destructive focus:bg-destructive/10"
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Eliminar
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </TableCell>
                         </TableRow>
                       );
@@ -1488,6 +1563,7 @@ const SaasAdmin = () => {
             )}
           </div>
         </div>
+        </TooltipProvider>
 
         {/* Metrics - Collapsible */}
         <Collapsible>
