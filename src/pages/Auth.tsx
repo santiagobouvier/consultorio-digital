@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Building2 } from "lucide-react";
+import { useHostnameBusiness } from "@/hooks/use-hostname-business";
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -15,6 +16,8 @@ const Auth = () => {
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  
+  const { business: hostnameBusiness, loading: businessLoading } = useHostnameBusiness();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -107,6 +110,8 @@ const Auth = () => {
     }
   };
 
+  const showContextualLogin = hostnameBusiness && !businessLoading;
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-secondary/20 to-background p-4">
       <div className="w-full max-w-md">
@@ -117,68 +122,89 @@ const Auth = () => {
           <ArrowLeft className="w-4 h-4" />
           Volver al inicio
         </Link>
+        
+        {/* Contextual business header */}
+        {showContextualLogin && (
+          <Card className="mb-4 border-primary/20 bg-primary/5">
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <Building2 className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Ingresando a</p>
+                <p className="font-semibold text-foreground">{hostnameBusiness.name}</p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <Card>
           <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">
-            {isLogin ? "Bienvenido" : "Crear cuenta"}
-          </CardTitle>
-          <CardDescription className="text-center">
-            {isLogin ? "Iniciá sesión en tu cuenta profesional" : "Comenzá a gestionar tu consultorio"}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {!isLogin && (
+            <CardTitle className="text-2xl font-bold text-center">
+              {isLogin ? "Bienvenido" : "Crear cuenta"}
+            </CardTitle>
+            <CardDescription className="text-center">
+              {showContextualLogin 
+                ? `Iniciá sesión en ${hostnameBusiness.name}`
+                : isLogin 
+                  ? "Iniciá sesión en tu cuenta profesional" 
+                  : "Comenzá a gestionar tu consultorio"
+              }
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {!isLogin && (
+                <div className="space-y-2">
+                  <Label htmlFor="name">Nombre completo</Label>
+                  <Input
+                    id="name"
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                    placeholder="Dr. María González"
+                  />
+                </div>
+              )}
               <div className="space-y-2">
-                <Label htmlFor="name">Nombre completo</Label>
+                <Label htmlFor="email">Correo electrónico</Label>
                 <Input
-                  id="name"
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   required
-                  placeholder="Dr. María González"
+                  placeholder="maria@example.com"
                 />
               </div>
-            )}
-            <div className="space-y-2">
-              <Label htmlFor="email">Correo electrónico</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                placeholder="maria@example.com"
-              />
+              <div className="space-y-2">
+                <Label htmlFor="password">Contraseña</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  placeholder="••••••"
+                />
+              </div>
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? "Aguardá un momento..." : isLogin ? "Iniciar sesión" : "Registrarse"}
+              </Button>
+            </form>
+            <div className="mt-4 text-center text-sm">
+              <button
+                type="button"
+                onClick={() => setIsLogin(!isLogin)}
+                className="text-primary hover:underline"
+              >
+                {isLogin ? "¿No tenés cuenta? Registrate" : "¿Ya tenés cuenta? Iniciá sesión"}
+              </button>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Contraseña</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={6}
-                placeholder="••••••"
-              />
-            </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Aguardá un momento..." : isLogin ? "Iniciar sesión" : "Registrarse"}
-            </Button>
-          </form>
-          <div className="mt-4 text-center text-sm">
-            <button
-              type="button"
-              onClick={() => setIsLogin(!isLogin)}
-              className="text-primary hover:underline"
-            >
-              {isLogin ? "¿No tenés cuenta? Registrate" : "¿Ya tenés cuenta? Iniciá sesión"}
-            </button>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
