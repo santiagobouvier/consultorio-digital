@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, ChevronLeft, ChevronRight, Search, Filter } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -24,11 +24,6 @@ import { PatientSummary } from "@/components/calendar/PatientSummary";
 import { format, addMonths, subMonths, addWeeks, subWeeks, addDays, subDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek, subMonths as subMonthsFn } from "date-fns";
 import { es } from "date-fns/locale";
 import { calculatePaymentStatus, type PaymentStatus } from "@/lib/payments";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import { useBusinessId } from "@/hooks/use-business-id";
 
 interface AppointmentWithRelations {
@@ -78,7 +73,6 @@ const Agenda = () => {
   const [patientSearch, setPatientSearch] = useState("");
   const [selectedAppointment, setSelectedAppointment] = useState<AppointmentWithRelations | null>(null);
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
   const [statusFilter, setStatusFilter] = useState<AppointmentStatusFilter>("all");
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<PaymentStatusFilter>("all");
   
@@ -489,139 +483,11 @@ const Agenda = () => {
           </div>
 
           <div className="flex items-center gap-2">
-            <Button 
-              variant={hasActiveFilters ? "default" : "outline"} 
-              size="sm" 
-              onClick={() => setShowFilters(!showFilters)} 
-              className="rounded-xl gap-1"
-            >
-              <Filter className="h-4 w-4" />
-              <span className="hidden sm:inline">Filtros</span>
-              {hasActiveFilters && (
-                <Badge variant="secondary" className="ml-1 rounded-full h-5 w-5 p-0 text-xs flex items-center justify-center">
-                  {(statusFilter !== "all" ? 1 : 0) + (paymentStatusFilter !== "all" ? 1 : 0) + (selectedPatientId ? 1 : 0)}
-                </Badge>
-              )}
-            </Button>
             <Button variant="outline" size="sm" onClick={goToToday} className="rounded-xl">
               Hoy
             </Button>
           </div>
         </div>
-
-        {/* Filters Section */}
-        <Collapsible open={showFilters} onOpenChange={setShowFilters}>
-          <CollapsibleContent className="space-y-3">
-            <Card className="border-dashed">
-              <CardContent className="p-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                  {/* Patient filter */}
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-muted-foreground">Paciente</label>
-                    <Select
-                      value={selectedPatientId || "all"}
-                      onValueChange={(value) => setSelectedPatientId(value === "all" ? null : value)}
-                    >
-                      <SelectTrigger className="h-10 rounded-xl">
-                        <Search className="h-4 w-4 mr-2 text-muted-foreground" />
-                        <SelectValue placeholder="Todos" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <div className="p-2">
-                          <Input
-                            placeholder="Buscar paciente..."
-                            value={patientSearch}
-                            onChange={(e) => setPatientSearch(e.target.value)}
-                            className="h-9 rounded-lg"
-                          />
-                        </div>
-                        <SelectItem value="all">Todos los pacientes</SelectItem>
-                        {filteredPatients.map((patient) => (
-                          <SelectItem key={patient.id} value={patient.id}>
-                            {patient.full_name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Appointment status filter */}
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-muted-foreground">Estado de cita</label>
-                    <Select
-                      value={statusFilter}
-                      onValueChange={(value) => setStatusFilter(value as AppointmentStatusFilter)}
-                    >
-                      <SelectTrigger className="h-10 rounded-xl">
-                        <SelectValue placeholder="Todos" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos los estados</SelectItem>
-                        <SelectItem value="pending">Programada</SelectItem>
-                        <SelectItem value="confirmed">Confirmada</SelectItem>
-                        <SelectItem value="attended">Realizada</SelectItem>
-                        <SelectItem value="cancelled">Cancelada</SelectItem>
-                        <SelectItem value="no_show">Ausente</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Payment status filter */}
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-muted-foreground">Estado de pago</label>
-                    <Select
-                      value={paymentStatusFilter}
-                      onValueChange={(value) => setPaymentStatusFilter(value as PaymentStatusFilter)}
-                    >
-                      <SelectTrigger className="h-10 rounded-xl">
-                        <SelectValue placeholder="Todos" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos</SelectItem>
-                        <SelectItem value="al_dia">
-                          <div className="flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full bg-green-500" />
-                            Al día
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="por_vencer">
-                          <div className="flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full bg-orange-500" />
-                            Por vencer (≤4 días)
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="vencido">
-                          <div className="flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full bg-red-500" />
-                            Vencido
-                          </div>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Clear filters */}
-                  <div className="flex items-end">
-                    {hasActiveFilters && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="rounded-xl text-muted-foreground"
-                        onClick={() => {
-                          setSelectedPatientId(null);
-                          setStatusFilter("all");
-                          setPaymentStatusFilter("all");
-                        }}
-                      >
-                        Limpiar filtros
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </CollapsibleContent>
-        </Collapsible>
 
         {/* View type & Navigation */}
         <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
@@ -668,6 +534,157 @@ const Agenda = () => {
             onRefresh={handleRefreshData}
           />
         )}
+
+        {/* Calendar Views */}
+        {loading ? (
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <>
+            {viewType === "month" && (
+              <CalendarGrid
+                currentDate={currentDate}
+                appointments={filteredAppointments}
+                payments={selectedPatientPayments}
+                onDateClick={handleDateClick}
+                onAppointmentClick={handleAppointmentClick}
+                selectedPatientId={selectedPatientId}
+                businessId={businessId}
+                onAppointmentCreated={handleRefreshData}
+              />
+            )}
+            {viewType === "week" && (
+              <WeekView
+                currentDate={currentDate}
+                appointments={filteredAppointments}
+                onAppointmentClick={handleAppointmentClick}
+                selectedPatientId={selectedPatientId}
+              />
+            )}
+            {viewType === "day" && (
+              <DayView
+                currentDate={currentDate}
+                appointments={filteredAppointments}
+                onAppointmentClick={handleAppointmentClick}
+                selectedPatientId={selectedPatientId}
+              />
+            )}
+          </>
+        )}
+
+        {/* Filters Section - Always visible below calendar */}
+        <Card className="bg-card/50">
+          <CardContent className="p-4 space-y-4">
+            <p className="text-sm font-semibold text-foreground">Filtros</p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {/* Patient filter */}
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-muted-foreground">Paciente</label>
+                <Select
+                  value={selectedPatientId || "all"}
+                  onValueChange={(value) => setSelectedPatientId(value === "all" ? null : value)}
+                >
+                  <SelectTrigger className="h-11 rounded-xl">
+                    <Search className="h-4 w-4 mr-2 text-muted-foreground" />
+                    <SelectValue placeholder="Todos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <div className="p-2">
+                      <Input
+                        placeholder="Buscar paciente..."
+                        value={patientSearch}
+                        onChange={(e) => setPatientSearch(e.target.value)}
+                        className="h-9 rounded-lg"
+                      />
+                    </div>
+                    <SelectItem value="all">Todos los pacientes</SelectItem>
+                    {filteredPatients.map((patient) => (
+                      <SelectItem key={patient.id} value={patient.id}>
+                        {patient.full_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Appointment status filter */}
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-muted-foreground">Estado de cita</label>
+                <Select
+                  value={statusFilter}
+                  onValueChange={(value) => setStatusFilter(value as AppointmentStatusFilter)}
+                >
+                  <SelectTrigger className="h-11 rounded-xl">
+                    <SelectValue placeholder="Todos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos los estados</SelectItem>
+                    <SelectItem value="pending">Programada</SelectItem>
+                    <SelectItem value="confirmed">Confirmada</SelectItem>
+                    <SelectItem value="attended">Realizada</SelectItem>
+                    <SelectItem value="cancelled">Cancelada</SelectItem>
+                    <SelectItem value="no_show">Ausente</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Payment status filter */}
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-muted-foreground">Estado de pago</label>
+                <Select
+                  value={paymentStatusFilter}
+                  onValueChange={(value) => setPaymentStatusFilter(value as PaymentStatusFilter)}
+                >
+                  <SelectTrigger className="h-11 rounded-xl">
+                    <SelectValue placeholder="Todos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="al_dia">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                        Al día
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="por_vencer">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-amber-500" />
+                        Por vencer
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="vencido">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-rose-500" />
+                        Vencido
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Clear filters */}
+            {hasActiveFilters && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-xl w-full sm:w-auto"
+                onClick={() => {
+                  setSelectedPatientId(null);
+                  setStatusFilter("all");
+                  setPaymentStatusFilter("all");
+                }}
+              >
+                Limpiar filtros
+              </Button>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Calendar Views */}
         {loading ? (
