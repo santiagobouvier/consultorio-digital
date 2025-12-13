@@ -88,17 +88,24 @@ export const DayDetailDrawer = ({
     return statusMap[status] || { label: status, variant: "outline" as const };
   };
 
-  const getPaymentStatusBadge = (status: string) => {
-    switch (status) {
-      case "paid":
-        return { label: "Pagado", className: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" };
-      case "pending":
-        return { label: "Pendiente", className: "bg-muted text-muted-foreground" };
-      case "overdue":
-        return { label: "Vencido", className: "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400" };
-      default:
-        return { label: status, className: "bg-muted text-muted-foreground" };
+  // FIX: Priorizar "paid" siempre - si paid_at existe, es PAGADO
+  const getPaymentStatusBadge = (payment: Payment) => {
+    // Si tiene paid_at o status es 'paid', siempre mostrar PAGADO
+    if (payment.paid_at || payment.status === 'paid') {
+      return { label: "Pagado", className: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" };
     }
+    
+    // Solo si NO está pagado, evaluar vencimiento
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const dueDate = new Date(payment.due_date);
+    dueDate.setHours(0, 0, 0, 0);
+    
+    if (dueDate < today) {
+      return { label: "Vencido", className: "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400" };
+    }
+    
+    return { label: "Pendiente", className: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" };
   };
 
   return (
@@ -213,7 +220,7 @@ export const DayDetailDrawer = ({
 
               <div className="space-y-2">
                 {dayPayments.map((payment) => {
-                  const statusInfo = getPaymentStatusBadge(payment.status);
+                  const statusInfo = getPaymentStatusBadge(payment);
                   return (
                     <div
                       key={payment.id}
@@ -227,7 +234,10 @@ export const DayDetailDrawer = ({
                             </p>
                           )}
                           <p className="text-xs text-muted-foreground">
-                            Vence: {format(new Date(payment.due_date), "d MMM", { locale: es })}
+                            {statusInfo.label === "Pagado" 
+                              ? `Pagado: ${payment.paid_at ? format(new Date(payment.paid_at), "d MMM", { locale: es }) : "-"}`
+                              : `Vence: ${format(new Date(payment.due_date), "d MMM", { locale: es })}`
+                            }
                           </p>
                         </div>
                         <Badge className={cn("rounded-full text-[10px]", statusInfo.className)}>

@@ -237,6 +237,7 @@ const Agenda = () => {
   };
 
   // Calculate payment status for a patient based on their pending payments
+  // FIX: Priorizar "paid" siempre - si paid_at existe, es PAGADO
   const getPatientPaymentStatus = useCallback((patientId: string): PaymentStatus => {
     const patientPayments = allPayments.filter(p => p.patient_id === patientId);
     
@@ -244,28 +245,33 @@ const Agenda = () => {
       return 'pending'; // No payments = treat as pending (green)
     }
 
-    // Find pending/unpaid payments
-    const pendingPayments = patientPayments.filter(p => !p.paid_at && p.status !== 'cancelled');
+    // Find pending/unpaid payments - FIX: verificar paid_at Y status
+    const pendingPayments = patientPayments.filter(p => 
+      !p.paid_at && p.status !== 'paid' && p.status !== 'cancelled'
+    );
     
     if (pendingPayments.length === 0) {
       return 'paid'; // All paid = green
     }
 
     // Check for overdue or due_soon
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
     let hasOverdue = false;
     let hasDueSoon = false;
 
     for (const payment of pendingPayments) {
-      const status = calculatePaymentStatus({
-        due_date: payment.due_date,
-        paid_at: payment.paid_at,
-        status: payment.status,
-      });
+      const dueDate = new Date(payment.due_date);
+      dueDate.setHours(0, 0, 0, 0);
       
-      if (status === 'overdue') {
+      const timeDiff = dueDate.getTime() - today.getTime();
+      const daysUntilDue = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+      
+      if (daysUntilDue < 0) {
         hasOverdue = true;
         break; // No need to continue, overdue is the worst status
-      } else if (status === 'due_soon') {
+      } else if (daysUntilDue <= 4) {
         hasDueSoon = true;
       }
     }

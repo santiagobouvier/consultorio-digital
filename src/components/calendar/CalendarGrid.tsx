@@ -143,33 +143,33 @@ export const CalendarGrid = ({
                 <div
                   key={index}
                   className={cn(
-                    "min-h-[56px] border-b border-r p-1.5 cursor-pointer transition-all active:bg-accent/70",
+                    "min-h-[72px] border-b border-r p-2 cursor-pointer transition-all active:bg-accent/70",
                     !isCurrentMonth && "bg-muted/20 opacity-50",
                     index % 7 === 6 && "border-r-0",
                     hasAppointments && isCurrentMonth && "bg-primary/5"
                   )}
                   onClick={() => handleDayClick(day)}
                 >
-                  <div className="flex flex-col items-center gap-1 h-full">
-                    {/* Day number */}
+                  <div className="flex flex-col items-center gap-1.5 h-full justify-center">
+                    {/* Day number - bigger */}
                     <span
                       className={cn(
-                        "text-base font-semibold w-8 h-8 flex items-center justify-center rounded-full transition-all",
+                        "text-lg font-bold w-10 h-10 flex items-center justify-center rounded-full transition-all",
                         !isCurrentMonth && "text-muted-foreground/40",
                         isCurrentMonth && "text-foreground",
-                        isCurrentDay && "bg-primary text-primary-foreground shadow-sm"
+                        isCurrentDay && "bg-primary text-primary-foreground shadow-md"
                       )}
                     >
                       {format(day, "d")}
                     </span>
                     
-                    {/* Appointment badge */}
+                    {/* Appointment badge - bigger and more tactile */}
                     {hasAppointments && (
                       <div className="flex items-center justify-center">
                         <span 
                           className={cn(
-                            "min-w-[20px] h-5 px-1.5 rounded-full text-xs font-bold flex items-center justify-center",
-                            "bg-primary text-primary-foreground"
+                            "min-w-[24px] h-6 px-2 rounded-full text-sm font-bold flex items-center justify-center",
+                            "bg-primary text-primary-foreground shadow-sm"
                           )}
                         >
                           {dayAppointments.length}
