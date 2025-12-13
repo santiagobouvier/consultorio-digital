@@ -287,16 +287,70 @@ const Dashboard = () => {
       startOfMonth.setDate(1);
       startOfMonth.setHours(0, 0, 0, 0);
 
-      const { data: paidPaymentsData } = await supabase
-        .from("payments")
-        .select("amount")
+      // Check user role to determine filtering
+      const { data: userRole } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
         .eq("business_id", currentBusinessId)
-        .not("paid_at", "is", null)
-        .gte("paid_at", startOfMonth.toISOString());
+        .maybeSingle();
 
-      if (paidPaymentsData) {
-        const totalIncome = paidPaymentsData.reduce((sum, p) => sum + (p.amount || 0), 0);
-        setMonthlyIncome(totalIncome);
+      const isOwnerOrAdmin = isAdmin || userRole?.role === "owner";
+      const isProfessional = userRole?.role === "professional";
+
+      if (isOwnerOrAdmin) {
+        // Owner/Admin: see all payments from the business
+        const { data: paidPaymentsData } = await supabase
+          .from("payments")
+          .select("amount")
+          .eq("business_id", currentBusinessId)
+          .not("paid_at", "is", null)
+          .gte("paid_at", startOfMonth.toISOString());
+
+        if (paidPaymentsData) {
+          const totalIncome = paidPaymentsData.reduce((sum, p) => sum + (p.amount || 0), 0);
+          setMonthlyIncome(totalIncome);
+        }
+      } else if (isProfessional) {
+        // Professional: only see payments from appointments where they are the professional
+        const { data: paidPaymentsData } = await supabase
+          .from("payments")
+          .select("amount, appointment_id")
+          .eq("business_id", currentBusinessId)
+          .not("paid_at", "is", null)
+          .gte("paid_at", startOfMonth.toISOString());
+
+        if (paidPaymentsData && paidPaymentsData.length > 0) {
+          // Get appointment IDs that have payments
+          const appointmentIds = paidPaymentsData
+            .filter(p => p.appointment_id)
+            .map(p => p.appointment_id);
+
+          if (appointmentIds.length > 0) {
+            // Get appointments where this professional is assigned
+            const { data: professionalAppointments } = await supabase
+              .from("appointments")
+              .select("id")
+              .in("id", appointmentIds)
+              .eq("professional_id", user.id);
+
+            const myAppointmentIds = new Set((professionalAppointments || []).map(a => a.id));
+
+            // Sum only payments from my appointments
+            const totalIncome = paidPaymentsData
+              .filter(p => p.appointment_id && myAppointmentIds.has(p.appointment_id))
+              .reduce((sum, p) => sum + (p.amount || 0), 0);
+
+            setMonthlyIncome(totalIncome);
+          } else {
+            setMonthlyIncome(0);
+          }
+        } else {
+          setMonthlyIncome(0);
+        }
+      } else {
+        // Patient or unknown role: don't show income
+        setMonthlyIncome(0);
       }
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
