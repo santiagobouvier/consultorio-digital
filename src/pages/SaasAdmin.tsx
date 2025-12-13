@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
   TableBody,
@@ -21,8 +22,14 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Select,
   SelectContent,
@@ -45,8 +52,6 @@ import {
   ArrowLeft,
   Eye,
   UserPlus,
-  Settings,
-  Power,
   Loader2,
   AlertTriangle,
   ChevronDown,
@@ -59,17 +64,20 @@ import {
   Shield,
   Sparkles,
   Play,
+  Trash2,
+  Pencil,
+  Search,
 } from "lucide-react";
 import { getPlanName, getPlanConfig, checkProfessionalLimit } from "@/hooks/use-plan-limits";
 import { 
   PLAN_DEFINITIONS, 
   PLAN_ORDER, 
   getPlanPrice, 
-  formatPrice, 
   normalizePlanCode 
 } from "@/lib/plan-definitions";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { PlanSelector } from "@/components/PlanSelector";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface BusinessWithDetails {
   id: string;
@@ -85,11 +93,9 @@ interface BusinessWithDetails {
   customMaxProfessionals?: number | null;
   customMaxPatients?: number | null;
   billingPeriod: string;
-  // Private clinic fields - used for custom domain/subdomain patient portal add-on
   isPrivateClinic: boolean;
   customSubdomain?: string | null;
   customDomain?: string | null;
-  // Demo flag
   isDemo: boolean;
 }
 
@@ -100,18 +106,14 @@ interface SaasMetrics {
   estimatedRevenue: number;
 }
 
-// Plan pricing for revenue calculation - now uses PLAN_DEFINITIONS
 const getPlanMonthlyRevenue = (planCode: string, billingCycle: string): number => {
   const normalizedCode = normalizePlanCode(planCode);
   return getPlanPrice(normalizedCode, billingCycle === "monthly" ? "monthly" : "annual");
 };
 
-const SUPER_ADMIN_EMAIL = "santib1997@gmail.com";
-
 type PlanFilter = "all" | "esencial" | "inicial" | "profesional" | "equipo" | "clinica" | "personalizado";
 type UsageFilter = "all" | "near_limit" | "at_limit";
 
-// Helper to calculate usage percentage and status
 const getUsageStatus = (current: number, max: number | null): { percentage: number; status: "ok" | "warning" | "danger" } => {
   if (max === null) return { percentage: 0, status: "ok" };
   const percentage = (current / max) * 100;
@@ -122,6 +124,7 @@ const getUsageStatus = (current: number, max: number | null): { percentage: numb
 
 const SaasAdmin = () => {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [loading, setLoading] = useState(true);
   const [businesses, setBusinesses] = useState<BusinessWithDetails[]>([]);
   const [metrics, setMetrics] = useState<SaasMetrics>({
@@ -139,6 +142,7 @@ const SaasAdmin = () => {
   // Filters
   const [planFilter, setPlanFilter] = useState<PlanFilter>("all");
   const [usageFilter, setUsageFilter] = useState<UsageFilter>("all");
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Create business form state
   const [newBusinessName, setNewBusinessName] = useState("");
@@ -165,6 +169,21 @@ const SaasAdmin = () => {
   // Demo creation state
   const [creatingDemo, setCreatingDemo] = useState(false);
 
+  // Delete modal state
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [businessToDelete, setBusinessToDelete] = useState<BusinessWithDetails | null>(null);
+  const [deleteConfirmChecked, setDeleteConfirmChecked] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  // Edit modal state
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [businessToEdit, setBusinessToEdit] = useState<BusinessWithDetails | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editPlan, setEditPlan] = useState("");
+  const [editIsActive, setEditIsActive] = useState(true);
+  const [saving, setSaving] = useState(false);
+
   useEffect(() => {
     checkAccessAndLoad();
   }, []);
@@ -177,7 +196,6 @@ const SaasAdmin = () => {
         return;
       }
 
-      // Verify super_admin role
       const { data: superAdminRole } = await supabase
         .from("user_roles")
         .select("id")
@@ -206,7 +224,6 @@ const SaasAdmin = () => {
     try {
       setLoading(true);
 
-      // Load all businesses
       const { data: businessesData, error: bizError } = await supabase
         .from("businesses")
         .select("*")
@@ -214,7 +231,6 @@ const SaasAdmin = () => {
 
       if (bizError) throw bizError;
 
-      // Load owner profiles for each business
       const ownerIds = [...new Set(businessesData?.map(b => b.owner_user_id) || [])];
       const { data: profiles } = await supabase
         .from("profiles")
@@ -223,7 +239,6 @@ const SaasAdmin = () => {
 
       const profileMap = new Map(profiles?.map(p => [p.id, p.email]) || []);
 
-      // Load professionals count per business
       const { data: rolesData } = await supabase
         .from("user_roles")
         .select("business_id, role")
@@ -236,7 +251,6 @@ const SaasAdmin = () => {
         }
       });
 
-      // Load patients count per business
       const { data: patientsData } = await supabase
         .from("patients")
         .select("business_id")
@@ -247,7 +261,6 @@ const SaasAdmin = () => {
         patientCountMap.set(p.business_id, (patientCountMap.get(p.business_id) || 0) + 1);
       });
 
-      // Build business list with details
       const businessesWithDetails: BusinessWithDetails[] = (businessesData || []).map(b => ({
         ...b,
         ownerEmail: profileMap.get(b.owner_user_id) || "N/A",
@@ -258,21 +271,17 @@ const SaasAdmin = () => {
         customMaxProfessionals: (b as any).custom_max_professionals,
         customMaxPatients: (b as any).custom_max_patients,
         billingPeriod: (b as any).billing_period || "annual",
-        // Private clinic fields for custom domain patient portal
         isPrivateClinic: (b as any).is_private_clinic || false,
         customSubdomain: (b as any).custom_subdomain || null,
         customDomain: (b as any).custom_domain || null,
-        // Demo flag
         isDemo: (b as any).is_demo || false,
       }));
 
       setBusinesses(businessesWithDetails);
 
-      // Calculate metrics including estimated revenue
       const totalProfessionals = rolesData?.length || 0;
       const totalPatients = patientsData?.length || 0;
       
-      // Calculate estimated revenue based on plans
       const estimatedRevenue = businessesWithDetails.reduce((sum, b) => {
         return sum + getPlanMonthlyRevenue(b.planCode, b.billingPeriod);
       }, 0);
@@ -308,7 +317,6 @@ const SaasAdmin = () => {
     try {
       setCreating(true);
 
-      // Check if user exists
       const { data: existingProfile } = await supabase
         .from("profiles")
         .select("id")
@@ -320,14 +328,13 @@ const SaasAdmin = () => {
       if (existingProfile) {
         ownerId = existingProfile.id;
       } else {
-        // Create new user via admin API (edge function)
         const { data: newUser, error: createError } = await supabase.functions.invoke(
           "create-professional-invite",
           {
             body: {
               email: newBusinessEmail.trim().toLowerCase(),
               name: newBusinessName.trim(),
-              businessId: null, // Will be set after business creation
+              businessId: null,
               isNewOwner: true,
             },
           }
@@ -337,7 +344,6 @@ const SaasAdmin = () => {
         ownerId = newUser.userId;
       }
 
-      // Create business
       const slug = newBusinessName
         .trim()
         .toLowerCase()
@@ -359,7 +365,6 @@ const SaasAdmin = () => {
 
       if (bizError) throw bizError;
 
-      // Create owner role
       await supabase.from("user_roles").insert({
         user_id: ownerId,
         role: "owner",
@@ -444,7 +449,6 @@ const SaasAdmin = () => {
       setCreating(true);
       setProfessionalLimitError(null);
 
-      // Check plan limits first
       const limitCheck = await checkProfessionalLimit(selectedBusiness.id);
       if (!limitCheck.canAdd) {
         setProfessionalLimitError(limitCheck.message || "Límite alcanzado");
@@ -462,7 +466,6 @@ const SaasAdmin = () => {
 
       if (error) throw error;
 
-      // If email was provided, show the invite link
       if (newProfEmail && data?.token) {
         const baseUrl = window.location.origin;
         const link = `${baseUrl}/invitar-profesional?token=${data.token}`;
@@ -528,7 +531,6 @@ const SaasAdmin = () => {
     }
   };
 
-  // Open private clinic modal with business data
   const openPrivateClinicModal = (business: BusinessWithDetails) => {
     setSelectedBusiness(business);
     setEditingPrivateClinic({
@@ -539,19 +541,6 @@ const SaasAdmin = () => {
     setShowPrivateClinicModal(true);
   };
 
-  // Helper to compute portal URL based on private clinic settings
-  const getPortalUrl = (business: BusinessWithDetails): string => {
-    if (business.customDomain) {
-      return `https://${business.customDomain}`;
-    }
-    if (business.customSubdomain) {
-      // TODO: Replace with actual SaaS base domain when configured
-      return `https://${business.customSubdomain}.tudominio.com`;
-    }
-    return `${window.location.origin}/portal-paciente`;
-  };
-
-  // Save private clinic settings
   const handleSavePrivateClinic = async () => {
     if (!selectedBusiness) return;
 
@@ -589,25 +578,160 @@ const SaasAdmin = () => {
   };
 
   const enterBusiness = (businessIdToEnter: string) => {
-    // Store the selected business and redirect to dashboard
     sessionStorage.setItem("saas_selected_business", businessIdToEnter);
     navigate("/dashboard");
   };
 
-  // Check if demo business exists
+  // Delete business cascade
+  const openDeleteModal = (business: BusinessWithDetails) => {
+    setBusinessToDelete(business);
+    setDeleteConfirmChecked(false);
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteBusiness = async () => {
+    if (!businessToDelete || !deleteConfirmChecked) return;
+
+    try {
+      setDeleting(true);
+      const businessId = businessToDelete.id;
+
+      // Delete in order to respect foreign keys
+      // 1. scheduled_reminders (depends on appointments)
+      const { data: appointmentIds } = await supabase
+        .from("appointments")
+        .select("id")
+        .eq("business_id", businessId);
+      
+      if (appointmentIds && appointmentIds.length > 0) {
+        const ids = appointmentIds.map(a => a.id);
+        await supabase.from("scheduled_reminders").delete().in("appointment_id", ids);
+      }
+
+      // 2. Delete payments
+      await supabase.from("payments").delete().eq("business_id", businessId);
+
+      // 3. Delete appointments
+      await supabase.from("appointments").delete().eq("business_id", businessId);
+
+      // 4. Delete availability_slots
+      await supabase.from("availability_slots").delete().eq("business_id", businessId);
+
+      // 5. Delete patient_portal_invites (depends on patients)
+      const { data: patientIds } = await supabase
+        .from("patients")
+        .select("id")
+        .eq("business_id", businessId);
+      
+      if (patientIds && patientIds.length > 0) {
+        const ids = patientIds.map(p => p.id);
+        await supabase.from("patient_portal_invites").delete().in("patient_id", ids);
+      }
+
+      // 6. Delete patients
+      await supabase.from("patients").delete().eq("business_id", businessId);
+
+      // 7. Delete services
+      await supabase.from("services").delete().eq("business_id", businessId);
+
+      // 8. Delete professional_portal_invites
+      await supabase.from("professional_portal_invites").delete().eq("business_id", businessId);
+
+      // 9. Delete user_roles for this business (except super_admin which has no business_id)
+      await supabase.from("user_roles").delete().eq("business_id", businessId);
+
+      // 10. Finally delete the business
+      const { error: bizError } = await supabase
+        .from("businesses")
+        .delete()
+        .eq("id", businessId);
+
+      if (bizError) throw bizError;
+
+      toast({
+        title: "Consultorio eliminado",
+        description: `El consultorio "${businessToDelete.name}" y todos sus datos han sido eliminados`,
+      });
+
+      setShowDeleteModal(false);
+      setBusinessToDelete(null);
+      await loadData();
+    } catch (error: any) {
+      console.error("Error deleting business:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo eliminar. Probá de nuevo.",
+        variant: "destructive",
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  // Edit business
+  const openEditModal = (business: BusinessWithDetails) => {
+    setBusinessToEdit(business);
+    setEditName(business.name);
+    setEditEmail(business.ownerEmail || "");
+    setEditPlan(business.planCode);
+    setEditIsActive(business.isActive);
+    setShowEditModal(true);
+  };
+
+  const handleEditBusiness = async () => {
+    if (!businessToEdit || !editName.trim()) {
+      toast({
+        title: "Error",
+        description: "El nombre es requerido",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setSaving(true);
+
+      const { error } = await supabase
+        .from("businesses")
+        .update({
+          name: editName.trim(),
+          plan_code: editPlan,
+          is_active: editIsActive,
+        })
+        .eq("id", businessToEdit.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Consultorio actualizado",
+        description: `Los cambios en "${editName}" han sido guardados`,
+      });
+
+      setShowEditModal(false);
+      setBusinessToEdit(null);
+      await loadData();
+    } catch (error: any) {
+      console.error("Error updating business:", error);
+      toast({
+        title: "Error",
+        description: error.message || "No se pudo actualizar el consultorio",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const demoBusinessExists = businesses.some(b => b.isDemo);
   const demoBusiness = businesses.find(b => b.isDemo);
 
-  // Create demo business with all sample data
   const handleCreateDemo = async () => {
     try {
       setCreatingDemo(true);
 
-      // Get current user
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("No user");
 
-      // 1. Create demo business
       const { data: business, error: bizError } = await supabase
         .from("businesses")
         .insert({
@@ -628,7 +752,6 @@ const SaasAdmin = () => {
       if (bizError) throw bizError;
       const businessId = business.id;
 
-      // 2. Create clinic settings
       await supabase.from("clinic_settings").insert({
         user_id: user.id,
         clinic_name: "Demo Psicología",
@@ -636,7 +759,6 @@ const SaasAdmin = () => {
         welcome_message: "Bienvenido/a al consultorio demo. Este es un espacio de demostración para explorar todas las funcionalidades del sistema.",
       });
 
-      // 3. Create demo patients
       const patients = [
         { full_name: "Sofía Martínez", email: "sofia.demo@demo.local", whatsapp_phone: "+598991111111" },
         { full_name: "Juan Rodríguez", email: "juan.demo@demo.local", whatsapp_phone: "+598992222222" },
@@ -650,7 +772,6 @@ const SaasAdmin = () => {
 
       if (patErr) throw patErr;
 
-      // 4. Create appointments (mix of statuses)
       const now = new Date();
       const tomorrow = new Date(now);
       tomorrow.setDate(tomorrow.getDate() + 1);
@@ -670,13 +791,10 @@ const SaasAdmin = () => {
       };
 
       const appointments = [
-        // Future appointments
         { patient_id: createdPatients[0].id, start_at: setTime(tomorrow, 10, 0).toISOString(), end_at: setTime(tomorrow, 11, 0).toISOString(), status: "confirmed", modality: "presencial" },
         { patient_id: createdPatients[1].id, start_at: setTime(dayAfter, 15, 0).toISOString(), end_at: setTime(dayAfter, 16, 0).toISOString(), status: "pending", modality: "online" },
-        // Past appointments
         { patient_id: createdPatients[0].id, start_at: setTime(lastWeek1, 11, 0).toISOString(), end_at: setTime(lastWeek1, 12, 0).toISOString(), status: "attended", modality: "presencial" },
         { patient_id: createdPatients[2].id, start_at: setTime(lastWeek2, 9, 0).toISOString(), end_at: setTime(lastWeek2, 10, 0).toISOString(), status: "attended", modality: "online" },
-        // Cancelled
         { patient_id: createdPatients[1].id, start_at: setTime(lastWeek3, 14, 0).toISOString(), end_at: setTime(lastWeek3, 15, 0).toISOString(), status: "cancelled", modality: "presencial" },
       ];
 
@@ -684,7 +802,6 @@ const SaasAdmin = () => {
         appointments.map(a => ({ ...a, business_id: businessId }))
       );
 
-      // 5. Create payments with varied statuses
       const dueGreen = new Date(now);
       dueGreen.setDate(dueGreen.getDate() + 15);
       const dueOrange = new Date(now);
@@ -693,11 +810,8 @@ const SaasAdmin = () => {
       dueRed.setDate(dueRed.getDate() - 5);
 
       const payments = [
-        // Green - Al día (paid)
         { patient_id: createdPatients[0].id, amount: 1500, due_date: dueGreen.toISOString(), status: "paid", paid_at: new Date().toISOString(), currency: "UYU" },
-        // Orange - Por vencer
         { patient_id: createdPatients[1].id, amount: 1500, due_date: dueOrange.toISOString(), status: "pending", paid_at: null, currency: "UYU" },
-        // Red - Vencido
         { patient_id: createdPatients[2].id, amount: 1500, due_date: dueRed.toISOString(), status: "pending", paid_at: null, currency: "UYU" },
       ];
 
@@ -705,17 +819,14 @@ const SaasAdmin = () => {
         payments.map(p => ({ ...p, business_id: businessId, recurrence_type: "one_time" }))
       );
 
-      // 6. Create availability slots for next 7 days (weekdays only)
       const slots: any[] = [];
       for (let i = 1; i <= 7; i++) {
         const slotDate = new Date(now);
         slotDate.setDate(slotDate.getDate() + i);
         const dayOfWeek = slotDate.getDay();
-        // Skip weekends (0 = Sunday, 6 = Saturday)
         if (dayOfWeek === 0 || dayOfWeek === 6) continue;
 
         const dateStr = slotDate.toISOString().split("T")[0];
-        // Morning slot
         slots.push({
           business_id: businessId,
           date: dateStr,
@@ -724,7 +835,6 @@ const SaasAdmin = () => {
           modality: "presencial",
           status: "available",
         });
-        // Afternoon slot
         slots.push({
           business_id: businessId,
           date: dateStr,
@@ -765,9 +875,17 @@ const SaasAdmin = () => {
     });
   };
 
-  // Filter businesses
+  // Filter businesses with search
   const filteredBusinesses = useMemo(() => {
     return businesses.filter((business) => {
+      // Search filter
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase();
+        const matchesName = business.name.toLowerCase().includes(query);
+        const matchesEmail = business.ownerEmail?.toLowerCase().includes(query);
+        if (!matchesName && !matchesEmail) return false;
+      }
+
       // Plan filter
       if (planFilter !== "all" && business.planCode !== planFilter) {
         return false;
@@ -785,25 +903,132 @@ const SaasAdmin = () => {
         const patientStatus = getUsageStatus(business.patientsCount, config.maxPatients);
 
         if (usageFilter === "near_limit") {
-          // Show businesses with 70%+ usage in either category
           return profStatus.status === "warning" || profStatus.status === "danger" || 
                  patientStatus.status === "warning" || patientStatus.status === "danger";
         }
         if (usageFilter === "at_limit") {
-          // Show businesses at 100% usage
           return profStatus.status === "danger" || patientStatus.status === "danger";
         }
       }
 
       return true;
     });
-  }, [businesses, planFilter, usageFilter]);
+  }, [businesses, planFilter, usageFilter, searchQuery]);
 
-  const hasActiveFilters = planFilter !== "all" || usageFilter !== "all";
+  const hasActiveFilters = planFilter !== "all" || usageFilter !== "all" || searchQuery.trim() !== "";
 
   const clearFilters = () => {
     setPlanFilter("all");
     setUsageFilter("all");
+    setSearchQuery("");
+  };
+
+  // Business Card Component for Mobile
+  const BusinessCard = ({ business }: { business: BusinessWithDetails }) => {
+    const customLimits = business.planCode === "custom" ? {
+      maxProfessionals: business.customMaxProfessionals ?? null,
+      maxPatients: business.customMaxPatients ?? null,
+    } : undefined;
+    const config = getPlanConfig(business.planCode, customLimits);
+    const profStatus = getUsageStatus(business.professionalsCount, config.maxProfessionals);
+    const patientStatus = getUsageStatus(business.patientsCount, config.maxPatients);
+
+    return (
+      <Card className="overflow-hidden">
+        <CardContent className="p-4 space-y-3">
+          {/* Header */}
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-base truncate">{business.name}</h3>
+              <p className="text-xs text-muted-foreground truncate">{business.ownerEmail}</p>
+            </div>
+            <div className="flex items-center gap-1 flex-shrink-0">
+              <Badge variant="secondary" className="text-xs">
+                {getPlanName(business.planCode)}
+              </Badge>
+              {business.isDemo && (
+                <Badge variant="outline" className="text-xs border-amber-500 text-amber-600">
+                  Demo
+                </Badge>
+              )}
+            </div>
+          </div>
+
+          {/* Stats */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className={`p-2 rounded-lg text-center ${
+              profStatus.status === "danger" 
+                ? "bg-destructive/10" 
+                : profStatus.status === "warning"
+                  ? "bg-yellow-500/10"
+                  : "bg-green-500/10"
+            }`}>
+              <p className="text-xs text-muted-foreground">Profesionales</p>
+              <p className={`font-semibold ${
+                profStatus.status === "danger" 
+                  ? "text-destructive" 
+                  : profStatus.status === "warning"
+                    ? "text-yellow-700 dark:text-yellow-400"
+                    : "text-green-700 dark:text-green-400"
+              }`}>
+                {business.professionalsCount}
+                {config.maxProfessionals !== null ? `/${config.maxProfessionals}` : " ∞"}
+              </p>
+            </div>
+            <div className={`p-2 rounded-lg text-center ${
+              patientStatus.status === "danger" 
+                ? "bg-destructive/10" 
+                : patientStatus.status === "warning"
+                  ? "bg-yellow-500/10"
+                  : "bg-green-500/10"
+            }`}>
+              <p className="text-xs text-muted-foreground">Pacientes</p>
+              <p className={`font-semibold ${
+                patientStatus.status === "danger" 
+                  ? "text-destructive" 
+                  : patientStatus.status === "warning"
+                    ? "text-yellow-700 dark:text-yellow-400"
+                    : "text-green-700 dark:text-green-400"
+              }`}>
+                {business.patientsCount}
+                {config.maxPatients !== null ? `/${config.maxPatients}` : " ∞"}
+              </p>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="grid grid-cols-3 gap-2 pt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-11 gap-1.5"
+              onClick={() => enterBusiness(business.id)}
+            >
+              <Eye className="h-4 w-4" />
+              Ver
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-11 gap-1.5"
+              onClick={() => openEditModal(business)}
+            >
+              <Pencil className="h-4 w-4" />
+              Editar
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-11 gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10"
+              onClick={() => openDeleteModal(business)}
+            >
+              <Trash2 className="h-4 w-4" />
+              Eliminar
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
   };
 
   if (loading) {
@@ -840,8 +1065,8 @@ const SaasAdmin = () => {
           </Badge>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row gap-3">
+        {/* Action Buttons - Sticky on mobile */}
+        <div className={`flex flex-col sm:flex-row gap-3 ${isMobile ? 'sticky top-0 z-10 bg-background pb-3 -mx-4 px-4 pt-2 border-b' : ''}`}>
           <Button
             className="flex-1 h-12 rounded-xl font-semibold gap-2"
             onClick={() => setShowCreateModal(true)}
@@ -850,7 +1075,6 @@ const SaasAdmin = () => {
             Crear nuevo consultorio
           </Button>
           
-          {/* Demo Button */}
           {demoBusinessExists ? (
             <Button
               variant="outline"
@@ -877,7 +1101,7 @@ const SaasAdmin = () => {
           )}
         </div>
 
-        {/* Businesses Table with Filters */}
+        {/* Businesses Section */}
         <Card className="mobile-card">
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between">
@@ -898,248 +1122,276 @@ const SaasAdmin = () => {
             </div>
           </CardHeader>
           <CardContent className="p-4 sm:p-6 pt-0 space-y-4">
-            {/* Filters */}
-            <div className="flex flex-wrap gap-3 pb-4 border-b">
-              <div className="flex items-center gap-2">
-                <Filter className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">Filtros:</span>
+            {/* Search + Filters */}
+            <div className="space-y-3 pb-4 border-b">
+              {/* Search */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por nombre o email..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 h-10"
+                />
               </div>
-              <Select value={planFilter} onValueChange={(v) => setPlanFilter(v as PlanFilter)}>
-                <SelectTrigger className="w-[180px] h-8">
-                  <SelectValue placeholder="Plan" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos los planes</SelectItem>
-                  {PLAN_ORDER.map(code => (
-                    <SelectItem key={code} value={code}>
-                      {PLAN_DEFINITIONS[code].name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={usageFilter} onValueChange={(v) => setUsageFilter(v as UsageFilter)}>
-                <SelectTrigger className="w-[180px] h-8">
-                  <SelectValue placeholder="Uso del plan" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todo el uso</SelectItem>
-                  <SelectItem value="near_limit">Cerca del límite (≥70%)</SelectItem>
-                  <SelectItem value="at_limit">En el límite (100%)</SelectItem>
-                </SelectContent>
-              </Select>
+              
+              {/* Filters */}
+              <div className="flex flex-wrap gap-2 items-center">
+                <Filter className="h-4 w-4 text-muted-foreground" />
+                <Select value={planFilter} onValueChange={(v) => setPlanFilter(v as PlanFilter)}>
+                  <SelectTrigger className="w-[140px] sm:w-[180px] h-9">
+                    <SelectValue placeholder="Plan" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos los planes</SelectItem>
+                    {PLAN_ORDER.map(code => (
+                      <SelectItem key={code} value={code}>
+                        {PLAN_DEFINITIONS[code].name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={usageFilter} onValueChange={(v) => setUsageFilter(v as UsageFilter)}>
+                  <SelectTrigger className="w-[140px] sm:w-[180px] h-9">
+                    <SelectValue placeholder="Uso" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todo el uso</SelectItem>
+                    <SelectItem value="near_limit">Cerca del límite (≥70%)</SelectItem>
+                    <SelectItem value="at_limit">En el límite (100%)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Consultorio</TableHead>
-                    <TableHead className="hidden sm:table-cell">Dueño</TableHead>
-                    <TableHead className="hidden md:table-cell">Plan</TableHead>
-                    <TableHead className="text-center">Profs.</TableHead>
-                    <TableHead className="text-center">Pacientes</TableHead>
-                    <TableHead className="hidden lg:table-cell text-center">Privado</TableHead>
-                    <TableHead className="hidden lg:table-cell text-center">Estado</TableHead>
-                    <TableHead className="hidden lg:table-cell">Creado</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredBusinesses.map((business) => {
-                    const customLimits = business.planCode === "custom" ? {
-                      maxProfessionals: business.customMaxProfessionals ?? null,
-                      maxPatients: business.customMaxPatients ?? null,
-                    } : undefined;
-                    const config = getPlanConfig(business.planCode, customLimits);
-                    const profStatus = getUsageStatus(business.professionalsCount, config.maxProfessionals);
-                    const patientStatus = getUsageStatus(business.patientsCount, config.maxPatients);
-                    
-                    // Overall status: worst of prof and patient status
-                    const overallStatus = profStatus.status === "danger" || patientStatus.status === "danger" 
-                      ? "danger" 
-                      : profStatus.status === "warning" || patientStatus.status === "warning"
-                        ? "warning"
-                        : "ok";
+            {/* Mobile: Cards View */}
+            {isMobile ? (
+              <div className="space-y-3">
+                {filteredBusinesses.map((business) => (
+                  <BusinessCard key={business.id} business={business} />
+                ))}
+                {filteredBusinesses.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    {hasActiveFilters 
+                      ? "No hay consultorios que coincidan con los filtros" 
+                      : "No hay consultorios registrados"}
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* Desktop: Table View */
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Consultorio</TableHead>
+                      <TableHead className="hidden sm:table-cell">Dueño</TableHead>
+                      <TableHead className="hidden md:table-cell">Plan</TableHead>
+                      <TableHead className="text-center">Profs.</TableHead>
+                      <TableHead className="text-center">Pacientes</TableHead>
+                      <TableHead className="hidden lg:table-cell text-center">Privado</TableHead>
+                      <TableHead className="hidden lg:table-cell text-center">Estado</TableHead>
+                      <TableHead className="hidden lg:table-cell">Creado</TableHead>
+                      <TableHead className="text-right">Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredBusinesses.map((business) => {
+                      const customLimits = business.planCode === "custom" ? {
+                        maxProfessionals: business.customMaxProfessionals ?? null,
+                        maxPatients: business.customMaxPatients ?? null,
+                      } : undefined;
+                      const config = getPlanConfig(business.planCode, customLimits);
+                      const profStatus = getUsageStatus(business.professionalsCount, config.maxProfessionals);
+                      const patientStatus = getUsageStatus(business.patientsCount, config.maxPatients);
+                      const overallStatus = profStatus.status === "danger" || patientStatus.status === "danger"
+                        ? "danger"
+                        : profStatus.status === "warning" || patientStatus.status === "warning"
+                          ? "warning"
+                          : "ok";
 
-                    return (
-                      <TableRow key={business.id} className={!business.isActive ? "opacity-60" : ""}>
-                        <TableCell className="font-medium">
-                          <div className="flex items-center gap-2">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <p className="font-semibold truncate">{business.name}</p>
-                                {business.isDemo && (
-                                  <Badge className="text-xs shrink-0 bg-amber-500/20 text-amber-600 hover:bg-amber-500/30 border-amber-500/30">
-                                    <Sparkles className="h-3 w-3 mr-1" />
-                                    DEMO
-                                  </Badge>
-                                )}
-                                {!business.isActive && (
-                                  <Badge variant="secondary" className="text-xs shrink-0">
-                                    Inactivo
-                                  </Badge>
-                                )}
-                              </div>
-                              <p className="text-xs text-muted-foreground sm:hidden truncate">
-                                {business.ownerEmail}
-                              </p>
-                              <div className="flex items-center gap-2 mt-0.5 md:hidden">
-                                <Badge variant="outline" className="text-xs">
-                                  {getPlanName(business.planCode)}
+                      return (
+                        <TableRow key={business.id}>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">{business.name}</span>
+                              {business.isDemo && (
+                                <Badge variant="outline" className="text-xs border-amber-500 text-amber-600">
+                                  Demo
                                 </Badge>
-                                <span className="text-xs text-muted-foreground">
-                                  {business.billingPeriod === "monthly" ? "Mensual" : "Anual"}
-                                </span>
-                              </div>
+                              )}
+                              {!business.isActive && (
+                                <Badge variant="secondary" className="text-xs">
+                                  Inactivo
+                                </Badge>
+                              )}
                             </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="hidden sm:table-cell text-sm">
-                          {business.ownerEmail}
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          <div className="space-y-1">
-                            <PlanSelector
-                              businessId={business.id}
-                              currentPlan={business.planCode}
-                              customMaxProfessionals={business.customMaxProfessionals}
-                              customMaxPatients={business.customMaxPatients}
-                              onChangePlan={handleChangePlan}
-                            />
-                            <p className="text-xs text-muted-foreground">
-                              {business.billingPeriod === "monthly" ? "Mensual" : "Anual"}
-                            </p>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md ${
-                            profStatus.status === "danger" 
-                              ? "bg-destructive/10 text-destructive" 
-                              : profStatus.status === "warning"
-                                ? "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400"
-                                : "bg-green-500/10 text-green-700 dark:text-green-400"
-                          }`}>
-                            {profStatus.status === "danger" && (
-                              <AlertTriangle className="h-3 w-3" />
+                          </TableCell>
+                          <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">
+                            {business.ownerEmail}
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell">
+                            <div className="space-y-1">
+                              <PlanSelector
+                                businessId={business.id}
+                                currentPlan={business.planCode}
+                                customMaxProfessionals={business.customMaxProfessionals}
+                                customMaxPatients={business.customMaxPatients}
+                                onChangePlan={handleChangePlan}
+                              />
+                              <p className="text-xs text-muted-foreground">
+                                {business.billingPeriod === "monthly" ? "Mensual" : "Anual"}
+                              </p>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md ${
+                              profStatus.status === "danger" 
+                                ? "bg-destructive/10 text-destructive" 
+                                : profStatus.status === "warning"
+                                  ? "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400"
+                                  : "bg-green-500/10 text-green-700 dark:text-green-400"
+                            }`}>
+                              {profStatus.status === "danger" && (
+                                <AlertTriangle className="h-3 w-3" />
+                              )}
+                              <span className="font-medium text-sm">
+                                {business.professionalsCount}
+                                {config.maxProfessionals !== null 
+                                  ? `/${config.maxProfessionals}` 
+                                  : " ∞"}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md ${
+                              patientStatus.status === "danger" 
+                                ? "bg-destructive/10 text-destructive" 
+                                : patientStatus.status === "warning"
+                                  ? "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400"
+                                  : "bg-green-500/10 text-green-700 dark:text-green-400"
+                            }`}>
+                              {patientStatus.status === "danger" && (
+                                <AlertTriangle className="h-3 w-3" />
+                              )}
+                              <span className="font-medium text-sm">
+                                {business.patientsCount}
+                                {config.maxPatients !== null 
+                                  ? `/${config.maxPatients}` 
+                                  : " ∞"}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="hidden lg:table-cell text-center">
+                            {business.isPrivateClinic ? (
+                              <Badge 
+                                variant="default" 
+                                className="bg-primary/10 text-primary hover:bg-primary/20 cursor-pointer gap-1"
+                                onClick={() => openPrivateClinicModal(business)}
+                              >
+                                <Shield className="h-3 w-3" />
+                                Sí
+                              </Badge>
+                            ) : (
+                              <Badge 
+                                variant="secondary" 
+                                className="cursor-pointer"
+                                onClick={() => openPrivateClinicModal(business)}
+                              >
+                                No
+                              </Badge>
                             )}
-                            <span className="font-medium text-sm">
-                              {business.professionalsCount}
-                              {config.maxProfessionals !== null 
-                                ? `/${config.maxProfessionals}` 
-                                : " ∞"}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md ${
-                            patientStatus.status === "danger" 
-                              ? "bg-destructive/10 text-destructive" 
-                              : patientStatus.status === "warning"
-                                ? "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400"
-                                : "bg-green-500/10 text-green-700 dark:text-green-400"
-                          }`}>
-                            {patientStatus.status === "danger" && (
-                              <AlertTriangle className="h-3 w-3" />
-                            )}
-                            <span className="font-medium text-sm">
-                              {business.patientsCount}
-                              {config.maxPatients !== null 
-                                ? `/${config.maxPatients}` 
-                                : " ∞"}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="hidden lg:table-cell text-center">
-                          {business.isPrivateClinic ? (
+                          </TableCell>
+                          <TableCell className="hidden lg:table-cell text-center">
                             <Badge 
-                              variant="default" 
-                              className="bg-primary/10 text-primary hover:bg-primary/20 cursor-pointer gap-1"
-                              onClick={() => openPrivateClinicModal(business)}
+                              variant={overallStatus === "ok" ? "default" : "secondary"}
+                              className={
+                                overallStatus === "danger" 
+                                  ? "bg-destructive/10 text-destructive hover:bg-destructive/20"
+                                  : overallStatus === "warning"
+                                    ? "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 hover:bg-yellow-500/20"
+                                    : "bg-green-500/10 text-green-700 dark:text-green-400 hover:bg-green-500/20"
+                              }
                             >
-                              <Shield className="h-3 w-3" />
-                              Sí
+                              {overallStatus === "danger" 
+                                ? "Límite" 
+                                : overallStatus === "warning" 
+                                  ? "Cerca" 
+                                  : "OK"}
                             </Badge>
-                          ) : (
-                            <Badge 
-                              variant="secondary" 
-                              className="cursor-pointer"
-                              onClick={() => openPrivateClinicModal(business)}
-                            >
-                              No
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="hidden lg:table-cell text-center">
-                          <Badge 
-                            variant={overallStatus === "ok" ? "default" : "secondary"}
-                            className={
-                              overallStatus === "danger" 
-                                ? "bg-destructive/10 text-destructive hover:bg-destructive/20"
-                                : overallStatus === "warning"
-                                  ? "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 hover:bg-yellow-500/20"
-                                  : "bg-green-500/10 text-green-700 dark:text-green-400 hover:bg-green-500/20"
-                            }
-                          >
-                            {overallStatus === "danger" 
-                              ? "Límite" 
-                              : overallStatus === "warning" 
-                                ? "Cerca" 
-                                : "OK"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
-                          {formatDate(business.created_at)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => openPrivateClinicModal(business)}
-                              title="Configurar dominio privado"
-                            >
-                              <Globe className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => enterBusiness(business.id)}
-                              title="Ingresar al consultorio"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => loadProfessionals(business)}
-                              title="Ver profesionales"
-                            >
-                              <UserCog className="h-4 w-4" />
-                            </Button>
-                          </div>
+                          </TableCell>
+                          <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
+                            {formatDate(business.created_at)}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => openPrivateClinicModal(business)}
+                                title="Configurar dominio privado"
+                              >
+                                <Globe className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => enterBusiness(business.id)}
+                                title="Ingresar al consultorio"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => loadProfessionals(business)}
+                                title="Ver profesionales"
+                              >
+                                <UserCog className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => openEditModal(business)}
+                                title="Editar consultorio"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                onClick={() => openDeleteModal(business)}
+                                title="Eliminar consultorio"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                    {filteredBusinesses.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                          {hasActiveFilters 
+                            ? "No hay consultorios que coincidan con los filtros" 
+                            : "No hay consultorios registrados"}
                         </TableCell>
                       </TableRow>
-                    );
-                  })}
-                  {filteredBusinesses.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
-                        {hasActiveFilters 
-                          ? "No hay consultorios que coincidan con los filtros" 
-                          : "No hay consultorios registrados"}
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </CardContent>
         </Card>
 
-        {/* Metrics - Now in Collapsible at the end */}
+        {/* Metrics - Collapsible */}
         <Collapsible>
           <CollapsibleTrigger asChild>
             <Button variant="outline" className="w-full justify-between h-12 rounded-xl">
@@ -1472,7 +1724,6 @@ const SaasAdmin = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            {/* Private Clinic Toggle */}
             <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
               <div className="space-y-0.5">
                 <Label className="text-sm font-semibold">Consultorio privado</Label>
@@ -1488,7 +1739,6 @@ const SaasAdmin = () => {
               />
             </div>
 
-            {/* Subdomain */}
             <div className="space-y-2">
               <Label htmlFor="customSubdomain">Subdominio personalizado</Label>
               <div className="flex items-center gap-1">
@@ -1508,7 +1758,6 @@ const SaasAdmin = () => {
               </p>
             </div>
 
-            {/* Custom Domain */}
             <div className="space-y-2">
               <Label htmlFor="customDomain">Dominio propio (opcional)</Label>
               <Input
@@ -1524,7 +1773,6 @@ const SaasAdmin = () => {
               </p>
             </div>
 
-            {/* Computed Portal URL (read-only) */}
             {selectedBusiness && (editingPrivateClinic.customDomain || editingPrivateClinic.customSubdomain) && (
               <div className="space-y-2">
                 <Label>URL del portal (calculada)</Label>
@@ -1557,6 +1805,153 @@ const SaasAdmin = () => {
             >
               {savingPrivateClinic && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Guardar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Modal */}
+      <AlertDialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
+        <AlertDialogContent className="sm:max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Eliminar consultorio
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>
+                ¿Estás seguro? Si eliminás el consultorio <strong>"{businessToDelete?.name}"</strong>, 
+                se borrarán todos sus datos y no se pueden recuperar.
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Se eliminarán: profesionales, pacientes, citas, pagos, recordatorios, 
+                disponibilidad, servicios e invitaciones asociadas.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-4">
+            <div className="flex items-start gap-3 p-3 bg-destructive/5 border border-destructive/20 rounded-lg">
+              <Checkbox 
+                id="deleteConfirm"
+                checked={deleteConfirmChecked}
+                onCheckedChange={(checked) => setDeleteConfirmChecked(checked === true)}
+                className="mt-0.5"
+              />
+              <Label 
+                htmlFor="deleteConfirm" 
+                className="text-sm font-normal cursor-pointer leading-relaxed"
+              >
+                Entiendo que esta acción es irreversible y que se eliminarán todos los datos del consultorio
+              </Label>
+            </div>
+          </div>
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => {
+                setShowDeleteModal(false);
+                setBusinessToDelete(null);
+                setDeleteConfirmChecked(false);
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              className="flex-1"
+              onClick={handleDeleteBusiness}
+              disabled={!deleteConfirmChecked || deleting}
+            >
+              {deleting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Eliminar definitivamente
+            </Button>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Edit Business Modal */}
+      <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Pencil className="h-5 w-5" />
+              Editar consultorio
+            </DialogTitle>
+            <DialogDescription>
+              Modifica los datos del consultorio "{businessToEdit?.name}"
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="editName">Nombre del consultorio</Label>
+              <Input
+                id="editName"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                placeholder="Nombre del consultorio"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Email del dueño</Label>
+              <Input
+                value={editEmail}
+                disabled
+                className="bg-muted"
+              />
+              <p className="text-xs text-muted-foreground">
+                El email del dueño no se puede cambiar
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="editPlan">Plan</Label>
+              <Select value={editPlan} onValueChange={setEditPlan}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar plan" />
+                </SelectTrigger>
+                <SelectContent>
+                  {PLAN_ORDER.map(code => {
+                    const plan = PLAN_DEFINITIONS[code];
+                    return (
+                      <SelectItem key={code} value={code}>
+                        {plan.name}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+              <div className="space-y-0.5">
+                <Label className="text-sm font-semibold">Estado activo</Label>
+                <p className="text-xs text-muted-foreground">
+                  Desactivar pausará el acceso al consultorio
+                </p>
+              </div>
+              <Switch
+                checked={editIsActive}
+                onCheckedChange={setEditIsActive}
+              />
+            </div>
+          </div>
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => {
+                setShowEditModal(false);
+                setBusinessToEdit(null);
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              className="flex-1"
+              onClick={handleEditBusiness}
+              disabled={saving}
+            >
+              {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Guardar cambios
             </Button>
           </div>
         </DialogContent>
