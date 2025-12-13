@@ -22,6 +22,8 @@ import { DayView } from "@/components/calendar/DayView";
 import { AppointmentDetailModal } from "@/components/calendar/AppointmentDetailModal";
 import { PatientSummary } from "@/components/calendar/PatientSummary";
 import { QuickAppointmentDrawer } from "@/components/calendar/QuickAppointmentDrawer";
+import { QuickPaymentDrawer } from "@/components/calendar/QuickPaymentDrawer";
+import { QuickActionSheet } from "@/components/calendar/QuickActionSheet";
 import { format, addMonths, subMonths, addWeeks, subWeeks, addDays, subDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek, subMonths as subMonthsFn } from "date-fns";
 import { es } from "date-fns/locale";
 import { calculatePaymentStatus, type PaymentStatus } from "@/lib/payments";
@@ -74,7 +76,9 @@ const Agenda = () => {
   const [patientSearch, setPatientSearch] = useState("");
   const [selectedAppointment, setSelectedAppointment] = useState<AppointmentWithRelations | null>(null);
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
+  const [showActionSheet, setShowActionSheet] = useState(false);
   const [showQuickCreate, setShowQuickCreate] = useState(false);
+  const [showQuickPayment, setShowQuickPayment] = useState(false);
   const [statusFilter, setStatusFilter] = useState<AppointmentStatusFilter>("all");
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<PaymentStatusFilter>("all");
   
@@ -702,7 +706,17 @@ const Agenda = () => {
           onPaymentRegistered={handleRefreshData}
         />
 
-        {/* Quick Create Drawer */}
+        {/* Quick Action Sheet */}
+        {businessId && (
+          <QuickActionSheet
+            open={showActionSheet}
+            onClose={() => setShowActionSheet(false)}
+            onCreateAppointment={() => setShowQuickCreate(true)}
+            onCreatePayment={() => setShowQuickPayment(true)}
+          />
+        )}
+
+        {/* Quick Create Appointment Drawer */}
         {businessId && (
           <QuickAppointmentDrawer
             open={showQuickCreate}
@@ -713,10 +727,21 @@ const Agenda = () => {
           />
         )}
 
+        {/* Quick Create Payment Drawer */}
+        {businessId && (
+          <QuickPaymentDrawer
+            open={showQuickPayment}
+            onClose={() => setShowQuickPayment(false)}
+            selectedDate={currentDate}
+            businessId={businessId}
+            onSuccess={handleRefreshData}
+          />
+        )}
+
         {/* Floating Action Button */}
         {businessId && (
           <Button
-            onClick={() => setShowQuickCreate(true)}
+            onClick={() => setShowActionSheet(true)}
             className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg z-50"
             size="icon"
           >

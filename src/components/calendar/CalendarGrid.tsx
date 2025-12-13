@@ -6,6 +6,7 @@ import { es } from "date-fns/locale";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { DayDetailDrawer } from "./DayDetailDrawer";
 import { QuickAppointmentDrawer } from "./QuickAppointmentDrawer";
+import { QuickPaymentDrawer } from "./QuickPaymentDrawer";
 
 interface Appointment {
   id: string;
@@ -56,6 +57,7 @@ export const CalendarGrid = ({
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [createDrawerOpen, setCreateDrawerOpen] = useState(false);
+  const [paymentDrawerOpen, setPaymentDrawerOpen] = useState(false);
   const [createDate, setCreateDate] = useState<Date>(new Date());
   
   const days = useMemo(() => {
@@ -202,6 +204,11 @@ export const CalendarGrid = ({
             setCreateDate(date);
             setCreateDrawerOpen(true);
           } : undefined}
+          onCreatePayment={businessId ? (date) => {
+            setDrawerOpen(false);
+            setCreateDate(date);
+            setPaymentDrawerOpen(true);
+          } : undefined}
         />
 
         {/* Quick Appointment Drawer */}
@@ -209,6 +216,19 @@ export const CalendarGrid = ({
           <QuickAppointmentDrawer
             open={createDrawerOpen}
             onClose={() => setCreateDrawerOpen(false)}
+            selectedDate={createDate}
+            businessId={businessId}
+            onSuccess={() => {
+              onAppointmentCreated?.();
+            }}
+          />
+        )}
+
+        {/* Quick Payment Drawer */}
+        {businessId && (
+          <QuickPaymentDrawer
+            open={paymentDrawerOpen}
+            onClose={() => setPaymentDrawerOpen(false)}
             selectedDate={createDate}
             businessId={businessId}
             onSuccess={() => {

@@ -40,6 +40,7 @@ interface DayDetailDrawerProps {
   onAppointmentClick: (appointment: Appointment) => void;
   selectedPatientId: string | null;
   onCreateAppointment?: (date: Date) => void;
+  onCreatePayment?: (date: Date) => void;
 }
 
 export const DayDetailDrawer = ({
@@ -51,6 +52,7 @@ export const DayDetailDrawer = ({
   onAppointmentClick,
   selectedPatientId,
   onCreateAppointment,
+  onCreatePayment,
 }: DayDetailDrawerProps) => {
   const dayAppointments = useMemo(() => {
     return appointments
@@ -134,15 +136,30 @@ export const DayDetailDrawer = ({
         </DrawerHeader>
 
         <div className="overflow-y-auto p-4 space-y-6">
-          {/* Create Appointment Button */}
-          {onCreateAppointment && (
-            <Button 
-              onClick={() => onCreateAppointment(selectedDate)}
-              className="w-full h-12 rounded-xl text-base font-semibold gap-2"
-            >
-              <Plus className="w-5 h-5" />
-              Crear cita
-            </Button>
+          {/* Quick Actions */}
+          {(onCreateAppointment || onCreatePayment) && (
+            <div className="grid grid-cols-2 gap-2">
+              {onCreateAppointment && (
+                <Button 
+                  onClick={() => onCreateAppointment(selectedDate)}
+                  variant="outline"
+                  className="h-12 rounded-xl text-sm font-semibold gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  Crear cita
+                </Button>
+              )}
+              {onCreatePayment && (
+                <Button 
+                  onClick={() => onCreatePayment(selectedDate)}
+                  variant="outline"
+                  className="h-12 rounded-xl text-sm font-semibold gap-2 text-emerald-600 border-emerald-200 hover:bg-emerald-50"
+                >
+                  <CreditCard className="w-4 h-4" />
+                  Registrar pago
+                </Button>
+              )}
+            </div>
           )}
 
           {/* Appointments Section */}
