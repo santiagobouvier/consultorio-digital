@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Professional, PROFESSIONAL_COLORS } from "../calendar-v2/types";
-
+import { Professional, PROFESSIONAL_COLORS } from "@/components/calendar-v2/types";
 interface UseProfessionalsResult {
   professionals: Professional[];
   loading: boolean;
