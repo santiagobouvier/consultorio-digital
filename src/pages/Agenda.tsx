@@ -479,8 +479,10 @@ const Agenda = () => {
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
-              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">Calendario</h1>
-              <p className="text-sm text-muted-foreground capitalize">{getDateRangeLabel()}</p>
+              <p className="text-xs text-muted-foreground">Calendario</p>
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-primary capitalize">
+                {getDateRangeLabel()}
+              </h1>
             </div>
           </div>
 
