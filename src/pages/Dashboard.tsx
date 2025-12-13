@@ -20,9 +20,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 
-// Lazy load desktop command center
-const DesktopCommandCenter = lazy(() => 
-  import("@/components/desktop/DesktopCommandCenter").then(m => ({ default: m.DesktopCommandCenter }))
+// Lazy load desktop dashboard (executive view)
+const DesktopDashboard = lazy(() => 
+  import("@/components/desktop/DesktopDashboard").then(m => ({ default: m.DesktopDashboard }))
 );
 
 const PRIVACY_MODE_KEY = "privacy_mode_enabled";
@@ -488,7 +488,7 @@ const Dashboard = () => {
     );
   }
 
-  // Desktop: show command center with 3-column layout
+  // Desktop: show executive dashboard with cards and quick access
   if (!isMobile) {
     return (
       <Suspense fallback={
@@ -496,7 +496,7 @@ const Dashboard = () => {
           <p className="text-muted-foreground">Cargando...</p>
         </div>
       }>
-        <DesktopCommandCenter />
+        <DesktopDashboard />
       </Suspense>
     );
   }
