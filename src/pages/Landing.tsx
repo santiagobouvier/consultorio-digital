@@ -393,7 +393,7 @@ const Landing = () => {
                   color: '#00c78a'
                 }}
               >
-                Para profesionales que agendan citas
+                Tu consultorio digital
               </span>
             </div>
             
