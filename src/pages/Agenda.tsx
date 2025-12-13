@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, Search, Plus } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +21,7 @@ import { WeekView } from "@/components/calendar/WeekView";
 import { DayView } from "@/components/calendar/DayView";
 import { AppointmentDetailModal } from "@/components/calendar/AppointmentDetailModal";
 import { PatientSummary } from "@/components/calendar/PatientSummary";
+import { QuickAppointmentDrawer } from "@/components/calendar/QuickAppointmentDrawer";
 import { format, addMonths, subMonths, addWeeks, subWeeks, addDays, subDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek, subMonths as subMonthsFn } from "date-fns";
 import { es } from "date-fns/locale";
 import { calculatePaymentStatus, type PaymentStatus } from "@/lib/payments";
@@ -73,6 +74,7 @@ const Agenda = () => {
   const [patientSearch, setPatientSearch] = useState("");
   const [selectedAppointment, setSelectedAppointment] = useState<AppointmentWithRelations | null>(null);
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
+  const [showQuickCreate, setShowQuickCreate] = useState(false);
   const [statusFilter, setStatusFilter] = useState<AppointmentStatusFilter>("all");
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<PaymentStatusFilter>("all");
   
@@ -697,6 +699,28 @@ const Agenda = () => {
           businessId={businessId}
           onPaymentRegistered={handleRefreshData}
         />
+
+        {/* Quick Create Drawer */}
+        {businessId && (
+          <QuickAppointmentDrawer
+            open={showQuickCreate}
+            onClose={() => setShowQuickCreate(false)}
+            selectedDate={currentDate}
+            businessId={businessId}
+            onSuccess={handleRefreshData}
+          />
+        )}
+
+        {/* Floating Action Button */}
+        {businessId && (
+          <Button
+            onClick={() => setShowQuickCreate(true)}
+            className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg z-50"
+            size="icon"
+          >
+            <Plus className="h-6 w-6" />
+          </Button>
+        )}
       </div>
     </div>
   );
