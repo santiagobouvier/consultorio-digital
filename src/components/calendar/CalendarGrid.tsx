@@ -118,21 +118,21 @@ export const CalendarGrid = ({
   if (isMobile) {
     return (
       <>
-        <div className="bg-card rounded-2xl border overflow-hidden">
-          {/* Header */}
-          <div className="grid grid-cols-7 border-b bg-muted/30">
+        <div className="bg-card rounded-3xl border shadow-sm overflow-hidden">
+          {/* Header - Week days */}
+          <div className="grid grid-cols-7 bg-muted/40 py-3">
             {weekDays.map((day) => (
               <div
                 key={day}
-                className="p-2 text-center text-xs font-semibold text-muted-foreground"
+                className="text-center text-xs font-bold text-muted-foreground uppercase tracking-wide"
               >
                 {day}
               </div>
             ))}
           </div>
 
-          {/* Days Grid - Improved mobile */}
-          <div className="grid grid-cols-7">
+          {/* Days Grid - Premium mobile */}
+          <div className="grid grid-cols-7 gap-px bg-border/50">
             {days.map((day, index) => {
               const dayAppointments = getAppointmentsForDay(day);
               const isCurrentMonth = isSameMonth(day, currentDate);
@@ -143,38 +143,40 @@ export const CalendarGrid = ({
                 <div
                   key={index}
                   className={cn(
-                    "min-h-[72px] border-b border-r p-2 cursor-pointer transition-all active:bg-accent/70",
-                    !isCurrentMonth && "bg-muted/20 opacity-50",
-                    index % 7 === 6 && "border-r-0",
+                    "min-h-[76px] p-1.5 cursor-pointer transition-all active:scale-95",
+                    // Días del mes actual: fondo limpio
+                    isCurrentMonth ? "bg-card" : "bg-muted/30",
+                    // Días con citas: sutil highlight
                     hasAppointments && isCurrentMonth && "bg-primary/5"
                   )}
                   onClick={() => handleDayClick(day)}
                 >
-                  <div className="flex flex-col items-center gap-1.5 h-full justify-center">
-                    {/* Day number - bigger */}
+                  <div className="flex flex-col items-center gap-1 h-full justify-center">
+                    {/* Day number */}
                     <span
                       className={cn(
-                        "text-lg font-bold w-10 h-10 flex items-center justify-center rounded-full transition-all",
-                        !isCurrentMonth && "text-muted-foreground/40",
+                        "text-lg font-bold w-10 h-10 flex items-center justify-center rounded-xl transition-all",
+                        // Días fuera del mes: muy atenuados
+                        !isCurrentMonth && "text-muted-foreground/30 font-normal",
+                        // Días del mes actual: visibles
                         isCurrentMonth && "text-foreground",
-                        isCurrentDay && "bg-primary text-primary-foreground shadow-md"
+                        // Hoy: protagonista con borde y fondo
+                        isCurrentDay && "bg-primary text-primary-foreground ring-2 ring-primary/30 ring-offset-2 ring-offset-background shadow-lg"
                       )}
                     >
                       {format(day, "d")}
                     </span>
                     
-                    {/* Appointment badge - bigger and more tactile */}
-                    {hasAppointments && (
-                      <div className="flex items-center justify-center">
-                        <span 
-                          className={cn(
-                            "min-w-[24px] h-6 px-2 rounded-full text-sm font-bold flex items-center justify-center",
-                            "bg-primary text-primary-foreground shadow-sm"
-                          )}
-                        >
-                          {dayAppointments.length}
-                        </span>
-                      </div>
+                    {/* Appointment badge */}
+                    {hasAppointments && isCurrentMonth && (
+                      <span 
+                        className={cn(
+                          "min-w-[22px] h-5 px-1.5 rounded-full text-xs font-bold flex items-center justify-center",
+                          "bg-primary/15 text-primary"
+                        )}
+                      >
+                        {dayAppointments.length > 9 ? "9+" : dayAppointments.length}
+                      </span>
                     )}
                   </div>
                 </div>
@@ -220,13 +222,13 @@ export const CalendarGrid = ({
 
   // Desktop: Full calendar with appointment previews
   return (
-    <div className="bg-card rounded-2xl border overflow-hidden">
+    <div className="bg-card rounded-3xl border shadow-sm overflow-hidden">
       {/* Header */}
-      <div className="grid grid-cols-7 border-b bg-muted/30">
+      <div className="grid grid-cols-7 bg-muted/40 py-3">
         {weekDays.map((day) => (
           <div
             key={day}
-            className="p-2 text-center text-xs font-semibold text-muted-foreground"
+            className="text-center text-xs font-bold text-muted-foreground uppercase tracking-wide"
           >
             {day}
           </div>
@@ -234,7 +236,7 @@ export const CalendarGrid = ({
       </div>
 
       {/* Days Grid */}
-      <div className="grid grid-cols-7">
+      <div className="grid grid-cols-7 gap-px bg-border/50">
         {days.map((day, index) => {
           const dayAppointments = getAppointmentsForDay(day);
           const isCurrentMonth = isSameMonth(day, currentDate);
@@ -244,54 +246,56 @@ export const CalendarGrid = ({
             <div
               key={index}
               className={cn(
-                "min-h-[120px] border-b border-r p-1.5 cursor-pointer transition-colors hover:bg-accent/50",
-                !isCurrentMonth && "bg-muted/20",
-                index % 7 === 6 && "border-r-0"
+                "min-h-[130px] p-2 cursor-pointer transition-all hover:bg-accent/30",
+                isCurrentMonth ? "bg-card" : "bg-muted/30"
               )}
               onClick={() => onDateClick(day)}
             >
-              <div className="flex justify-between items-start mb-1">
+              <div className="flex justify-between items-start mb-2">
                 <span
                   className={cn(
-                    "text-xs font-medium w-6 h-6 flex items-center justify-center rounded-full",
-                    !isCurrentMonth && "text-muted-foreground/50",
-                    isCurrentDay && "bg-primary text-primary-foreground"
+                    "text-sm font-bold w-8 h-8 flex items-center justify-center rounded-lg transition-all",
+                    !isCurrentMonth && "text-muted-foreground/30 font-normal",
+                    isCurrentMonth && "text-foreground",
+                    isCurrentDay && "bg-primary text-primary-foreground ring-2 ring-primary/30 ring-offset-1 ring-offset-background"
                   )}
                 >
                   {format(day, "d")}
                 </span>
-                {dayAppointments.length > 0 && (
-                  <span className="text-[10px] text-muted-foreground">
+                {dayAppointments.length > 0 && isCurrentMonth && (
+                  <span className="text-[10px] font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded-full">
                     {dayAppointments.length}
                   </span>
                 )}
               </div>
 
-              <div className="space-y-0.5 overflow-hidden">
-                {dayAppointments.slice(0, 3).map((apt) => (
-                  <div
-                    key={apt.id}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onAppointmentClick(apt);
-                    }}
-                    className={cn(
-                      "text-xs p-1 rounded bg-primary/10 hover:bg-primary/20 cursor-pointer truncate border-l-2",
-                      selectedPatientId && getPaymentBorderColor(apt.paymentColor)
-                    )}
-                  >
-                    <span className="font-medium">{formatTime(apt.start_at)}</span>
-                    <span className="ml-1 text-muted-foreground">
-                      {apt.patients?.full_name?.split(" ")[0] || "Sin paciente"}
-                    </span>
-                  </div>
-                ))}
-                {dayAppointments.length > 3 && (
-                  <div className="text-[10px] text-muted-foreground text-center">
-                    +{dayAppointments.length - 3} más
-                  </div>
-                )}
-              </div>
+              {isCurrentMonth && (
+                <div className="space-y-1 overflow-hidden">
+                  {dayAppointments.slice(0, 2).map((apt) => (
+                    <div
+                      key={apt.id}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onAppointmentClick(apt);
+                      }}
+                      className={cn(
+                        "text-xs p-1.5 rounded-lg bg-primary/10 hover:bg-primary/20 cursor-pointer truncate border-l-2",
+                        selectedPatientId ? getPaymentBorderColor(apt.paymentColor) : "border-l-primary"
+                      )}
+                    >
+                      <span className="font-semibold">{formatTime(apt.start_at)}</span>
+                      <span className="ml-1 text-muted-foreground">
+                        {apt.patients?.full_name?.split(" ")[0] || "Sin paciente"}
+                      </span>
+                    </div>
+                  ))}
+                  {dayAppointments.length > 2 && (
+                    <div className="text-[10px] font-medium text-muted-foreground text-center py-0.5">
+                      +{dayAppointments.length - 2} más
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           );
         })}
