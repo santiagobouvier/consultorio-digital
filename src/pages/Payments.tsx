@@ -28,6 +28,7 @@ import {
 import { ArrowLeft, Search, Filter, RefreshCw, Pencil, Trash2 } from "lucide-react";
 import { PaymentWhatsAppMenu } from "@/components/PaymentWhatsAppMenu";
 import { PaymentForm } from "@/components/PaymentForm";
+import { PaymentDetailDrawer } from "@/components/PaymentDetailDrawer";
 import {
   calculatePaymentStatus,
   getPaymentStatusColor,
@@ -77,9 +78,9 @@ const Payments = () => {
   const [patientFilter, setPatientFilter] = useState<string>("all");
   const [editingPayment, setEditingPayment] = useState<Payment | null>(null);
   const [deletingPaymentId, setDeletingPaymentId] = useState<string | null>(null);
+  const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
   
   const { businessId, loading: businessLoading } = useBusinessId();
-
   useEffect(() => {
     if (businessId) {
       fetchData();
@@ -295,11 +296,15 @@ const Payments = () => {
                 {filteredPayments.map((payment) => (
                   <div
                     key={payment.id}
-                    className="flex items-center justify-between py-3 border-b border-border last:border-0 gap-3"
+                    onClick={() => setSelectedPayment(payment)}
+                    className="flex items-center justify-between py-3 border-b border-border last:border-0 gap-3 cursor-pointer active:bg-muted/50 transition-colors rounded-lg -mx-2 px-2"
                   >
                     <div className="flex-1 min-w-0">
                       <button
-                        onClick={() => navigate(`/patients/${payment.patient_id}`)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/patients/${payment.patient_id}`);
+                        }}
                         className="font-semibold text-sm text-foreground hover:text-primary transition-colors text-left truncate block w-full"
                       >
                         {payment.patients?.full_name || "Paciente desconocido"}
@@ -318,10 +323,12 @@ const Payments = () => {
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       {payment.status !== "paid" && payment.status !== "cancelled" && (
-                        <PaymentWhatsAppMenu
-                          patientPhone={payment.patients?.whatsapp_phone || null}
-                          patientName={payment.patients?.full_name || ""}
-                        />
+                        <div onClick={(e) => e.stopPropagation()}>
+                          <PaymentWhatsAppMenu
+                            patientPhone={payment.patients?.whatsapp_phone || null}
+                            patientName={payment.patients?.full_name || ""}
+                          />
+                        </div>
                       )}
                       <span className="font-bold text-sm text-foreground">
                         {formatCurrency(payment.amount, payment.currency)}
@@ -402,6 +409,43 @@ const Payments = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Payment Detail Drawer */}
+      <PaymentDetailDrawer
+        open={!!selectedPayment}
+        onOpenChange={(open) => !open && setSelectedPayment(null)}
+        payment={selectedPayment}
+        onEdit={() => {
+          if (selectedPayment) {
+            setEditingPayment(selectedPayment);
+          }
+        }}
+        onMarkAsPaid={async () => {
+          if (selectedPayment) {
+            try {
+              const { error } = await supabase
+                .from("payments")
+                .update({ paid_at: new Date().toISOString(), status: "paid" })
+                .eq("id", selectedPayment.id);
+              
+              if (error) throw error;
+              
+              toast({
+                title: "Éxito",
+                description: "Pago marcado como pagado",
+              });
+              fetchData();
+            } catch (error) {
+              console.error("Error marking payment as paid:", error);
+              toast({
+                title: "Error",
+                description: "No se pudo actualizar el pago",
+                variant: "destructive",
+              });
+            }
+          }
+        }}
+      />
     </div>
   );
 };
