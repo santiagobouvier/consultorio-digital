@@ -72,7 +72,7 @@ const Agenda = () => {
   const [allPayments, setAllPayments] = useState<Payment[]>([]);
   const [selectedPatientPayments, setSelectedPatientPayments] = useState<Payment[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
-  const [viewType, setViewType] = useState<ViewType>("week");
+  const [viewType, setViewType] = useState<ViewType>("month");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
   const [patientSearch, setPatientSearch] = useState("");
@@ -682,6 +682,8 @@ const Agenda = () => {
                 onDateClick={handleDateClick}
                 onAppointmentClick={handleAppointmentClick}
                 selectedPatientId={selectedPatientId}
+                businessId={businessId}
+                onAppointmentCreated={handleRefreshData}
               />
             )}
             {viewType === "week" && (
