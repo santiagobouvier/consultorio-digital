@@ -108,6 +108,64 @@ export const CalendarGrid = ({
     return { paid, pending, overdue, total: dayPayments.length };
   };
 
+  // Límite de indicadores por día
+  const MAX_BADGES_MOBILE = 3;
+  const MAX_BADGES_DESKTOP = 4;
+
+  // Genera badges ordenados por prioridad: rojo > naranja > verde > azul (citas)
+  const getPriorityBadges = (
+    appointmentsCount: number,
+    paymentStats: { paid: number; pending: number; overdue: number }
+  ) => {
+    const maxBadges = isMobile ? MAX_BADGES_MOBILE : MAX_BADGES_DESKTOP;
+    
+    type Badge = { type: 'overdue' | 'pending' | 'paid' | 'appointments'; count: number; priority: number };
+    const allBadges: Badge[] = [];
+
+    // Prioridad: 1 = rojo (vencido), 2 = naranja (pendiente), 3 = verde (pagado), 4 = azul (citas)
+    if (paymentStats.overdue > 0) {
+      allBadges.push({ type: 'overdue', count: paymentStats.overdue, priority: 1 });
+    }
+    if (paymentStats.pending > 0) {
+      allBadges.push({ type: 'pending', count: paymentStats.pending, priority: 2 });
+    }
+    if (paymentStats.paid > 0) {
+      allBadges.push({ type: 'paid', count: paymentStats.paid, priority: 3 });
+    }
+    if (appointmentsCount > 0) {
+      allBadges.push({ type: 'appointments', count: appointmentsCount, priority: 4 });
+    }
+
+    // Ordenar por prioridad
+    allBadges.sort((a, b) => a.priority - b.priority);
+
+    const totalBadges = allBadges.length;
+    
+    if (totalBadges <= maxBadges) {
+      return { visibleBadges: allBadges, remaining: 0 };
+    }
+
+    // Si hay vencidos, garantizar que al menos 1 rojo sea visible
+    let visibleBadges = allBadges.slice(0, maxBadges);
+    const hasOverdueVisible = visibleBadges.some(b => b.type === 'overdue');
+    const hasOverdueTotal = allBadges.some(b => b.type === 'overdue');
+
+    // Si hay vencidos pero no están visibles, reemplazar el último por el rojo
+    if (hasOverdueTotal && !hasOverdueVisible) {
+      const overdueIdx = allBadges.findIndex(b => b.type === 'overdue');
+      if (overdueIdx !== -1) {
+        visibleBadges = [allBadges[overdueIdx], ...visibleBadges.slice(0, maxBadges - 1)];
+      }
+    }
+
+    // Calcular restantes (conteo total de items, no de badges)
+    const visibleTypes = new Set(visibleBadges.map(b => b.type));
+    const hiddenBadges = allBadges.filter(b => !visibleTypes.has(b.type));
+    const remaining = hiddenBadges.reduce((sum, b) => sum + b.count, 0);
+
+    return { visibleBadges, remaining };
+  };
+
   const getPaymentBorderColor = (color?: string) => {
     switch (color) {
       case "green":
@@ -188,44 +246,60 @@ export const CalendarGrid = ({
                       {format(day, "d")}
                     </span>
                     
-                    {/* Indicators */}
-                    {isCurrentMonth && hasActivity && (
-                      <div className="flex flex-col gap-0.5 items-center w-full">
-                        {/* Appointments */}
-                        {hasAppointments && (
-                          <div className="flex items-center gap-1">
-                            <span className="w-3 h-3 rounded-full bg-primary shadow-sm" />
-                            <span className="text-xs font-bold text-primary">
-                              {dayAppointments.length}
-                            </span>
+                    {/* Indicators - Limited by priority */}
+                    {isCurrentMonth && hasActivity && (() => {
+                      const { visibleBadges, remaining } = getPriorityBadges(
+                        dayAppointments.length,
+                        paymentStats
+                      );
+
+                      return (
+                        <div className="flex flex-col gap-0.5 items-center w-full">
+                          <div className="flex items-center gap-1 flex-wrap justify-center">
+                            {visibleBadges.map((badge, idx) => {
+                              if (badge.type === 'overdue') {
+                                return (
+                                  <span key={idx} className="flex items-center gap-0.5">
+                                    <span className="w-3.5 h-3.5 rounded-full bg-rose-500 animate-pulse shadow-md" />
+                                    <span className="text-xs font-extrabold text-rose-600">{badge.count}</span>
+                                  </span>
+                                );
+                              }
+                              if (badge.type === 'pending') {
+                                return (
+                                  <span key={idx} className="flex items-center gap-0.5">
+                                    <span className="w-3 h-3 rounded-full bg-amber-500 shadow-sm" />
+                                    <span className="text-xs font-bold text-amber-600">{badge.count}</span>
+                                  </span>
+                                );
+                              }
+                              if (badge.type === 'paid') {
+                                return (
+                                  <span key={idx} className="flex items-center gap-0.5">
+                                    <span className="w-3 h-3 rounded-full bg-emerald-500 shadow-sm" />
+                                    <span className="text-xs font-bold text-emerald-600">{badge.count}</span>
+                                  </span>
+                                );
+                              }
+                              if (badge.type === 'appointments') {
+                                return (
+                                  <span key={idx} className="flex items-center gap-0.5">
+                                    <span className="w-3 h-3 rounded-full bg-primary shadow-sm" />
+                                    <span className="text-xs font-bold text-primary">{badge.count}</span>
+                                  </span>
+                                );
+                              }
+                              return null;
+                            })}
+                            {remaining > 0 && (
+                              <span className="text-[10px] font-bold text-muted-foreground bg-muted rounded-full px-1.5 py-0.5">
+                                +{remaining}
+                              </span>
+                            )}
                           </div>
-                        )}
-                        
-                        {/* Payments */}
-                        {hasPayments && (
-                          <div className="flex items-center gap-1.5 flex-wrap justify-center">
-                            {paymentStats.paid > 0 && (
-                              <span className="flex items-center gap-0.5">
-                                <span className="w-3 h-3 rounded-full bg-emerald-500 shadow-sm" />
-                                <span className="text-xs font-bold text-emerald-600">{paymentStats.paid}</span>
-                              </span>
-                            )}
-                            {paymentStats.pending > 0 && (
-                              <span className="flex items-center gap-0.5">
-                                <span className="w-3 h-3 rounded-full bg-amber-500 shadow-sm" />
-                                <span className="text-xs font-bold text-amber-600">{paymentStats.pending}</span>
-                              </span>
-                            )}
-                            {paymentStats.overdue > 0 && (
-                              <span className="flex items-center gap-0.5">
-                                <span className="w-3.5 h-3.5 rounded-full bg-rose-500 animate-pulse shadow-md" />
-                                <span className="text-xs font-extrabold text-rose-600">{paymentStats.overdue}</span>
-                              </span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
               );
@@ -332,29 +406,66 @@ export const CalendarGrid = ({
                   {format(day, "d")}
                 </span>
                 
-                {/* Day summary badges */}
-                {isCurrentMonth && (
-                  <div className="flex items-center gap-1">
-                    {dayAppointments.length > 0 && (
-                      <span className="text-[10px] font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded-full">
-                        {dayAppointments.length} cita{dayAppointments.length > 1 ? 's' : ''}
-                      </span>
-                    )}
-                    {hasPayments && (
-                      <div className="flex items-center gap-1">
-                        {paymentStats.paid > 0 && (
-                          <span className="w-3 h-3 rounded-full bg-emerald-500 shadow-sm" title={`${paymentStats.paid} pagado(s)`} />
-                        )}
-                        {paymentStats.pending > 0 && (
-                          <span className="w-3 h-3 rounded-full bg-amber-500 shadow-sm" title={`${paymentStats.pending} pendiente(s)`} />
-                        )}
-                        {paymentStats.overdue > 0 && (
-                          <span className="w-3.5 h-3.5 rounded-full bg-rose-500 animate-pulse shadow-md" title={`${paymentStats.overdue} vencido(s)`} />
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
+                {/* Day summary badges - Limited by priority */}
+                {isCurrentMonth && (() => {
+                  const hasActivity = dayAppointments.length > 0 || hasPayments;
+                  if (!hasActivity) return null;
+
+                  const { visibleBadges, remaining } = getPriorityBadges(
+                    dayAppointments.length,
+                    paymentStats
+                  );
+
+                  return (
+                    <div className="flex items-center gap-1 flex-wrap">
+                      {visibleBadges.map((badge, idx) => {
+                        if (badge.type === 'overdue') {
+                          return (
+                            <span 
+                              key={idx}
+                              className="w-3.5 h-3.5 rounded-full bg-rose-500 animate-pulse shadow-md" 
+                              title={`${badge.count} vencido(s)`} 
+                            />
+                          );
+                        }
+                        if (badge.type === 'pending') {
+                          return (
+                            <span 
+                              key={idx}
+                              className="w-3 h-3 rounded-full bg-amber-500 shadow-sm" 
+                              title={`${badge.count} pendiente(s)`} 
+                            />
+                          );
+                        }
+                        if (badge.type === 'paid') {
+                          return (
+                            <span 
+                              key={idx}
+                              className="w-3 h-3 rounded-full bg-emerald-500 shadow-sm" 
+                              title={`${badge.count} pagado(s)`} 
+                            />
+                          );
+                        }
+                        if (badge.type === 'appointments') {
+                          return (
+                            <span 
+                              key={idx}
+                              className="text-[10px] font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded-full"
+                            >
+                              {badge.count} cita{badge.count > 1 ? 's' : ''}
+                            </span>
+                          );
+                        }
+                        return null;
+                      })}
+                      {remaining > 0 && (
+                        <span className="text-[10px] font-bold text-muted-foreground bg-muted rounded-full px-1.5 py-0.5">
+                          +{remaining}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
 
               {isCurrentMonth && (
