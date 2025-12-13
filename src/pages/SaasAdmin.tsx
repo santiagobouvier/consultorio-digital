@@ -935,36 +935,36 @@ const SaasAdmin = () => {
 
     return (
       <Card className="overflow-hidden">
-        <CardContent className="p-4 space-y-3">
-          {/* Header */}
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-base truncate">{business.name}</h3>
-              <p className="text-xs text-muted-foreground truncate">{business.ownerEmail}</p>
-            </div>
-            <div className="flex items-center gap-1 flex-shrink-0">
-              <Badge variant="secondary" className="text-xs">
-                {getPlanName(business.planCode)}
-              </Badge>
+        <CardContent className="p-4 space-y-4">
+          {/* Header - Name + Plan prominently */}
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="font-semibold text-lg leading-tight">{business.name}</h3>
               {business.isDemo && (
-                <Badge variant="outline" className="text-xs border-amber-500 text-amber-600">
+                <Badge variant="outline" className="text-xs border-amber-500 text-amber-600 shrink-0">
                   Demo
                 </Badge>
               )}
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="text-xs font-medium">
+                {getPlanName(business.planCode)}
+              </Badge>
+              <span className="text-xs text-muted-foreground">{business.ownerEmail}</span>
             </div>
           </div>
 
           {/* Stats */}
           <div className="grid grid-cols-2 gap-3">
-            <div className={`p-2 rounded-lg text-center ${
+            <div className={`p-3 rounded-lg text-center ${
               profStatus.status === "danger" 
                 ? "bg-destructive/10" 
                 : profStatus.status === "warning"
                   ? "bg-yellow-500/10"
                   : "bg-green-500/10"
             }`}>
-              <p className="text-xs text-muted-foreground">Profesionales</p>
-              <p className={`font-semibold ${
+              <p className="text-xs text-muted-foreground mb-1">Profesionales</p>
+              <p className={`font-bold text-lg ${
                 profStatus.status === "danger" 
                   ? "text-destructive" 
                   : profStatus.status === "warning"
@@ -972,18 +972,20 @@ const SaasAdmin = () => {
                     : "text-green-700 dark:text-green-400"
               }`}>
                 {business.professionalsCount}
-                {config.maxProfessionals !== null ? `/${config.maxProfessionals}` : " ∞"}
+                <span className="text-sm font-normal">
+                  {config.maxProfessionals !== null ? `/${config.maxProfessionals}` : " ∞"}
+                </span>
               </p>
             </div>
-            <div className={`p-2 rounded-lg text-center ${
+            <div className={`p-3 rounded-lg text-center ${
               patientStatus.status === "danger" 
                 ? "bg-destructive/10" 
                 : patientStatus.status === "warning"
                   ? "bg-yellow-500/10"
                   : "bg-green-500/10"
             }`}>
-              <p className="text-xs text-muted-foreground">Pacientes</p>
-              <p className={`font-semibold ${
+              <p className="text-xs text-muted-foreground mb-1">Pacientes</p>
+              <p className={`font-bold text-lg ${
                 patientStatus.status === "danger" 
                   ? "text-destructive" 
                   : patientStatus.status === "warning"
@@ -991,39 +993,61 @@ const SaasAdmin = () => {
                     : "text-green-700 dark:text-green-400"
               }`}>
                 {business.patientsCount}
-                {config.maxPatients !== null ? `/${config.maxPatients}` : " ∞"}
+                <span className="text-sm font-normal">
+                  {config.maxPatients !== null ? `/${config.maxPatients}` : " ∞"}
+                </span>
               </p>
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="grid grid-cols-3 gap-2 pt-2">
+          {/* Actions - Icon buttons with tooltips for mobile */}
+          <div className="flex items-center justify-between pt-2 border-t">
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-10 w-10"
+                onClick={() => enterBusiness(business.id)}
+                title="Ver consultorio"
+              >
+                <Eye className="h-5 w-5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-10 w-10"
+                onClick={() => openEditModal(business)}
+                title="Editar"
+              >
+                <Pencil className="h-5 w-5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-10 w-10"
+                onClick={() => loadProfessionals(business)}
+                title="Ver profesionales"
+              >
+                <UserCog className="h-5 w-5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-10 w-10"
+                onClick={() => openPrivateClinicModal(business)}
+                title="Configurar dominio"
+              >
+                <Globe className="h-5 w-5" />
+              </Button>
+            </div>
             <Button
-              variant="outline"
-              size="sm"
-              className="h-11 gap-1.5"
-              onClick={() => enterBusiness(business.id)}
-            >
-              <Eye className="h-4 w-4" />
-              Ver
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-11 gap-1.5"
-              onClick={() => openEditModal(business)}
-            >
-              <Pencil className="h-4 w-4" />
-              Editar
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-11 gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10"
+              variant="ghost"
+              size="icon"
+              className="h-10 w-10 text-destructive hover:text-destructive hover:bg-destructive/10"
               onClick={() => openDeleteModal(business)}
+              title="Eliminar"
             >
-              <Trash2 className="h-4 w-4" />
-              Eliminar
+              <Trash2 className="h-5 w-5" />
             </Button>
           </div>
         </CardContent>
