@@ -393,7 +393,7 @@ const Landing = () => {
                   color: '#00c78a'
                 }}
               >
-                Para psicólogos y profesionales de la salud
+                Para profesionales que agendan citas
               </span>
             </div>
             
