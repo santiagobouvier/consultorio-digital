@@ -193,9 +193,9 @@ export const CalendarGrid = ({
                       <div className="flex flex-col gap-0.5 items-center w-full">
                         {/* Appointments */}
                         {hasAppointments && (
-                          <div className="flex items-center gap-0.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-                            <span className="text-[10px] font-semibold text-primary">
+                          <div className="flex items-center gap-1">
+                            <span className="w-3 h-3 rounded-full bg-primary shadow-sm" />
+                            <span className="text-xs font-bold text-primary">
                               {dayAppointments.length}
                             </span>
                           </div>
@@ -203,23 +203,23 @@ export const CalendarGrid = ({
                         
                         {/* Payments */}
                         {hasPayments && (
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-1.5 flex-wrap justify-center">
                             {paymentStats.paid > 0 && (
                               <span className="flex items-center gap-0.5">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                                <span className="text-[10px] font-semibold text-emerald-600">{paymentStats.paid}</span>
+                                <span className="w-3 h-3 rounded-full bg-emerald-500 shadow-sm" />
+                                <span className="text-xs font-bold text-emerald-600">{paymentStats.paid}</span>
                               </span>
                             )}
                             {paymentStats.pending > 0 && (
                               <span className="flex items-center gap-0.5">
-                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                                <span className="text-[10px] font-semibold text-amber-600">{paymentStats.pending}</span>
+                                <span className="w-3 h-3 rounded-full bg-amber-500 shadow-sm" />
+                                <span className="text-xs font-bold text-amber-600">{paymentStats.pending}</span>
                               </span>
                             )}
                             {paymentStats.overdue > 0 && (
                               <span className="flex items-center gap-0.5">
-                                <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
-                                <span className="text-[10px] font-bold text-rose-600">{paymentStats.overdue}</span>
+                                <span className="w-3.5 h-3.5 rounded-full bg-rose-500 animate-pulse shadow-md" />
+                                <span className="text-xs font-extrabold text-rose-600">{paymentStats.overdue}</span>
                               </span>
                             )}
                           </div>
@@ -341,15 +341,15 @@ export const CalendarGrid = ({
                       </span>
                     )}
                     {hasPayments && (
-                      <div className="flex items-center gap-0.5">
+                      <div className="flex items-center gap-1">
                         {paymentStats.paid > 0 && (
-                          <span className="w-2 h-2 rounded-full bg-emerald-500" title={`${paymentStats.paid} pagado(s)`} />
+                          <span className="w-3 h-3 rounded-full bg-emerald-500 shadow-sm" title={`${paymentStats.paid} pagado(s)`} />
                         )}
                         {paymentStats.pending > 0 && (
-                          <span className="w-2 h-2 rounded-full bg-amber-500" title={`${paymentStats.pending} pendiente(s)`} />
+                          <span className="w-3 h-3 rounded-full bg-amber-500 shadow-sm" title={`${paymentStats.pending} pendiente(s)`} />
                         )}
                         {paymentStats.overdue > 0 && (
-                          <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" title={`${paymentStats.overdue} vencido(s)`} />
+                          <span className="w-3.5 h-3.5 rounded-full bg-rose-500 animate-pulse shadow-md" title={`${paymentStats.overdue} vencido(s)`} />
                         )}
                       </div>
                     )}
