@@ -29,6 +29,7 @@ const ProfessionalInvitation = lazy(() => import("./pages/ProfessionalInvitation
 const ProfessionalRegister = lazy(() => import("./pages/ProfessionalRegister"));
 const ConsultorioOnboarding = lazy(() => import("./pages/ConsultorioOnboarding"));
 const SaasAdmin = lazy(() => import("./pages/SaasAdmin"));
+const CommandCenter = lazy(() => import("./pages/CommandCenter"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
@@ -49,6 +50,7 @@ const App = () => (
             <Route path="/patients/:id" element={<PatientDetail />} />
             <Route path="/appointments" element={<Appointments />} />
             <Route path="/agenda" element={<Agenda />} />
+            <Route path="/centro-control" element={<CommandCenter />} />
             <Route path="/recordatorios-pendientes" element={<PendingReminders />} />
             <Route path="/mi-consultorio" element={<ClinicSettings />} />
             <Route path="/horarios-disponibles" element={<AvailableSlots />} />
