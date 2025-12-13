@@ -24,7 +24,8 @@ import { PatientSummary } from "@/components/calendar/PatientSummary";
 import { QuickAppointmentDrawer } from "@/components/calendar/QuickAppointmentDrawer";
 import { QuickPaymentDrawer } from "@/components/calendar/QuickPaymentDrawer";
 import { QuickActionSheet } from "@/components/calendar/QuickActionSheet";
-import { format, addMonths, subMonths, addWeeks, subWeeks, addDays, subDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek, subMonths as subMonthsFn } from "date-fns";
+import { TodaySummaryDrawer } from "@/components/calendar/TodaySummaryDrawer";
+import { format, addMonths, subMonths, addWeeks, subWeeks, addDays, subDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek, subMonths as subMonthsFn, isToday } from "date-fns";
 import { es } from "date-fns/locale";
 import { calculatePaymentStatus, type PaymentStatus } from "@/lib/payments";
 import { useBusinessId } from "@/hooks/use-business-id";
@@ -84,7 +85,7 @@ const Agenda = () => {
   const [statusFilter, setStatusFilter] = useState<AppointmentStatusFilter>("all");
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<PaymentStatusFilter>("all");
   const [selectedProfessionalId, setSelectedProfessionalId] = useState<string | null>(null);
-  
+  const [showTodaySummary, setShowTodaySummary] = useState(false);
   const { businessId, loading: businessLoading } = useBusinessId();
   const { professionals, currentUserId, isOwner } = useProfessionals(businessId);
 
@@ -423,6 +424,8 @@ const Agenda = () => {
 
   const goToToday = () => {
     setCurrentDate(new Date());
+    // Open Today Summary drawer
+    setShowTodaySummary(true);
   };
 
   const handleDateClick = (date: Date) => {
@@ -501,7 +504,12 @@ const Agenda = () => {
           </div>
 
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={goToToday} className="rounded-xl">
+            <Button 
+              variant={isToday(currentDate) ? "default" : "outline"} 
+              size="sm" 
+              onClick={goToToday} 
+              className="rounded-xl font-semibold"
+            >
               Hoy
             </Button>
           </div>
@@ -796,6 +804,27 @@ const Agenda = () => {
             selectedDate={currentDate}
             businessId={businessId}
             onSuccess={handleRefreshData}
+          />
+        )}
+
+        {/* Today Summary Drawer */}
+        {businessId && (
+          <TodaySummaryDrawer
+            open={showTodaySummary}
+            onClose={() => setShowTodaySummary(false)}
+            appointments={appointments}
+            payments={allPayments}
+            patients={patients}
+            businessId={businessId}
+            onRefresh={handleRefreshData}
+            onCreateAppointment={() => {
+              setShowTodaySummary(false);
+              setShowQuickCreate(true);
+            }}
+            onCreatePayment={() => {
+              setShowTodaySummary(false);
+              setShowQuickPayment(true);
+            }}
           />
         )}
 
