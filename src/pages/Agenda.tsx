@@ -555,16 +555,37 @@ const Agenda = () => {
         ) : (
           <>
             {viewType === "month" && (
-              <CalendarGrid
-                currentDate={currentDate}
-                appointments={filteredAppointments}
-                payments={selectedPatientPayments}
-                onDateClick={handleDateClick}
-                onAppointmentClick={handleAppointmentClick}
-                selectedPatientId={selectedPatientId}
-                businessId={businessId}
-                onAppointmentCreated={handleRefreshData}
-              />
+              <>
+                <CalendarGrid
+                  currentDate={currentDate}
+                  appointments={filteredAppointments}
+                  payments={allPayments}
+                  onDateClick={handleDateClick}
+                  onAppointmentClick={handleAppointmentClick}
+                  selectedPatientId={selectedPatientId}
+                  businessId={businessId}
+                  onAppointmentCreated={handleRefreshData}
+                />
+                {/* Legend */}
+                <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-primary" />
+                    <span>Citas</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                    <span>Pagados</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-amber-500" />
+                    <span>Pendientes</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-rose-500" />
+                    <span>Vencidos</span>
+                  </div>
+                </div>
+              </>
             )}
             {viewType === "week" && (
               <WeekView
