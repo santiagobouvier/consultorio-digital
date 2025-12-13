@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import {
   Select,
   SelectContent,
@@ -19,8 +20,13 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { toast } from "@/hooks/use-toast";
-import { Calendar, Clock, User, CreditCard, Loader2 } from "lucide-react";
+import { Calendar, Clock, User, CreditCard, Loader2, CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Patient {
@@ -49,6 +55,7 @@ export const QuickAppointmentDrawer = ({
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   // Form state
+  const [appointmentDate, setAppointmentDate] = useState<Date>(selectedDate);
   const [selectedPatientId, setSelectedPatientId] = useState("");
   const [time, setTime] = useState("09:00");
   const [duration, setDuration] = useState("60");
@@ -68,6 +75,7 @@ export const QuickAppointmentDrawer = ({
   // Reset form when drawer opens with new date
   useEffect(() => {
     if (open) {
+      setAppointmentDate(selectedDate);
       setSelectedPatientId("");
       setTime("09:00");
       setDuration("60");
@@ -129,7 +137,7 @@ export const QuickAppointmentDrawer = ({
       setLoading(true);
 
       // Build start_at and end_at
-      const dateStr = format(selectedDate, "yyyy-MM-dd");
+      const dateStr = format(appointmentDate, "yyyy-MM-dd");
       const startAt = new Date(`${dateStr}T${time}:00`);
       const endAt = new Date(startAt);
       endAt.setMinutes(endAt.getMinutes() + parseInt(duration));
@@ -189,7 +197,7 @@ export const QuickAppointmentDrawer = ({
 
       toast({
         title: "Cita creada",
-        description: `Cita para las ${time} del ${format(selectedDate, "d 'de' MMMM", { locale: es })}`,
+        description: `Cita para las ${time} del ${format(appointmentDate, "d 'de' MMMM", { locale: es })}`,
       });
 
       onSuccess();
@@ -216,14 +224,39 @@ export const QuickAppointmentDrawer = ({
             </div>
             <div>
               <DrawerTitle className="text-left">Nueva cita</DrawerTitle>
-              <p className="text-sm text-muted-foreground capitalize">
-                {format(selectedDate, "EEEE d 'de' MMMM", { locale: es })}
-              </p>
             </div>
           </div>
         </DrawerHeader>
 
         <div className="overflow-y-auto p-4 space-y-5">
+          {/* Date picker */}
+          <div className="space-y-2">
+            <Label className="text-sm font-semibold flex items-center gap-2">
+              <CalendarIcon className="w-4 h-4" />
+              Fecha *
+            </Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full h-12 rounded-xl text-base justify-start font-normal"
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {format(appointmentDate, "EEEE d 'de' MMMM yyyy", { locale: es })}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <CalendarComponent
+                  mode="single"
+                  selected={appointmentDate}
+                  onSelect={(date) => date && setAppointmentDate(date)}
+                  initialFocus
+                  className="p-3 pointer-events-auto"
+                  locale={es}
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
           {/* Patient selector */}
           <div className="space-y-2">
             <Label className="text-sm font-semibold flex items-center gap-2">
