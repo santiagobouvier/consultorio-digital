@@ -866,7 +866,7 @@ const Landing = () => {
               <img 
                 src="/assets/logo-digitalbuilders.webp" 
                 alt="Digital Builders" 
-                className="h-6 sm:h-8"
+                className="h-10 sm:h-12"
               />
             </a>
           </div>
