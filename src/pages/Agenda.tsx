@@ -28,6 +28,7 @@ import { format, addMonths, subMonths, addWeeks, subWeeks, addDays, subDays, sta
 import { es } from "date-fns/locale";
 import { calculatePaymentStatus, type PaymentStatus } from "@/lib/payments";
 import { useBusinessId } from "@/hooks/use-business-id";
+import { useProfessionals } from "@/hooks/use-professionals";
 
 interface AppointmentWithRelations {
   id: string;
@@ -39,6 +40,7 @@ interface AppointmentWithRelations {
   payment_status: string | null;
   patient_id: string | null;
   service_id: string | null;
+  professional_id: string | null;
   patients: { full_name: string } | null;
   services: { name: string } | null;
   paymentColor?: string;
@@ -81,8 +83,10 @@ const Agenda = () => {
   const [showQuickPayment, setShowQuickPayment] = useState(false);
   const [statusFilter, setStatusFilter] = useState<AppointmentStatusFilter>("all");
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<PaymentStatusFilter>("all");
+  const [selectedProfessionalId, setSelectedProfessionalId] = useState<string | null>(null);
   
   const { businessId, loading: businessLoading } = useBusinessId();
+  const { professionals, currentUserId, isOwner } = useProfessionals(businessId);
 
   useEffect(() => {
     if (businessId) {
@@ -174,6 +178,7 @@ const Agenda = () => {
           payment_status,
           patient_id,
           service_id,
+          professional_id,
           patients (full_name),
           services (name)
         `)
@@ -303,6 +308,11 @@ const Agenda = () => {
   const filteredAppointments = useMemo(() => {
     let result = appointmentsWithPaymentColors;
 
+    // Filter by professional
+    if (selectedProfessionalId) {
+      result = result.filter(apt => apt.professional_id === selectedProfessionalId);
+    }
+
     // Filter by patient
     if (selectedPatientId) {
       result = result.filter(apt => apt.patient_id === selectedPatientId);
@@ -334,7 +344,7 @@ const Agenda = () => {
     }
 
     return result;
-  }, [appointmentsWithPaymentColors, selectedPatientId, statusFilter, paymentStatusFilter]);
+  }, [appointmentsWithPaymentColors, selectedPatientId, selectedProfessionalId, statusFilter, paymentStatusFilter]);
 
   // Calculate patient payment status for PatientSummary
   const patientPaymentStatus = useMemo(() => {
@@ -440,7 +450,7 @@ const Agenda = () => {
     }
   };
 
-  const hasActiveFilters = statusFilter !== "all" || paymentStatusFilter !== "all" || selectedPatientId !== null;
+  const hasActiveFilters = statusFilter !== "all" || paymentStatusFilter !== "all" || selectedPatientId !== null || selectedProfessionalId !== null;
 
   const handleRefreshData = () => {
     fetchAppointments();
@@ -610,7 +620,36 @@ const Agenda = () => {
         <Card className="bg-card/50">
           <CardContent className="p-4 space-y-4">
             <p className="text-sm font-semibold text-foreground">Filtros</p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Professional filter - only show if multiple professionals */}
+              {professionals.length > 1 && (
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-muted-foreground">Profesional</label>
+                  <Select
+                    value={selectedProfessionalId || "all"}
+                    onValueChange={(value) => setSelectedProfessionalId(value === "all" ? null : value)}
+                  >
+                    <SelectTrigger className="h-11 rounded-xl">
+                      <SelectValue placeholder="Todos" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos los profesionales</SelectItem>
+                      {professionals.map((professional) => (
+                        <SelectItem key={professional.userId} value={professional.userId}>
+                          <div className="flex items-center gap-2">
+                            <span 
+                              className="w-3 h-3 rounded-full" 
+                              style={{ backgroundColor: professional.color }}
+                            />
+                            {professional.name}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
               {/* Patient filter */}
               <div className="space-y-2">
                 <label className="text-xs font-medium text-muted-foreground">Paciente</label>
@@ -705,6 +744,7 @@ const Agenda = () => {
                 className="rounded-xl w-full sm:w-auto"
                 onClick={() => {
                   setSelectedPatientId(null);
+                  setSelectedProfessionalId(null);
                   setStatusFilter("all");
                   setPaymentStatusFilter("all");
                 }}

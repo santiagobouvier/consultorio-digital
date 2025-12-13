@@ -26,8 +26,9 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { toast } from "@/hooks/use-toast";
-import { Calendar, Clock, User, CreditCard, Loader2, CalendarIcon } from "lucide-react";
+import { Calendar, Clock, User, CreditCard, Loader2, CalendarIcon, UserCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useProfessionals } from "@/hooks/use-professionals";
 
 interface Patient {
   id: string;
@@ -52,11 +53,13 @@ export const QuickAppointmentDrawer = ({
   const [loading, setLoading] = useState(false);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [loadingPatients, setLoadingPatients] = useState(false);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  const { professionals, currentUserId, isOwner } = useProfessionals(businessId);
 
   // Form state
   const [appointmentDate, setAppointmentDate] = useState<Date>(selectedDate);
   const [selectedPatientId, setSelectedPatientId] = useState("");
+  const [selectedProfessionalId, setSelectedProfessionalId] = useState("");
   const [time, setTime] = useState("09:00");
   const [duration, setDuration] = useState("60");
   const [notes, setNotes] = useState("");
@@ -68,9 +71,21 @@ export const QuickAppointmentDrawer = ({
   useEffect(() => {
     if (open && businessId) {
       fetchPatients();
-      fetchCurrentUser();
     }
   }, [open, businessId]);
+
+  // Set default professional when professionals load
+  useEffect(() => {
+    if (professionals.length > 0 && currentUserId && !selectedProfessionalId) {
+      // Default to current user if they're a professional
+      const currentProfessional = professionals.find(p => p.userId === currentUserId);
+      if (currentProfessional) {
+        setSelectedProfessionalId(currentProfessional.userId);
+      } else if (professionals.length === 1) {
+        setSelectedProfessionalId(professionals[0].userId);
+      }
+    }
+  }, [professionals, currentUserId, selectedProfessionalId]);
 
   // Reset form when drawer opens with new date
   useEffect(() => {
@@ -82,13 +97,13 @@ export const QuickAppointmentDrawer = ({
       setNotes("");
       setPaymentAmount("");
       setPaymentStatus("pending");
+      // Reset professional to current user
+      const currentProfessional = professionals.find(p => p.userId === currentUserId);
+      if (currentProfessional) {
+        setSelectedProfessionalId(currentProfessional.userId);
+      }
     }
   }, [open, selectedDate]);
-
-  const fetchCurrentUser = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    setCurrentUserId(user?.id || null);
-  };
 
   const fetchPatients = async () => {
     setLoadingPatients(true);
@@ -153,7 +168,7 @@ export const QuickAppointmentDrawer = ({
         .insert({
           business_id: businessId,
           patient_id: selectedPatientId,
-          professional_id: currentUserId,
+          professional_id: selectedProfessionalId || currentUserId,
           start_at: startAt.toISOString(),
           end_at: endAt.toISOString(),
           status: "pending",
@@ -286,6 +301,34 @@ export const QuickAppointmentDrawer = ({
               </SelectContent>
             </Select>
           </div>
+
+          {/* Professional selector (only show if multiple professionals or is owner) */}
+          {(professionals.length > 1 || isOwner) && (
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold flex items-center gap-2">
+                <UserCircle className="w-4 h-4" />
+                Profesional *
+              </Label>
+              <Select value={selectedProfessionalId} onValueChange={setSelectedProfessionalId}>
+                <SelectTrigger className="h-12 rounded-xl text-base">
+                  <SelectValue placeholder="Seleccionar profesional" />
+                </SelectTrigger>
+                <SelectContent>
+                  {professionals.map((professional) => (
+                    <SelectItem key={professional.userId} value={professional.userId}>
+                      <div className="flex items-center gap-2">
+                        <span 
+                          className="w-3 h-3 rounded-full" 
+                          style={{ backgroundColor: professional.color }}
+                        />
+                        {professional.name}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {/* Time */}
           <div className="space-y-2">
