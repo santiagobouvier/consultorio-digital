@@ -24,6 +24,7 @@ import { toast } from "@/hooks/use-toast";
 import { PatientForm } from "@/components/PatientForm";
 import { Search, Plus, ArrowLeft, ChevronRight, Smartphone } from "lucide-react";
 import { useBusinessId } from "@/hooks/use-business-id";
+import { BrandFooter } from "@/components/BrandFooter";
 
 interface Patient {
   id: string;
@@ -348,6 +349,8 @@ const Patients = () => {
           </>
         )}
       </div>
+
+      <BrandFooter />
 
       <PatientForm
         open={showForm}
