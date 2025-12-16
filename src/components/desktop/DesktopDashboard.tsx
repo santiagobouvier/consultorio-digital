@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { MonthlyHighlights } from "@/components/MonthlyHighlights";
 import {
   Select,
   SelectContent,
@@ -669,6 +670,9 @@ export const DesktopDashboard = () => {
             Registrar pago
           </Button>
         </div>
+
+        {/* Monthly Highlights Section - Secondary visual block */}
+        <MonthlyHighlights businessId={businessId} className="pt-4" />
       </main>
     </div>
   );
