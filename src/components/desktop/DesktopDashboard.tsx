@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { MonthlyHighlights } from "@/components/MonthlyHighlights";
-import { Logo } from "@/components/Logo";
+import { BrandFooter } from "@/components/BrandFooter";
 import {
   Select,
   SelectContent,
@@ -674,16 +674,7 @@ export const DesktopDashboard = () => {
         <MonthlyHighlights businessId={businessId} className="pt-4" />
       </main>
 
-      {/* Footer minimalista con logo */}
-      <footer className="py-12 mt-auto">
-        <div className="max-w-[1400px] mx-auto px-10 flex items-center justify-center">
-          <img 
-            src="/assets/logo-footer.png" 
-            alt="Tu Consultorio Digital" 
-            className="w-[300px] opacity-60"
-          />
-        </div>
-      </footer>
+      <BrandFooter />
     </div>
   );
 };

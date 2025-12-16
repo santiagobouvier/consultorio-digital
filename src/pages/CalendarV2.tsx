@@ -32,6 +32,7 @@ import { AppointmentDetailModal } from "@/components/calendar/AppointmentDetailM
 import { CreateAppointmentModal } from "@/components/CreateAppointmentModal";
 import { QuickPaymentDrawer } from "@/components/calendar/QuickPaymentDrawer";
 import { Skeleton } from "@/components/ui/skeleton";
+import { BrandFooter } from "@/components/BrandFooter";
 import {
   CalendarAppointment,
   CalendarFilters,
@@ -536,6 +537,8 @@ const CalendarV2 = () => {
           />
         )}
       </div>
+
+      <BrandFooter />
     </div>
   );
 };
