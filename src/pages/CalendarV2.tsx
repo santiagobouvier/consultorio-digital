@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useBusinessId } from "@/hooks/use-business-id";
 import { useProfessionals } from "@/hooks/use-professionals";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { calculatePaymentStatus, type PaymentStatus } from "@/lib/payments";
 import {
   format,
@@ -26,8 +27,10 @@ import { CalendarFiltersPanel } from "@/components/calendar-v2/CalendarFiltersPa
 import { DayViewV2 } from "@/components/calendar-v2/DayViewV2";
 import { WeekViewV2 } from "@/components/calendar-v2/WeekViewV2";
 import { MonthViewV2 } from "@/components/calendar-v2/MonthViewV2";
+import { DesktopCalendarLayout } from "@/components/calendar-v2/DesktopCalendarLayout";
 import { AppointmentDetailModal } from "@/components/calendar/AppointmentDetailModal";
 import { CreateAppointmentModal } from "@/components/CreateAppointmentModal";
+import { QuickPaymentDrawer } from "@/components/calendar/QuickPaymentDrawer";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   CalendarAppointment,
@@ -54,11 +57,12 @@ interface Payment {
 
 const CalendarV2 = () => {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const { businessId, loading: businessLoading } = useBusinessId();
   const { professionals, loading: professionalsLoading, currentUserId, isOwner } = useProfessionals(businessId);
 
-  // Calendar state
-  const [viewType, setViewType] = useState<ViewType>("week");
+  // Calendar state - default to month on desktop
+  const [viewType, setViewType] = useState<ViewType>("month");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<CalendarFilters>({
@@ -79,6 +83,8 @@ const CalendarV2 = () => {
   const [selectedAppointment, setSelectedAppointment] = useState<CalendarAppointment | null>(null);
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showPaymentDrawer, setShowPaymentDrawer] = useState(false);
+  const [selectedDateForAction, setSelectedDateForAction] = useState<Date>(new Date());
 
   // Fetch business settings
   useEffect(() => {
@@ -435,43 +441,66 @@ const CalendarV2 = () => {
           </div>
         ) : (
           <>
-            {viewType === "day" && (
-              <DayViewV2
+            {/* Desktop: Use DesktopCalendarLayout for month view */}
+            {!isMobile && viewType === "month" ? (
+              <DesktopCalendarLayout
                 currentDate={currentDate}
                 appointments={filteredAppointments}
                 onAppointmentClick={(apt) => {
                   setSelectedAppointment(apt);
                   setShowAppointmentModal(true);
                 }}
-                onAddAppointment={() => setShowCreateModal(true)}
-                showProfessionalColors={showProfessionalColors}
-              />
-            )}
-            {viewType === "week" && (
-              <WeekViewV2
-                currentDate={currentDate}
-                appointments={filteredAppointments}
-                onAppointmentClick={(apt) => {
-                  setSelectedAppointment(apt);
-                  setShowAppointmentModal(true);
+                onCreateAppointment={(date) => {
+                  if (date) setSelectedDateForAction(date);
+                  setShowCreateModal(true);
                 }}
-                onDayClick={handleDayClick}
-                onAddAppointment={() => setShowCreateModal(true)}
-                showProfessionalColors={showProfessionalColors}
-              />
-            )}
-            {viewType === "month" && (
-              <MonthViewV2
-                currentDate={currentDate}
-                appointments={filteredAppointments}
-                onAppointmentClick={(apt) => {
-                  setSelectedAppointment(apt);
-                  setShowAppointmentModal(true);
+                onCreatePayment={(date) => {
+                  if (date) setSelectedDateForAction(date);
+                  setShowPaymentDrawer(true);
                 }}
-                onDayClick={handleDayClick}
-                onAddAppointment={() => setShowCreateModal(true)}
                 showProfessionalColors={showProfessionalColors}
               />
+            ) : (
+              <>
+                {viewType === "day" && (
+                  <DayViewV2
+                    currentDate={currentDate}
+                    appointments={filteredAppointments}
+                    onAppointmentClick={(apt) => {
+                      setSelectedAppointment(apt);
+                      setShowAppointmentModal(true);
+                    }}
+                    onAddAppointment={() => setShowCreateModal(true)}
+                    showProfessionalColors={showProfessionalColors}
+                  />
+                )}
+                {viewType === "week" && (
+                  <WeekViewV2
+                    currentDate={currentDate}
+                    appointments={filteredAppointments}
+                    onAppointmentClick={(apt) => {
+                      setSelectedAppointment(apt);
+                      setShowAppointmentModal(true);
+                    }}
+                    onDayClick={handleDayClick}
+                    onAddAppointment={() => setShowCreateModal(true)}
+                    showProfessionalColors={showProfessionalColors}
+                  />
+                )}
+                {viewType === "month" && isMobile && (
+                  <MonthViewV2
+                    currentDate={currentDate}
+                    appointments={filteredAppointments}
+                    onAppointmentClick={(apt) => {
+                      setSelectedAppointment(apt);
+                      setShowAppointmentModal(true);
+                    }}
+                    onDayClick={handleDayClick}
+                    onAddAppointment={() => setShowCreateModal(true)}
+                    showProfessionalColors={showProfessionalColors}
+                  />
+                )}
+              </>
             )}
           </>
         )}
@@ -495,6 +524,17 @@ const CalendarV2 = () => {
           patientId={null}
           onSuccess={handleRefresh}
         />
+
+        {/* Quick payment drawer */}
+        {businessId && (
+          <QuickPaymentDrawer
+            open={showPaymentDrawer}
+            onClose={() => setShowPaymentDrawer(false)}
+            selectedDate={selectedDateForAction}
+            businessId={businessId}
+            onSuccess={handleRefresh}
+          />
+        )}
       </div>
     </div>
   );
