@@ -15,8 +15,14 @@ import { CalendarAppointment } from "./types";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MonthDayDrawer } from "./MonthDayDrawer";
-import { Plus } from "lucide-react";
+import { Plus, AlertCircle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
+
+interface DayIndicator {
+  count: number;
+  hasOverdue: boolean;
+  hasPending: boolean;
+}
 
 interface MonthViewV2Props {
   currentDate: Date;
@@ -25,6 +31,10 @@ interface MonthViewV2Props {
   onDayClick: (date: Date) => void;
   onAddAppointment: () => void;
   showProfessionalColors: boolean;
+  // Desktop specific props
+  isDesktop?: boolean;
+  selectedDay?: Date | null;
+  dayIndicators?: Map<string, DayIndicator>;
 }
 
 export const MonthViewV2 = ({
@@ -34,9 +44,12 @@ export const MonthViewV2 = ({
   onDayClick,
   onAddAppointment,
   showProfessionalColors,
+  isDesktop = false,
+  selectedDay = null,
+  dayIndicators,
 }: MonthViewV2Props) => {
   const isMobile = useIsMobile();
-  const [selectedDay, setSelectedDay] = useState<Date | null>(null);
+  const [mobileSelectedDay, setMobileSelectedDay] = useState<Date | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const days = useMemo(() => {
@@ -51,9 +64,26 @@ export const MonthViewV2 = ({
     return appointments.filter((apt) => isSameDay(new Date(apt.start_at), date));
   };
 
+  const getDayIndicator = (date: Date): DayIndicator | undefined => {
+    if (dayIndicators) {
+      return dayIndicators.get(date.toDateString());
+    }
+    // Fallback: calculate from appointments
+    const dayApts = getAppointmentsForDay(date);
+    if (dayApts.length === 0) return undefined;
+    return {
+      count: dayApts.length,
+      hasOverdue: dayApts.some(apt => apt.paymentColor === "red"),
+      hasPending: dayApts.some(apt => apt.paymentColor === "orange"),
+    };
+  };
+
   const handleDayClick = (day: Date) => {
-    if (isMobile) {
-      setSelectedDay(day);
+    if (isDesktop) {
+      // On desktop, let parent handle via onDayClick
+      onDayClick(day);
+    } else if (isMobile) {
+      setMobileSelectedDay(day);
       setDrawerOpen(true);
     } else {
       onDayClick(day);
@@ -83,8 +113,10 @@ export const MonthViewV2 = ({
         <div className="grid grid-cols-7">
           {days.map((day, index) => {
             const dayAppointments = getAppointmentsForDay(day);
+            const indicator = getDayIndicator(day);
             const isCurrentMonth = isSameMonth(day, currentDate);
             const isCurrentDay = isToday(day);
+            const isSelected = selectedDay && isSameDay(day, selectedDay);
             const hasAppointments = dayAppointments.length > 0;
 
             return (
@@ -92,28 +124,39 @@ export const MonthViewV2 = ({
                 key={index}
                 onClick={() => handleDayClick(day)}
                 className={cn(
-                  "min-h-[60px] md:min-h-[100px] p-1.5 md:p-2 border-b border-r transition-colors text-left",
+                  "min-h-[70px] md:min-h-[110px] p-1.5 md:p-2 border-b border-r transition-all duration-200 text-left relative group",
                   "hover:bg-muted/50 active:bg-muted/70",
                   !isCurrentMonth && "bg-muted/20",
-                  index % 7 === 6 && "border-r-0"
+                  index % 7 === 6 && "border-r-0",
+                  isSelected && "bg-primary/5 ring-2 ring-primary ring-inset"
                 )}
               >
                 {/* Day number */}
                 <div className="flex items-center justify-between mb-1">
                   <span
                     className={cn(
-                      "text-xs md:text-sm font-medium w-6 h-6 md:w-7 md:h-7 flex items-center justify-center rounded-full",
+                      "text-xs md:text-sm font-medium w-6 h-6 md:w-7 md:h-7 flex items-center justify-center rounded-full transition-colors",
                       !isCurrentMonth && "text-muted-foreground/50",
-                      isCurrentDay && "bg-primary text-primary-foreground"
+                      isCurrentDay && "bg-primary text-primary-foreground",
+                      isSelected && !isCurrentDay && "bg-primary/20 text-primary"
                     )}
                   >
                     {format(day, "d")}
                   </span>
-                  {/* Desktop: count badge */}
-                  {!isMobile && hasAppointments && (
-                    <span className="text-xs text-muted-foreground">
-                      {dayAppointments.length}
-                    </span>
+                  
+                  {/* Desktop: Payment indicators */}
+                  {!isMobile && indicator && (
+                    <div className="flex items-center gap-1">
+                      {indicator.hasOverdue && (
+                        <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+                      )}
+                      {indicator.hasPending && !indicator.hasOverdue && (
+                        <div className="w-2 h-2 rounded-full bg-amber-500" />
+                      )}
+                      <span className="text-xs text-muted-foreground font-medium">
+                        {indicator.count}
+                      </span>
+                    </div>
                   )}
                 </div>
 
@@ -127,7 +170,11 @@ export const MonthViewV2 = ({
                           "w-1.5 h-1.5 rounded-full",
                           showProfessionalColors && apt.professional
                             ? ""
-                            : "bg-primary"
+                            : apt.paymentColor === "red" 
+                              ? "bg-rose-500"
+                              : apt.paymentColor === "orange"
+                                ? "bg-amber-500"
+                                : "bg-primary"
                         )}
                         style={{
                           backgroundColor:
@@ -145,7 +192,7 @@ export const MonthViewV2 = ({
                   </div>
                 )}
 
-                {/* Desktop: appointment previews */}
+                {/* Desktop: appointment previews with payment status */}
                 {!isMobile && hasAppointments && (
                   <div className="space-y-0.5 overflow-hidden">
                     {dayAppointments.slice(0, 3).map((apt) => (
@@ -156,11 +203,13 @@ export const MonthViewV2 = ({
                           onAppointmentClick(apt);
                         }}
                         className={cn(
-                          "text-xs p-1 rounded truncate cursor-pointer",
-                          "bg-primary/10 hover:bg-primary/20 border-l-2",
-                          showProfessionalColors && apt.professional
-                            ? ""
-                            : "border-l-primary"
+                          "text-xs p-1.5 rounded-lg truncate cursor-pointer transition-all",
+                          "hover:scale-[1.02] hover:shadow-sm",
+                          apt.paymentColor === "red" 
+                            ? "bg-rose-50 dark:bg-rose-500/10 border-l-2 border-l-rose-500"
+                            : apt.paymentColor === "orange"
+                              ? "bg-amber-50 dark:bg-amber-500/10 border-l-2 border-l-amber-500"
+                              : "bg-primary/10 border-l-2 border-l-primary"
                         )}
                         style={{
                           borderLeftColor:
@@ -169,19 +218,28 @@ export const MonthViewV2 = ({
                               : undefined,
                         }}
                       >
-                        <span className="font-medium">
-                          {format(new Date(apt.start_at), "HH:mm")}
-                        </span>
-                        <span className="ml-1 text-muted-foreground">
-                          {apt.patients?.full_name?.split(" ")[0] || "Sin"}
-                        </span>
+                        <div className="flex items-center gap-1">
+                          <span className="font-medium">
+                            {format(new Date(apt.start_at), "HH:mm")}
+                          </span>
+                          <span className="text-muted-foreground truncate">
+                            {apt.patients?.full_name?.split(" ")[0] || "Sin nombre"}
+                          </span>
+                        </div>
                       </div>
                     ))}
                     {dayAppointments.length > 3 && (
-                      <p className="text-[10px] text-muted-foreground text-center">
+                      <p className="text-[10px] text-muted-foreground text-center py-0.5">
                         +{dayAppointments.length - 3} más
                       </p>
                     )}
+                  </div>
+                )}
+
+                {/* Desktop: hover indicator for empty days */}
+                {!isMobile && !hasAppointments && isCurrentMonth && (
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Plus className="w-5 h-5 text-muted-foreground/40" />
                   </div>
                 )}
               </button>
@@ -190,18 +248,20 @@ export const MonthViewV2 = ({
         </div>
       </div>
 
-      {/* Mobile: Day drawer */}
-      <MonthDayDrawer
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        selectedDate={selectedDay || currentDate}
-        appointments={appointments}
-        onAppointmentClick={(apt) => {
-          setDrawerOpen(false);
-          onAppointmentClick(apt);
-        }}
-        showProfessionalColors={showProfessionalColors}
-      />
+      {/* Mobile: Day drawer (only on mobile) */}
+      {isMobile && !isDesktop && (
+        <MonthDayDrawer
+          open={drawerOpen}
+          onClose={() => setDrawerOpen(false)}
+          selectedDate={mobileSelectedDay || currentDate}
+          appointments={appointments}
+          onAppointmentClick={(apt) => {
+            setDrawerOpen(false);
+            onAppointmentClick(apt);
+          }}
+          showProfessionalColors={showProfessionalColors}
+        />
+      )}
 
       {/* Mobile: Floating Add button */}
       {isMobile && (
