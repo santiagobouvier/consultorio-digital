@@ -680,7 +680,7 @@ export const DesktopDashboard = () => {
           <img 
             src="/assets/logo-footer.png" 
             alt="Tu Consultorio Digital" 
-            className="w-[600px] opacity-60"
+            className="w-[300px] opacity-60"
           />
         </div>
       </footer>
