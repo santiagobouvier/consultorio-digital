@@ -4,6 +4,7 @@ import { CalendarAppointment } from "./types";
 import { DesktopDaySidebar } from "./DesktopDaySidebar";
 import { MonthViewV2 } from "./MonthViewV2";
 import { cn } from "@/lib/utils";
+import { Calendar, ChevronRight } from "lucide-react";
 
 interface DesktopCalendarLayoutProps {
   currentDate: Date;
@@ -23,10 +24,9 @@ export const DesktopCalendarLayout = ({
   showProfessionalColors,
 }: DesktopCalendarLayoutProps) => {
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true); // Start open to show the panel
 
   const handleDayClick = (date: Date) => {
-    // If clicking same day, toggle sidebar
     if (selectedDay && isSameDay(date, selectedDay)) {
       setSidebarOpen(!sidebarOpen);
     } else {
@@ -37,6 +37,7 @@ export const DesktopCalendarLayout = ({
 
   const handleCloseSidebar = () => {
     setSidebarOpen(false);
+    setSelectedDay(null);
   };
 
   // Get day indicators for month view
@@ -61,8 +62,8 @@ export const DesktopCalendarLayout = ({
     <div className="flex gap-6 h-[calc(100vh-200px)] min-h-[600px]">
       {/* Calendar area */}
       <div className={cn(
-        "flex-1 transition-all duration-300 ease-out",
-        sidebarOpen ? "w-[calc(100%-380px)]" : "w-full"
+        "transition-all duration-300 ease-out",
+        sidebarOpen ? "flex-1" : "w-full"
       )}>
         <MonthViewV2
           currentDate={currentDate}
@@ -77,10 +78,12 @@ export const DesktopCalendarLayout = ({
         />
       </div>
 
-      {/* Side panel */}
+      {/* Side panel - always visible container */}
       <div className={cn(
-        "shrink-0 overflow-hidden transition-all duration-300 ease-out border rounded-2xl bg-card shadow-lg",
-        sidebarOpen ? "w-[360px] opacity-100" : "w-0 opacity-0 border-0"
+        "shrink-0 overflow-hidden transition-all duration-300 ease-out rounded-2xl shadow-lg",
+        sidebarOpen 
+          ? "w-[380px] opacity-100 border bg-card" 
+          : "w-0 opacity-0"
       )}>
         {sidebarOpen && (
           <DesktopDaySidebar
@@ -96,6 +99,16 @@ export const DesktopCalendarLayout = ({
           />
         )}
       </div>
+
+      {/* Toggle button when closed */}
+      {!sidebarOpen && (
+        <button
+          onClick={() => setSidebarOpen(true)}
+          className="fixed right-0 top-1/2 -translate-y-1/2 bg-card border border-r-0 rounded-l-xl p-2 shadow-lg hover:bg-muted transition-colors z-10"
+        >
+          <ChevronRight className="w-5 h-5 text-muted-foreground rotate-180" />
+        </button>
+      )}
     </div>
   );
 };
