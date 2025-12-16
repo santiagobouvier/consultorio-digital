@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "@/hooks/use-toast";
 import { Users, CalendarPlus, CalendarDays, UserPlus, Bell, LogOut, Camera, CreditCard, AlertTriangle, Clock, Plus, EyeOff, Eye, Smartphone, Building2, ChevronDown, Shield, Settings, ArrowRight } from "lucide-react";
+import { MonthlyHighlights } from "@/components/MonthlyHighlights";
 import { PlanUsageCard } from "@/components/PlanUsageCard";
 import { PatientForm } from "@/components/PatientForm";
 import { CreateAppointmentModal } from "@/components/CreateAppointmentModal";
@@ -915,6 +916,9 @@ const Dashboard = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Monthly Highlights - at the bottom */}
+        <MonthlyHighlights businessId={businessId} className="mt-2" />
 
         {/* Admin Panel Link */}
         {isSuperAdmin && (
