@@ -675,10 +675,9 @@ export const DesktopDashboard = () => {
       </main>
 
       {/* Footer minimalista con logo */}
-      <footer className="py-10 mt-auto">
-        <div className="max-w-[1400px] mx-auto px-10 flex flex-col items-center justify-center gap-2">
-          <Logo variant="full" size="2xl" className="opacity-80" />
-          <span className="text-sm text-muted-foreground">Bien gestionado</span>
+      <footer className="py-8 mt-auto">
+        <div className="max-w-[1400px] mx-auto px-10 flex items-center justify-center">
+          <Logo variant="full" size="2xl" className="opacity-70 h-40" />
         </div>
       </footer>
     </div>
