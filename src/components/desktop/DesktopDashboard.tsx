@@ -299,16 +299,7 @@ export const DesktopDashboard = () => {
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30">
       {/* Header Superior */}
       <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm">
-        <div className="max-w-[1400px] mx-auto px-10 py-4">
-          {/* Top bar: Logo prominente */}
-          <div className="flex items-center justify-between mb-4">
-            <Logo variant="full" size="lg" />
-            <div className="text-xs text-muted-foreground">
-              Sistema de gestión para consultorios
-            </div>
-          </div>
-          
-          {/* Main header content */}
+        <div className="max-w-[1400px] mx-auto px-10 py-6">
           <div className="flex items-center justify-between">
             {/* Left: Clinic Icon + Greeting + Clinic Name */}
             <div className="flex items-center gap-4">
@@ -682,6 +673,15 @@ export const DesktopDashboard = () => {
         {/* Monthly Highlights Section - Secondary visual block */}
         <MonthlyHighlights businessId={businessId} className="pt-4" />
       </main>
+
+      {/* Footer minimalista con logo */}
+      <footer className="py-6 mt-auto">
+        <div className="max-w-[1400px] mx-auto px-10 flex items-center justify-center gap-3">
+          <Logo variant="compact" size="sm" className="opacity-70" />
+          <span className="text-xs text-muted-foreground">•</span>
+          <span className="text-xs text-muted-foreground">Bien gestionado</span>
+        </div>
+      </footer>
     </div>
   );
 };
