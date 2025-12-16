@@ -299,25 +299,31 @@ export const DesktopDashboard = () => {
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30">
       {/* Header Superior */}
       <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm">
-        <div className="max-w-[1400px] mx-auto px-10 py-6">
+        <div className="max-w-[1400px] mx-auto px-10 py-4">
+          {/* Top bar: Logo prominente */}
+          <div className="flex items-center justify-between mb-4">
+            <Logo variant="full" size="lg" />
+            <div className="text-xs text-muted-foreground">
+              Sistema de gestión para consultorios
+            </div>
+          </div>
+          
+          {/* Main header content */}
           <div className="flex items-center justify-between">
             {/* Left: Clinic Icon + Greeting + Clinic Name */}
-            <div className="flex items-center gap-6">
-              <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center">
-                <Building2 className="h-7 w-7 text-primary" />
+            <div className="flex items-center gap-4">
+              <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                <Building2 className="h-6 w-6 text-primary" />
               </div>
               <div>
                 <p className="text-muted-foreground text-sm font-medium">
                   {getGreeting()}, {userName.split(" ")[0]}
                 </p>
-                <h1 className="text-2xl font-bold text-foreground tracking-tight">
+                <h1 className="text-xl font-bold text-foreground tracking-tight">
                   {businessName}
                 </h1>
               </div>
             </div>
-            
-            {/* Branding logo - subtle */}
-            <Logo variant="icon" size="sm" className="opacity-60" />
 
             {/* Center: Professional Selector (if multiple) */}
             {professionals.length > 1 && (
