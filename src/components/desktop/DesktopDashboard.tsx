@@ -675,9 +675,13 @@ export const DesktopDashboard = () => {
       </main>
 
       {/* Footer minimalista con logo */}
-      <footer className="py-6 mt-auto">
+      <footer className="py-12 mt-auto">
         <div className="max-w-[1400px] mx-auto px-10 flex items-center justify-center">
-          <Logo variant="full" size="2xl" className="opacity-70 h-[520px]" />
+          <img 
+            src="/assets/logo-footer.png" 
+            alt="Tu Consultorio Digital" 
+            className="w-[600px] opacity-60"
+          />
         </div>
       </footer>
     </div>
