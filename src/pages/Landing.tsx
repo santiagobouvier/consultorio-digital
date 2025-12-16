@@ -29,6 +29,12 @@ import agendaMobile from "@/assets/screenshots/agenda-mobile.png";
 import patientsMobile from "@/assets/screenshots/patients-mobile.png";
 import remindersMobile from "@/assets/screenshots/reminders-mobile.png";
 import { PLAN_DEFINITIONS, PLAN_ORDER, formatPrice } from "@/lib/plan-definitions";
+import logoImage from "@/assets/logo-tuconsultorio.png";
+
+// Brand color for landing (matches logo teal)
+const BRAND_COLOR = "#00a5a0";
+const BRAND_COLOR_LIGHT = "rgba(0, 165, 160, 0.15)";
+const BRAND_SHADOW = "rgba(0, 165, 160, 0.35)";
 
 // Screenshot slides for carousel
 const screenshotSlides = [
@@ -381,26 +387,22 @@ const Landing = () => {
             className="relative rounded-2xl sm:rounded-3xl p-6 sm:p-10 md:p-14"
             style={{ 
               backgroundColor: '#111111',
-              boxShadow: '0 8px 60px rgba(0, 199, 138, 0.15), 0 0 80px rgba(0, 199, 138, 0.08)'
+              boxShadow: `0 8px 60px ${BRAND_COLOR_LIGHT}, 0 0 80px rgba(0, 165, 160, 0.08)`
             }}
           >
-            {/* Badge */}
+            {/* Logo */}
             <div className="flex justify-center mb-6">
-              <span 
-                className="px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium"
-                style={{ 
-                  backgroundColor: 'rgba(0, 199, 138, 0.1)',
-                  color: '#00c78a'
-                }}
-              >
-                Tu consultorio digital
-              </span>
+              <img 
+                src={logoImage} 
+                alt="Tu Consultorio Digital" 
+                className="h-24 sm:h-32 w-auto"
+              />
             </div>
             
             {/* Title */}
             <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold tracking-tight text-center mb-4 sm:mb-6 leading-tight">
               Tu consultorio ordenado:
-              <span className="block" style={{ color: '#00c78a' }}>pacientes, agenda y pagos</span>
+              <span className="block" style={{ color: BRAND_COLOR }}>pacientes, agenda y pagos</span>
               <span className="block">en un solo lugar</span>
             </h1>
             
@@ -420,8 +422,8 @@ const Landing = () => {
                   size="lg" 
                   className="w-full sm:w-auto h-12 sm:h-14 px-8 sm:px-12 text-sm sm:text-base font-semibold rounded-xl transition-all duration-300"
                   style={{ 
-                    backgroundColor: '#00c78a',
-                    boxShadow: '0 4px 30px rgba(0, 199, 138, 0.35)'
+                    backgroundColor: BRAND_COLOR,
+                    boxShadow: `0 4px 30px ${BRAND_SHADOW}`
                   }}
                 >
                   Ver demo

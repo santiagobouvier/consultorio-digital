@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { toast } from "sonner";
 import { ArrowLeft, Building2 } from "lucide-react";
 import { useHostnameBusiness } from "@/hooks/use-hostname-business";
+import { Logo } from "@/components/Logo";
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -113,8 +114,13 @@ const Auth = () => {
   const showContextualLogin = hostnameBusiness && !businessLoading;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-secondary/20 to-background p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-secondary/30 to-background p-4">
       <div className="w-full max-w-md">
+        {/* Logo centered at top */}
+        <div className="flex justify-center mb-8">
+          <Logo variant="full" size="xl" showTagline={true} />
+        </div>
+
         <Link 
           to="/" 
           className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-4 transition-colors"

@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { MonthlyHighlights } from "@/components/MonthlyHighlights";
+import { Logo } from "@/components/Logo";
 import {
   Select,
   SelectContent,
@@ -300,12 +301,10 @@ export const DesktopDashboard = () => {
       <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm">
         <div className="max-w-[1400px] mx-auto px-10 py-6">
           <div className="flex items-center justify-between">
-            {/* Left: Greeting + Clinic Name */}
+            {/* Left: Logo + Greeting + Clinic Name */}
             <div className="flex items-center gap-6">
+              <Logo variant="icon" size="lg" />
               <div className="flex items-center gap-4">
-                <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center">
-                  <Building2 className="h-7 w-7 text-primary" />
-                </div>
                 <div>
                   <p className="text-muted-foreground text-sm font-medium">
                     {getGreeting()}, {userName.split(" ")[0]}
