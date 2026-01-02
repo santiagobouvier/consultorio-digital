@@ -41,14 +41,9 @@ export default function ProfessionalInvitation() {
 
   const validateToken = async () => {
     try {
-      // Fetch invite details
+      // Use secure function to validate token (prevents enumeration attacks)
       const { data: invite, error: inviteError } = await supabase
-        .from("professional_portal_invites")
-        .select(`
-          *,
-          businesses:business_id (name)
-        `)
-        .eq("token", token)
+        .rpc("validate_professional_invite", { p_token: token })
         .maybeSingle();
 
       if (inviteError || !invite) {
@@ -56,6 +51,13 @@ export default function ProfessionalInvitation() {
         setLoading(false);
         return;
       }
+
+      // Now fetch business name separately (this is safe as business data is not sensitive)
+      const { data: business } = await supabase
+        .from("businesses")
+        .select("name")
+        .eq("id", invite.business_id)
+        .maybeSingle();
 
       if (invite.used_at) {
         setError("Esta invitación ya fue utilizada. Si necesitas acceso, pide al administrador que te envíe una nueva invitación.");
@@ -72,7 +74,7 @@ export default function ProfessionalInvitation() {
       setInviteData({
         name: invite.name,
         email: invite.email,
-        businessName: invite.businesses?.name
+        businessName: business?.name
       });
       setName(invite.name);
       setLoading(false);
