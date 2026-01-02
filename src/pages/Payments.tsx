@@ -28,6 +28,7 @@ import {
 import { ArrowLeft, Search, Filter, RefreshCw, Pencil, Trash2 } from "lucide-react";
 import { PaymentWhatsAppMenu } from "@/components/PaymentWhatsAppMenu";
 import { PaymentForm } from "@/components/PaymentForm";
+import LoadingPage from "@/components/LoadingPage";
 import { PaymentDetailDrawer } from "@/components/PaymentDetailDrawer";
 import {
   calculatePaymentStatus,
@@ -197,11 +198,7 @@ const Payments = () => {
   });
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <p className="text-muted-foreground">Cargando...</p>
-      </div>
-    );
+    return <LoadingPage />;
   }
 
   return (
