@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Download, Check, Smartphone } from "lucide-react";
+import { Download, Check, Smartphone, Loader2 } from "lucide-react";
 import { usePWAInstall } from "@/hooks/use-pwa-install";
 import {
   Dialog,
@@ -17,6 +17,8 @@ interface InstallAppButtonProps {
   showIcon?: boolean;
 }
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 export const InstallAppButton = ({
   variant = "default",
   size = "default",
@@ -26,30 +28,42 @@ export const InstallAppButton = ({
   const { isInstallable, isInstalled, installApp } = usePWAInstall();
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [showUnavailableDialog, setShowUnavailableDialog] = useState(false);
   const [isInstalling, setIsInstalling] = useState(false);
 
   const handleClickInstall = () => {
-    // Mostrar popup informativo primero
     setShowConfirmDialog(true);
   };
 
   const handleConfirmInstall = async () => {
     setShowConfirmDialog(false);
+
+    const startedAt = Date.now();
     setIsInstalling(true);
 
+    // Intento de instalación automática (solo funciona cuando el navegador expone el prompt)
     if (isInstallable) {
       const success = await installApp();
+
+      // Asegurar que el loader se vea al menos un poquito
+      const elapsed = Date.now() - startedAt;
+      if (elapsed < 1200) await sleep(1200 - elapsed);
+
       setIsInstalling(false);
-      
+
       if (success) {
         setShowSuccessDialog(true);
       }
-    } else {
-      // Simular proceso para cuando no hay prompt disponible
-      // El navegador igual puede instalar desde el menú
-      setIsInstalling(false);
-      setShowSuccessDialog(true);
+
+      return;
     }
+
+    // Si no hay prompt disponible, NO podemos forzar la instalación automática.
+    // Mostramos una explicación corta y alternativa.
+    const elapsed = Date.now() - startedAt;
+    if (elapsed < 900) await sleep(900 - elapsed);
+    setIsInstalling(false);
+    setShowUnavailableDialog(true);
   };
 
   // Ya instalada
@@ -100,6 +114,40 @@ export const InstallAppButton = ({
               <Download className="h-4 w-4 mr-2" />
               Instalar
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog de progreso (instalando) */}
+      <Dialog open={isInstalling}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+              Instalando...
+            </DialogTitle>
+            <DialogDescription className="text-base pt-2">
+              Estamos agregando la app a tu celular.
+            </DialogDescription>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog cuando el navegador no expone el instalador automático */}
+      <Dialog open={showUnavailableDialog} onOpenChange={setShowUnavailableDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Smartphone className="h-6 w-6 text-primary" />
+              Instalación
+            </DialogTitle>
+            <DialogDescription className="text-base pt-2">
+              En algunos Android el botón automático aparece unos segundos después.
+              Si no te sale, abrí el menú <strong>⋮</strong> de Chrome y tocá <strong>"Instalar app"</strong>.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-center pt-4">
+            <Button onClick={() => setShowUnavailableDialog(false)}>Entendido</Button>
           </div>
         </DialogContent>
       </Dialog>
