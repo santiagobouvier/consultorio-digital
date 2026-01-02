@@ -15,7 +15,11 @@ export default defineConfig(({ mode }) => ({
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["favicon.png", "app-icon-512.png", "assets/logo-footer.png"],
+      includeAssets: [
+        "favicon.png",
+        "app-icon-512.png",
+        "assets/logo-footer.png",
+      ],
       manifest: {
         name: "Tu Consultorio Digital",
         short_name: "Tu Consultorio",
@@ -28,26 +32,21 @@ export default defineConfig(({ mode }) => ({
         icons: [
           {
             src: "/app-icon-512.png",
-            sizes: "192x192",
-            type: "image/png"
-          },
-          {
-            src: "/app-icon-512.png",
             sizes: "512x512",
-            type: "image/png"
+            type: "image/png",
           },
           {
             src: "/app-icon-512.png",
             sizes: "512x512",
             type: "image/png",
-            purpose: "maskable"
-          }
-        ]
+            purpose: "maskable",
+          },
+        ],
       },
       workbox: {
-        globPatterns: ["**/*.{js,css,html,ico,png,svg,webp}"]
-      }
-    })
+        globPatterns: ["**/*.{js,css,html,ico,png,svg,webp}"],
+      },
+    }),
   ].filter(Boolean),
   resolve: {
     alias: {
