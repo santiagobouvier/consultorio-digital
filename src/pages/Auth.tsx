@@ -118,7 +118,7 @@ const Auth = () => {
       <div className="w-full max-w-md">
         {/* Logo centered at top */}
         <div className="flex justify-center mb-8">
-          <Logo variant="full" size="xl" showTagline={true} />
+          <Logo variant="full" size="xl" showTagline={false} />
         </div>
 
         <Link 
