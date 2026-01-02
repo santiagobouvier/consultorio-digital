@@ -392,7 +392,7 @@ const Landing = () => {
             }}
           >
             {/* Logo */}
-            <div className="flex justify-center mb-6">
+            <div className="flex justify-center mb-2">
               <img 
                 src={logoWhite} 
                 alt="Tu Consultorio Digital" 
