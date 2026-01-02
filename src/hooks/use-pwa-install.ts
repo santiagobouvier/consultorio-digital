@@ -5,14 +5,41 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 }
 
+type Platform = "ios" | "android" | "desktop" | "unknown";
+
+const detectPlatform = (): Platform => {
+  const userAgent = navigator.userAgent.toLowerCase();
+  
+  if (/iphone|ipad|ipod/.test(userAgent)) {
+    return "ios";
+  }
+  if (/android/.test(userAgent)) {
+    return "android";
+  }
+  if (/windows|macintosh|linux/.test(userAgent) && !/mobile/.test(userAgent)) {
+    return "desktop";
+  }
+  return "unknown";
+};
+
+const isInStandaloneMode = (): boolean => {
+  return (
+    window.matchMedia("(display-mode: standalone)").matches ||
+    (window.navigator as any).standalone === true
+  );
+};
+
 export const usePWAInstall = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstallable, setIsInstallable] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
+  const [platform, setPlatform] = useState<Platform>("unknown");
 
   useEffect(() => {
+    setPlatform(detectPlatform());
+    
     // Check if already installed
-    if (window.matchMedia("(display-mode: standalone)").matches) {
+    if (isInStandaloneMode()) {
       setIsInstalled(true);
       return;
     }
@@ -60,6 +87,9 @@ export const usePWAInstall = () => {
   return {
     isInstallable,
     isInstalled,
-    installApp
+    installApp,
+    platform,
+    // Para iOS siempre mostramos instrucciones manuales
+    showManualInstructions: platform === "ios" && !isInstalled
   };
 };
