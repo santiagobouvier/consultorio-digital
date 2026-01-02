@@ -25,6 +25,7 @@ import { PatientForm } from "@/components/PatientForm";
 import { Search, Plus, ArrowLeft, ChevronRight, Smartphone } from "lucide-react";
 import { useBusinessId } from "@/hooks/use-business-id";
 import { BrandFooter } from "@/components/BrandFooter";
+import LoadingPage from "@/components/LoadingPage";
 
 interface Patient {
   id: string;
@@ -170,11 +171,7 @@ const Patients = () => {
   };
 
   if (businessLoading || dataLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <p className="text-muted-foreground">Cargando...</p>
-      </div>
-    );
+    return <LoadingPage />;
   }
 
   return (

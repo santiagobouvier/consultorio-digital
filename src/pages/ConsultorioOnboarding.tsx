@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { ArrowLeft, ArrowRight, Check, Building2 } from "lucide-react";
+import LoadingPage from "@/components/LoadingPage";
 
 const TIMEZONES = [
   { value: "America/Montevideo", label: "Uruguay (GMT-3)" },
@@ -207,14 +208,7 @@ const ConsultorioOnboarding = () => {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-secondary/20 to-background">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4" />
-          <p className="text-muted-foreground">Cargando...</p>
-        </div>
-      </div>
-    );
+    return <LoadingPage />;
   }
 
   return (
