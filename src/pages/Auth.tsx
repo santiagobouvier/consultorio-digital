@@ -201,13 +201,15 @@ const Auth = () => {
               </Button>
             </form>
             <div className="mt-4 text-center text-sm">
-              <button
-                type="button"
-                onClick={() => setIsLogin(!isLogin)}
+              <span className="text-muted-foreground">¿Necesitás un consultorio? </span>
+              <a
+                href="https://wa.me/59891093977?text=Hola,%20me%20interesa%20Tu%20Consultorio%20Digital."
+                target="_blank"
+                rel="noopener noreferrer"
                 className="text-primary hover:underline"
               >
-                {isLogin ? "¿No tenés cuenta? Registrate" : "¿Ya tenés cuenta? Iniciá sesión"}
-              </button>
+                Hablemos
+              </a>
             </div>
           </CardContent>
         </Card>
