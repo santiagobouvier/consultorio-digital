@@ -53,5 +53,7 @@ export default defineConfig(({ mode }) => ({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
+    // Evita que se bundleen múltiples copias de React (causa "Invalid hook call")
+    dedupe: ["react", "react-dom"],
   },
 }));
