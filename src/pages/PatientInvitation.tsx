@@ -32,10 +32,9 @@ const PatientInvitation = () => {
 
   const validateToken = async () => {
     try {
+      // Use secure function to validate token (prevents enumeration attacks)
       const { data: invite, error } = await supabase
-        .from("patient_portal_invites")
-        .select("id, expires_at, used_at")
-        .eq("token", token)
+        .rpc("validate_patient_invite", { p_token: token })
         .maybeSingle();
 
       if (error || !invite) {

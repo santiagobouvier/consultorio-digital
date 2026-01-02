@@ -695,6 +695,15 @@ export type Database = {
         Args: { _business_id: string; _user_id: string }
         Returns: boolean
       }
+      validate_patient_invite: {
+        Args: { p_token: string }
+        Returns: {
+          expires_at: string
+          id: string
+          patient_id: string
+          used_at: string
+        }[]
+      }
       validate_professional_invite: {
         Args: { p_token: string }
         Returns: {
