@@ -695,6 +695,17 @@ export type Database = {
         Args: { _business_id: string; _user_id: string }
         Returns: boolean
       }
+      validate_professional_invite: {
+        Args: { p_token: string }
+        Returns: {
+          business_id: string
+          email: string
+          expires_at: string
+          id: string
+          name: string
+          used_at: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
