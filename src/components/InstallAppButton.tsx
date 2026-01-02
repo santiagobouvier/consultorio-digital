@@ -60,9 +60,13 @@ export const InstallAppButton = ({
     setIsInstalling(true);
 
     // Si el navegador no expone el prompt, NO podemos forzar la instalación.
+    // En Android esto suele pasar cuando:
+    // - Estás dentro de un navegador embebido (Instagram/WhatsApp)
+    // - Estás dentro de un iframe (como la vista previa)
+    // - Chrome todavía no consideró el sitio "instalable" en ese contexto
     if (!isInstallable) {
       setIsInstalling(false);
-      // En iOS mostramos instrucciones manuales; en Android mostramos alternativa.
+
       if (showManualInstructions) {
         setShowManualDialog(true);
       } else {
@@ -83,6 +87,22 @@ export const InstallAppButton = ({
     // Luego de aceptar el prompt, mostramos SI O SÍ el popup informativo.
     setIsInstalling(false);
     setShowSuccessDialog(true);
+  };
+
+  const isInIframe = (() => {
+    try {
+      return window.self !== window.top;
+    } catch {
+      return true;
+    }
+  })();
+
+  const userAgent = typeof navigator !== "undefined" ? navigator.userAgent : "";
+  const isInAppBrowser = /Instagram|FBAN|FBAV|FB_IAB|Line\/|WhatsApp|wv\)|; wv|Twitter/i.test(userAgent);
+
+  const openInNewTab = () => {
+    // En la vista previa (iframe), abrir en nueva pestaña hace que Chrome pueda mostrar el instalador.
+    window.open(window.location.href, "_blank", "noopener,noreferrer");
   };
 
   // SIEMPRE mostramos el botón "Instalar App" - la verificación es al hacer clic
@@ -149,12 +169,33 @@ export const InstallAppButton = ({
               Instalación
             </DialogTitle>
             <DialogDescription className="text-base pt-2">
-              No se pudo abrir el instalador automático.
-              {platform === "android" ? " En Android, abrí el menú del navegador y tocá \"Instalar app\" o \"Agregar a pantalla de inicio\"." : " Probá actualizar la página y volver a intentar en unos segundos."}
+              No se pudo abrir el instalador automático en este contexto.
+              {platform === "android" ? (
+                <>
+                  {isInIframe || isInAppBrowser ? (
+                    <>
+                      <br />
+                      Abrilo en <strong>Chrome (pestaña normal)</strong> y volvé a tocar “Instalar App”.
+                    </>
+                  ) : (
+                    <>
+                      {" "}
+                      Probá actualizar la página y volver a intentar en unos segundos.
+                    </>
+                  )}
+                </>
+              ) : (
+                <> Probá actualizar la página y volver a intentar en unos segundos.</>
+              )}
             </DialogDescription>
           </DialogHeader>
-          <div className="flex justify-center pt-4">
-            <Button onClick={() => setShowUnavailableDialog(false)}>Entendido</Button>
+          <div className="flex flex-col sm:flex-row justify-center gap-3 pt-4">
+            {(platform === "android") && (isInIframe || isInAppBrowser) && (
+              <Button onClick={openInNewTab}>Abrir en nueva pestaña</Button>
+            )}
+            <Button variant={(platform === "android") && (isInIframe || isInAppBrowser) ? "outline" : "default"} onClick={() => setShowUnavailableDialog(false)}>
+              Entendido
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
