@@ -396,7 +396,7 @@ const Landing = () => {
               <img 
                 src={logoWhite} 
                 alt="Tu Consultorio Digital" 
-                className="h-24 sm:h-32 w-auto"
+                className="h-40 sm:h-56 w-auto"
               />
             </div>
             
