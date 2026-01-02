@@ -43,6 +43,13 @@ export default defineConfig(({ mode }) => ({
             type: "image/svg+xml",
             purpose: "any",
           },
+          // Chrome/Android suele requerir un ícono PNG 192x192 y 512x512 para considerarla instalable.
+          // Reutilizamos el mismo asset; si querés podemos agregar un 192 real más adelante.
+          {
+            src: "/app-icon-512.png",
+            sizes: "192x192",
+            type: "image/png",
+          },
           {
             src: "/app-icon-512.png",
             sizes: "512x512",
