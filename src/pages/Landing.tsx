@@ -449,8 +449,12 @@ const Landing = () => {
             {/* Install App & Login Buttons */}
             <div className="flex flex-col sm:flex-row justify-center gap-3 mt-6 pt-6 border-t border-white/10">
               <InstallAppButton />
-              <a href="/auth">
-                <Button variant="outline" className="gap-2 bg-transparent text-white border-white/20 hover:bg-white/5">
+              <a href="/auth" className="w-full sm:w-auto">
+                <Button 
+                  variant="outline" 
+                  size="lg"
+                  className="w-full sm:w-auto h-12 sm:h-14 px-8 sm:px-12 text-sm sm:text-base font-semibold rounded-xl gap-2 bg-transparent text-white border-white/20 hover:bg-white/5"
+                >
                   Iniciar sesión
                 </Button>
               </a>
