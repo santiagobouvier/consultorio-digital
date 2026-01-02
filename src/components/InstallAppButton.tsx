@@ -9,7 +9,8 @@ export const InstallAppButton = () => {
     <Button 
       onClick={install} 
       disabled={!canInstall}
-      className="gap-2"
+      size="lg"
+      className="w-full sm:w-auto h-12 sm:h-14 px-8 sm:px-12 text-sm sm:text-base font-semibold rounded-xl gap-2"
     >
       <Download className="h-4 w-4" />
       Agregá el ícono a tu celular
