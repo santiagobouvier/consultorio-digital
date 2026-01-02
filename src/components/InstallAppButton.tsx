@@ -40,6 +40,21 @@ export const InstallAppButton = ({
   const [isInstalling, setIsInstalling] = useState(false);
 
   const handleClickInstall = () => {
+    // Si estás en un iframe (preview) o en un navegador embebido, Android NO muestra el instalador.
+    // En ese caso abrimos la app en una pestaña normal para que el prompt pueda aparecer.
+    try {
+      const isInIframeNow = window.self !== window.top;
+      const ua = navigator.userAgent;
+      const isInAppBrowserNow = /Instagram|FBAN|FBAV|FB_IAB|Line\/|WhatsApp|wv\)|; wv|Twitter/i.test(ua);
+
+      if (platform === "android" && (isInIframeNow || isInAppBrowserNow)) {
+        window.open(window.location.href, "_blank", "noopener,noreferrer");
+        return;
+      }
+    } catch {
+      // Si no podemos detectar, igual seguimos con el flujo normal.
+    }
+
     // Verificar EN TIEMPO REAL si ya está instalada
     if (checkIsInstalledNow()) {
       setShowAlreadyInstalledDialog(true);
