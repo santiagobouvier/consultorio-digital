@@ -5,12 +5,14 @@ import { usePWAInstall } from "@/hooks/use-pwa-install";
 export const InstallAppButton = () => {
   const { canInstall, install } = usePWAInstall();
 
-  if (!canInstall) return null;
-
   return (
-    <Button onClick={install} className="gap-2">
+    <Button 
+      onClick={install} 
+      disabled={!canInstall}
+      className="gap-2"
+    >
       <Download className="h-4 w-4" />
-      Instalar app
+      Descargá la app
     </Button>
   );
 };
