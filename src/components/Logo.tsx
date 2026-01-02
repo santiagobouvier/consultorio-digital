@@ -1,4 +1,4 @@
-import logoFull from "@/assets/logo-tuconsultorio.png";
+import logoFull from "@/assets/logo-consultorio-digital.png";
 
 interface LogoProps {
   variant?: "full" | "compact" | "icon";
