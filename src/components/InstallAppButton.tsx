@@ -142,8 +142,8 @@ export const InstallAppButton = ({
               Instalación
             </DialogTitle>
             <DialogDescription className="text-base pt-2">
-              En algunos Android el botón automático aparece unos segundos después.
-              Si no te sale, abrí el menú <strong>⋮</strong> de Chrome y tocá <strong>"Instalar app"</strong>.
+              Tu navegador no permitió completar la instalación automáticamente.
+              Probá actualizar la página y volver a intentar en unos segundos.
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-center pt-4">
@@ -161,6 +161,7 @@ export const InstallAppButton = ({
               ¡Aplicación instalada!
             </DialogTitle>
             <DialogDescription className="text-base pt-2">
+              Instalación correcta. Esto puede demorar unos minutos.
               Por favor, verificá buscando el ícono de Tu Consultorio en tu celular.
             </DialogDescription>
           </DialogHeader>
