@@ -12,7 +12,7 @@ export const InstallAppButton = () => {
       className="gap-2"
     >
       <Download className="h-4 w-4" />
-      Descargá la app
+      Agregá el ícono a tu celular
     </Button>
   );
 };
