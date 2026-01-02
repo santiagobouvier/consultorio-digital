@@ -23,11 +23,16 @@ const detectPlatform = (): Platform => {
 };
 
 const isInStandaloneMode = (): boolean => {
-  return (
-    window.matchMedia("(display-mode: standalone)").matches ||
-    (window.navigator as any).standalone === true
-  );
+  // Múltiples formas de detectar standalone / instalada
+  const displayModeStandalone = window.matchMedia("(display-mode: standalone)").matches;
+  const displayModeFullscreen = window.matchMedia("(display-mode: fullscreen)").matches;
+  const navigatorStandalone = (window.navigator as any).standalone === true; // iOS Safari
+  
+  return displayModeStandalone || displayModeFullscreen || navigatorStandalone;
 };
+
+// Persistir si el usuario instaló la app (para casos donde el navegador no reporta bien)
+const INSTALLED_KEY = "pwa_installed";
 
 export const usePWAInstall = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
@@ -38,8 +43,8 @@ export const usePWAInstall = () => {
   useEffect(() => {
     setPlatform(detectPlatform());
     
-    // Check if already installed
-    if (isInStandaloneMode()) {
+    // Check if already installed (standalone o localStorage)
+    if (isInStandaloneMode() || localStorage.getItem(INSTALLED_KEY) === "true") {
       setIsInstalled(true);
       return;
     }
@@ -54,14 +59,27 @@ export const usePWAInstall = () => {
       setIsInstalled(true);
       setIsInstallable(false);
       setDeferredPrompt(null);
+      // Guardar en localStorage para detectar en el futuro
+      localStorage.setItem(INSTALLED_KEY, "true");
     };
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstall);
     window.addEventListener("appinstalled", handleAppInstalled);
 
+    // Escuchar cambios en display-mode por si el usuario instala desde el menú del navegador
+    const mediaQuery = window.matchMedia("(display-mode: standalone)");
+    const handleDisplayModeChange = (e: MediaQueryListEvent) => {
+      if (e.matches) {
+        setIsInstalled(true);
+        localStorage.setItem(INSTALLED_KEY, "true");
+      }
+    };
+    mediaQuery.addEventListener("change", handleDisplayModeChange);
+
     return () => {
       window.removeEventListener("beforeinstallprompt", handleBeforeInstall);
       window.removeEventListener("appinstalled", handleAppInstalled);
+      mediaQuery.removeEventListener("change", handleDisplayModeChange);
     };
   }, []);
 
@@ -75,6 +93,8 @@ export const usePWAInstall = () => {
       if (outcome === "accepted") {
         setDeferredPrompt(null);
         setIsInstallable(false);
+        setIsInstalled(true);
+        localStorage.setItem(INSTALLED_KEY, "true");
         return true;
       }
       return false;
