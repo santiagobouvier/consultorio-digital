@@ -12,8 +12,6 @@ import { ArrowLeft, Save, Copy, ExternalLink, RotateCcw, UserPlus, Users, Crown,
 import { ProfessionalInviteModal } from "@/components/ProfessionalInviteModal";
 import { Badge } from "@/components/ui/badge";
 import { PlanUsageCard } from "@/components/PlanUsageCard";
-import LoadingPage from "@/components/LoadingPage";
-
 const DEFAULT_TEMPLATES = {
   reminder: "Hola {{paciente}}, te recuerdo tu sesión del {{fecha}} a las {{hora}}. Modalidad: {{modalidad}}. {{link}}. Cualquier cosa me escribís por acá.",
   confirmation: "Hola {{paciente}}, confirmo tu sesión del {{fecha}} a las {{hora}}. Modalidad: {{modalidad}}. {{link}}. Te espero!",
@@ -321,7 +319,11 @@ const ClinicSettings = () => {
   };
 
   if (loading) {
-    return <LoadingPage />;
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="h-6 w-6 rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground animate-spin" />
+      </div>
+    );
   }
 
   return (
