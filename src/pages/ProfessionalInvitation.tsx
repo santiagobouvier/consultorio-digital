@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { AlertCircle, CheckCircle, Loader2, UserCheck } from "lucide-react";
+import LoadingPage from "@/components/LoadingPage";
 
 export default function ProfessionalInvitation() {
   const [searchParams] = useSearchParams();
@@ -159,16 +160,7 @@ export default function ProfessionalInvitation() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <Card className="w-full max-w-md">
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-            <p className="text-muted-foreground">Validando invitación...</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
+    return <LoadingPage />;
   }
 
   if (error) {

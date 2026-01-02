@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { Send, CheckCircle2 } from "lucide-react";
+import LoadingPage from "@/components/LoadingPage";
 
 const PublicClinic = () => {
   const { slug } = useParams();
@@ -123,11 +124,7 @@ const PublicClinic = () => {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <p className="text-muted-foreground">Cargando...</p>
-      </div>
-    );
+    return <LoadingPage />;
   }
 
   if (!businessId) {

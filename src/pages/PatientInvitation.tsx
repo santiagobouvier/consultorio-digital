@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { Loader2, Lock, AlertCircle, CheckCircle } from "lucide-react";
+import LoadingPage from "@/components/LoadingPage";
 
 type InviteStatus = "loading" | "valid" | "invalid" | "expired" | "used" | "success";
 
@@ -131,14 +132,7 @@ const PatientInvitation = () => {
   };
 
   if (status === "loading") {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">Validando invitación...</p>
-        </div>
-      </div>
-    );
+    return <LoadingPage />;
   }
 
   if (status === "invalid" || status === "expired" || status === "used") {
