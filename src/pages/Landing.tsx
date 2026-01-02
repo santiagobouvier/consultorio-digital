@@ -30,6 +30,7 @@ import patientsMobile from "@/assets/screenshots/patients-mobile.png";
 import remindersMobile from "@/assets/screenshots/reminders-mobile.png";
 import { PLAN_DEFINITIONS, PLAN_ORDER, formatPrice } from "@/lib/plan-definitions";
 import logoImage from "@/assets/logo-tuconsultorio.png";
+import { InstallAppButton } from "@/components/InstallAppButton";
 
 // Brand color for landing (matches logo teal)
 const BRAND_COLOR = "#00a5a0";
@@ -443,6 +444,15 @@ const Landing = () => {
                   Hablar por WhatsApp
                 </Button>
               </a>
+            </div>
+
+            {/* Install App Button */}
+            <div className="flex justify-center mt-6 pt-6 border-t border-white/10">
+              <InstallAppButton 
+                variant="ghost"
+                size="lg"
+                className="text-gray-400 hover:text-white hover:bg-white/10"
+              />
             </div>
           </div>
         </div>
