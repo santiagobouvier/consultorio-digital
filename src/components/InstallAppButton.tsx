@@ -17,19 +17,33 @@ interface InstallAppButtonProps {
   showIcon?: boolean;
 }
 
+// Detecta en tiempo real si la app está en modo standalone (instalada)
+const checkIsInstalledNow = (): boolean => {
+  const displayModeStandalone = window.matchMedia("(display-mode: standalone)").matches;
+  const displayModeFullscreen = window.matchMedia("(display-mode: fullscreen)").matches;
+  const navigatorStandalone = (window.navigator as any).standalone === true;
+  return displayModeStandalone || displayModeFullscreen || navigatorStandalone;
+};
+
 export const InstallAppButton = ({
   variant = "default",
   size = "default",
   className = "",
   showIcon = true,
 }: InstallAppButtonProps) => {
-  const { isInstallable, isInstalled, installApp } = usePWAInstall();
+  const { isInstallable, installApp } = usePWAInstall();
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [showUnavailableDialog, setShowUnavailableDialog] = useState(false);
+  const [showAlreadyInstalledDialog, setShowAlreadyInstalledDialog] = useState(false);
   const [isInstalling, setIsInstalling] = useState(false);
 
   const handleClickInstall = () => {
+    // Verificar EN TIEMPO REAL si ya está instalada
+    if (checkIsInstalledNow()) {
+      setShowAlreadyInstalledDialog(true);
+      return;
+    }
     setShowConfirmDialog(true);
   };
 
@@ -54,20 +68,11 @@ export const InstallAppButton = ({
     }
 
     // Luego de aceptar el prompt, mostramos SI O SÍ el popup informativo.
-    // (El ícono puede tardar unos minutos: eso depende del sistema del celular.)
     setIsInstalling(false);
     setShowSuccessDialog(true);
   };
 
-  // Ya instalada
-  if (isInstalled) {
-    return (
-      <Button variant="outline" size={size} className={`gap-2 ${className}`} disabled>
-        <Check className="h-4 w-4" />
-        App instalada
-      </Button>
-    );
-  }
+  // SIEMPRE mostramos el botón "Instalar App" - la verificación es al hacer clic
 
   return (
     <>
@@ -156,6 +161,24 @@ export const InstallAppButton = ({
           </DialogHeader>
           <div className="flex justify-center pt-4">
             <Button onClick={() => setShowSuccessDialog(false)}>Entendido</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog cuando ya está instalada */}
+      <Dialog open={showAlreadyInstalledDialog} onOpenChange={setShowAlreadyInstalledDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Check className="h-6 w-6 text-green-600" />
+              Ya tenés la app instalada
+            </DialogTitle>
+            <DialogDescription className="text-base pt-2">
+              La aplicación ya está instalada en tu dispositivo. Buscá el ícono de "Tu Consultorio" en tu pantalla de inicio.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-center pt-4">
+            <Button onClick={() => setShowAlreadyInstalledDialog(false)}>Entendido</Button>
           </div>
         </DialogContent>
       </Dialog>
