@@ -29,7 +29,7 @@ import agendaMobile from "@/assets/screenshots/agenda-mobile.png";
 import patientsMobile from "@/assets/screenshots/patients-mobile.png";
 import remindersMobile from "@/assets/screenshots/reminders-mobile.png";
 import { PLAN_DEFINITIONS, PLAN_ORDER, formatPrice } from "@/lib/plan-definitions";
-import logoImage from "@/assets/logo-tuconsultorio.png";
+import logoWhite from "@/assets/logo-consultorio-digital-white.png";
 import { InstallAppButton } from "@/components/InstallAppButton";
 
 // Brand color for landing (matches logo teal)
@@ -394,7 +394,7 @@ const Landing = () => {
             {/* Logo */}
             <div className="flex justify-center mb-6">
               <img 
-                src={logoImage} 
+                src={logoWhite} 
                 alt="Tu Consultorio Digital" 
                 className="h-24 sm:h-32 w-auto"
               />
