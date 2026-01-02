@@ -448,11 +448,7 @@ const Landing = () => {
 
             {/* Install App Button */}
             <div className="flex justify-center mt-6 pt-6 border-t border-white/10">
-              <InstallAppButton 
-                variant="ghost"
-                size="lg"
-                className="text-gray-400 hover:text-white hover:bg-white/10"
-              />
+              <InstallAppButton />
             </div>
           </div>
         </div>
