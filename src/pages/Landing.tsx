@@ -446,9 +446,14 @@ const Landing = () => {
               </a>
             </div>
 
-            {/* Install App Button */}
-            <div className="flex justify-center mt-6 pt-6 border-t border-white/10">
+            {/* Install App & Login Buttons */}
+            <div className="flex flex-col sm:flex-row justify-center gap-3 mt-6 pt-6 border-t border-white/10">
               <InstallAppButton />
+              <a href="/auth">
+                <Button variant="outline" className="gap-2 bg-transparent text-white border-white/20 hover:bg-white/5">
+                  Iniciar sesión
+                </Button>
+              </a>
             </div>
           </div>
         </div>
@@ -855,9 +860,14 @@ const Landing = () => {
             </a>
           </div>
           
-          {/* Install App Button */}
-          <div className="flex justify-center mt-6">
+          {/* Install App & Login Buttons */}
+          <div className="flex flex-col sm:flex-row justify-center gap-3 mt-6">
             <InstallAppButton />
+            <a href="/auth">
+              <Button variant="outline" className="gap-2 bg-transparent text-white border-white/20 hover:bg-white/5">
+                Iniciar sesión
+              </Button>
+            </a>
           </div>
         </div>
       </section>
