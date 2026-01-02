@@ -14,6 +14,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { ArrowLeft, Send, Trash2, Bell } from "lucide-react";
+import LoadingPage from "@/components/LoadingPage";
 
 interface Reminder {
   id: string;
@@ -176,11 +177,7 @@ const PendingReminders = () => {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <p className="text-muted-foreground">Cargando...</p>
-      </div>
-    );
+    return <LoadingPage />;
   }
 
   return (

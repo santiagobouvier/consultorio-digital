@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "@/hooks/use-toast";
 import { Users, CalendarPlus, CalendarDays, UserPlus, Bell, LogOut, Camera, CreditCard, AlertTriangle, Clock, Plus, EyeOff, Eye, Smartphone, Building2, ChevronDown, Shield, Settings, ArrowRight } from "lucide-react";
 import { MonthlyHighlights } from "@/components/MonthlyHighlights";
+import LoadingPage from "@/components/LoadingPage";
 import { PlanUsageCard } from "@/components/PlanUsageCard";
 import { PatientForm } from "@/components/PatientForm";
 import { CreateAppointmentModal } from "@/components/CreateAppointmentModal";
@@ -482,21 +483,13 @@ const Dashboard = () => {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="h-6 w-6 rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground animate-spin" />
-      </div>
-    );
+    return <LoadingPage />;
   }
 
   // Desktop: show executive dashboard with cards and quick access
   if (!isMobile) {
     return (
-      <Suspense fallback={
-        <div className="min-h-screen bg-background flex items-center justify-center">
-          <div className="h-6 w-6 rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground animate-spin" />
-        </div>
-      }>
+      <Suspense fallback={<LoadingPage />}>
         <DesktopDashboard />
       </Suspense>
     );

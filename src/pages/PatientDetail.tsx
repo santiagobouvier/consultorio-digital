@@ -21,6 +21,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { PaymentWhatsAppMenu } from "@/components/PaymentWhatsAppMenu";
+import LoadingPage from "@/components/LoadingPage";
 import {
   calculatePaymentStatus,
   getPaymentStatusColor,
@@ -284,11 +285,7 @@ const PatientDetail = () => {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <p className="text-muted-foreground">Cargando información del paciente...</p>
-      </div>
-    );
+    return <LoadingPage />;
   }
 
   if (!patient) {

@@ -86,12 +86,13 @@ import {
   Rows3,
   LayoutGrid,
 } from "lucide-react";
+import LoadingPage from "@/components/LoadingPage";
 import { getPlanName, getPlanConfig, checkProfessionalLimit } from "@/hooks/use-plan-limits";
-import { 
-  PLAN_DEFINITIONS, 
-  PLAN_ORDER, 
-  getPlanPrice, 
-  normalizePlanCode 
+import {
+  PLAN_DEFINITIONS,
+  PLAN_ORDER,
+  getPlanPrice,
+  normalizePlanCode,
 } from "@/lib/plan-definitions";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { PlanSelector } from "@/components/PlanSelector";
@@ -1075,11 +1076,7 @@ const SaasAdmin = () => {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <LoadingPage />;
   }
 
   return (

@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { AlertCircle, CheckCircle, Loader2, UserPlus, Building2 } from "lucide-react";
 import { getPlanConfig } from "@/hooks/use-plan-limits";
+import LoadingPage from "@/components/LoadingPage";
 
 interface BusinessInfo {
   id: string;
@@ -198,16 +199,7 @@ export default function ProfessionalRegister() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <Card className="w-full max-w-md">
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-            <p className="text-muted-foreground">Validando enlace...</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
+    return <LoadingPage />;
   }
 
   if (error) {
