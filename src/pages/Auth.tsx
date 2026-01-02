@@ -117,7 +117,7 @@ const Auth = () => {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-secondary/30 to-background p-4">
       <div className="w-full max-w-md">
         {/* Logo centered at top */}
-        <div className="flex justify-center mb-4">
+        <div className="flex justify-center mb-2">
           <Logo variant="full" size="4xl" showTagline={false} />
         </div>
 
