@@ -31,7 +31,8 @@ const isInStandaloneMode = (): boolean => {
   return displayModeStandalone || displayModeFullscreen || navigatorStandalone;
 };
 
-// Persistir si el usuario instaló la app (para casos donde el navegador no reporta bien)
+// Persistir si el usuario instaló la app (solo como hint). NO debe bloquear listeners
+// porque el usuario puede desinstalar la app y el navegador vuelve a requerir beforeinstallprompt.
 const INSTALLED_KEY = "pwa_installed";
 
 export const usePWAInstall = () => {
@@ -42,11 +43,16 @@ export const usePWAInstall = () => {
 
   useEffect(() => {
     setPlatform(detectPlatform());
-    
-    // Check if already installed (standalone o localStorage)
-    if (isInStandaloneMode() || localStorage.getItem(INSTALLED_KEY) === "true") {
-      setIsInstalled(true);
-      return;
+
+    // Estado real: standalone (instalada)
+    const standaloneNow = isInStandaloneMode();
+    setIsInstalled(standaloneNow);
+
+    // Si alguna vez marcamos "instalada" pero ya no está en standalone,
+    // limpiamos el flag para no quedar bloqueados.
+    const storedInstalled = localStorage.getItem(INSTALLED_KEY) === "true";
+    if (storedInstalled && !standaloneNow) {
+      localStorage.removeItem(INSTALLED_KEY);
     }
 
     const handleBeforeInstall = (e: Event) => {
@@ -59,7 +65,6 @@ export const usePWAInstall = () => {
       setIsInstalled(true);
       setIsInstallable(false);
       setDeferredPrompt(null);
-      // Guardar en localStorage para detectar en el futuro
       localStorage.setItem(INSTALLED_KEY, "true");
     };
 
@@ -72,6 +77,9 @@ export const usePWAInstall = () => {
       if (e.matches) {
         setIsInstalled(true);
         localStorage.setItem(INSTALLED_KEY, "true");
+      } else {
+        // si sale de standalone (ej: desinstalación / abrir en navegador)
+        setIsInstalled(false);
       }
     };
     mediaQuery.addEventListener("change", handleDisplayModeChange);
