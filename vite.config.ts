@@ -29,7 +29,7 @@ export default defineConfig(({ mode }) => ({
         id: "/",
         scope: "/",
         name: "Tu Consultorio Digital",
-        short_name: "Tu Consultorio Digital",
+        short_name: "Consultorio Digital",
         description: "Sistema de gestión de consultorios - Agenda, pacientes y pagos",
         theme_color: "#00a5a0",
         background_color: "#0a0a0a",
