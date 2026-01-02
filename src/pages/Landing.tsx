@@ -401,7 +401,7 @@ const Landing = () => {
             </div>
             
             {/* Title */}
-            <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold tracking-tight text-center mb-4 sm:mb-6 leading-tight">
+            <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold tracking-tight text-center mb-4 sm:mb-6 leading-tight -mt-6 sm:-mt-10">
               Tu consultorio ordenado:
               <span className="block" style={{ color: BRAND_COLOR }}>pacientes, agenda y pagos</span>
               <span className="block">en un solo lugar</span>
