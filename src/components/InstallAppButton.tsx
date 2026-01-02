@@ -31,10 +31,11 @@ export const InstallAppButton = ({
   className = "",
   showIcon = true,
 }: InstallAppButtonProps) => {
-  const { isInstallable, installApp } = usePWAInstall();
+  const { isInstallable, installApp, platform, showManualInstructions } = usePWAInstall();
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [showUnavailableDialog, setShowUnavailableDialog] = useState(false);
+  const [showManualDialog, setShowManualDialog] = useState(false);
   const [showAlreadyInstalledDialog, setShowAlreadyInstalledDialog] = useState(false);
   const [isInstalling, setIsInstalling] = useState(false);
 
@@ -44,6 +45,13 @@ export const InstallAppButton = ({
       setShowAlreadyInstalledDialog(true);
       return;
     }
+
+    // En iPhone/iPad no existe el prompt automático. Mostramos instrucciones.
+    if (showManualInstructions) {
+      setShowManualDialog(true);
+      return;
+    }
+
     setShowConfirmDialog(true);
   };
 
@@ -54,7 +62,12 @@ export const InstallAppButton = ({
     // Si el navegador no expone el prompt, NO podemos forzar la instalación.
     if (!isInstallable) {
       setIsInstalling(false);
-      setShowUnavailableDialog(true);
+      // En iOS mostramos instrucciones manuales; en Android mostramos alternativa.
+      if (showManualInstructions) {
+        setShowManualDialog(true);
+      } else {
+        setShowUnavailableDialog(true);
+      }
       return;
     }
 
@@ -136,12 +149,34 @@ export const InstallAppButton = ({
               Instalación
             </DialogTitle>
             <DialogDescription className="text-base pt-2">
-              Tu navegador no permitió completar la instalación automáticamente.
-              Probá actualizar la página y volver a intentar en unos segundos.
+              No se pudo abrir el instalador automático.
+              {platform === "android" ? " En Android, abrí el menú del navegador y tocá \"Instalar app\" o \"Agregar a pantalla de inicio\"." : " Probá actualizar la página y volver a intentar en unos segundos."}
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-center pt-4">
             <Button onClick={() => setShowUnavailableDialog(false)}>Entendido</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog de instalación manual (iOS) */}
+      <Dialog open={showManualDialog} onOpenChange={setShowManualDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Smartphone className="h-6 w-6 text-primary" />
+              Instalar en iPhone
+            </DialogTitle>
+            <DialogDescription className="text-base pt-2">
+              En iPhone la instalación es manual:
+              <br />
+              1) Tocá Compartir (cuadrado con flecha ↑)
+              <br />
+              2) Elegí "Agregar a pantalla de inicio"
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-center pt-4">
+            <Button onClick={() => setShowManualDialog(false)}>Entendido</Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -155,8 +190,8 @@ export const InstallAppButton = ({
               Instalación en curso
             </DialogTitle>
             <DialogDescription className="text-base pt-2">
-              Tu app se está instalando. Por favor, esperá unos minutos y verificá el ícono
-              en tu celular.
+              Si aceptaste la instalación, el ícono aparece en tu pantalla de inicio en segundos.
+              Si no lo ves, buscá "Tu Consultorio" en el buscador de apps del celular.
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-center pt-4">
