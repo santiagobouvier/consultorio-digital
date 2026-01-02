@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Download, Check, Smartphone, Loader2 } from "lucide-react";
 import { usePWAInstall } from "@/hooks/use-pwa-install";
@@ -17,17 +17,6 @@ interface InstallAppButtonProps {
   showIcon?: boolean;
 }
 
-type InstallResult = "installed" | "pending";
-
-const waitUntil = async (condition: () => boolean, timeoutMs: number) => {
-  const startedAt = Date.now();
-  while (Date.now() - startedAt < timeoutMs) {
-    if (condition()) return true;
-    await new Promise((r) => setTimeout(r, 150));
-  }
-  return condition();
-};
-
 export const InstallAppButton = ({
   variant = "default",
   size = "default",
@@ -39,13 +28,6 @@ export const InstallAppButton = ({
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [showUnavailableDialog, setShowUnavailableDialog] = useState(false);
   const [isInstalling, setIsInstalling] = useState(false);
-  const [installResult, setInstallResult] = useState<InstallResult>("pending");
-
-  // Mantener la última lectura de isInstalled dentro de async flows
-  const isInstalledRef = useRef(isInstalled);
-  useEffect(() => {
-    isInstalledRef.current = isInstalled;
-  }, [isInstalled]);
 
   const handleClickInstall = () => {
     setShowConfirmDialog(true);
@@ -65,19 +47,14 @@ export const InstallAppButton = ({
     // Dispara el prompt nativo del navegador.
     const accepted = await installApp();
 
-    // Si el usuario canceló, cortamos sin mostrar éxito.
+    // Si el usuario canceló, cortamos.
     if (!accepted) {
       setIsInstalling(false);
       return;
     }
 
-    // Importante: aceptar el prompt NO garantiza que el ícono aparezca instantáneo.
-    // Eso lo termina el sistema del celular. Para mejorar UX:
-    // - esperamos unos segundos por el evento real (appinstalled / standalone)
-    // - si no llega, mostramos “instalación iniciada” (sin mentir).
-    const installedQuickly = await waitUntil(() => isInstalledRef.current, 5000);
-    setInstallResult(installedQuickly ? "installed" : "pending");
-
+    // Luego de aceptar el prompt, mostramos SI O SÍ el popup informativo.
+    // (El ícono puede tardar unos minutos: eso depende del sistema del celular.)
     setIsInstalling(false);
     setShowSuccessDialog(true);
   };
@@ -168,28 +145,13 @@ export const InstallAppButton = ({
       <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle
-              className={`flex items-center gap-2 ${
-                installResult === "installed" ? "text-green-600" : ""
-              }`}
-            >
-              <Check className="h-6 w-6" />
-              {installResult === "installed"
-                ? "¡Aplicación instalada!"
-                : "Instalación iniciada"}
+            <DialogTitle className="flex items-center gap-2">
+              <Check className="h-6 w-6 text-green-600" />
+              Instalación en curso
             </DialogTitle>
             <DialogDescription className="text-base pt-2">
-              {installResult === "installed" ? (
-                <>Instalación correcta. Ya deberías ver el ícono en tu celular.</>
-              ) : (
-                <>
-                  Instalación correcta. Tu celular puede tardar unos segundos en mostrar el
-                  ícono.
-                  <br />
-                  Si no lo ves, buscá “Tu Consultorio” en la lista de aplicaciones del
-                  celular.
-                </>
-              )}
+              Tu app se está instalando. Por favor, esperá unos minutos y verificá el ícono
+              en tu celular.
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-center pt-4">
