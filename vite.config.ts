@@ -31,6 +31,12 @@ export default defineConfig(({ mode }) => ({
         start_url: "/auth",
         icons: [
           {
+            src: "/app-icon.svg",
+            sizes: "any",
+            type: "image/svg+xml",
+            purpose: "any",
+          },
+          {
             src: "/app-icon-512.png",
             sizes: "512x512",
             type: "image/png",
