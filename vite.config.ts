@@ -21,6 +21,8 @@ export default defineConfig(({ mode }) => ({
         "assets/logo-footer.png",
       ],
       manifest: {
+        id: "/",
+        scope: "/",
         name: "Tu Consultorio Digital",
         short_name: "Tu Consultorio",
         description: "Sistema de gestión de consultorios - Agenda, pacientes y pagos",
