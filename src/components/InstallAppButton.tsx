@@ -195,7 +195,13 @@ export const InstallAppButton = ({
                   ) : (
                     <>
                       {" "}
-                      Probá actualizar la página y volver a intentar en unos segundos.
+                      Si estás en <strong>Chrome</strong> y aún así no aparece el instalador automático:
+                      <br />
+                      1) Tocá el menú (⋮)
+                      <br />
+                      2) Elegí <strong>“Instalar app”</strong> o <strong>“Agregar a pantalla principal”</strong>
+                      <br />
+                      3) Confirmá
                     </>
                   )}
                 </>
