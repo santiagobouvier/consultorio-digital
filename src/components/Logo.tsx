@@ -4,7 +4,7 @@ interface LogoProps {
   variant?: "full" | "compact" | "icon";
   showTagline?: boolean;
   className?: string;
-  size?: "sm" | "md" | "lg" | "xl" | "2xl";
+  size?: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl";
 }
 
 const sizeClasses = {
@@ -13,6 +13,8 @@ const sizeClasses = {
   lg: "h-14",
   xl: "h-20",
   "2xl": "h-32",
+  "3xl": "h-40",
+  "4xl": "h-52",
 };
 
 export const Logo = ({ 
