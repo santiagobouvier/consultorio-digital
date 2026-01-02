@@ -9,7 +9,7 @@ type Platform = "ios" | "android" | "desktop" | "unknown";
 
 const detectPlatform = (): Platform => {
   const userAgent = navigator.userAgent.toLowerCase();
-  
+
   if (/iphone|ipad|ipod/.test(userAgent)) {
     return "ios";
   }
@@ -27,13 +27,54 @@ const isInStandaloneMode = (): boolean => {
   const displayModeStandalone = window.matchMedia("(display-mode: standalone)").matches;
   const displayModeFullscreen = window.matchMedia("(display-mode: fullscreen)").matches;
   const navigatorStandalone = (window.navigator as any).standalone === true; // iOS Safari
-  
+
   return displayModeStandalone || displayModeFullscreen || navigatorStandalone;
 };
 
 // Persistir si el usuario instaló la app (solo como hint). NO debe bloquear listeners
 // porque el usuario puede desinstalar la app y el navegador vuelve a requerir beforeinstallprompt.
 const INSTALLED_KEY = "pwa_installed";
+
+// --- Listener global (clave): si beforeinstallprompt se dispara ANTES de que se monte el botón,
+// lo capturamos igual y no se pierde.
+let deferredPromptGlobal: BeforeInstallPromptEvent | null = null;
+let installableGlobal = false;
+const subscribers = new Set<() => void>();
+
+const notify = () => {
+  subscribers.forEach((fn) => {
+    try {
+      fn();
+    } catch {
+      // ignore
+    }
+  });
+};
+
+const ensureGlobalPWAListeners = () => {
+  if (typeof window === "undefined") return;
+  const w = window as any;
+  if (w.__pwa_listeners_attached) return;
+  w.__pwa_listeners_attached = true;
+
+  window.addEventListener("beforeinstallprompt", (e: Event) => {
+    e.preventDefault();
+    deferredPromptGlobal = e as BeforeInstallPromptEvent;
+    installableGlobal = true;
+    notify();
+  });
+
+  window.addEventListener("appinstalled", () => {
+    deferredPromptGlobal = null;
+    installableGlobal = false;
+    try {
+      localStorage.setItem(INSTALLED_KEY, "true");
+    } catch {
+      // ignore
+    }
+    notify();
+  });
+};
 
 export const usePWAInstall = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
@@ -42,6 +83,8 @@ export const usePWAInstall = () => {
   const [platform, setPlatform] = useState<Platform>("unknown");
 
   useEffect(() => {
+    ensureGlobalPWAListeners();
+
     setPlatform(detectPlatform());
 
     // Estado real: standalone (instalada)
@@ -55,21 +98,15 @@ export const usePWAInstall = () => {
       localStorage.removeItem(INSTALLED_KEY);
     }
 
-    const handleBeforeInstall = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
-      setIsInstallable(true);
+    const syncFromGlobal = () => {
+      setDeferredPrompt(deferredPromptGlobal);
+      setIsInstallable(installableGlobal);
     };
 
-    const handleAppInstalled = () => {
-      setIsInstalled(true);
-      setIsInstallable(false);
-      setDeferredPrompt(null);
-      localStorage.setItem(INSTALLED_KEY, "true");
-    };
+    // Sincroniza inmediatamente (por si el evento ya pasó)
+    syncFromGlobal();
 
-    window.addEventListener("beforeinstallprompt", handleBeforeInstall);
-    window.addEventListener("appinstalled", handleAppInstalled);
+    subscribers.add(syncFromGlobal);
 
     // Escuchar cambios en display-mode por si el usuario instala desde el menú del navegador
     const mediaQuery = window.matchMedia("(display-mode: standalone)");
@@ -85,20 +122,22 @@ export const usePWAInstall = () => {
     mediaQuery.addEventListener("change", handleDisplayModeChange);
 
     return () => {
-      window.removeEventListener("beforeinstallprompt", handleBeforeInstall);
-      window.removeEventListener("appinstalled", handleAppInstalled);
+      subscribers.delete(syncFromGlobal);
       mediaQuery.removeEventListener("change", handleDisplayModeChange);
     };
   }, []);
 
   const installApp = async (): Promise<boolean> => {
-    if (!deferredPrompt) return false;
+    const prompt = deferredPromptGlobal ?? deferredPrompt;
+    if (!prompt) return false;
 
     try {
-      await deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      
+      await prompt.prompt();
+      const { outcome } = await prompt.userChoice;
+
       if (outcome === "accepted") {
+        deferredPromptGlobal = null;
+        installableGlobal = false;
         setDeferredPrompt(null);
         setIsInstallable(false);
         setIsInstalled(true);
@@ -118,6 +157,7 @@ export const usePWAInstall = () => {
     installApp,
     platform,
     // Para iOS siempre mostramos instrucciones manuales
-    showManualInstructions: platform === "ios" && !isInstalled
+    showManualInstructions: platform === "ios" && !isInstalled,
   };
 };
+
