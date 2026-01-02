@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Download, Check, Smartphone, Loader2 } from "lucide-react";
 import { usePWAInstall } from "@/hooks/use-pwa-install";
@@ -17,19 +17,35 @@ interface InstallAppButtonProps {
   showIcon?: boolean;
 }
 
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+type InstallResult = "installed" | "pending";
+
+const waitUntil = async (condition: () => boolean, timeoutMs: number) => {
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < timeoutMs) {
+    if (condition()) return true;
+    await new Promise((r) => setTimeout(r, 150));
+  }
+  return condition();
+};
 
 export const InstallAppButton = ({
   variant = "default",
   size = "default",
   className = "",
-  showIcon = true
+  showIcon = true,
 }: InstallAppButtonProps) => {
   const { isInstallable, isInstalled, installApp } = usePWAInstall();
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [showUnavailableDialog, setShowUnavailableDialog] = useState(false);
   const [isInstalling, setIsInstalling] = useState(false);
+  const [installResult, setInstallResult] = useState<InstallResult>("pending");
+
+  // Mantener la última lectura de isInstalled dentro de async flows
+  const isInstalledRef = useRef(isInstalled);
+  useEffect(() => {
+    isInstalledRef.current = isInstalled;
+  }, [isInstalled]);
 
   const handleClickInstall = () => {
     setShowConfirmDialog(true);
@@ -37,44 +53,39 @@ export const InstallAppButton = ({
 
   const handleConfirmInstall = async () => {
     setShowConfirmDialog(false);
-
-    const startedAt = Date.now();
     setIsInstalling(true);
 
-    // Intento de instalación automática (solo funciona cuando el navegador expone el prompt)
-    if (isInstallable) {
-      const success = await installApp();
-
-      // Asegurar que el loader se vea al menos un poquito
-      const elapsed = Date.now() - startedAt;
-      if (elapsed < 1200) await sleep(1200 - elapsed);
-
+    // Si el navegador no expone el prompt, NO podemos forzar la instalación.
+    if (!isInstallable) {
       setIsInstalling(false);
-
-      if (success) {
-        setShowSuccessDialog(true);
-      }
-
+      setShowUnavailableDialog(true);
       return;
     }
 
-    // Si no hay prompt disponible, NO podemos forzar la instalación automática.
-    // Mostramos una explicación corta y alternativa.
-    const elapsed = Date.now() - startedAt;
-    if (elapsed < 900) await sleep(900 - elapsed);
+    // Dispara el prompt nativo del navegador.
+    const accepted = await installApp();
+
+    // Si el usuario canceló, cortamos sin mostrar éxito.
+    if (!accepted) {
+      setIsInstalling(false);
+      return;
+    }
+
+    // Importante: aceptar el prompt NO garantiza que el ícono aparezca instantáneo.
+    // Eso lo termina el sistema del celular. Para mejorar UX:
+    // - esperamos unos segundos por el evento real (appinstalled / standalone)
+    // - si no llega, mostramos “instalación iniciada” (sin mentir).
+    const installedQuickly = await waitUntil(() => isInstalledRef.current, 5000);
+    setInstallResult(installedQuickly ? "installed" : "pending");
+
     setIsInstalling(false);
-    setShowUnavailableDialog(true);
+    setShowSuccessDialog(true);
   };
 
   // Ya instalada
   if (isInstalled) {
     return (
-      <Button
-        variant="outline"
-        size={size}
-        className={`gap-2 ${className}`}
-        disabled
-      >
+      <Button variant="outline" size={size} className={`gap-2 ${className}`} disabled>
         <Check className="h-4 w-4" />
         App instalada
       </Button>
@@ -103,7 +114,8 @@ export const InstallAppButton = ({
               Instalar Tu Consultorio
             </DialogTitle>
             <DialogDescription className="text-base pt-2">
-              La aplicación quedará como un ícono en tu celular para que puedas acceder rápidamente sin abrir el navegador.
+              La aplicación quedará como un ícono en tu celular para que puedas acceder
+              rápidamente sin abrir el navegador.
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-center gap-3 pt-4">
@@ -127,7 +139,7 @@ export const InstallAppButton = ({
               Instalando...
             </DialogTitle>
             <DialogDescription className="text-base pt-2">
-              Estamos agregando la app a tu celular.
+              Confirmaste la instalación. Tu celular está agregando el ícono.
             </DialogDescription>
           </DialogHeader>
         </DialogContent>
@@ -152,23 +164,36 @@ export const InstallAppButton = ({
         </DialogContent>
       </Dialog>
 
-      {/* Dialog de éxito */}
+      {/* Dialog de resultado */}
       <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-green-600">
+            <DialogTitle
+              className={`flex items-center gap-2 ${
+                installResult === "installed" ? "text-green-600" : ""
+              }`}
+            >
               <Check className="h-6 w-6" />
-              ¡Aplicación instalada!
+              {installResult === "installed"
+                ? "¡Aplicación instalada!"
+                : "Instalación iniciada"}
             </DialogTitle>
             <DialogDescription className="text-base pt-2">
-              Instalación correcta. Esto puede demorar unos minutos.
-              Por favor, verificá buscando el ícono de Tu Consultorio en tu celular.
+              {installResult === "installed" ? (
+                <>Instalación correcta. Ya deberías ver el ícono en tu celular.</>
+              ) : (
+                <>
+                  Instalación correcta. Tu celular puede tardar unos segundos en mostrar el
+                  ícono.
+                  <br />
+                  Si no lo ves, buscá “Tu Consultorio” en la lista de aplicaciones del
+                  celular.
+                </>
+              )}
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-center pt-4">
-            <Button onClick={() => setShowSuccessDialog(false)}>
-              Entendido
-            </Button>
+            <Button onClick={() => setShowSuccessDialog(false)}>Entendido</Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -177,3 +202,4 @@ export const InstallAppButton = ({
 };
 
 export default InstallAppButton;
+
