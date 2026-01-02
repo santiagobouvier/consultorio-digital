@@ -18,26 +18,26 @@ export default defineConfig(({ mode }) => ({
       includeAssets: ["favicon.png", "assets/logo-footer.png"],
       manifest: {
         name: "Tu Consultorio Digital",
-        short_name: "Consultorio",
+        short_name: "Tu Consultorio",
         description: "Sistema de gestión de consultorios - Agenda, pacientes y pagos",
         theme_color: "#00a5a0",
         background_color: "#0a0a0a",
         display: "standalone",
         orientation: "portrait",
-        start_url: "/",
+        start_url: "/auth",
         icons: [
           {
-            src: "favicon.png",
+            src: "app-icon-512.png",
             sizes: "192x192",
             type: "image/png"
           },
           {
-            src: "favicon.png",
+            src: "app-icon-512.png",
             sizes: "512x512",
             type: "image/png"
           },
           {
-            src: "favicon.png",
+            src: "app-icon-512.png",
             sizes: "512x512",
             type: "image/png",
             purpose: "maskable"
