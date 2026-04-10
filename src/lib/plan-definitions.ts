@@ -1,5 +1,5 @@
 // Single source of truth for all plan definitions
-// 3 plans: Esencial, Profesional, Clínica + Personalizado (admin only)
+// 4 plans: Starter, Esencial, Profesional, Clínica + Personalizado (admin only)
 
 export interface PlanDefinition {
   code: string;
@@ -14,23 +14,32 @@ export interface PlanDefinition {
 }
 
 export const PLAN_DEFINITIONS: Record<string, PlanDefinition> = {
+  starter: {
+    code: "starter",
+    name: "Starter",
+    description: "Para empezar con tu consultorio digital",
+    maxProfessionals: 1,
+    maxPatients: 5,
+    priceAnnual: 0, // TBD
+    priceMonthly: 0, // TBD
+  },
   esencial: {
     code: "esencial",
     name: "Esencial",
     description: "Para profesionales independientes",
     maxProfessionals: 1,
     maxPatients: 15,
-    priceAnnual: 9,
-    priceMonthly: 12,
+    priceAnnual: 0, // TBD
+    priceMonthly: 0, // TBD
   },
   profesional: {
     code: "profesional",
     name: "Profesional",
     description: "Para consultorios en crecimiento",
-    maxProfessionals: 3,
-    maxPatients: 100,
-    priceAnnual: 29,
-    priceMonthly: 39,
+    maxProfessionals: 1,
+    maxPatients: 35,
+    priceAnnual: 0, // TBD
+    priceMonthly: 0, // TBD
     isHighlighted: true,
     highlightLabel: "Más elegido",
   },
@@ -38,10 +47,10 @@ export const PLAN_DEFINITIONS: Record<string, PlanDefinition> = {
     code: "clinica",
     name: "Clínica",
     description: "Para clínicas y equipos grandes",
-    maxProfessionals: 10,
-    maxPatients: 500,
-    priceAnnual: 79,
-    priceMonthly: 99,
+    maxProfessionals: 3,
+    maxPatients: 160,
+    priceAnnual: 0, // TBD
+    priceMonthly: 0, // TBD
   },
   personalizado: {
     code: "personalizado",
@@ -55,13 +64,13 @@ export const PLAN_DEFINITIONS: Record<string, PlanDefinition> = {
 };
 
 // Ordered list for UI display (personalizado excluded from public pricing)
-export const PLAN_ORDER = ["esencial", "profesional", "clinica"];
-export const PLAN_ORDER_WITH_CUSTOM = ["esencial", "profesional", "clinica", "personalizado"];
+export const PLAN_ORDER = ["starter", "esencial", "profesional", "clinica"];
+export const PLAN_ORDER_WITH_CUSTOM = ["starter", "esencial", "profesional", "clinica", "personalizado"];
 
 // Helper functions
 export function getPlanDefinition(planCode: string): PlanDefinition {
   const normalized = normalizePlanCode(planCode);
-  return PLAN_DEFINITIONS[normalized] || PLAN_DEFINITIONS.esencial;
+  return PLAN_DEFINITIONS[normalized] || PLAN_DEFINITIONS.starter;
 }
 
 export function getPlanName(planCode: string): string {
