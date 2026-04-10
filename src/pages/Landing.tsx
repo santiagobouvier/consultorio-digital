@@ -747,9 +747,9 @@ const Landing = () => {
             )}
           </div>
 
-          {/* Pricing Cards Grid - Show first 3 plans on desktop */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-4 sm:mb-6">
-            {getPricingPlans().slice(0, 3).map((plan, index) => (
+          {/* Pricing Cards Grid - 4 plans */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8 sm:mb-12">
+            {getPricingPlans().map((plan, index) => (
               <div
                 key={plan.id}
                 className="animate-fade-in"
@@ -760,20 +760,39 @@ const Landing = () => {
             ))}
           </div>
 
-          {/* More plans - 2 columns */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-4 sm:mb-6">
-            {getPricingPlans().slice(3).map((plan, index) => (
-              <div
-                key={plan.id}
-                className="animate-fade-in"
-                style={{ animationDelay: `${(index + 4) * 100}ms`, animationFillMode: 'both' }}
-              >
-                <PricingCard {...plan} />
+          {/* Personalizado - Bloque aparte */}
+          <div className="max-w-2xl mx-auto animate-fade-in" style={{ animationDelay: '600ms', animationFillMode: 'both' }}>
+            <div
+              className="relative p-6 sm:p-8 rounded-xl sm:rounded-2xl border border-white/10 text-center"
+              style={{ backgroundColor: '#111111', boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)' }}
+            >
+              <h3 className="text-lg sm:text-xl font-bold text-white mb-2">🏢 Solución para consultorios grandes</h3>
+              <p className="text-gray-400 text-sm mb-5">
+                ¿Tenés un equipo más grande o necesitás más capacidad?
+              </p>
+              <div className="space-y-2 mb-6 text-sm text-gray-300">
+                <div className="flex items-center justify-center gap-2">
+                  <Check className="w-4 h-4 flex-shrink-0" style={{ color: '#00c78a' }} />
+                  <span>Más profesionales</span>
+                </div>
+                <div className="flex items-center justify-center gap-2">
+                  <Check className="w-4 h-4 flex-shrink-0" style={{ color: '#00c78a' }} />
+                  <span>Más pacientes</span>
+                </div>
+                <div className="flex items-center justify-center gap-2">
+                  <Check className="w-4 h-4 flex-shrink-0" style={{ color: '#00c78a' }} />
+                  <span>Configuraciones a medida</span>
+                </div>
               </div>
-            ))}
-            {/* Personalizado Card */}
-            <div className="animate-fade-in" style={{ animationDelay: '600ms', animationFillMode: 'both' }}>
-              <PricingCard {...personalizadoPlan} />
+              <a href={whatsappPersonalizado} target="_blank" rel="noopener noreferrer">
+                <Button
+                  className="h-11 sm:h-12 px-8 text-sm font-semibold rounded-xl transition-all duration-300"
+                  variant="outline"
+                  style={{ borderColor: 'rgba(255, 255, 255, 0.2)', color: 'white', backgroundColor: 'transparent' }}
+                >
+                  Contactanos
+                </Button>
+              </a>
             </div>
           </div>
         </div>
