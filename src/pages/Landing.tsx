@@ -760,37 +760,49 @@ const Landing = () => {
             ))}
           </div>
 
-          {/* Personalizado - Bloque aparte */}
-          <div className="max-w-2xl mx-auto animate-fade-in" style={{ animationDelay: '600ms', animationFillMode: 'both' }}>
+          {/* Personalizado - Bloque aparte, destacado */}
+          <div className="max-w-3xl mx-auto animate-fade-in" style={{ animationDelay: '600ms', animationFillMode: 'both' }}>
             <div
-              className="relative p-6 sm:p-8 rounded-xl sm:rounded-2xl border border-white/10 text-center"
-              style={{ backgroundColor: '#111111', boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)' }}
+              className="relative p-8 sm:p-10 md:p-12 rounded-2xl border border-white/15 text-center"
+              style={{
+                background: 'linear-gradient(135deg, #111111 0%, #1a1a2e 50%, #111111 100%)',
+                boxShadow: '0 8px 40px rgba(0, 0, 0, 0.4), 0 0 60px rgba(0, 199, 138, 0.05)',
+              }}
             >
-              <h3 className="text-lg sm:text-xl font-bold text-white mb-2">🏢 Solución para consultorios grandes</h3>
-              <p className="text-gray-400 text-sm mb-5">
+              <div className="text-4xl sm:text-5xl mb-4">🏢</div>
+              <h3 className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-3 tracking-tight">
+                Solución para consultorios grandes
+              </h3>
+              <p className="text-gray-400 text-sm sm:text-base mb-6 sm:mb-8 max-w-lg mx-auto leading-relaxed">
                 ¿Tenés un equipo más grande o necesitás más capacidad?
+                <br />
+                Te armamos un plan a tu medida.
               </p>
-              <div className="space-y-2 mb-6 text-sm text-gray-300">
-                <div className="flex items-center justify-center gap-2">
-                  <Check className="w-4 h-4 flex-shrink-0" style={{ color: '#00c78a' }} />
+              <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 mb-8 text-sm sm:text-base text-gray-300">
+                <div className="flex items-center gap-2">
+                  <Check className="w-5 h-5 flex-shrink-0" style={{ color: '#00c78a' }} />
                   <span>Más profesionales</span>
                 </div>
-                <div className="flex items-center justify-center gap-2">
-                  <Check className="w-4 h-4 flex-shrink-0" style={{ color: '#00c78a' }} />
+                <div className="flex items-center gap-2">
+                  <Check className="w-5 h-5 flex-shrink-0" style={{ color: '#00c78a' }} />
                   <span>Más pacientes</span>
                 </div>
-                <div className="flex items-center justify-center gap-2">
-                  <Check className="w-4 h-4 flex-shrink-0" style={{ color: '#00c78a' }} />
+                <div className="flex items-center gap-2">
+                  <Check className="w-5 h-5 flex-shrink-0" style={{ color: '#00c78a' }} />
                   <span>Configuraciones a medida</span>
                 </div>
               </div>
               <a href={whatsappPersonalizado} target="_blank" rel="noopener noreferrer">
                 <Button
-                  className="h-11 sm:h-12 px-8 text-sm font-semibold rounded-xl transition-all duration-300"
+                  className="h-12 sm:h-14 px-10 sm:px-12 text-sm sm:text-base font-semibold rounded-xl transition-all duration-300"
                   variant="outline"
-                  style={{ borderColor: 'rgba(255, 255, 255, 0.2)', color: 'white', backgroundColor: 'transparent' }}
+                  style={{
+                    borderColor: 'rgba(0, 199, 138, 0.4)',
+                    color: 'white',
+                    backgroundColor: 'rgba(0, 199, 138, 0.08)',
+                  }}
                 >
-                  Contactanos
+                  Contactanos por WhatsApp
                 </Button>
               </a>
             </div>
