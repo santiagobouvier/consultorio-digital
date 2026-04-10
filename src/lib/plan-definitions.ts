@@ -1,5 +1,5 @@
 // Single source of truth for all plan definitions
-// This file defines all plans, limits, and prices used across the entire system
+// 3 plans: Esencial, Profesional, Clínica + Personalizado (admin only)
 
 export interface PlanDefinition {
   code: string;
@@ -7,8 +7,8 @@ export interface PlanDefinition {
   description: string;
   maxProfessionals: number | null; // null = unlimited
   maxPatients: number | null; // null = unlimited
-  priceAnnual: number; // Monthly price when paying annually
-  priceMonthly: number; // Monthly price when paying monthly
+  priceAnnual: number; // Monthly price when paying annually (USD)
+  priceMonthly: number; // Monthly price when paying monthly (USD)
   isHighlighted?: boolean;
   highlightLabel?: string;
 }
@@ -16,54 +16,36 @@ export interface PlanDefinition {
 export const PLAN_DEFINITIONS: Record<string, PlanDefinition> = {
   esencial: {
     code: "esencial",
-    name: "Plan Esencial",
-    description: "Para empezar con pocos pacientes",
+    name: "Esencial",
+    description: "Para profesionales independientes",
     maxProfessionals: 1,
-    maxPatients: 10,
-    priceAnnual: 1500,
-    priceMonthly: 2000,
-  },
-  inicial: {
-    code: "inicial",
-    name: "Plan Inicial",
-    description: "Ideal para profesionales independientes",
-    maxProfessionals: 1,
-    maxPatients: 25,
-    priceAnnual: 1900,
-    priceMonthly: 2900,
+    maxPatients: 15,
+    priceAnnual: 9,
+    priceMonthly: 12,
   },
   profesional: {
     code: "profesional",
-    name: "Plan Profesional",
+    name: "Profesional",
     description: "Para consultorios en crecimiento",
     maxProfessionals: 3,
     maxPatients: 100,
-    priceAnnual: 3900,
-    priceMonthly: 5400,
+    priceAnnual: 29,
+    priceMonthly: 39,
     isHighlighted: true,
     highlightLabel: "Más elegido",
   },
-  equipo: {
-    code: "equipo",
-    name: "Plan Equipo",
-    description: "Para clínicas medianas",
-    maxProfessionals: 7,
-    maxPatients: 300,
-    priceAnnual: 6900,
-    priceMonthly: 9400,
-  },
   clinica: {
     code: "clinica",
-    name: "Plan Clínica",
-    description: "Para clínicas grandes",
-    maxProfessionals: 12,
+    name: "Clínica",
+    description: "Para clínicas y equipos grandes",
+    maxProfessionals: 10,
     maxPatients: 500,
-    priceAnnual: 12000,
-    priceMonthly: 17000,
+    priceAnnual: 79,
+    priceMonthly: 99,
   },
   personalizado: {
     code: "personalizado",
-    name: "Plan Personalizado",
+    name: "Personalizado",
     description: "A medida para tus necesidades",
     maxProfessionals: null,
     maxPatients: null,
@@ -72,20 +54,23 @@ export const PLAN_DEFINITIONS: Record<string, PlanDefinition> = {
   },
 };
 
-// Ordered list for UI display
-export const PLAN_ORDER = ["esencial", "inicial", "profesional", "equipo", "clinica", "personalizado"];
+// Ordered list for UI display (personalizado excluded from public pricing)
+export const PLAN_ORDER = ["esencial", "profesional", "clinica"];
+export const PLAN_ORDER_WITH_CUSTOM = ["esencial", "profesional", "clinica", "personalizado"];
 
 // Helper functions
 export function getPlanDefinition(planCode: string): PlanDefinition {
-  return PLAN_DEFINITIONS[planCode] || PLAN_DEFINITIONS.inicial;
+  const normalized = normalizePlanCode(planCode);
+  return PLAN_DEFINITIONS[normalized] || PLAN_DEFINITIONS.esencial;
 }
 
 export function getPlanName(planCode: string): string {
-  return PLAN_DEFINITIONS[planCode]?.name || PLAN_DEFINITIONS.inicial.name;
+  return getPlanDefinition(planCode).name;
 }
 
 export function getPlanLimits(planCode: string, customLimits?: { maxProfessionals?: number | null; maxPatients?: number | null }) {
-  if (planCode === "personalizado" && customLimits) {
+  const normalized = normalizePlanCode(planCode);
+  if (normalized === "personalizado" && customLimits) {
     return {
       maxProfessionals: customLimits.maxProfessionals ?? null,
       maxPatients: customLimits.maxPatients ?? null,
@@ -104,14 +89,16 @@ export function getPlanPrice(planCode: string, billingCycle: "monthly" | "annual
 }
 
 export function formatPrice(price: number): string {
-  return price.toLocaleString("es-UY");
+  return `$${price}`;
 }
 
 // Map old plan codes to new ones for migration
 export const LEGACY_PLAN_MAP: Record<string, string> = {
-  individual: "inicial",
-  professional: "profesional", 
-  advanced: "equipo",
+  individual: "esencial",
+  inicial: "esencial",
+  professional: "profesional",
+  advanced: "clinica",
+  equipo: "clinica",
   enterprise: "clinica",
   custom: "personalizado",
 };
