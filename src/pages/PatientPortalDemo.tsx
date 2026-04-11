@@ -518,7 +518,7 @@ const PatientPortalDemo = () => {
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto lg:flex lg:gap-0">
+      <div className="lg:flex lg:gap-0 min-h-[calc(100vh-6rem)]">
         {/* Desktop Sidebar Navigation */}
         <aside className="hidden lg:block w-64 shrink-0 border-r bg-card min-h-[calc(100vh-theme(spacing.16))] sticky top-16 self-start">
           <nav className="p-4 space-y-1">
