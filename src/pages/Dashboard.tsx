@@ -914,6 +914,21 @@ const Dashboard = () => {
               <p className="font-semibold text-sm text-foreground">Consultorio</p>
             </CardContent>
           </Card>
+
+          {isDemo && (
+            <Card 
+              className="mobile-card-compact hover:shadow-md transition-all cursor-pointer group active:scale-[0.98] border-accent bg-accent/10 col-span-2 sm:col-span-1"
+              onClick={() => navigate("/portal-paciente/demo")}
+            >
+              <CardContent className="p-4 flex flex-col items-center justify-center text-center min-h-[90px]">
+                <div className="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center mb-2 group-hover:bg-accent/30 transition-colors">
+                  <Eye className="h-5 w-5 text-accent-foreground" />
+                </div>
+                <p className="font-semibold text-sm text-foreground">Demo Paciente</p>
+                <p className="text-xs text-muted-foreground">Ver portal</p>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Monthly Highlights - at the bottom */}
