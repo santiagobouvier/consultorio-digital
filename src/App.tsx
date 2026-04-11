@@ -4,6 +4,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { lazy, Suspense } from "react";
+import { DashboardLayout } from "@/components/DashboardLayout";
+
 // Lazy load all pages for optimal performance
 const Landing = lazy(() => import("./pages/Landing"));
 const Auth = lazy(() => import("./pages/Auth"));
@@ -38,9 +40,11 @@ const SubscriptionGuard = lazy(() => import("./components/SubscriptionGuard"));
 
 const queryClient = new QueryClient();
 
-// Helper to wrap a page with subscription guard
+// Helper to wrap a page with subscription guard + sidebar layout
 const Protected = ({ children }: { children: React.ReactNode }) => (
-  <SubscriptionGuard>{children}</SubscriptionGuard>
+  <SubscriptionGuard>
+    <DashboardLayout>{children}</DashboardLayout>
+  </SubscriptionGuard>
 );
 
 const App = () => (
@@ -63,12 +67,11 @@ const App = () => (
             <Route path="/invitar-profesional" element={<ProfessionalInvitation />} />
             <Route path="/registrarse-profesional" element={<ProfessionalRegister />} />
             <Route path="/onboarding-consultorio" element={<ConsultorioOnboarding />} />
-            <Route path="/billing" element={<Billing />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/portal-paciente/demo" element={<PatientPortalDemo />} />
             <Route path="/portal/:slug" element={<ClinicPortal />} />
             
-            {/* Protected routes - require active subscription */}
+            {/* Protected routes - require active subscription + sidebar */}
             <Route path="/dashboard" element={<Protected><Dashboard /></Protected>} />
             <Route path="/patients" element={<Protected><Patients /></Protected>} />
             <Route path="/patients/:id" element={<Protected><PatientDetail /></Protected>} />
@@ -81,7 +84,8 @@ const App = () => (
             <Route path="/solicitudes" element={<Protected><AppointmentRequests /></Protected>} />
             <Route path="/pagos" element={<Protected><Payments /></Protected>} />
             <Route path="/personalizar-portal" element={<Protected><PortalCustomization /></Protected>} />
-            <Route path="/saas-admin" element={<SaasAdmin />} />
+            <Route path="/billing" element={<Protected><Billing /></Protected>} />
+            <Route path="/saas-admin" element={<Protected><SaasAdmin /></Protected>} />
             
             {/* Catch-all */}
             <Route path="*" element={<NotFound />} />
