@@ -501,9 +501,9 @@ const PatientPortalDemo = () => {
 
       {/* Header */}
       <header className="border-b bg-card sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 lg:px-8 py-3 lg:py-4 flex items-center justify-between">
+        <div className="px-4 lg:px-8 py-3 lg:py-4 flex items-center justify-between">
           <div className="flex items-center gap-3 lg:gap-4">
-            <Avatar className="h-9 w-9 lg:h-10 lg:w-10 lg:block hidden">
+            <Avatar className="h-9 w-9 lg:h-10 lg:w-10 hidden lg:flex">
               <AvatarFallback className="bg-primary/10 text-primary font-bold">SM</AvatarFallback>
             </Avatar>
             <div>
@@ -518,9 +518,9 @@ const PatientPortalDemo = () => {
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto lg:flex lg:gap-0">
+      <div className="lg:flex lg:gap-0 min-h-[calc(100vh-6rem)]">
         {/* Desktop Sidebar Navigation */}
-        <aside className="hidden lg:block w-64 shrink-0 border-r bg-card min-h-[calc(100vh-theme(spacing.16))] sticky top-16 self-start">
+        <aside className="hidden lg:flex lg:flex-col w-72 shrink-0 border-r bg-card/80 backdrop-blur-sm sticky top-16 self-start h-[calc(100vh-4rem)]">
           <nav className="p-4 space-y-1">
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 mb-3">Navegación</p>
             {TABS.map(t => {
@@ -530,13 +530,13 @@ const PatientPortalDemo = () => {
                 <button
                   key={t.id}
                   onClick={() => setTab(t.id)}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
                     isActive 
-                      ? "bg-primary/10 text-primary" 
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      ? "bg-primary/10 text-primary shadow-sm" 
+                      : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                   }`}
                 >
-                  <Icon className="h-4 w-4" />
+                  <Icon className={`h-5 w-5 ${isActive ? "text-primary" : ""}`} />
                   {t.label}
                   {t.id === "pagos" && pendingCount > 0 && (
                     <span className="ml-auto bg-destructive text-destructive-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
@@ -548,9 +548,9 @@ const PatientPortalDemo = () => {
             })}
           </nav>
 
-          {/* Sidebar patient info */}
-          <div className="p-4 border-t mt-4">
-            <div className="flex items-center gap-3 mb-3">
+          {/* Sidebar patient info - pushed to bottom */}
+          <div className="mt-auto p-4 border-t">
+            <div className="flex items-center gap-3">
               <Avatar className="h-10 w-10">
                 <AvatarFallback className="bg-primary/10 text-primary font-bold text-sm">SM</AvatarFallback>
               </Avatar>
@@ -563,8 +563,8 @@ const PatientPortalDemo = () => {
         </aside>
 
         {/* Mobile Tab Bar */}
-        <div className="lg:hidden border-b bg-card sticky top-[52px] z-10">
-          <div className="flex overflow-x-auto px-2">
+        <div className="lg:hidden border-b bg-card/95 backdrop-blur-sm sticky top-[52px] z-10">
+          <div className="flex justify-around px-1">
             {TABS.map(t => {
               const Icon = t.icon;
               const isActive = tab === t.id;
@@ -572,14 +572,20 @@ const PatientPortalDemo = () => {
                 <button
                   key={t.id}
                   onClick={() => setTab(t.id)}
-                  className={`flex items-center gap-1.5 px-3 py-3 text-xs font-medium whitespace-nowrap border-b-2 transition-colors ${
+                  className={`relative flex flex-col items-center gap-0.5 px-2 py-2.5 text-[10px] sm:text-xs font-medium whitespace-nowrap transition-colors flex-1 ${
                     isActive 
-                      ? "border-primary text-primary" 
-                      : "border-transparent text-muted-foreground hover:text-foreground"
+                      ? "text-primary" 
+                      : "text-muted-foreground"
                   }`}
                 >
-                  <Icon className="h-4 w-4" />
-                  <span className="hidden sm:inline">{t.label}</span>
+                  <Icon className={`h-5 w-5 ${isActive ? "text-primary" : ""}`} />
+                  <span>{t.label}</span>
+                  {isActive && <div className="absolute bottom-0 left-2 right-2 h-0.5 bg-primary rounded-full" />}
+                  {t.id === "pagos" && pendingCount > 0 && (
+                    <span className="absolute -top-0.5 right-1 bg-destructive text-destructive-foreground text-[9px] rounded-full h-4 w-4 flex items-center justify-center">
+                      {pendingCount}
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -587,7 +593,7 @@ const PatientPortalDemo = () => {
         </div>
 
         {/* Main Content */}
-        <main className="flex-1 min-w-0 px-4 lg:px-8 py-4 lg:py-8">
+        <main className="flex-1 min-w-0 px-4 lg:px-10 xl:px-16 py-4 lg:py-8 max-w-[1200px]">
           {/* Mobile welcome */}
           <div className="lg:hidden flex items-center gap-3 mb-4">
             <Avatar className="h-10 w-10">
