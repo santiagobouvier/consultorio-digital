@@ -15,10 +15,8 @@ export default defineConfig(({ mode }) => ({
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: "autoUpdate",
-      // IMPORTANTE: en modo preview/desarrollo Chrome no considera la PWA “instalable”
-      // si no hay service worker activo. Esto habilita SW/manifest también en dev.
       devOptions: {
-        enabled: true,
+        enabled: false,
       },
       includeAssets: [
         "favicon.png",
@@ -63,6 +61,7 @@ export default defineConfig(({ mode }) => ({
       },
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,webp}"],
+        navigateFallbackDenylist: [/^\/~oauth/],
       },
     }),
   ].filter(Boolean),
