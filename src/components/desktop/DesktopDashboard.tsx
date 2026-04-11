@@ -666,6 +666,25 @@ export const DesktopDashboard = () => {
           </Card>
         )}
 
+        {/* Portal Customization Banner */}
+        <Card 
+          className="border-primary/20 bg-primary/5 hover:bg-primary/10 transition-all cursor-pointer"
+          onClick={() => navigate("/personalizar-portal")}
+        >
+          <CardContent className="p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <Palette className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="font-semibold text-foreground">Personalizar Portal del Paciente</p>
+                <p className="text-sm text-muted-foreground">Configurá logo, nombre y colores del portal</p>
+              </div>
+            </div>
+            <ArrowRight className="h-5 w-5 text-muted-foreground" />
+          </CardContent>
+        </Card>
+
         {/* Quick Actions Row */}
         <div className="grid grid-cols-3 gap-6">
           <Button
