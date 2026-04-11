@@ -27,6 +27,8 @@ import {
   Loader2,
   Check,
   ArrowUpRight,
+  Shield,
+  Lock,
 } from "lucide-react";
 import {
   getPlanDefinition,
