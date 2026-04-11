@@ -63,6 +63,7 @@ const App = () => (
             <Route path="/onboarding-consultorio" element={<ConsultorioOnboarding />} />
             <Route path="/billing" element={<Billing />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/portal-paciente/demo" element={<PatientPortalDemo />} />
             
             {/* Protected routes - require active subscription */}
             <Route path="/dashboard" element={<Protected><Dashboard /></Protected>} />
