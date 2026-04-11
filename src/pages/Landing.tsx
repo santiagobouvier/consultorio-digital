@@ -910,6 +910,10 @@ const Landing = () => {
       {/* Footer */}
       <footer className="px-4 sm:px-6 py-8 sm:py-12 bg-black border-t border-white/5">
         <div className="max-w-7xl mx-auto flex flex-col items-center gap-4">
+          <div className="flex items-center gap-2 text-gray-500 text-xs">
+            <span className="text-lg">🇺🇾</span>
+            <span>Disponible únicamente en Uruguay por el momento</span>
+          </div>
           <p className="text-center text-gray-600 text-xs sm:text-sm font-light">
             © {new Date().getFullYear()} Sistema de Gestión de Consultorio
           </p>
