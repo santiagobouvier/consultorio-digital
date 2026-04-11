@@ -171,7 +171,7 @@ const Dashboard = () => {
           if (userRole?.business_id) {
             const { data: memberBusiness } = await supabase
               .from("businesses")
-              .select("id, name, owner_user_id, onboarding_completed")
+              .select("id, name, owner_user_id, onboarding_completed, is_demo")
               .eq("id", userRole.business_id)
               .single();
             
