@@ -31,8 +31,14 @@ const CommandCenter = lazy(() => import("./pages/CommandCenter"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const Billing = lazy(() => import("./pages/Billing"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const SubscriptionGuard = lazy(() => import("./components/SubscriptionGuard"));
 
 const queryClient = new QueryClient();
+
+// Helper to wrap a page with subscription guard
+const Protected = ({ children }: { children: React.ReactNode }) => (
+  <SubscriptionGuard>{children}</SubscriptionGuard>
+);
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -42,32 +48,36 @@ const App = () => (
       <BrowserRouter>
         <Suspense fallback={null}>
           <Routes>
+            {/* Public routes */}
             <Route path="/" element={<Landing />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/configurar-negocio" element={<BusinessSetup />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/patients" element={<Patients />} />
-            <Route path="/patients/:id" element={<PatientDetail />} />
-            <Route path="/appointments" element={<Appointments />} />
-            <Route path="/agenda" element={<Agenda />} />
-            <Route path="/centro-control" element={<CommandCenter />} />
-            <Route path="/recordatorios-pendientes" element={<PendingReminders />} />
-            <Route path="/mi-consultorio" element={<ClinicSettings />} />
-            <Route path="/horarios-disponibles" element={<AvailableSlots />} />
-            <Route path="/solicitudes" element={<AppointmentRequests />} />
             <Route path="/consultorio/:slug" element={<PublicClinic />} />
             <Route path="/consultorio/:slug/reservar" element={<PublicBooking />} />
             <Route path="/pago-plan/:planId" element={<PlanPayment />} />
-            <Route path="/pagos" element={<Payments />} />
             <Route path="/portal-paciente" element={<PatientPortal />} />
             <Route path="/portal-paciente/invitacion" element={<PatientInvitation />} />
             <Route path="/invitar-profesional" element={<ProfessionalInvitation />} />
             <Route path="/registrarse-profesional" element={<ProfessionalRegister />} />
             <Route path="/onboarding-consultorio" element={<ConsultorioOnboarding />} />
-            <Route path="/saas-admin" element={<SaasAdmin />} />
             <Route path="/billing" element={<Billing />} />
             <Route path="/reset-password" element={<ResetPassword />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            
+            {/* Protected routes - require active subscription */}
+            <Route path="/dashboard" element={<Protected><Dashboard /></Protected>} />
+            <Route path="/patients" element={<Protected><Patients /></Protected>} />
+            <Route path="/patients/:id" element={<Protected><PatientDetail /></Protected>} />
+            <Route path="/appointments" element={<Protected><Appointments /></Protected>} />
+            <Route path="/agenda" element={<Protected><Agenda /></Protected>} />
+            <Route path="/centro-control" element={<Protected><CommandCenter /></Protected>} />
+            <Route path="/recordatorios-pendientes" element={<Protected><PendingReminders /></Protected>} />
+            <Route path="/mi-consultorio" element={<Protected><ClinicSettings /></Protected>} />
+            <Route path="/horarios-disponibles" element={<Protected><AvailableSlots /></Protected>} />
+            <Route path="/solicitudes" element={<Protected><AppointmentRequests /></Protected>} />
+            <Route path="/pagos" element={<Protected><Payments /></Protected>} />
+            <Route path="/saas-admin" element={<SaasAdmin />} />
+            
+            {/* Catch-all */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
