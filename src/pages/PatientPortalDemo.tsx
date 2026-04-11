@@ -530,13 +530,13 @@ const PatientPortalDemo = () => {
                 <button
                   key={t.id}
                   onClick={() => setTab(t.id)}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
                     isActive 
-                      ? "bg-primary/10 text-primary" 
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      ? "bg-primary/10 text-primary shadow-sm" 
+                      : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                   }`}
                 >
-                  <Icon className="h-4 w-4" />
+                  <Icon className={`h-5 w-5 ${isActive ? "text-primary" : ""}`} />
                   {t.label}
                   {t.id === "pagos" && pendingCount > 0 && (
                     <span className="ml-auto bg-destructive text-destructive-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
@@ -548,9 +548,9 @@ const PatientPortalDemo = () => {
             })}
           </nav>
 
-          {/* Sidebar patient info */}
-          <div className="p-4 border-t mt-4">
-            <div className="flex items-center gap-3 mb-3">
+          {/* Sidebar patient info - pushed to bottom */}
+          <div className="mt-auto p-4 border-t">
+            <div className="flex items-center gap-3">
               <Avatar className="h-10 w-10">
                 <AvatarFallback className="bg-primary/10 text-primary font-bold text-sm">SM</AvatarFallback>
               </Avatar>
