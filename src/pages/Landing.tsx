@@ -55,8 +55,8 @@ const screenshotSlides = [
     image: patientsMobile
   },
   {
-    title: "Recordatorios WhatsApp",
-    description: "Enviá recordatorios de citas y pagos con un solo click. Menos ausencias, más control.",
+    title: "Recordatorios automáticos",
+    description: "Enviá recordatorios de citas y pagos por email de forma automática. Menos ausencias, más control.",
     image: remindersMobile
   },
   {
@@ -70,7 +70,7 @@ const screenshotSlides = [
 const faqItems = [
   {
     question: "¿Qué incluye cada plan?",
-    answer: "Todos los planes incluyen las mismas funcionalidades: gestión de pacientes, agenda privada, portal del paciente, recordatorios por WhatsApp, gestión de pagos y alertas. La diferencia está en la cantidad de profesionales y pacientes activos."
+    answer: "Todos los planes incluyen las mismas funcionalidades: gestión de pacientes, agenda privada, portal del paciente, recordatorios automáticos por email, gestión de pagos y alertas. La diferencia está en la cantidad de profesionales y pacientes activos."
   },
   {
     question: "¿Puedo cambiar de plan en cualquier momento?",
@@ -81,8 +81,8 @@ const faqItems = [
     answer: "Te avisaremos cuando estés cerca del límite. Para superarlo, debés solicitar un upgrade de plan manualmente."
   },
   {
-    question: "¿Los recordatorios por WhatsApp tienen costo adicional?",
-    answer: "No, los recordatorios están incluidos en todos los planes sin límite de envíos."
+    question: "¿Los recordatorios por email tienen costo adicional?",
+    answer: "No, los recordatorios automáticos están incluidos en todos los planes sin límite de envíos."
   },
   {
     question: "¿Mis pacientes pueden ver información de otros pacientes?",
@@ -114,8 +114,8 @@ const currentFeatures = [
   },
   {
     icon: Bell,
-    title: "Recordatorios",
-    description: "Recordatorios de citas y pagos. Envío manual por WhatsApp desde el sistema.",
+    title: "Recordatorios automáticos",
+    description: "Recordatorios de citas y pagos enviados automáticamente por email a tus pacientes.",
   },
   {
     icon: Shield,
@@ -129,7 +129,7 @@ const problems = [
   { icon: AlertTriangle, text: "Agenda desordenada entre cuadernos y apps" },
   { icon: AlertTriangle, text: "Pagos que se olvidan o no se registran" },
   { icon: AlertTriangle, text: "Pacientes que no recuerdan sus turnos" },
-  { icon: AlertTriangle, text: "Información repartida en WhatsApp y Excel" },
+  { icon: AlertTriangle, text: "Información repartida en planillas y apps" },
 ];
 
 // Benefits section
