@@ -35,6 +35,7 @@ import {
   Building2,
   CalendarCheck,
   AlertCircle,
+  Eye,
 } from "lucide-react";
 
 interface Appointment {
@@ -66,6 +67,7 @@ export const DesktopDashboard = () => {
   // Data state
   const [businessName, setBusinessName] = useState("");
   const [userName, setUserName] = useState("");
+  const [isDemo, setIsDemo] = useState(false);
   const [selectedProfessionalId, setSelectedProfessionalId] = useState<string>("all");
   
   // KPIs
@@ -101,11 +103,14 @@ export const DesktopDashboard = () => {
 
       const { data: business } = await supabase
         .from("businesses")
-        .select("name")
+        .select("name, is_demo")
         .eq("id", businessId)
         .single();
 
-      if (business) setBusinessName(business.name);
+      if (business) {
+        setBusinessName(business.name);
+        setIsDemo(business.is_demo || false);
+      }
 
       // Today's appointments count
       const today = new Date();
@@ -639,6 +644,27 @@ export const DesktopDashboard = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Demo Patient Portal Banner */}
+        {isDemo && (
+          <Card 
+            className="border-accent bg-accent/10 hover:bg-accent/20 transition-all cursor-pointer"
+            onClick={() => navigate("/portal-paciente/demo")}
+          >
+            <CardContent className="p-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-accent/20">
+                  <Eye className="h-5 w-5 text-accent-foreground" />
+                </div>
+                <div>
+                  <p className="font-semibold text-foreground">Demo Portal del Paciente</p>
+                  <p className="text-sm text-muted-foreground">Mirá cómo ven tus pacientes su portal personal</p>
+                </div>
+              </div>
+              <ArrowRight className="h-5 w-5 text-muted-foreground" />
+            </CardContent>
+          </Card>
+        )}
 
         {/* Quick Actions Row */}
         <div className="grid grid-cols-3 gap-6">
