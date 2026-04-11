@@ -520,7 +520,7 @@ const PatientPortalDemo = () => {
 
       <div className="lg:flex lg:gap-0 min-h-[calc(100vh-6rem)]">
         {/* Desktop Sidebar Navigation */}
-        <aside className="hidden lg:block w-64 shrink-0 border-r bg-card min-h-[calc(100vh-theme(spacing.16))] sticky top-16 self-start">
+        <aside className="hidden lg:flex lg:flex-col w-72 shrink-0 border-r bg-card/80 backdrop-blur-sm sticky top-16 self-start h-[calc(100vh-4rem)]">
           <nav className="p-4 space-y-1">
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 mb-3">Navegación</p>
             {TABS.map(t => {
