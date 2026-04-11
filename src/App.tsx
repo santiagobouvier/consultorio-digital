@@ -78,6 +78,7 @@ const App = () => (
             <Route path="/horarios-disponibles" element={<Protected><AvailableSlots /></Protected>} />
             <Route path="/solicitudes" element={<Protected><AppointmentRequests /></Protected>} />
             <Route path="/pagos" element={<Protected><Payments /></Protected>} />
+            <Route path="/personalizar-portal" element={<Protected><PortalCustomization /></Protected>} />
             <Route path="/saas-admin" element={<SaasAdmin />} />
             
             {/* Catch-all */}
