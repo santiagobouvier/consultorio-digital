@@ -11,7 +11,8 @@ import { useBusinessId } from "@/hooks/use-business-id";
 import { supabase } from "@/integrations/supabase/client";
 import {
   ArrowLeft, Palette, Upload, Eye, Check, Building2,
-  Sun, Moon, Type, Image as ImageIcon, Sparkles
+  Sun, Moon, Type, Image as ImageIcon, Sparkles,
+  Copy, ExternalLink, Share2, Smartphone
 } from "lucide-react";
 
 const THEME_PRESETS = [
@@ -61,6 +62,7 @@ const PortalCustomization = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { businessId, loading: bizLoading } = useBusinessId();
+  const [publicSlug, setPublicSlug] = useState("");
 
   const [clinicName, setClinicName] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
@@ -77,7 +79,7 @@ const PortalCustomization = () => {
     const load = async () => {
       const { data } = await supabase
         .from("businesses")
-        .select("name, portal_clinic_display_name, portal_logo_url, portal_primary_color, portal_dark_primary_color, portal_theme_preset")
+        .select("name, portal_clinic_display_name, portal_logo_url, portal_primary_color, portal_dark_primary_color, portal_theme_preset, public_slug")
         .eq("id", businessId)
         .single();
       if (data) {
@@ -91,6 +93,7 @@ const PortalCustomization = () => {
         setDarkColor(dc);
         setCustomLightHex(hslToHex(lc));
         setCustomDarkHex(hslToHex(dc));
+        setPublicSlug(data.public_slug || "");
       }
     };
     load();
@@ -403,6 +406,62 @@ const PortalCustomization = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Share portal link */}
+        {publicSlug && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Share2 className="h-5 w-5 text-primary" /> Compartir portal con pacientes
+              </CardTitle>
+              <CardDescription>
+                Compartí este link con tus pacientes para que accedan a su portal personalizado e instalen la app con tu marca.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center gap-2">
+                <div className="flex-1 bg-muted rounded-lg px-3 py-2.5 text-sm font-mono truncate border border-border">
+                  {window.location.origin}/portal/{publicSlug}
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-2 shrink-0"
+                  onClick={() => {
+                    navigator.clipboard.writeText(`${window.location.origin}/portal/${publicSlug}`);
+                    toast({ title: "Link copiado", description: "Compartilo con tus pacientes" });
+                  }}
+                >
+                  <Copy className="h-4 w-4" /> Copiar
+                </Button>
+                <Button
+                  size="sm"
+                  className="gap-2 shrink-0"
+                  onClick={() => {
+                    const url = `${window.location.origin}/portal/${publicSlug}`;
+                    if (navigator.share) {
+                      navigator.share({
+                        title: clinicName || "Mi Consultorio",
+                        text: `Accedé a tu portal de ${clinicName || "Mi Consultorio"}`,
+                        url,
+                      });
+                    } else {
+                      navigator.clipboard.writeText(url);
+                      toast({ title: "Link copiado" });
+                    }
+                  }}
+                >
+                  <ExternalLink className="h-4 w-4" /> Compartir
+                </Button>
+              </div>
+              <div className="p-3 rounded-xl bg-primary/5 border border-primary/10">
+                <p className="text-xs text-muted-foreground">
+                  <strong className="text-foreground">💡 Tip:</strong> Tus pacientes podrán iniciar sesión, ver sus citas, pagos e historial, e instalar la app en su dispositivo con tu logo y nombre.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <div className="flex justify-end gap-3 pb-8">
           <Button variant="outline" onClick={() => navigate(-1)}>Cancelar</Button>
