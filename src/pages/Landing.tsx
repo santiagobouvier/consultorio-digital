@@ -912,7 +912,7 @@ const Landing = () => {
         <div className="max-w-7xl mx-auto flex flex-col items-center gap-4">
           <div className="flex items-center gap-2 text-gray-500 text-xs">
             <span className="text-lg">🇺🇾</span>
-            <span>Disponible únicamente en Uruguay por el momento</span>
+            <span>Disponible únicamente en Uruguay</span>
           </div>
           <p className="text-center text-gray-600 text-xs sm:text-sm font-light">
             © {new Date().getFullYear()} Sistema de Gestión de Consultorio
