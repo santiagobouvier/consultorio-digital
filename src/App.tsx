@@ -33,6 +33,7 @@ const Billing = lazy(() => import("./pages/Billing"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const PatientPortalDemo = lazy(() => import("./pages/PatientPortalDemo"));
 const PortalCustomization = lazy(() => import("./pages/PortalCustomization"));
+const ClinicPortal = lazy(() => import("./pages/ClinicPortal"));
 const SubscriptionGuard = lazy(() => import("./components/SubscriptionGuard"));
 
 const queryClient = new QueryClient();
@@ -65,6 +66,7 @@ const App = () => (
             <Route path="/billing" element={<Billing />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/portal-paciente/demo" element={<PatientPortalDemo />} />
+            <Route path="/portal/:slug" element={<ClinicPortal />} />
             
             {/* Protected routes - require active subscription */}
             <Route path="/dashboard" element={<Protected><Dashboard /></Protected>} />
