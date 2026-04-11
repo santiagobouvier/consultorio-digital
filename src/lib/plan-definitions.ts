@@ -7,8 +7,8 @@ export interface PlanDefinition {
   description: string;
   maxProfessionals: number | null; // null = unlimited
   maxPatients: number | null; // null = unlimited
-  priceAnnual: number; // Monthly price when paying annually (USD)
-  priceMonthly: number; // Monthly price when paying monthly (USD)
+  priceAnnual: number; // Monthly price when paying annually (UYU)
+  priceMonthly: number; // Monthly price when paying monthly (UYU)
   isHighlighted?: boolean;
   highlightLabel?: string;
 }
@@ -20,8 +20,8 @@ export const PLAN_DEFINITIONS: Record<string, PlanDefinition> = {
     description: "Para empezar con tu consultorio digital",
     maxProfessionals: 1,
     maxPatients: 5,
-    priceAnnual: 0, // TBD
-    priceMonthly: 0, // TBD
+    priceAnnual: 630,
+    priceMonthly: 790,
   },
   esencial: {
     code: "esencial",
@@ -29,8 +29,8 @@ export const PLAN_DEFINITIONS: Record<string, PlanDefinition> = {
     description: "Para profesionales independientes",
     maxProfessionals: 1,
     maxPatients: 15,
-    priceAnnual: 0, // TBD
-    priceMonthly: 0, // TBD
+    priceAnnual: 1350,
+    priceMonthly: 1690,
   },
   profesional: {
     code: "profesional",
@@ -38,8 +38,8 @@ export const PLAN_DEFINITIONS: Record<string, PlanDefinition> = {
     description: "Para consultorios en crecimiento",
     maxProfessionals: 2,
     maxPatients: 50,
-    priceAnnual: 0, // TBD
-    priceMonthly: 0, // TBD
+    priceAnnual: 2390,
+    priceMonthly: 2990,
     isHighlighted: true,
     highlightLabel: "Más elegido",
   },
@@ -49,8 +49,8 @@ export const PLAN_DEFINITIONS: Record<string, PlanDefinition> = {
     description: "Para clínicas y equipos grandes",
     maxProfessionals: 5,
     maxPatients: 200,
-    priceAnnual: 0, // TBD
-    priceMonthly: 0, // TBD
+    priceAnnual: 4390,
+    priceMonthly: 5490,
   },
   personalizado: {
     code: "personalizado",
@@ -98,7 +98,7 @@ export function getPlanPrice(planCode: string, billingCycle: "monthly" | "annual
 }
 
 export function formatPrice(price: number): string {
-  return `$${price}`;
+  return `$${price.toLocaleString("es-UY")}`;
 }
 
 // Map old plan codes to new ones for migration
