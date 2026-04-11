@@ -75,7 +75,22 @@ const Auth = () => {
         return;
       }
       if (result.redirected) return;
-      // Session set — redirect by role
+
+      // Check if user has any role — if not, they don't have an account
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: roles } = await supabase
+          .from("user_roles").select("role").eq("user_id", user.id);
+        const { data: business } = await supabase
+          .from("businesses").select("id").eq("owner_user_id", user.id).maybeSingle();
+
+        if ((!roles || roles.length === 0) && !business) {
+          await supabase.auth.signOut();
+          toast.error("No tenés una cuenta activa. Contactanos por WhatsApp para comenzar.");
+          return;
+        }
+      }
+
       toast.success("¡Bienvenido!");
       await redirectByRole();
     } catch (error: any) {
