@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { MonthlyHighlights } from "@/components/MonthlyHighlights";
-import { BrandFooter } from "@/components/BrandFooter";
+
 import {
   Select,
   SelectContent,
@@ -673,8 +673,6 @@ export const DesktopDashboard = () => {
         {/* Monthly Highlights Section - Secondary visual block */}
         <MonthlyHighlights businessId={businessId} className="pt-4" />
       </main>
-
-      <BrandFooter />
     </div>
   );
 };

@@ -40,7 +40,7 @@ import {
   type RecurrenceType,
 } from "@/lib/payments";
 import { useBusinessId } from "@/hooks/use-business-id";
-import { BrandFooter } from "@/components/BrandFooter";
+
 
 interface Patient {
   id: string;
@@ -366,8 +366,6 @@ const Payments = () => {
           </CardContent>
         </Card>
       </div>
-
-      <BrandFooter />
       {editingPayment && businessId && (
         <PaymentForm
           open={!!editingPayment}
