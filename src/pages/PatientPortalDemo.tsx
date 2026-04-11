@@ -1,19 +1,23 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
+import { supabase } from "@/integrations/supabase/client";
+import { useBusinessId } from "@/hooks/use-business-id";
+import { useToast } from "@/hooks/use-toast";
 import { 
   User, Calendar, CreditCard, Clock, MapPin, Video,
   Phone, Mail, Building2, ArrowLeft, FileText, 
   LayoutDashboard, Star, Heart, TrendingUp, CalendarCheck,
-  ChevronRight, CheckCircle2, AlertCircle
+  ChevronRight, CheckCircle2, AlertCircle, Sun, Moon,
+  Download, Share2, Copy, ExternalLink, Smartphone
 } from "lucide-react";
 import { formatCurrency } from "@/lib/payments";
 
-// ---- Simulated data (hardcoded, no DB calls) ----
+// ---- Simulated data ----
 const DEMO_PATIENT = {
   full_name: "Sofía Martínez",
   email: "sofia.martinez@email.com",
@@ -21,12 +25,6 @@ const DEMO_PATIENT = {
   reason_for_consultation: "Manejo de ansiedad y estrés laboral",
   created_at: "2025-11-15",
   private_notes: "Sofía ha mostrado avances significativos en técnicas de respiración y mindfulness. Continuar trabajando en límites laborales.",
-};
-
-const DEMO_BUSINESS = {
-  name: "Consultorio Dra. María López",
-  specialty: "Psicología Clínica",
-  contact_email: "dra.lopez@consultorio.com",
 };
 
 const today = new Date();
@@ -63,13 +61,136 @@ const TABS = [
   { id: "perfil", label: "Perfil", icon: User },
 ] as const;
 
+// Theme CSS variables generator
+const generateThemeVars = (primaryColor: string, isDark: boolean) => {
+  const vars: Record<string, string> = {};
+  if (isDark) {
+    vars["--background"] = "220 15% 8%";
+    vars["--foreground"] = "220 10% 98%";
+    vars["--card"] = "220 12% 11%";
+    vars["--card-foreground"] = "220 10% 98%";
+    vars["--popover"] = "220 12% 11%";
+    vars["--popover-foreground"] = "220 10% 98%";
+    vars["--primary"] = primaryColor;
+    vars["--primary-foreground"] = "0 0% 100%";
+    vars["--secondary"] = "220 12% 16%";
+    vars["--secondary-foreground"] = "220 10% 98%";
+    vars["--muted"] = "220 12% 16%";
+    vars["--muted-foreground"] = "220 8% 65%";
+    vars["--accent"] = "220 15% 18%";
+    vars["--accent-foreground"] = "220 10% 90%";
+    vars["--destructive"] = "0 70% 50%";
+    vars["--destructive-foreground"] = "0 0% 100%";
+    vars["--border"] = "220 12% 18%";
+    vars["--input"] = "220 12% 18%";
+    vars["--ring"] = primaryColor;
+  } else {
+    vars["--background"] = "220 15% 98%";
+    vars["--foreground"] = "220 10% 15%";
+    vars["--card"] = "0 0% 100%";
+    vars["--card-foreground"] = "220 10% 15%";
+    vars["--popover"] = "0 0% 100%";
+    vars["--popover-foreground"] = "220 10% 15%";
+    vars["--primary"] = primaryColor;
+    vars["--primary-foreground"] = "0 0% 100%";
+    vars["--secondary"] = "220 25% 96%";
+    vars["--secondary-foreground"] = "220 10% 25%";
+    vars["--muted"] = "220 15% 96%";
+    vars["--muted-foreground"] = "220 8% 46%";
+    vars["--accent"] = "220 30% 94%";
+    vars["--accent-foreground"] = "220 10% 25%";
+    vars["--destructive"] = "0 84% 60%";
+    vars["--destructive-foreground"] = "0 0% 100%";
+    vars["--border"] = "220 10% 90%";
+    vars["--input"] = "220 10% 90%";
+    vars["--ring"] = primaryColor;
+  }
+  return vars;
+};
+
+interface PortalBranding {
+  name: string;
+  specialty: string;
+  contact_email: string;
+  logoUrl: string;
+  lightColor: string;
+  darkColor: string;
+  slug: string;
+}
+
 const PatientPortalDemo = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const { businessId, loading: bizLoading } = useBusinessId(false);
   const [tab, setTab] = useState("resumen");
+  const [isDark, setIsDark] = useState(false);
+  const [showInstallPanel, setShowInstallPanel] = useState(false);
+  const [branding, setBranding] = useState<PortalBranding>({
+    name: "Consultorio Demo",
+    specialty: "Psicología Clínica",
+    contact_email: "demo@consultorio.com",
+    logoUrl: "",
+    lightColor: "176 100% 32%",
+    darkColor: "176 85% 42%",
+    slug: "",
+  });
+
+  // Load branding from DB
+  useEffect(() => {
+    const loadBranding = async () => {
+      // Try to load from the current user's business, or fallback to demo business
+      let query = supabase
+        .from("businesses")
+        .select("name, specialty, contact_email, portal_logo_url, portal_clinic_display_name, portal_primary_color, portal_dark_primary_color, public_slug, is_demo");
+      
+      if (businessId) {
+        query = query.eq("id", businessId);
+      } else {
+        query = query.eq("is_demo", true);
+      }
+
+      const { data } = await query.limit(1).maybeSingle();
+      if (data) {
+        setBranding({
+          name: (data as any).portal_clinic_display_name || data.name || "Mi Consultorio",
+          specialty: data.specialty || "Salud",
+          contact_email: data.contact_email || "",
+          logoUrl: (data as any).portal_logo_url || "",
+          lightColor: (data as any).portal_primary_color || "176 100% 32%",
+          darkColor: (data as any).portal_dark_primary_color || "176 85% 42%",
+          slug: data.public_slug || "",
+        });
+      }
+    };
+    loadBranding();
+  }, [businessId]);
+
+  // Apply theme CSS variables
+  const themeVars = useMemo(() => {
+    const color = isDark ? branding.darkColor : branding.lightColor;
+    return generateThemeVars(color, isDark);
+  }, [isDark, branding.lightColor, branding.darkColor]);
+
+  const themeStyle = useMemo(() => {
+    const style: Record<string, string> = {};
+    Object.entries(themeVars).forEach(([key, value]) => {
+      style[key] = value;
+    });
+    return style;
+  }, [themeVars]);
 
   const totalSessions = PAST.filter(a => a.status === "completed").length;
   const totalPaid = PAYMENTS.filter(p => p.status === "paid").reduce((s, p) => s + p.amount, 0);
   const pendingCount = PAYMENTS.filter(p => p.status === "pending").length;
+
+  const portalUrl = branding.slug
+    ? `${window.location.origin}/portal-paciente/demo?clinic=${branding.slug}`
+    : `${window.location.origin}/portal-paciente/demo`;
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(portalUrl);
+    toast({ title: "Link copiado", description: "Compartí este link con tus pacientes" });
+  };
 
   const statusBadge = (status: string) => {
     const map: Record<string, { variant: "default" | "secondary" | "destructive" | "outline"; label: string }> = {
@@ -89,11 +210,11 @@ const PatientPortalDemo = () => {
     return <Badge variant="secondary">Pendiente</Badge>;
   };
 
-  // ---- Tab Content Components ----
+  // ---- Tab Content ----
 
   const ResumenTab = () => (
     <div className="space-y-6">
-      {/* Welcome hero - desktop only */}
+      {/* Welcome hero - desktop */}
       <div className="hidden lg:block rounded-xl border bg-gradient-to-br from-primary/5 via-card to-accent/5 p-8">
         <div className="flex items-center gap-6">
           <Avatar className="h-20 w-20 border-4 border-primary/20">
@@ -102,59 +223,37 @@ const PatientPortalDemo = () => {
           <div>
             <h2 className="text-2xl font-bold text-foreground">Hola, {DEMO_PATIENT.full_name.split(" ")[0]} 👋</h2>
             <p className="text-muted-foreground mt-1">Acá podés ver tu resumen, próximas citas, pagos e historial.</p>
-            <p className="text-xs text-muted-foreground mt-2">{DEMO_BUSINESS.name} · {DEMO_BUSINESS.specialty}</p>
+            <p className="text-xs text-muted-foreground mt-2">{branding.name} · {branding.specialty}</p>
           </div>
         </div>
       </div>
 
-      {/* Stats grid */}
+      {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
-        <Card className="group hover:shadow-md transition-all">
-          <CardContent className="pt-4 pb-3 lg:pt-6 lg:pb-4 text-center">
-            <div className="inline-flex items-center justify-center h-10 w-10 rounded-full bg-primary/10 mb-2 lg:mb-3">
-              <Calendar className="h-5 w-5 text-primary" />
-            </div>
-            <p className="text-2xl lg:text-3xl font-bold text-primary">{UPCOMING.length}</p>
-            <p className="text-xs lg:text-sm text-muted-foreground">Próximas citas</p>
-          </CardContent>
-        </Card>
-        <Card className="group hover:shadow-md transition-all">
-          <CardContent className="pt-4 pb-3 lg:pt-6 lg:pb-4 text-center">
-            <div className="inline-flex items-center justify-center h-10 w-10 rounded-full bg-accent/10 mb-2 lg:mb-3">
-              <CalendarCheck className="h-5 w-5 text-accent-foreground" />
-            </div>
-            <p className="text-2xl lg:text-3xl font-bold">{totalSessions}</p>
-            <p className="text-xs lg:text-sm text-muted-foreground">Sesiones realizadas</p>
-          </CardContent>
-        </Card>
-        <Card className="group hover:shadow-md transition-all">
-          <CardContent className="pt-4 pb-3 lg:pt-6 lg:pb-4 text-center">
-            <div className="inline-flex items-center justify-center h-10 w-10 rounded-full bg-destructive/10 mb-2 lg:mb-3">
-              <AlertCircle className="h-5 w-5 text-destructive" />
-            </div>
-            <p className="text-2xl lg:text-3xl font-bold text-destructive">{pendingCount}</p>
-            <p className="text-xs lg:text-sm text-muted-foreground">Pagos pendientes</p>
-          </CardContent>
-        </Card>
-        <Card className="group hover:shadow-md transition-all">
-          <CardContent className="pt-4 pb-3 lg:pt-6 lg:pb-4 text-center">
-            <div className="inline-flex items-center justify-center h-10 w-10 rounded-full bg-primary/10 mb-2 lg:mb-3">
-              <TrendingUp className="h-5 w-5 text-primary" />
-            </div>
-            <p className="text-2xl lg:text-3xl font-bold text-primary">{formatCurrency(totalPaid, "UYU")}</p>
-            <p className="text-xs lg:text-sm text-muted-foreground">Total pagado</p>
-          </CardContent>
-        </Card>
+        {[
+          { icon: Calendar, value: UPCOMING.length, label: "Próximas citas", color: "text-primary" },
+          { icon: CalendarCheck, value: totalSessions, label: "Sesiones realizadas", color: "text-foreground" },
+          { icon: AlertCircle, value: pendingCount, label: "Pagos pendientes", color: "text-destructive" },
+          { icon: TrendingUp, value: formatCurrency(totalPaid, "UYU"), label: "Total pagado", color: "text-primary" },
+        ].map((stat, i) => (
+          <Card key={i} className="group hover:shadow-md transition-all">
+            <CardContent className="pt-4 pb-3 lg:pt-6 lg:pb-4 text-center">
+              <div className="inline-flex items-center justify-center h-10 w-10 rounded-full bg-primary/10 mb-2 lg:mb-3">
+                <stat.icon className={`h-5 w-5 ${i === 2 ? "text-destructive" : "text-primary"}`} />
+              </div>
+              <p className={`text-2xl lg:text-3xl font-bold ${stat.color}`}>{stat.value}</p>
+              <p className="text-xs lg:text-sm text-muted-foreground">{stat.label}</p>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      {/* Two-column layout on desktop */}
+      {/* Two-column */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
-        {/* Next appointment */}
         <Card className="hover:shadow-md transition-all">
           <CardHeader className="pb-2 lg:pb-3">
             <CardTitle className="text-base lg:text-lg flex items-center gap-2">
-              <Calendar className="h-4 w-4 lg:h-5 lg:w-5 text-primary" />
-              Próxima cita
+              <Calendar className="h-4 w-4 lg:h-5 lg:w-5 text-primary" /> Próxima cita
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -179,12 +278,10 @@ const PatientPortalDemo = () => {
           </CardContent>
         </Card>
 
-        {/* Professional notes */}
         <Card className="hover:shadow-md transition-all">
           <CardHeader className="pb-2 lg:pb-3">
             <CardTitle className="text-base lg:text-lg flex items-center gap-2">
-              <Heart className="h-4 w-4 lg:h-5 lg:w-5 text-primary" />
-              Notas de tu profesional
+              <Heart className="h-4 w-4 lg:h-5 lg:w-5 text-primary" /> Notas de tu profesional
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -197,7 +294,7 @@ const PatientPortalDemo = () => {
         </Card>
       </div>
 
-      {/* Pending payment alert */}
+      {/* Pending payment */}
       <Card className="border-destructive/30 bg-destructive/5 hover:shadow-md transition-all">
         <CardContent className="p-4 lg:p-5 flex items-center justify-between">
           <div className="flex items-center gap-3 lg:gap-4">
@@ -211,6 +308,24 @@ const PatientPortalDemo = () => {
           </div>
           <Button variant="outline" size="sm" className="hidden sm:flex gap-2" onClick={() => setTab("pagos")}>
             Ver pagos <ChevronRight className="h-4 w-4" />
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Install CTA */}
+      <Card className="border-primary/20 bg-primary/5 hover:shadow-md transition-all">
+        <CardContent className="p-4 lg:p-5 flex items-center justify-between">
+          <div className="flex items-center gap-3 lg:gap-4">
+            <div className="h-10 w-10 lg:h-12 lg:w-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+              <Smartphone className="h-5 w-5 lg:h-6 lg:w-6 text-primary" />
+            </div>
+            <div>
+              <p className="font-semibold text-sm lg:text-base">Instalá la app en tu celular</p>
+              <p className="text-xs lg:text-sm text-muted-foreground">Accedé rápido a tus citas y pagos desde el inicio</p>
+            </div>
+          </div>
+          <Button size="sm" className="gap-2" onClick={() => setShowInstallPanel(true)}>
+            <Download className="h-4 w-4" /> Instalar
           </Button>
         </CardContent>
       </Card>
@@ -271,7 +386,6 @@ const PatientPortalDemo = () => {
           <Card key={apt.id} className={`hover:shadow-md transition-all ${apt.status === "no_show" ? "opacity-60" : ""}`}>
             <CardContent className="p-4 lg:p-6">
               <div className="flex flex-col lg:flex-row lg:items-start gap-3 lg:gap-6">
-                {/* Date column */}
                 <div className="lg:w-48 shrink-0">
                   <div className="flex items-center lg:flex-col lg:items-start gap-2 lg:gap-0">
                     <p className="font-semibold text-sm lg:text-base">{formatShort(apt.date)}</p>
@@ -282,9 +396,7 @@ const PatientPortalDemo = () => {
                     <span className="lg:hidden">{statusBadge(apt.status)}</span>
                   </div>
                 </div>
-                {/* Divider - desktop only */}
                 <div className="hidden lg:block w-px bg-border self-stretch" />
-                {/* Notes column */}
                 <div className="flex-1 min-w-0">
                   <div className="hidden lg:flex items-center justify-between mb-2">
                     {statusBadge(apt.status)}
@@ -312,7 +424,6 @@ const PatientPortalDemo = () => {
 
   const PagosTab = () => (
     <div className="space-y-4 lg:space-y-6">
-      {/* Payment summary banner */}
       <Card className="border-destructive/30 bg-destructive/5">
         <CardContent className="p-4 lg:p-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
@@ -333,7 +444,7 @@ const PatientPortalDemo = () => {
         </CardContent>
       </Card>
 
-      {/* Desktop: table-like layout; Mobile: cards */}
+      {/* Desktop table */}
       <div className="hidden lg:block">
         <Card>
           <CardHeader className="pb-3">
@@ -344,11 +455,7 @@ const PatientPortalDemo = () => {
           <CardContent>
             <div className="border rounded-lg overflow-hidden">
               <div className="grid grid-cols-5 gap-4 px-4 py-3 bg-muted/50 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                <span>Concepto</span>
-                <span>Monto</span>
-                <span>Vencimiento</span>
-                <span>Estado</span>
-                <span>Fecha de pago</span>
+                <span>Concepto</span><span>Monto</span><span>Vencimiento</span><span>Estado</span><span>Fecha de pago</span>
               </div>
               {PAYMENTS.map((p, i) => (
                 <div key={p.id} className={`grid grid-cols-5 gap-4 px-4 py-4 items-center text-sm ${i !== PAYMENTS.length - 1 ? "border-b" : ""} hover:bg-muted/30 transition-colors`}>
@@ -392,7 +499,6 @@ const PatientPortalDemo = () => {
 
   const PerfilTab = () => (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
-      {/* Patient profile card */}
       <Card className="hover:shadow-md transition-all">
         <CardHeader className="pb-3">
           <CardTitle className="text-base lg:text-lg flex items-center gap-2">
@@ -439,7 +545,6 @@ const PatientPortalDemo = () => {
         </CardContent>
       </Card>
 
-      {/* Clinic info card */}
       <Card className="hover:shadow-md transition-all">
         <CardHeader className="pb-3">
           <CardTitle className="text-base lg:text-lg flex items-center gap-2">
@@ -448,12 +553,16 @@ const PatientPortalDemo = () => {
         </CardHeader>
         <CardContent className="space-y-4 lg:space-y-5">
           <div className="flex items-center gap-4 pb-4 border-b">
-            <div className="h-16 w-16 lg:h-20 lg:w-20 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-              <Building2 className="h-8 w-8 lg:h-10 lg:w-10 text-primary" />
-            </div>
+            {branding.logoUrl ? (
+              <img src={branding.logoUrl} className="h-16 w-16 lg:h-20 lg:w-20 rounded-xl object-cover" alt="" />
+            ) : (
+              <div className="h-16 w-16 lg:h-20 lg:w-20 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                <Building2 className="h-8 w-8 lg:h-10 lg:w-10 text-primary" />
+              </div>
+            )}
             <div>
-              <p className="font-bold text-base lg:text-lg">{DEMO_BUSINESS.name}</p>
-              <p className="text-sm text-muted-foreground capitalize">{DEMO_BUSINESS.specialty}</p>
+              <p className="font-bold text-base lg:text-lg">{branding.name}</p>
+              <p className="text-sm text-muted-foreground capitalize">{branding.specialty}</p>
             </div>
           </div>
           <div className="flex items-center gap-3 text-sm">
@@ -462,11 +571,9 @@ const PatientPortalDemo = () => {
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Contacto</p>
-              <p className="font-medium">{DEMO_BUSINESS.contact_email}</p>
+              <p className="font-medium">{branding.contact_email}</p>
             </div>
           </div>
-          
-          {/* Quick stats */}
           <Separator />
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-lg bg-muted/40 p-3 text-center">
@@ -492,121 +599,185 @@ const PatientPortalDemo = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Demo Banner */}
-      <div className="bg-primary text-primary-foreground text-center py-2 px-4 text-sm font-medium">
-        <Star className="inline h-4 w-4 mr-1 -mt-0.5" />
-        Demo — Así ve un paciente su portal personal
-      </div>
+    <div className="min-h-screen" style={themeStyle as any}>
+      <div className="min-h-screen bg-background text-foreground transition-colors duration-300">
+        {/* Demo Banner */}
+        <div className="bg-primary text-primary-foreground text-center py-2 px-4 text-sm font-medium">
+          <Star className="inline h-4 w-4 mr-1 -mt-0.5" />
+          Demo — Así ve un paciente su portal personal
+        </div>
 
-      {/* Header */}
-      <header className="border-b bg-card sticky top-0 z-10">
-        <div className="px-4 lg:px-8 py-3 lg:py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3 lg:gap-4">
-            <Avatar className="h-9 w-9 lg:h-10 lg:w-10 hidden lg:flex">
-              <AvatarFallback className="bg-primary/10 text-primary font-bold">SM</AvatarFallback>
-            </Avatar>
-            <div>
-              <h1 className="text-lg lg:text-xl font-bold">Mi Portal</h1>
-              <p className="text-xs lg:text-sm text-muted-foreground">{DEMO_BUSINESS.name}</p>
+        {/* Header */}
+        <header className="border-b border-border bg-card sticky top-0 z-10">
+          <div className="px-4 lg:px-8 py-3 lg:py-4 flex items-center justify-between">
+            <div className="flex items-center gap-3 lg:gap-4">
+              {branding.logoUrl ? (
+                <img src={branding.logoUrl} className="h-9 w-9 lg:h-10 lg:w-10 rounded-lg object-cover" alt="" />
+              ) : (
+                <Avatar className="h-9 w-9 lg:h-10 lg:w-10">
+                  <AvatarFallback className="bg-primary/10 text-primary font-bold">
+                    {branding.name.substring(0, 2).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+              )}
+              <div>
+                <h1 className="text-lg lg:text-xl font-bold text-foreground">{branding.name}</h1>
+                <p className="text-xs lg:text-sm text-muted-foreground">{branding.specialty}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {/* Dark/Light toggle */}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsDark(!isDark)}
+                className="h-9 w-9 rounded-full"
+                title={isDark ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+              >
+                {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              </Button>
+              {/* Share/Install */}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowInstallPanel(!showInstallPanel)}
+                className="h-9 w-9 rounded-full"
+                title="Compartir / Instalar"
+              >
+                <Share2 className="h-4 w-4" />
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => navigate("/dashboard")} className="gap-2">
+                <ArrowLeft className="h-4 w-4" />
+                <span className="hidden sm:inline">Volver</span>
+              </Button>
             </div>
           </div>
-          <Button variant="outline" size="sm" onClick={() => navigate("/dashboard")} className="gap-2">
-            <ArrowLeft className="h-4 w-4" />
-            <span className="hidden sm:inline">Volver al panel</span>
-          </Button>
-        </div>
-      </header>
+        </header>
 
-      <div className="lg:flex lg:gap-0 min-h-[calc(100vh-6rem)]">
-        {/* Desktop Sidebar Navigation */}
-        <aside className="hidden lg:flex lg:flex-col w-72 shrink-0 border-r bg-card/80 backdrop-blur-sm sticky top-16 self-start h-[calc(100vh-4rem)]">
-          <nav className="p-4 space-y-1">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 mb-3">Navegación</p>
-            {TABS.map(t => {
-              const Icon = t.icon;
-              const isActive = tab === t.id;
-              return (
-                <button
-                  key={t.id}
-                  onClick={() => setTab(t.id)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
-                    isActive 
-                      ? "bg-primary/10 text-primary shadow-sm" 
-                      : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
-                  }`}
-                >
-                  <Icon className={`h-5 w-5 ${isActive ? "text-primary" : ""}`} />
-                  {t.label}
-                  {t.id === "pagos" && pendingCount > 0 && (
-                    <span className="ml-auto bg-destructive text-destructive-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                      {pendingCount}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </nav>
-
-          {/* Sidebar patient info - pushed to bottom */}
-          <div className="mt-auto p-4 border-t">
-            <div className="flex items-center gap-3">
-              <Avatar className="h-10 w-10">
-                <AvatarFallback className="bg-primary/10 text-primary font-bold text-sm">SM</AvatarFallback>
-              </Avatar>
-              <div className="min-w-0">
-                <p className="font-medium text-sm truncate">{DEMO_PATIENT.full_name}</p>
-                <p className="text-xs text-muted-foreground truncate">{DEMO_PATIENT.email}</p>
+        {/* Install/Share Panel */}
+        {showInstallPanel && (
+          <div className="border-b border-border bg-card px-4 lg:px-8 py-4 animate-fade-in">
+            <div className="max-w-2xl mx-auto">
+              <div className="flex items-center gap-3 mb-3">
+                <Smartphone className="h-5 w-5 text-primary" />
+                <h3 className="font-semibold text-foreground">Instalá la app de {branding.name}</h3>
+              </div>
+              <p className="text-sm text-muted-foreground mb-4">
+                Compartí este link con tus pacientes. Al abrirlo, podrán instalar la app directamente en su celular con el logo y nombre de tu consultorio.
+              </p>
+              <div className="flex items-center gap-2">
+                <div className="flex-1 bg-muted rounded-lg px-3 py-2 text-sm text-foreground font-mono truncate border border-border">
+                  {portalUrl}
+                </div>
+                <Button size="sm" variant="outline" className="gap-2 shrink-0" onClick={handleCopyLink}>
+                  <Copy className="h-4 w-4" /> Copiar
+                </Button>
+                <Button size="sm" className="gap-2 shrink-0" onClick={() => {
+                  if (navigator.share) {
+                    navigator.share({ title: branding.name, text: `Accedé a tu portal de ${branding.name}`, url: portalUrl });
+                  } else {
+                    handleCopyLink();
+                  }
+                }}>
+                  <ExternalLink className="h-4 w-4" /> Compartir
+                </Button>
+              </div>
+              <div className="mt-3 p-3 rounded-lg bg-primary/5 border border-primary/10">
+                <p className="text-xs text-muted-foreground">
+                  <strong className="text-foreground">💡 Tip:</strong> Los pacientes pueden instalarlo desde el navegador: en iPhone, tocar "Compartir → Agregar a inicio"; en Android, tocar el menú "⋮ → Instalar app".
+                </p>
               </div>
             </div>
           </div>
-        </aside>
+        )}
 
-        {/* Mobile Tab Bar */}
-        <div className="lg:hidden border-b bg-card/95 backdrop-blur-sm sticky top-[52px] z-10">
-          <div className="flex justify-around px-1">
-            {TABS.map(t => {
-              const Icon = t.icon;
-              const isActive = tab === t.id;
-              return (
-                <button
-                  key={t.id}
-                  onClick={() => setTab(t.id)}
-                  className={`relative flex flex-col items-center gap-0.5 px-2 py-2.5 text-[10px] sm:text-xs font-medium whitespace-nowrap transition-colors flex-1 ${
-                    isActive 
-                      ? "text-primary" 
-                      : "text-muted-foreground"
-                  }`}
-                >
-                  <Icon className={`h-5 w-5 ${isActive ? "text-primary" : ""}`} />
-                  <span>{t.label}</span>
-                  {isActive && <div className="absolute bottom-0 left-2 right-2 h-0.5 bg-primary rounded-full" />}
-                  {t.id === "pagos" && pendingCount > 0 && (
-                    <span className="absolute -top-0.5 right-1 bg-destructive text-destructive-foreground text-[9px] rounded-full h-4 w-4 flex items-center justify-center">
-                      {pendingCount}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        <div className="lg:flex lg:gap-0 min-h-[calc(100vh-6rem)]">
+          {/* Desktop Sidebar */}
+          <aside className="hidden lg:flex lg:flex-col w-72 shrink-0 border-r border-border bg-card/80 backdrop-blur-sm sticky top-16 self-start h-[calc(100vh-4rem)]">
+            <nav className="p-4 space-y-1">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 mb-3">Navegación</p>
+              {TABS.map(t => {
+                const Icon = t.icon;
+                const isActive = tab === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => setTab(t.id)}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+                      isActive 
+                        ? "bg-primary/10 text-primary shadow-sm" 
+                        : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                    }`}
+                  >
+                    <Icon className={`h-5 w-5 ${isActive ? "text-primary" : ""}`} />
+                    {t.label}
+                    {t.id === "pagos" && pendingCount > 0 && (
+                      <span className="ml-auto bg-destructive text-destructive-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                        {pendingCount}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </nav>
 
-        {/* Main Content */}
-        <main className="flex-1 min-w-0 px-4 lg:px-10 xl:px-16 py-4 lg:py-8 max-w-[1200px]">
-          {/* Mobile welcome */}
-          <div className="lg:hidden flex items-center gap-3 mb-4">
-            <Avatar className="h-10 w-10">
-              <AvatarFallback className="bg-primary/10 text-primary font-bold text-sm">SM</AvatarFallback>
-            </Avatar>
-            <div>
-              <p className="font-semibold text-sm">Hola, {DEMO_PATIENT.full_name.split(" ")[0]} 👋</p>
-              <p className="text-xs text-muted-foreground">{DEMO_BUSINESS.name}</p>
+            <div className="mt-auto p-4 border-t border-border">
+              <div className="flex items-center gap-3">
+                <Avatar className="h-10 w-10">
+                  <AvatarFallback className="bg-primary/10 text-primary font-bold text-sm">SM</AvatarFallback>
+                </Avatar>
+                <div className="min-w-0">
+                  <p className="font-medium text-sm truncate text-foreground">{DEMO_PATIENT.full_name}</p>
+                  <p className="text-xs text-muted-foreground truncate">{DEMO_PATIENT.email}</p>
+                </div>
+              </div>
+            </div>
+          </aside>
+
+          {/* Mobile Tab Bar */}
+          <div className="lg:hidden border-b border-border bg-card/95 backdrop-blur-sm sticky top-[52px] z-10">
+            <div className="flex justify-around px-1">
+              {TABS.map(t => {
+                const Icon = t.icon;
+                const isActive = tab === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => setTab(t.id)}
+                    className={`relative flex flex-col items-center gap-0.5 px-2 py-2.5 text-[10px] sm:text-xs font-medium whitespace-nowrap transition-colors flex-1 ${
+                      isActive ? "text-primary" : "text-muted-foreground"
+                    }`}
+                  >
+                    <Icon className={`h-5 w-5 ${isActive ? "text-primary" : ""}`} />
+                    <span>{t.label}</span>
+                    {isActive && <div className="absolute bottom-0 left-2 right-2 h-0.5 bg-primary rounded-full" />}
+                    {t.id === "pagos" && pendingCount > 0 && (
+                      <span className="absolute -top-0.5 right-1 bg-destructive text-destructive-foreground text-[9px] rounded-full h-4 w-4 flex items-center justify-center">
+                        {pendingCount}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          {tabContent[tab]}
-        </main>
+          {/* Main Content */}
+          <main className="flex-1 min-w-0 px-4 lg:px-10 xl:px-16 py-4 lg:py-8 max-w-[1200px]">
+            {/* Mobile welcome */}
+            <div className="lg:hidden flex items-center gap-3 mb-4">
+              <Avatar className="h-10 w-10">
+                <AvatarFallback className="bg-primary/10 text-primary font-bold text-sm">SM</AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="font-semibold text-sm text-foreground">Hola, {DEMO_PATIENT.full_name.split(" ")[0]} 👋</p>
+                <p className="text-xs text-muted-foreground">{branding.name}</p>
+              </div>
+            </div>
+
+            {tabContent[tab]}
+          </main>
+        </div>
       </div>
     </div>
   );
