@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.setup-demo-user]
 verify_jwt = false
+
+[functions.get-clinic-manifest]
+verify_jwt = false
