@@ -929,6 +929,19 @@ const Dashboard = () => {
               </CardContent>
             </Card>
           )}
+
+          <Card 
+            className="mobile-card-compact hover:shadow-md transition-all cursor-pointer group active:scale-[0.98] border-primary/20 bg-primary/5 col-span-2 sm:col-span-1"
+            onClick={() => navigate("/personalizar-portal")}
+          >
+            <CardContent className="p-4 flex flex-col items-center justify-center text-center min-h-[90px]">
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mb-2 group-hover:bg-primary/20 transition-colors">
+                <Palette className="h-5 w-5 text-primary" />
+              </div>
+              <p className="font-semibold text-sm text-foreground">Personalizar Portal</p>
+              <p className="text-xs text-muted-foreground">Logo y colores</p>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Monthly Highlights - at the bottom */}
