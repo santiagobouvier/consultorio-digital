@@ -67,6 +67,7 @@ export const DesktopDashboard = () => {
   // Data state
   const [businessName, setBusinessName] = useState("");
   const [userName, setUserName] = useState("");
+  const [isDemo, setIsDemo] = useState(false);
   const [selectedProfessionalId, setSelectedProfessionalId] = useState<string>("all");
   
   // KPIs
