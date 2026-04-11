@@ -734,9 +734,9 @@ const PatientPortalDemo = () => {
             </div>
           </aside>
 
-          {/* Mobile Tab Bar */}
-          <div className="lg:hidden border-b border-border bg-card/95 backdrop-blur-sm sticky top-[52px] z-10">
-            <div className="flex justify-around px-1">
+        {/* Mobile Bottom Nav Bar - native app style */}
+          <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card/95 backdrop-blur-xl safe-area-bottom">
+            <div className="flex justify-around items-end px-1 pt-1.5 pb-2">
               {TABS.map(t => {
                 const Icon = t.icon;
                 const isActive = tab === t.id;
@@ -744,15 +744,16 @@ const PatientPortalDemo = () => {
                   <button
                     key={t.id}
                     onClick={() => setTab(t.id)}
-                    className={`relative flex flex-col items-center gap-0.5 px-2 py-2.5 text-[10px] sm:text-xs font-medium whitespace-nowrap transition-colors flex-1 ${
-                      isActive ? "text-primary" : "text-muted-foreground"
+                    className={`relative flex flex-col items-center gap-0.5 px-3 py-1 text-[10px] font-medium transition-all ${
+                      isActive ? "text-primary scale-105" : "text-muted-foreground"
                     }`}
                   >
-                    <Icon className={`h-5 w-5 ${isActive ? "text-primary" : ""}`} />
+                    <div className={`p-1.5 rounded-xl transition-colors ${isActive ? "bg-primary/12" : ""}`}>
+                      <Icon className={`h-5 w-5 ${isActive ? "text-primary" : ""}`} />
+                    </div>
                     <span>{t.label}</span>
-                    {isActive && <div className="absolute bottom-0 left-2 right-2 h-0.5 bg-primary rounded-full" />}
                     {t.id === "pagos" && pendingCount > 0 && (
-                      <span className="absolute -top-0.5 right-1 bg-destructive text-destructive-foreground text-[9px] rounded-full h-4 w-4 flex items-center justify-center">
+                      <span className="absolute top-0 right-0 bg-destructive text-destructive-foreground text-[9px] rounded-full h-4 w-4 flex items-center justify-center font-bold">
                         {pendingCount}
                       </span>
                     )}
@@ -760,10 +761,10 @@ const PatientPortalDemo = () => {
                 );
               })}
             </div>
-          </div>
+          </nav>
 
           {/* Main Content */}
-          <main className="flex-1 min-w-0 px-4 lg:px-10 xl:px-16 py-4 lg:py-8 max-w-[1200px]">
+          <main className="flex-1 min-w-0 px-4 lg:px-10 xl:px-16 py-4 lg:py-8 pb-24 lg:pb-8 max-w-[1200px]">
             {/* Mobile welcome */}
             <div className="lg:hidden flex items-center gap-3 mb-4">
               <Avatar className="h-10 w-10">
