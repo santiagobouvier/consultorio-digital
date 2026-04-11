@@ -1,18 +1,24 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { ArrowLeft, Building2, Mail, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, Building2, Mail, Eye, EyeOff, Sparkles } from "lucide-react";
 import { useHostnameBusiness } from "@/hooks/use-hostname-business";
 import { Logo } from "@/components/Logo";
+import { getPlanDefinition, formatPrice } from "@/lib/plan-definitions";
 
 const Auth = () => {
+  const [searchParams] = useSearchParams();
+  const selectedPlan = searchParams.get("plan");
+  const billingPeriod = searchParams.get("billing") || "annual";
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -20,9 +26,13 @@ const Auth = () => {
   const [forgotEmail, setForgotEmail] = useState("");
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotSent, setForgotSent] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(!!selectedPlan);
   const navigate = useNavigate();
 
   const { business: hostnameBusiness, loading: businessLoading } = useHostnameBusiness();
+
+  const planDef = selectedPlan ? getPlanDefinition(selectedPlan) : null;
+  const planPrice = planDef ? (billingPeriod === "annual" ? planDef.priceAnnual : planDef.priceMonthly) : 0;
 
   const redirectByRole = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -44,8 +54,34 @@ const Auth = () => {
       .from("businesses").select("id, onboarding_completed, name").eq("owner_user_id", user.id).maybeSingle();
     if (business) {
       navigate(business.onboarding_completed ? "/dashboard" : "/onboarding-consultorio");
+    } else if (selectedPlan) {
+      // New user with plan — redirect to checkout
+      await createSubscription();
     } else {
       navigate("/configurar-negocio");
+    }
+  };
+
+  const createSubscription = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke("create-subscription", {
+        body: {
+          plan_code: selectedPlan,
+          billing_period: billingPeriod,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.checkout_url) {
+        window.location.href = data.checkout_url;
+      } else {
+        navigate("/dashboard");
+      }
+    } catch (err: any) {
+      console.error("Subscription error:", err);
+      toast.error("Error al crear la suscripción. Intentá de nuevo.");
+      navigate("/dashboard");
     }
   };
 
@@ -53,10 +89,26 @@ const Auth = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
-      toast.success("¡Bienvenido de nuevo!");
-      await redirectByRole();
+      if (isSignUp) {
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: { full_name: name },
+            emailRedirectTo: selectedPlan
+              ? `${window.location.origin}/auth?plan=${selectedPlan}&billing=${billingPeriod}`
+              : window.location.origin,
+          },
+        });
+        if (error) throw error;
+        toast.success("¡Revisá tu email para confirmar tu cuenta!");
+        return;
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        toast.success("¡Bienvenido de nuevo!");
+        await redirectByRole();
+      }
     } catch (error: any) {
       toast.error(error.message || "Ocurrió un error");
     } finally {
@@ -67,29 +119,22 @@ const Auth = () => {
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
     try {
+      // Store plan info before redirect
+      if (selectedPlan) {
+        localStorage.setItem("pending_plan", selectedPlan);
+        localStorage.setItem("pending_billing", billingPeriod);
+      }
+
       const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin,
+        redirect_uri: selectedPlan
+          ? `${window.location.origin}/auth?plan=${selectedPlan}&billing=${billingPeriod}`
+          : window.location.origin,
       });
       if (result.error) {
         toast.error("Error al iniciar sesión con Google");
         return;
       }
       if (result.redirected) return;
-
-      // Check if user has any role — if not, they don't have an account
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: roles } = await supabase
-          .from("user_roles").select("role").eq("user_id", user.id);
-        const { data: business } = await supabase
-          .from("businesses").select("id").eq("owner_user_id", user.id).maybeSingle();
-
-        if ((!roles || roles.length === 0) && !business) {
-          await supabase.auth.signOut();
-          toast.error("No tenés una cuenta activa. Contactanos por WhatsApp para comenzar.");
-          return;
-        }
-      }
 
       toast.success("¡Bienvenido!");
       await redirectByRole();
@@ -99,6 +144,31 @@ const Auth = () => {
       setGoogleLoading(false);
     }
   };
+
+  // Handle post-OAuth redirect
+  useEffect(() => {
+    const checkPostAuth = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const pendingPlan = localStorage.getItem("pending_plan");
+      if (pendingPlan && selectedPlan) {
+        localStorage.removeItem("pending_plan");
+        localStorage.removeItem("pending_billing");
+
+        // Check if user already has a business
+        const { data: business } = await supabase
+          .from("businesses").select("id").eq("owner_user_id", user.id).maybeSingle();
+
+        if (!business) {
+          await createSubscription();
+        } else {
+          await redirectByRole();
+        }
+      }
+    };
+    checkPostAuth();
+  }, []);
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -144,6 +214,24 @@ const Auth = () => {
           Volver al inicio
         </Link>
 
+        {/* Plan badge */}
+        {selectedPlan && planDef && (
+          <div className="mb-4 rounded-xl border border-[hsla(160,80%,50%,0.3)] bg-[hsla(160,80%,50%,0.05)] p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-[hsla(160,80%,50%,0.1)] flex items-center justify-center">
+                <Sparkles className="w-5 h-5 text-[hsl(160,80%,50%)]" />
+              </div>
+              <div>
+                <p className="text-sm text-white/50">Plan seleccionado</p>
+                <p className="font-semibold text-white">{planDef.name} — {formatPrice(planPrice)}/mes</p>
+              </div>
+            </div>
+            <p className="text-xs text-[hsl(160,80%,50%)] mt-2 ml-13">
+              ✨ 7 días gratis, después se cobra automáticamente
+            </p>
+          </div>
+        )}
+
         {/* Contextual business header */}
         {showContextualLogin && (
           <div className="mb-4 rounded-xl border border-[hsla(176,80%,40%,0.2)] bg-[hsla(176,80%,40%,0.05)] p-4 flex items-center gap-3">
@@ -166,14 +254,16 @@ const Auth = () => {
         >
           <div className="p-6 pb-2 text-center space-y-1">
             <h2 className="text-2xl font-bold text-white">
-              {showForgotPassword ? "Recuperar acceso" : "Bienvenido"}
+              {showForgotPassword ? "Recuperar acceso" : isSignUp ? "Crear cuenta" : "Bienvenido"}
             </h2>
             <p className="text-sm text-white/50">
               {showForgotPassword
                 ? "Te enviaremos un email para restablecer tu contraseña"
-                : showContextualLogin
-                  ? `Iniciá sesión en ${hostnameBusiness.name}`
-                  : "Iniciá sesión en tu cuenta profesional"
+                : isSignUp
+                  ? "Registrate para empezar tu prueba gratuita"
+                  : showContextualLogin
+                    ? `Iniciá sesión en ${hostnameBusiness.name}`
+                    : "Iniciá sesión en tu cuenta profesional"
               }
             </p>
           </div>
@@ -245,7 +335,7 @@ const Auth = () => {
                       <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
                     </svg>
                   )}
-                  Continuar con Google
+                  {isSignUp ? "Registrarse con Google" : "Continuar con Google"}
                 </Button>
 
                 <div className="relative my-5">
@@ -255,8 +345,22 @@ const Auth = () => {
                   </span>
                 </div>
 
-                {/* Email Login */}
+                {/* Email Form */}
                 <form onSubmit={handleSubmit} className="space-y-4">
+                  {isSignUp && (
+                    <div className="space-y-2">
+                      <Label htmlFor="name" className="text-white/70">Nombre completo</Label>
+                      <Input
+                        id="name"
+                        type="text"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        required
+                        placeholder="María García"
+                        className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-[hsl(176,80%,40%)]"
+                      />
+                    </div>
+                  )}
                   <div className="space-y-2">
                     <Label htmlFor="email" className="text-white/70">Correo electrónico</Label>
                     <Input
@@ -272,13 +376,15 @@ const Auth = () => {
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <Label htmlFor="password" className="text-white/70">Contraseña</Label>
-                      <button
-                        type="button"
-                        className="text-xs text-[hsl(176,80%,40%)] hover:underline"
-                        onClick={() => setShowForgotPassword(true)}
-                      >
-                        ¿Olvidaste tu contraseña?
-                      </button>
+                      {!isSignUp && (
+                        <button
+                          type="button"
+                          className="text-xs text-[hsl(176,80%,40%)] hover:underline"
+                          onClick={() => setShowForgotPassword(true)}
+                        >
+                          ¿Olvidaste tu contraseña?
+                        </button>
+                      )}
                     </div>
                     <div className="relative">
                       <Input
@@ -307,20 +413,32 @@ const Auth = () => {
                     disabled={loading}
                     style={{ backgroundColor: '#00a5a0', boxShadow: '0 4px 20px rgba(0,165,160,0.3)' }}
                   >
-                    {loading ? "Aguardá un momento..." : "Iniciar sesión"}
+                    {loading ? "Aguardá un momento..." : isSignUp ? "Crear cuenta y empezar prueba" : "Iniciar sesión"}
                   </Button>
                 </form>
 
                 <div className="mt-5 text-center text-sm">
-                  <span className="text-white/40">¿Necesitás un consultorio? </span>
-                  <a
-                    href="https://wa.me/59891093977?text=Hola,%20me%20interesa%20Tu%20Consultorio%20Digital."
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-[hsl(176,80%,40%)] hover:underline font-medium"
-                  >
-                    Hablemos
-                  </a>
+                  {isSignUp ? (
+                    <>
+                      <span className="text-white/40">¿Ya tenés cuenta? </span>
+                      <button
+                        onClick={() => setIsSignUp(false)}
+                        className="text-[hsl(176,80%,40%)] hover:underline font-medium"
+                      >
+                        Iniciá sesión
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-white/40">¿No tenés cuenta? </span>
+                      <button
+                        onClick={() => setIsSignUp(true)}
+                        className="text-[hsl(176,80%,40%)] hover:underline font-medium"
+                      >
+                        Registrate gratis
+                      </button>
+                    </>
+                  )}
                 </div>
               </>
             )}
