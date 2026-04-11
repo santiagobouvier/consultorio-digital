@@ -103,11 +103,14 @@ export const DesktopDashboard = () => {
 
       const { data: business } = await supabase
         .from("businesses")
-        .select("name")
+        .select("name, is_demo")
         .eq("id", businessId)
         .single();
 
-      if (business) setBusinessName(business.name);
+      if (business) {
+        setBusinessName(business.name);
+        setIsDemo(business.is_demo || false);
+      }
 
       // Today's appointments count
       const today = new Date();
