@@ -195,6 +195,11 @@ const Dashboard = () => {
 
       setBusinessId(currentBusinessId);
 
+      // Check if demo business
+      const { data: bizInfo } = await supabase
+        .from("businesses").select("is_demo").eq("id", currentBusinessId).maybeSingle();
+      setIsDemo(bizInfo?.is_demo || false);
+
       const { count: patientsCount } = await supabase
         .from("patients")
         .select("*", { count: "exact", head: true })
