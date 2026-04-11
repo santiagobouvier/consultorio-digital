@@ -31,6 +31,7 @@ const CommandCenter = lazy(() => import("./pages/CommandCenter"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const Billing = lazy(() => import("./pages/Billing"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const PatientPortalDemo = lazy(() => import("./pages/PatientPortalDemo"));
 const SubscriptionGuard = lazy(() => import("./components/SubscriptionGuard"));
 
 const queryClient = new QueryClient();
