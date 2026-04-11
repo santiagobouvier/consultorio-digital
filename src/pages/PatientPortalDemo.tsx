@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
+import { usePWAInstall } from "@/hooks/use-pwa-install";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +16,7 @@ import {
   Phone, Mail, Building2, ArrowLeft, FileText, 
   LayoutDashboard, Star, Heart, TrendingUp, CalendarCheck,
   ChevronRight, CheckCircle2, AlertCircle, Sun, Moon,
-  Download, Share2, Copy, ExternalLink, Smartphone,
+  Download, Smartphone,
   Camera, Save, Edit2, X
 } from "lucide-react";
 import { formatCurrency } from "@/lib/payments";
@@ -128,7 +129,7 @@ const PatientPortalDemo = () => {
   const { businessId, loading: bizLoading } = useBusinessId(false);
   const [tab, setTab] = useState("resumen");
   const [isDark, setIsDark] = useState(false);
-  const [showInstallPanel, setShowInstallPanel] = useState(false);
+  const { canInstall, install, isInstalled } = usePWAInstall();
   const [branding, setBranding] = useState<PortalBranding>({
     name: "Consultorio Demo",
     specialty: "Psicología Clínica",
@@ -193,13 +194,13 @@ const PatientPortalDemo = () => {
   const totalPaid = PAYMENTS.filter(p => p.status === "paid").reduce((s, p) => s + p.amount, 0);
   const pendingCount = PAYMENTS.filter(p => p.status === "pending").length;
 
-  const portalUrl = branding.slug
-    ? `${window.location.origin}/portal-paciente/demo?clinic=${branding.slug}`
-    : `${window.location.origin}/portal-paciente/demo`;
-
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(portalUrl);
-    toast({ title: "Link copiado", description: "Compartí este link con tus pacientes" });
+  const handleInstallApp = async () => {
+    if (canInstall) {
+      await install();
+    } else {
+      // Fallback: open published URL for installation
+      window.open("https://agenda-psicologia.lovable.app", "_blank", "noopener,noreferrer");
+    }
   };
 
   const initials = demoPatient.full_name.split(" ").map(w => w[0]).join("").substring(0, 2).toUpperCase();
@@ -360,23 +361,25 @@ const PatientPortalDemo = () => {
         </Card>
       )}
 
-      {/* Install CTA */}
-      <Card className="border-primary/20 bg-primary/5 hover:shadow-md transition-all">
-        <CardContent className="p-4 lg:p-5 flex items-center justify-between">
-          <div className="flex items-center gap-3 lg:gap-4">
-            <div className="h-10 w-10 lg:h-12 lg:w-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-              <Smartphone className="h-5 w-5 lg:h-6 lg:w-6 text-primary" />
+      {/* Install CTA - only show if not already installed */}
+      {!isInstalled && (
+        <Card className="border-primary/20 bg-primary/5 hover:shadow-md transition-all">
+          <CardContent className="p-4 lg:p-5 flex items-center justify-between">
+            <div className="flex items-center gap-3 lg:gap-4">
+              <div className="h-10 w-10 lg:h-12 lg:w-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <Smartphone className="h-5 w-5 lg:h-6 lg:w-6 text-primary" />
+              </div>
+              <div>
+                <p className="font-semibold text-sm lg:text-base">Instalá la aplicación en tu dispositivo</p>
+                <p className="text-xs lg:text-sm text-muted-foreground">Accedé rápido desde tu celular, tablet o escritorio</p>
+              </div>
             </div>
-            <div>
-              <p className="font-semibold text-sm lg:text-base">Instalá la aplicación en tu dispositivo</p>
-              <p className="text-xs lg:text-sm text-muted-foreground">Accedé rápido desde tu celular, tablet o escritorio</p>
-            </div>
-          </div>
-          <Button size="sm" className="gap-2" onClick={() => setShowInstallPanel(true)}>
-            <Download className="h-4 w-4" /> Instalar
-          </Button>
-        </CardContent>
-      </Card>
+            <Button size="sm" className="gap-2" onClick={handleInstallApp}>
+              <Download className="h-4 w-4" /> Instalar
+            </Button>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 
@@ -759,15 +762,6 @@ const PatientPortalDemo = () => {
               >
                 {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
               </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setShowInstallPanel(!showInstallPanel)}
-                className="h-9 w-9 rounded-full"
-                title="Compartir / Instalar"
-              >
-                <Share2 className="h-4 w-4" />
-              </Button>
               <Button variant="outline" size="sm" onClick={() => navigate("/dashboard")} className="gap-2">
                 <ArrowLeft className="h-4 w-4" />
                 <span className="hidden sm:inline">Volver</span>
@@ -776,42 +770,6 @@ const PatientPortalDemo = () => {
           </div>
         </header>
 
-        {/* Install/Share Panel */}
-        {showInstallPanel && (
-          <div className="border-b border-border bg-card px-4 lg:px-8 py-4 animate-fade-in">
-            <div className="max-w-2xl mx-auto">
-              <div className="flex items-center gap-3 mb-3">
-                <Smartphone className="h-5 w-5 text-primary" />
-                <h3 className="font-semibold text-foreground">Instalá la aplicación de {branding.name}</h3>
-              </div>
-              <p className="text-sm text-muted-foreground mb-4">
-                Compartí este link con tus pacientes. Al abrirlo, podrán instalar la aplicación en su celular, tablet o escritorio con el logo y nombre de tu consultorio.
-              </p>
-              <div className="flex items-center gap-2">
-                <div className="flex-1 bg-muted rounded-lg px-3 py-2 text-sm text-foreground font-mono truncate border border-border">
-                  {portalUrl}
-                </div>
-                <Button size="sm" variant="outline" className="gap-2 shrink-0" onClick={handleCopyLink}>
-                  <Copy className="h-4 w-4" /> Copiar
-                </Button>
-                <Button size="sm" className="gap-2 shrink-0" onClick={() => {
-                  if (navigator.share) {
-                    navigator.share({ title: branding.name, text: `Accedé a tu portal de ${branding.name}`, url: portalUrl });
-                  } else {
-                    handleCopyLink();
-                  }
-                }}>
-                  <ExternalLink className="h-4 w-4" /> Compartir
-                </Button>
-              </div>
-              <div className="mt-3 p-3 rounded-xl bg-primary/5 border border-primary/10">
-                <p className="text-xs text-muted-foreground">
-                  <strong className="text-foreground">💡 Tip:</strong> En iPhone: "Compartir → Agregar a inicio". En Android: menú "⋮ → Instalar app". En escritorio: buscar el ícono de instalación en la barra de navegación del navegador.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
 
         <div className="lg:flex lg:gap-0 min-h-[calc(100vh-6rem)]">
           {/* Desktop Sidebar */}
