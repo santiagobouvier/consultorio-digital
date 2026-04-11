@@ -1,0 +1,95 @@
+import { ReactNode, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useSubscriptionStatus } from "@/hooks/use-subscription-status";
+import LoadingPage from "@/components/LoadingPage";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AlertTriangle, CreditCard } from "lucide-react";
+
+interface SubscriptionGuardProps {
+  children: ReactNode;
+}
+
+const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
+  const navigate = useNavigate();
+  const [businessId, setBusinessId] = useState<string | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+
+  useEffect(() => {
+    const getBusinessId = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        navigate("/auth");
+        return;
+      }
+
+      // Get business via RPC
+      const { data } = await supabase.rpc("get_user_business_id", { _user_id: user.id });
+      setBusinessId(data || null);
+      setAuthLoading(false);
+    };
+    getBusinessId();
+  }, [navigate]);
+
+  const { status, loading, trialDaysLeft, isSuperAdmin } = useSubscriptionStatus(businessId);
+
+  if (authLoading || loading) return <LoadingPage />;
+
+  // No business yet — let them through to setup
+  if (!businessId) return <>{children}</>;
+
+  // Super admin, active, trial — allowed
+  if (isSuperAdmin || status === "active" || status === "trial") {
+    return <>{children}</>;
+  }
+
+  // Blocked: expired, cancelled, past_due, none
+  const messages: Record<string, { title: string; desc: string }> = {
+    expired: {
+      title: "Tu período de prueba ha terminado",
+      desc: "Para seguir usando Tu Consultorio Digital, activá tu suscripción eligiendo un plan.",
+    },
+    cancelled: {
+      title: "Tu suscripción fue cancelada",
+      desc: "Reactivá tu plan para volver a acceder a todas las funcionalidades.",
+    },
+    past_due: {
+      title: "Tu pago está pendiente",
+      desc: "Actualizá tu método de pago para continuar usando la plataforma.",
+    },
+    none: {
+      title: "No tenés una suscripción activa",
+      desc: "Elegí un plan para comenzar a usar Tu Consultorio Digital.",
+    },
+  };
+
+  const msg = messages[status] || messages.none;
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <Card className="max-w-md w-full text-center">
+        <CardHeader>
+          <div className="mx-auto mb-4 w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center">
+            <AlertTriangle className="h-8 w-8 text-destructive" />
+          </div>
+          <CardTitle className="text-xl">{msg.title}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-muted-foreground">{msg.desc}</p>
+          <div className="flex flex-col gap-2">
+            <Button onClick={() => navigate("/billing")} className="w-full">
+              <CreditCard className="mr-2 h-4 w-4" />
+              Ir a Facturación
+            </Button>
+            <Button variant="outline" onClick={() => navigate("/")} className="w-full">
+              Volver al inicio
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+export default SubscriptionGuard;
