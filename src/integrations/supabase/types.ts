@@ -220,6 +220,11 @@ export type Database = {
           plan_code: string
           plan_expires_at: string | null
           plan_started_at: string | null
+          portal_clinic_display_name: string | null
+          portal_dark_primary_color: string | null
+          portal_logo_url: string | null
+          portal_primary_color: string | null
+          portal_theme_preset: string | null
           public_slug: string
           shared_calendar: boolean
           specialty: string | null
@@ -244,6 +249,11 @@ export type Database = {
           plan_code?: string
           plan_expires_at?: string | null
           plan_started_at?: string | null
+          portal_clinic_display_name?: string | null
+          portal_dark_primary_color?: string | null
+          portal_logo_url?: string | null
+          portal_primary_color?: string | null
+          portal_theme_preset?: string | null
           public_slug: string
           shared_calendar?: boolean
           specialty?: string | null
@@ -268,6 +278,11 @@ export type Database = {
           plan_code?: string
           plan_expires_at?: string | null
           plan_started_at?: string | null
+          portal_clinic_display_name?: string | null
+          portal_dark_primary_color?: string | null
+          portal_logo_url?: string | null
+          portal_primary_color?: string | null
+          portal_theme_preset?: string | null
           public_slug?: string
           shared_calendar?: boolean
           specialty?: string | null

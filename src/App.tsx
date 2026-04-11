@@ -32,6 +32,7 @@ const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const Billing = lazy(() => import("./pages/Billing"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const PatientPortalDemo = lazy(() => import("./pages/PatientPortalDemo"));
+const PortalCustomization = lazy(() => import("./pages/PortalCustomization"));
 const SubscriptionGuard = lazy(() => import("./components/SubscriptionGuard"));
 
 const queryClient = new QueryClient();
@@ -77,6 +78,7 @@ const App = () => (
             <Route path="/horarios-disponibles" element={<Protected><AvailableSlots /></Protected>} />
             <Route path="/solicitudes" element={<Protected><AppointmentRequests /></Protected>} />
             <Route path="/pagos" element={<Protected><Payments /></Protected>} />
+            <Route path="/personalizar-portal" element={<Protected><PortalCustomization /></Protected>} />
             <Route path="/saas-admin" element={<SaasAdmin />} />
             
             {/* Catch-all */}
