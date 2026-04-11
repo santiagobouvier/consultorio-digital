@@ -537,8 +537,6 @@ const CalendarV2 = () => {
           />
         )}
       </div>
-
-      <BrandFooter />
     </div>
   );
 };

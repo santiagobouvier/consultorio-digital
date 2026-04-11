@@ -673,8 +673,6 @@ export const DesktopDashboard = () => {
         {/* Monthly Highlights Section - Secondary visual block */}
         <MonthlyHighlights businessId={businessId} className="pt-4" />
       </main>
-
-      <BrandFooter />
     </div>
   );
 };

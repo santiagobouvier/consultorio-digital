@@ -347,8 +347,6 @@ const Patients = () => {
         )}
       </div>
 
-      <BrandFooter />
-
       <PatientForm
         open={showForm}
         onOpenChange={setShowForm}

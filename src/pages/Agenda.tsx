@@ -840,8 +840,6 @@ const Agenda = () => {
           </Button>
         )}
       </div>
-
-      <BrandFooter />
     </div>
   );
 };

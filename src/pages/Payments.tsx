@@ -366,8 +366,6 @@ const Payments = () => {
           </CardContent>
         </Card>
       </div>
-
-      <BrandFooter />
       {editingPayment && businessId && (
         <PaymentForm
           open={!!editingPayment}
