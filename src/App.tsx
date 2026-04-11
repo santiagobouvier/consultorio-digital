@@ -31,6 +31,7 @@ const CommandCenter = lazy(() => import("./pages/CommandCenter"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const Billing = lazy(() => import("./pages/Billing"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const PatientPortalDemo = lazy(() => import("./pages/PatientPortalDemo"));
 const SubscriptionGuard = lazy(() => import("./components/SubscriptionGuard"));
 
 const queryClient = new QueryClient();
@@ -62,6 +63,7 @@ const App = () => (
             <Route path="/onboarding-consultorio" element={<ConsultorioOnboarding />} />
             <Route path="/billing" element={<Billing />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/portal-paciente/demo" element={<PatientPortalDemo />} />
             
             {/* Protected routes - require active subscription */}
             <Route path="/dashboard" element={<Protected><Dashboard /></Protected>} />
