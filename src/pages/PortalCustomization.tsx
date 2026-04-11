@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useBusinessId } from "@/hooks/use-business-id";
 import { supabase } from "@/integrations/supabase/client";
@@ -163,13 +162,71 @@ const PortalCustomization = () => {
     }
   };
 
+  const PortalPreview = ({ mode, primaryColor, bgColor, cardBg, textColor, subtextColor, borderColor }: {
+    mode: "light" | "dark";
+    primaryColor: string;
+    bgColor: string;
+    cardBg: string;
+    textColor: string;
+    subtextColor: string;
+    borderColor: string;
+  }) => (
+    <div className="rounded-xl border overflow-hidden" style={{ backgroundColor: bgColor, borderColor }}>
+      <div className="px-3 py-2 flex items-center gap-2 border-b" style={{ backgroundColor: cardBg, borderColor }}>
+        {mode === "light" ? <Sun className="h-3.5 w-3.5" style={{ color: subtextColor }} /> : <Moon className="h-3.5 w-3.5" style={{ color: subtextColor }} />}
+        <span className="text-xs font-medium" style={{ color: subtextColor }}>
+          {mode === "light" ? "Modo claro" : "Modo oscuro"}
+        </span>
+      </div>
+      <div className="p-4 space-y-3">
+        <div className="flex items-center gap-3">
+          {logoUrl ? (
+            <img src={logoUrl} className="h-9 w-9 rounded-lg object-cover" alt="" />
+          ) : (
+            <div className="h-9 w-9 rounded-lg flex items-center justify-center" style={{ backgroundColor: `hsl(${primaryColor} / 0.12)` }}>
+              <Building2 className="h-4 w-4" style={{ color: `hsl(${primaryColor})` }} />
+            </div>
+          )}
+          <div>
+            <p className="font-bold text-xs" style={{ color: textColor }}>{clinicName || "Mi Portal"}</p>
+            <p className="text-[10px]" style={{ color: subtextColor }}>Portal del paciente</p>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          {["Resumen", "Citas", "Pagos"].map((t, i) => (
+            <div key={t} className="px-2.5 py-1 rounded-md text-[10px] font-medium"
+              style={i === 0 ? { backgroundColor: `hsl(${primaryColor} / ${mode === "light" ? "0.1" : "0.15"})`, color: `hsl(${primaryColor})` } : { color: subtextColor }}
+            >{t}</div>
+          ))}
+        </div>
+        <div className="grid grid-cols-3 gap-1.5">
+          {["2", "4", "1"].map((v, i) => (
+            <div key={i} className="rounded-md p-2 text-center" style={{ border: `1px solid ${borderColor}`, backgroundColor: cardBg }}>
+              <p className="text-sm font-bold" style={{ color: `hsl(${primaryColor})` }}>{v}</p>
+              <p className="text-[9px]" style={{ color: subtextColor }}>{["Citas", "Sesiones", "Pagos"][i]}</p>
+            </div>
+          ))}
+        </div>
+        <div className="rounded-lg p-3 space-y-1.5" style={{ border: `1px solid ${borderColor}`, backgroundColor: cardBg }}>
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] font-semibold" style={{ color: textColor }}>Próxima cita</p>
+            <div className="px-1.5 py-0.5 rounded text-[8px] font-medium" style={{ backgroundColor: `hsl(${primaryColor} / 0.15)`, color: `hsl(${primaryColor})` }}>Confirmada</div>
+          </div>
+          <p className="text-[9px]" style={{ color: subtextColor }}>Lunes 14 de abril — 10:00 hs</p>
+        </div>
+        <div className="rounded-md py-2 text-center text-[10px] font-semibold" style={{ backgroundColor: `hsl(${primaryColor})`, color: "white" }}>
+          Ver todas las citas
+        </div>
+      </div>
+    </div>
+  );
+
   if (bizLoading) {
     return <div className="min-h-screen flex items-center justify-center"><p className="text-muted-foreground">Cargando...</p></div>;
   }
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="border-b bg-card sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-4 lg:px-8 py-3 lg:py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -196,9 +253,7 @@ const PortalCustomization = () => {
       </header>
 
       <main className="max-w-5xl mx-auto px-4 lg:px-8 py-6 lg:py-10 space-y-6 lg:space-y-8">
-        {/* Identity Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Logo */}
           <Card>
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
@@ -219,18 +274,9 @@ const PortalCustomization = () => {
                 </Avatar>
                 <div className="space-y-2">
                   <label className="cursor-pointer">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handleLogoUpload}
-                      disabled={uploading}
-                    />
+                    <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} disabled={uploading} />
                     <Button variant="outline" size="sm" className="gap-2" asChild>
-                      <span>
-                        <Upload className="h-4 w-4" />
-                        {uploading ? "Subiendo..." : "Subir logo"}
-                      </span>
+                      <span><Upload className="h-4 w-4" />{uploading ? "Subiendo..." : "Subir logo"}</span>
                     </Button>
                   </label>
                   <p className="text-xs text-muted-foreground">PNG, JPG o SVG. Máx 2MB.</p>
@@ -239,7 +285,6 @@ const PortalCustomization = () => {
             </CardContent>
           </Card>
 
-          {/* Clinic name */}
           <Card>
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
@@ -250,12 +295,7 @@ const PortalCustomization = () => {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="clinic-name">Nombre visible</Label>
-                <Input
-                  id="clinic-name"
-                  value={clinicName}
-                  onChange={e => setClinicName(e.target.value)}
-                  placeholder="Ej: Consultorio Dra. María López"
-                />
+                <Input id="clinic-name" value={clinicName} onChange={e => setClinicName(e.target.value)} placeholder="Ej: Consultorio Dra. María López" />
                 <p className="text-xs text-muted-foreground">Este nombre aparece debajo del logo en el portal</p>
               </div>
             </CardContent>
@@ -264,7 +304,6 @@ const PortalCustomization = () => {
 
         <Separator />
 
-        {/* Color Theme Section */}
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
@@ -273,7 +312,6 @@ const PortalCustomization = () => {
             <CardDescription>Elegí una paleta predefinida o personalizá los colores del portal</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Preset grid */}
             <div>
               <Label className="text-sm mb-3 block">Paletas predefinidas</Label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -292,12 +330,14 @@ const PortalCustomization = () => {
                         <Check className="h-4 w-4 text-primary" />
                       </div>
                     )}
-                    <div
-                      className="h-10 w-10 rounded-full border-2 border-card shadow-inner"
-                      style={{
-                        background: preset.id === "custom" ? preset.preview : preset.preview,
-                      }}
-                    />
+                    {preset.id !== "custom" ? (
+                      <div className="flex gap-1">
+                        <div className="h-8 w-8 rounded-full border-2 border-card shadow-inner" style={{ background: preset.preview }} />
+                        <div className="h-8 w-8 rounded-full border-2 border-card shadow-inner" style={{ background: `hsl(${preset.dark})` }} />
+                      </div>
+                    ) : (
+                      <div className="h-8 w-16 rounded-full border-2 border-card shadow-inner" style={{ background: preset.preview }} />
+                    )}
                     <span className="text-xs font-medium">{preset.name}</span>
                   </button>
                 ))}
@@ -306,7 +346,6 @@ const PortalCustomization = () => {
 
             <Separator />
 
-            {/* Custom color pickers */}
             <div>
               <Label className="text-sm mb-3 block">Colores personalizados</Label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -316,120 +355,55 @@ const PortalCustomization = () => {
                     <Label className="text-sm">Color primario (modo claro)</Label>
                   </div>
                   <div className="flex items-center gap-3">
-                    <input
-                      type="color"
-                      value={customLightHex}
-                      onChange={e => handleCustomLightChange(e.target.value)}
-                      className="h-12 w-12 rounded-lg border border-border cursor-pointer p-1"
-                    />
+                    <input type="color" value={customLightHex} onChange={e => handleCustomLightChange(e.target.value)} className="h-12 w-12 rounded-lg border border-border cursor-pointer p-1" />
                     <div className="flex-1">
-                      <Input
-                        value={customLightHex}
-                        onChange={e => handleCustomLightChange(e.target.value)}
-                        placeholder="#00a89d"
-                        className="font-mono text-sm"
-                      />
-                      <p className="text-xs text-muted-foreground mt-1">HSL: {lightColor}</p>
+                      <Input value={customLightHex} onChange={e => handleCustomLightChange(e.target.value)} placeholder="#00a89d" className="font-mono text-sm" />
                     </div>
                   </div>
-                  {/* Preview bar */}
-                  <div className="rounded-lg p-4 border" style={{ backgroundColor: `hsl(${lightColor})` }}>
-                    <p className="text-sm font-semibold" style={{ color: "white" }}>Vista previa modo claro</p>
-                  </div>
                 </div>
-
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
                     <Moon className="h-4 w-4 text-muted-foreground" />
                     <Label className="text-sm">Color primario (modo oscuro)</Label>
                   </div>
                   <div className="flex items-center gap-3">
-                    <input
-                      type="color"
-                      value={customDarkHex}
-                      onChange={e => handleCustomDarkChange(e.target.value)}
-                      className="h-12 w-12 rounded-lg border border-border cursor-pointer p-1"
-                    />
+                    <input type="color" value={customDarkHex} onChange={e => handleCustomDarkChange(e.target.value)} className="h-12 w-12 rounded-lg border border-border cursor-pointer p-1" />
                     <div className="flex-1">
-                      <Input
-                        value={customDarkHex}
-                        onChange={e => handleCustomDarkChange(e.target.value)}
-                        placeholder="#00bfb3"
-                        className="font-mono text-sm"
-                      />
-                      <p className="text-xs text-muted-foreground mt-1">HSL: {darkColor}</p>
+                      <Input value={customDarkHex} onChange={e => handleCustomDarkChange(e.target.value)} placeholder="#00bfb3" className="font-mono text-sm" />
                     </div>
                   </div>
-                  <div className="rounded-lg p-4 border" style={{ backgroundColor: `hsl(${darkColor})` }}>
-                    <p className="text-sm font-semibold" style={{ color: "white" }}>Vista previa modo oscuro</p>
-                  </div>
                 </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div>
+              <Label className="text-sm mb-4 block">Vista previa en tiempo real</Label>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <PortalPreview
+                  mode="light"
+                  primaryColor={lightColor}
+                  bgColor="#f8fafb"
+                  cardBg="#ffffff"
+                  textColor="#1a1a1a"
+                  subtextColor="#888888"
+                  borderColor="#e5e7eb"
+                />
+                <PortalPreview
+                  mode="dark"
+                  primaryColor={darkColor}
+                  bgColor="#0f1419"
+                  cardBg="#1a2028"
+                  textColor="#f0f0f0"
+                  subtextColor="#777777"
+                  borderColor="#2a3038"
+                />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Live Preview */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Eye className="h-4 w-4 text-primary" /> Vista previa del portal
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="rounded-xl border overflow-hidden">
-              {/* Simulated portal header */}
-              <div className="p-4 border-b" style={{ backgroundColor: `hsl(${lightColor} / 0.05)` }}>
-                <div className="flex items-center gap-3">
-                  {logoUrl ? (
-                    <img src={logoUrl} className="h-10 w-10 rounded-lg object-cover" alt="Logo" />
-                  ) : (
-                    <div className="h-10 w-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: `hsl(${lightColor} / 0.15)` }}>
-                      <Building2 className="h-5 w-5" style={{ color: `hsl(${lightColor})` }} />
-                    </div>
-                  )}
-                  <div>
-                    <p className="font-bold text-sm">{clinicName || "Mi Portal"}</p>
-                    <p className="text-xs text-muted-foreground">Portal del paciente</p>
-                  </div>
-                </div>
-              </div>
-              {/* Simulated content */}
-              <div className="p-4 space-y-3 bg-background">
-                <div className="flex gap-3">
-                  {["Resumen", "Citas", "Pagos"].map((t, i) => (
-                    <div
-                      key={t}
-                      className="px-3 py-1.5 rounded-lg text-xs font-medium"
-                      style={i === 0 ? {
-                        backgroundColor: `hsl(${lightColor} / 0.1)`,
-                        color: `hsl(${lightColor})`,
-                      } : {
-                        color: "hsl(var(--muted-foreground))",
-                      }}
-                    >
-                      {t}
-                    </div>
-                  ))}
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { label: "Próximas citas", value: "2" },
-                    { label: "Sesiones", value: "4" },
-                    { label: "Pagos pend.", value: "1" },
-                  ].map(item => (
-                    <div key={item.label} className="rounded-lg border p-3 text-center">
-                      <p className="text-lg font-bold" style={{ color: `hsl(${lightColor})` }}>{item.value}</p>
-                      <p className="text-[10px] text-muted-foreground">{item.label}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Save button (bottom) */}
         <div className="flex justify-end gap-3 pb-8">
           <Button variant="outline" onClick={() => navigate(-1)}>Cancelar</Button>
           <Button onClick={handleSave} disabled={saving} className="gap-2">
