@@ -45,8 +45,8 @@ export const PLAN_DEFINITIONS: Record<string, PlanDefinition> = {
   },
   clinica: {
     code: "clinica",
-    name: "Clínica",
-    description: "Para clínicas y equipos grandes",
+    name: "Consultorio",
+    description: "Para consultorios y equipos grandes",
     maxProfessionals: 5,
     maxPatients: 200,
     priceAnnual: 4390,
