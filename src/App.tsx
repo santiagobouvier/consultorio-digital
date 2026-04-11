@@ -28,6 +28,7 @@ const ProfessionalRegister = lazy(() => import("./pages/ProfessionalRegister"));
 const ConsultorioOnboarding = lazy(() => import("./pages/ConsultorioOnboarding"));
 const SaasAdmin = lazy(() => import("./pages/SaasAdmin"));
 const CommandCenter = lazy(() => import("./pages/CommandCenter"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
