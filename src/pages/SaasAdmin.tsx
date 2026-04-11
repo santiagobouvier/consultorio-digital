@@ -404,15 +404,15 @@ const SaasAdmin = () => {
               </Button>
               <div>
                 <div className="flex items-center gap-3">
-                  <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">Command Center</h1>
+                  <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">Panel de Gestión</h1>
                   <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/20">
                     <Zap className="h-3 w-3 mr-1" />
-                    Live
+                    En vivo
                   </Badge>
                 </div>
-                <p className="text-sm text-white/50 mt-1 font-mono flex items-center gap-2">
-                  <Terminal className="h-3.5 w-3.5" />
-                  admin@tuconsultorio ~
+                <p className="text-sm text-white/50 mt-1 flex items-center gap-2">
+                  <Building2 className="h-3.5 w-3.5" />
+                  Administración de consultorios
                 </p>
               </div>
             </div>
