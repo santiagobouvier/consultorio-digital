@@ -1,12 +1,10 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { 
   Users, 
   MessageCircle, 
   Calendar, 
   HelpCircle, 
-  ChevronLeft, 
-  ChevronRight, 
   Check, 
   Shield, 
   CreditCard, 
@@ -22,12 +20,6 @@ import {
 } from "lucide-react";
 import PricingCard from "@/components/PricingCard";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import useEmblaCarousel from "embla-carousel-react";
-import dashboardMobile from "@/assets/screenshots/dashboard-mobile.png";
-import appointmentsMobile from "@/assets/screenshots/appointments-mobile.png";
-import agendaMobile from "@/assets/screenshots/agenda-mobile.png";
-import patientsMobile from "@/assets/screenshots/patients-mobile.png";
-import remindersMobile from "@/assets/screenshots/reminders-mobile.png";
 import { PLAN_DEFINITIONS, PLAN_ORDER, formatPrice } from "@/lib/plan-definitions";
 import logoWhite from "@/assets/logo-consultorio-digital-white.png";
 import { InstallAppButton } from "@/components/InstallAppButton";
@@ -37,34 +29,7 @@ const BRAND_COLOR = "#00a5a0";
 const BRAND_COLOR_LIGHT = "rgba(0, 165, 160, 0.15)";
 const BRAND_SHADOW = "rgba(0, 165, 160, 0.35)";
 
-// Screenshot slides for carousel
-const screenshotSlides = [
-  {
-    title: "Dashboard Principal",
-    description: "Visualizá citas del día, pagos pendientes y acciones rápidas. Todo lo importante en un solo lugar.",
-    image: dashboardMobile
-  },
-  {
-    title: "Agenda Privada",
-    description: "Calendario visual solo accesible para vos y tus pacientes. Control total de horarios y disponibilidad.",
-    image: agendaMobile
-  },
-  {
-    title: "Fichas de Pacientes",
-    description: "Historial completo, notas privadas, estado de pagos y próximas citas de cada paciente.",
-    image: patientsMobile
-  },
-  {
-    title: "Recordatorios automáticos",
-    description: "Enviá recordatorios de citas y pagos por email de forma automática. Menos ausencias, más control.",
-    image: remindersMobile
-  },
-  {
-    title: "Portal del Paciente",
-    description: "Cada paciente accede con su usuario, ve sus citas y puede reservar turnos disponibles.",
-    image: appointmentsMobile
-  }
-];
+// Screenshot slides removed - section to be redesigned later
 
 // FAQ items
 const faqItems = [
@@ -156,177 +121,7 @@ const benefits = [
   },
 ];
 
-// Screenshots Carousel Component
-const ScreenshotsCarousel = () => {
-  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, align: "center" });
-  const [selectedIndex, setSelectedIndex] = useState(0);
-
-  const scrollPrev = useCallback(() => emblaApi && emblaApi.scrollPrev(), [emblaApi]);
-  const scrollNext = useCallback(() => emblaApi && emblaApi.scrollNext(), [emblaApi]);
-
-  const onSelect = useCallback(() => {
-    if (!emblaApi) return;
-    setSelectedIndex(emblaApi.selectedScrollSnap());
-  }, [emblaApi]);
-
-  useEffect(() => {
-    if (!emblaApi) return;
-    onSelect();
-    emblaApi.on("select", onSelect);
-    return () => { emblaApi.off("select", onSelect); };
-  }, [emblaApi, onSelect]);
-
-  return (
-    <section id="conoce-el-sistema" className="px-4 sm:px-6 py-14 sm:py-24" style={{ backgroundColor: '#080808' }}>
-      <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-10 sm:mb-16">
-          <h2 className="text-xl sm:text-3xl md:text-4xl font-bold mb-3 sm:mb-4 tracking-tight">
-            Conocé el sistema por dentro
-          </h2>
-          <p className="text-gray-500 text-sm sm:text-lg font-light">
-            Así se ve tu consultorio organizado.
-          </p>
-        </div>
-
-        {/* Carousel */}
-        <div className="relative">
-          <div className="overflow-hidden rounded-xl md:rounded-2xl" ref={emblaRef}>
-            <div className="flex">
-              {screenshotSlides.map((slide, index) => (
-                <div 
-                  key={index} 
-                  className="flex-[0_0_100%] min-w-0 px-2 md:px-4"
-                >
-                  {/* Mobile Layout */}
-                  <div 
-                    className="md:hidden rounded-xl border border-white/10 p-5 flex flex-col"
-                    style={{ 
-                      backgroundColor: '#111111',
-                      boxShadow: selectedIndex === index ? '0 8px 40px rgba(0, 199, 138, 0.15)' : 'none'
-                    }}
-                  >
-                    <div className="mb-5">
-                      <span 
-                        className="text-[10px] font-semibold tracking-widest uppercase mb-2 block"
-                        style={{ color: '#00c78a' }}
-                      >
-                        {index + 1}/{screenshotSlides.length}
-                      </span>
-                      <h3 className="text-lg font-bold text-white mb-2">
-                        {slide.title}
-                      </h3>
-                      <p className="text-gray-400 text-sm leading-relaxed font-light">
-                        {slide.description}
-                      </p>
-                    </div>
-                    
-                    <div className="flex justify-center">
-                      {slide.image ? (
-                        <img 
-                          src={slide.image} 
-                          alt={slide.title}
-                          className="h-[320px] w-auto object-contain rounded-lg"
-                        />
-                      ) : (
-                        <div 
-                          className="h-[320px] w-[180px] rounded-lg flex items-center justify-center border border-white/10"
-                          style={{ backgroundColor: '#1a1a1a' }}
-                        >
-                          <p className="text-gray-500 text-xs font-light">Próximamente</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Desktop Layout */}
-                  <div 
-                    className={`hidden md:flex items-center gap-12 lg:gap-20 rounded-2xl p-8 lg:p-12 border border-white/10 ${
-                      index % 2 === 0 ? 'flex-row' : 'flex-row-reverse'
-                    }`}
-                    style={{ 
-                      backgroundColor: '#111111',
-                      boxShadow: selectedIndex === index ? '0 8px 40px rgba(0, 199, 138, 0.15)' : 'none'
-                    }}
-                  >
-                    <div className="flex-1 flex justify-center">
-                      {slide.image ? (
-                        <img 
-                          src={slide.image} 
-                          alt={slide.title}
-                          className="h-[400px] lg:h-[480px] w-auto object-contain rounded-xl shadow-2xl"
-                        />
-                      ) : (
-                        <div 
-                          className="h-[400px] lg:h-[480px] w-[220px] lg:w-[260px] rounded-xl flex items-center justify-center border border-white/10"
-                          style={{ backgroundColor: '#1a1a1a' }}
-                        >
-                          <p className="text-gray-500 text-sm font-light">Próximamente</p>
-                        </div>
-                      )}
-                    </div>
-                    
-                    <div className="flex-1 flex flex-col justify-center">
-                      <span 
-                        className="text-xs font-semibold tracking-widest uppercase mb-4"
-                        style={{ color: '#00c78a' }}
-                      >
-                        Funcionalidad {index + 1}/{screenshotSlides.length}
-                      </span>
-                      <h3 className="text-2xl lg:text-3xl font-bold text-white mb-4">
-                        {slide.title}
-                      </h3>
-                      <p className="text-gray-400 text-base lg:text-lg leading-relaxed font-light">
-                        {slide.description}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Navigation Arrows */}
-          <button
-            onClick={scrollPrev}
-            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-2 md:-translate-x-6 w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 z-10"
-            style={{ 
-              backgroundColor: '#00c78a',
-              boxShadow: '0 4px 20px rgba(0, 199, 138, 0.3)'
-            }}
-          >
-            <ChevronLeft className="w-5 h-5 md:w-6 md:h-6 text-white" />
-          </button>
-          <button
-            onClick={scrollNext}
-            className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-2 md:translate-x-6 w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 z-10"
-            style={{ 
-              backgroundColor: '#00c78a',
-              boxShadow: '0 4px 20px rgba(0, 199, 138, 0.3)'
-            }}
-          >
-            <ChevronRight className="w-5 h-5 md:w-6 md:h-6 text-white" />
-          </button>
-        </div>
-
-        {/* Dots Indicator */}
-        <div className="flex justify-center gap-2 mt-6">
-          {screenshotSlides.map((_, index) => (
-            <button
-              key={index}
-              onClick={() => emblaApi?.scrollTo(index)}
-              className="w-2 h-2 rounded-full transition-all duration-300"
-              style={{ 
-                backgroundColor: selectedIndex === index ? '#00c78a' : 'rgba(255, 255, 255, 0.2)',
-                transform: selectedIndex === index ? 'scale(1.3)' : 'scale(1)'
-              }}
-            />
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-};
-
+// Screenshots carousel removed - to be redesigned later
 const Landing = () => {
   const [isAnnual, setIsAnnual] = useState(true);
   const whatsappDemo = "https://wa.me/59891093977?text=Hola,%20quiero%20ver%20una%20demo%20del%20sistema%20para%20consultorios.";
@@ -522,8 +317,7 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* Screenshots Carousel Section */}
-      <ScreenshotsCarousel />
+      {/* Screenshots section removed - to be redesigned */}
 
       {/* Features Section - Current Real Features */}
       <section className="px-4 sm:px-6 py-14 sm:py-28 bg-black">
