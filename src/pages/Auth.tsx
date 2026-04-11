@@ -5,12 +5,10 @@ import { lovable } from "@/integrations/lovable/index";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { ArrowLeft, Building2, Mail, Eye, EyeOff } from "lucide-react";
 import { useHostnameBusiness } from "@/hooks/use-hostname-business";
 import { Logo } from "@/components/Logo";
-import { Separator } from "@/components/ui/separator";
 
 const Auth = () => {
   const [email, setEmail] = useState("");
@@ -125,7 +123,7 @@ const Auth = () => {
 
         <Link
           to="/"
-          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-4 transition-colors"
+          className="inline-flex items-center gap-2 text-sm text-white/40 hover:text-white/70 mb-4 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           Volver al inicio
@@ -133,49 +131,53 @@ const Auth = () => {
 
         {/* Contextual business header */}
         {showContextualLogin && (
-          <Card className="mb-4 border-primary/20 bg-primary/5">
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                <Building2 className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Ingresando a</p>
-                <p className="font-semibold text-foreground">{hostnameBusiness.name}</p>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="mb-4 rounded-xl border border-[hsla(176,80%,40%,0.2)] bg-[hsla(176,80%,40%,0.05)] p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-[hsla(176,80%,40%,0.1)] flex items-center justify-center">
+              <Building2 className="w-5 h-5 text-[hsl(176,80%,40%)]" />
+            </div>
+            <div>
+              <p className="text-sm text-white/50">Ingresando a</p>
+              <p className="font-semibold text-white">{hostnameBusiness.name}</p>
+            </div>
+          </div>
         )}
 
-        <Card className="border-border/40 bg-card/80 backdrop-blur-sm shadow-2xl">
-          <CardHeader className="space-y-1 text-center">
-            <CardTitle className="text-2xl font-bold">
+        <div
+          className="rounded-2xl border border-white/10 shadow-2xl"
+          style={{
+            backgroundColor: '#111111',
+            boxShadow: '0 8px 60px rgba(0, 165, 160, 0.08), 0 0 120px rgba(0, 165, 160, 0.04)',
+          }}
+        >
+          <div className="p-6 pb-2 text-center space-y-1">
+            <h2 className="text-2xl font-bold text-white">
               {showForgotPassword ? "Recuperar acceso" : "Bienvenido"}
-            </CardTitle>
-            <CardDescription>
+            </h2>
+            <p className="text-sm text-white/50">
               {showForgotPassword
                 ? "Te enviaremos un email para restablecer tu contraseña"
                 : showContextualLogin
                   ? `Iniciá sesión en ${hostnameBusiness.name}`
                   : "Iniciá sesión en tu cuenta profesional"
               }
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+            </p>
+          </div>
+          <div className="p-6 pt-4">
             {showForgotPassword ? (
               forgotSent ? (
                 <div className="text-center space-y-4 py-4">
-                  <div className="mx-auto w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Mail className="w-7 h-7 text-primary" />
+                  <div className="mx-auto w-14 h-14 rounded-full bg-[hsla(176,80%,40%,0.1)] flex items-center justify-center">
+                    <Mail className="w-7 h-7 text-[hsl(176,80%,40%)]" />
                   </div>
                   <div>
-                    <p className="font-medium text-foreground">¡Email enviado!</p>
-                    <p className="text-sm text-muted-foreground mt-1">
+                    <p className="font-medium text-white">¡Email enviado!</p>
+                    <p className="text-sm text-white/50 mt-1">
                       Revisá tu bandeja de entrada en <strong>{forgotEmail}</strong> y seguí el enlace para restablecer tu contraseña.
                     </p>
                   </div>
                   <Button
                     variant="outline"
-                    className="w-full"
+                    className="w-full border-white/10 text-white/70 hover:bg-white/5 hover:text-white"
                     onClick={() => { setShowForgotPassword(false); setForgotSent(false); setForgotEmail(""); }}
                   >
                     Volver a iniciar sesión
@@ -184,7 +186,7 @@ const Auth = () => {
               ) : (
                 <form onSubmit={handleForgotPassword} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="forgot-email">Correo electrónico</Label>
+                    <Label htmlFor="forgot-email" className="text-white/70">Correo electrónico</Label>
                     <Input
                       id="forgot-email"
                       type="email"
@@ -192,15 +194,16 @@ const Auth = () => {
                       onChange={(e) => setForgotEmail(e.target.value)}
                       required
                       placeholder="maria@example.com"
+                      className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-[hsl(176,80%,40%)]"
                     />
                   </div>
-                  <Button type="submit" className="w-full" disabled={forgotLoading}>
+                  <Button type="submit" className="w-full" disabled={forgotLoading} style={{ backgroundColor: '#00a5a0' }}>
                     {forgotLoading ? "Enviando..." : "Enviar email de recuperación"}
                   </Button>
                   <Button
                     type="button"
                     variant="ghost"
-                    className="w-full text-muted-foreground"
+                    className="w-full text-white/40 hover:text-white/70 hover:bg-white/5"
                     onClick={() => setShowForgotPassword(false)}
                   >
                     Volver a iniciar sesión
@@ -213,12 +216,12 @@ const Auth = () => {
                 <Button
                   type="button"
                   variant="outline"
-                  className="w-full h-11 gap-3 font-medium"
+                  className="w-full h-11 gap-3 font-medium border-white/10 bg-white/5 text-white hover:bg-white/10"
                   onClick={handleGoogleLogin}
                   disabled={googleLoading}
                 >
                   {googleLoading ? (
-                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
+                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-transparent" />
                   ) : (
                     <svg className="h-5 w-5" viewBox="0 0 24 24">
                       <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4" />
@@ -231,8 +234,8 @@ const Auth = () => {
                 </Button>
 
                 <div className="relative my-5">
-                  <Separator />
-                  <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-3 text-xs text-muted-foreground">
+                  <div className="h-px bg-white/10" />
+                  <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 px-3 text-xs text-white/30" style={{ backgroundColor: '#111111' }}>
                     o con email
                   </span>
                 </div>
@@ -240,7 +243,7 @@ const Auth = () => {
                 {/* Email Login */}
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="email">Correo electrónico</Label>
+                    <Label htmlFor="email" className="text-white/70">Correo electrónico</Label>
                     <Input
                       id="email"
                       type="email"
@@ -248,14 +251,15 @@ const Auth = () => {
                       onChange={(e) => setEmail(e.target.value)}
                       required
                       placeholder="maria@example.com"
+                      className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-[hsl(176,80%,40%)]"
                     />
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <Label htmlFor="password">Contraseña</Label>
+                      <Label htmlFor="password" className="text-white/70">Contraseña</Label>
                       <button
                         type="button"
-                        className="text-xs text-primary hover:underline"
+                        className="text-xs text-[hsl(176,80%,40%)] hover:underline"
                         onClick={() => setShowForgotPassword(true)}
                       >
                         ¿Olvidaste tu contraseña?
@@ -270,11 +274,11 @@ const Auth = () => {
                         required
                         minLength={6}
                         placeholder="••••••"
-                        className="pr-10"
+                        className="pr-10 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-[hsl(176,80%,40%)]"
                       />
                       <button
                         type="button"
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
                         onClick={() => setShowPassword(!showPassword)}
                         tabIndex={-1}
                       >
@@ -282,26 +286,31 @@ const Auth = () => {
                       </button>
                     </div>
                   </div>
-                  <Button type="submit" className="w-full h-11" disabled={loading}>
+                  <Button
+                    type="submit"
+                    className="w-full h-11 font-semibold text-white"
+                    disabled={loading}
+                    style={{ backgroundColor: '#00a5a0', boxShadow: '0 4px 20px rgba(0,165,160,0.3)' }}
+                  >
                     {loading ? "Aguardá un momento..." : "Iniciar sesión"}
                   </Button>
                 </form>
 
                 <div className="mt-5 text-center text-sm">
-                  <span className="text-muted-foreground">¿Necesitás un consultorio? </span>
+                  <span className="text-white/40">¿Necesitás un consultorio? </span>
                   <a
                     href="https://wa.me/59891093977?text=Hola,%20me%20interesa%20Tu%20Consultorio%20Digital."
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-primary hover:underline font-medium"
+                    className="text-[hsl(176,80%,40%)] hover:underline font-medium"
                   >
                     Hablemos
                   </a>
                 </div>
               </>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     </div>
   );
