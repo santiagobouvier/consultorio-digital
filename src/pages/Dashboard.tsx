@@ -61,7 +61,8 @@ const Dashboard = () => {
     return saved === "true";
   });
   
-  // Super admin state
+  // Demo & Super admin state
+  const [isDemo, setIsDemo] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [allBusinesses, setAllBusinesses] = useState<Business[]>([]);
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
