@@ -164,22 +164,22 @@ const Auth = () => {
               }
             </p>
           </div>
-          <CardContent>
+          <div className="p-6 pt-4">
             {showForgotPassword ? (
               forgotSent ? (
                 <div className="text-center space-y-4 py-4">
-                  <div className="mx-auto w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Mail className="w-7 h-7 text-primary" />
+                  <div className="mx-auto w-14 h-14 rounded-full bg-[hsla(176,80%,40%,0.1)] flex items-center justify-center">
+                    <Mail className="w-7 h-7 text-[hsl(176,80%,40%)]" />
                   </div>
                   <div>
-                    <p className="font-medium text-foreground">¡Email enviado!</p>
-                    <p className="text-sm text-muted-foreground mt-1">
+                    <p className="font-medium text-white">¡Email enviado!</p>
+                    <p className="text-sm text-white/50 mt-1">
                       Revisá tu bandeja de entrada en <strong>{forgotEmail}</strong> y seguí el enlace para restablecer tu contraseña.
                     </p>
                   </div>
                   <Button
                     variant="outline"
-                    className="w-full"
+                    className="w-full border-white/10 text-white/70 hover:bg-white/5 hover:text-white"
                     onClick={() => { setShowForgotPassword(false); setForgotSent(false); setForgotEmail(""); }}
                   >
                     Volver a iniciar sesión
