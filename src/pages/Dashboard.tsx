@@ -509,34 +509,33 @@ const Dashboard = () => {
         {isSuperAdmin && allBusinesses.length > 0 && (
           <Card className="mobile-card-compact bg-primary/5 border-primary/30">
             <CardContent className="p-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Badge variant="default" className="text-xs">Super Admin</Badge>
-                  <span className="text-xs text-muted-foreground">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:justify-between">
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <Badge variant="default" className="text-[10px] px-1.5">Admin</Badge>
+                  <span className="text-[10px] text-muted-foreground">
                     {allBusinesses.length} consultorios
                   </span>
                 </div>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="gap-2">
-                      <Building2 className="h-4 w-4" />
-                      <span className="truncate max-w-[150px]">{selectedBusiness?.name || "Seleccionar"}</span>
-                      <ChevronDown className="h-4 w-4" />
+                    <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs w-full sm:w-auto">
+                      <Building2 className="h-3.5 w-3.5 flex-shrink-0" />
+                      <span className="truncate max-w-[120px] sm:max-w-[150px]">{selectedBusiness?.name || "Seleccionar"}</span>
+                      <ChevronDown className="h-3.5 w-3.5 flex-shrink-0" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="max-h-64 overflow-y-auto">
+                  <DropdownMenuContent align="end" className="max-h-64 overflow-y-auto w-56">
                     {allBusinesses.map((business) => (
                       <DropdownMenuItem
                         key={business.id}
                         onClick={() => {
                           setSelectedBusiness(business);
-                          // Update sessionStorage so other pages use the same business
                           sessionStorage.setItem("saas_selected_business", business.id);
                           fetchDashboardData(business.id);
                         }}
                         className={business.id === selectedBusiness?.id ? "bg-accent" : ""}
                       >
-                        {business.name}
+                        <span className="truncate">{business.name}</span>
                       </DropdownMenuItem>
                     ))}
                   </DropdownMenuContent>

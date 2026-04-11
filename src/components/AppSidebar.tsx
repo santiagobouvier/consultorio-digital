@@ -10,7 +10,6 @@ import {
   FileText,
   LogOut,
   Shield,
-  ChevronDown,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -47,10 +46,9 @@ const configItems = [
 ];
 
 export function AppSidebar() {
-  const { state } = useSidebar();
-  const collapsed = state === "collapsed";
   const location = useLocation();
   const navigate = useNavigate();
+  const { setOpen } = useSidebar();
   const [userName, setUserName] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
@@ -88,47 +86,42 @@ export function AppSidebar() {
     navigate("/");
   };
 
+  const handleNavigate = (url: string) => {
+    navigate(url);
+    setOpen(false); // Close sidebar after navigation
+  };
+
   const isActive = (path: string) => location.pathname === path;
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-white/5 bg-[hsl(180,15%,4%)]">
-      <SidebarContent className="bg-[hsl(180,15%,4%)]">
-        {/* Logo / Brand */}
-        <div className={`p-4 ${collapsed ? "px-2" : ""}`}>
-          {collapsed ? (
-            <div className="w-8 h-8 rounded-lg bg-[hsla(176,80%,40%,0.15)] flex items-center justify-center mx-auto">
-              <span className="text-[hsl(176,80%,40%)] font-bold text-sm">TC</span>
-            </div>
-          ) : (
-            <h2 className="text-sm font-semibold text-white/80 tracking-tight">
-              Tu Consultorio Digital
-            </h2>
-          )}
-        </div>
-
+    <Sidebar
+      collapsible="offcanvas"
+      className="border-r-0"
+      style={{
+        "--sidebar-width": "280px",
+      } as React.CSSProperties}
+    >
+      <SidebarContent className="bg-[#0a0a0a] border-r border-white/5 pt-16">
         {/* Main navigation */}
         <SidebarGroup>
-          <SidebarGroupLabel className="text-white/30 text-[10px] uppercase tracking-wider">
-            {!collapsed && "Principal"}
+          <SidebarGroupLabel className="text-white/25 text-[10px] uppercase tracking-widest px-4 mb-1">
+            Principal
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {mainItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
-                    asChild
                     isActive={isActive(item.url)}
-                    tooltip={collapsed ? item.title : undefined}
+                    onClick={() => handleNavigate(item.url)}
+                    className={`mx-2 rounded-lg transition-all duration-200 ${
+                      isActive(item.url)
+                        ? "bg-[hsla(176,80%,40%,0.08)] text-[hsl(176,80%,40%)]"
+                        : "text-white/45 hover:text-white/80 hover:bg-white/[0.03]"
+                    }`}
                   >
-                    <NavLink
-                      to={item.url}
-                      end
-                      className="text-white/50 hover:text-white hover:bg-white/5 transition-colors"
-                      activeClassName="bg-[hsla(176,80%,40%,0.1)] text-[hsl(176,80%,40%)] font-medium"
-                    >
-                      <item.icon className="h-4 w-4" />
-                      {!collapsed && <span>{item.title}</span>}
-                    </NavLink>
+                    <item.icon className="h-4 w-4" />
+                    <span className="text-sm">{item.title}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
@@ -136,29 +129,29 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
+        {/* Separator */}
+        <div className="mx-6 my-2 h-px bg-white/5" />
+
         {/* Config navigation */}
         <SidebarGroup>
-          <SidebarGroupLabel className="text-white/30 text-[10px] uppercase tracking-wider">
-            {!collapsed && "Configuración"}
+          <SidebarGroupLabel className="text-white/25 text-[10px] uppercase tracking-widest px-4 mb-1">
+            Configuración
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {configItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
-                    asChild
                     isActive={isActive(item.url)}
-                    tooltip={collapsed ? item.title : undefined}
+                    onClick={() => handleNavigate(item.url)}
+                    className={`mx-2 rounded-lg transition-all duration-200 ${
+                      isActive(item.url)
+                        ? "bg-[hsla(176,80%,40%,0.08)] text-[hsl(176,80%,40%)]"
+                        : "text-white/45 hover:text-white/80 hover:bg-white/[0.03]"
+                    }`}
                   >
-                    <NavLink
-                      to={item.url}
-                      end
-                      className="text-white/50 hover:text-white hover:bg-white/5 transition-colors"
-                      activeClassName="bg-[hsla(176,80%,40%,0.1)] text-[hsl(176,80%,40%)] font-medium"
-                    >
-                      <item.icon className="h-4 w-4" />
-                      {!collapsed && <span>{item.title}</span>}
-                    </NavLink>
+                    <item.icon className="h-4 w-4" />
+                    <span className="text-sm">{item.title}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
@@ -166,19 +159,16 @@ export function AppSidebar() {
               {isSuperAdmin && (
                 <SidebarMenuItem>
                   <SidebarMenuButton
-                    asChild
                     isActive={isActive("/saas-admin")}
-                    tooltip={collapsed ? "Admin" : undefined}
+                    onClick={() => handleNavigate("/saas-admin")}
+                    className={`mx-2 rounded-lg transition-all duration-200 ${
+                      isActive("/saas-admin")
+                        ? "bg-[hsla(176,80%,40%,0.08)] text-[hsl(176,80%,40%)]"
+                        : "text-white/45 hover:text-white/80 hover:bg-white/[0.03]"
+                    }`}
                   >
-                    <NavLink
-                      to="/saas-admin"
-                      end
-                      className="text-white/50 hover:text-white hover:bg-white/5 transition-colors"
-                      activeClassName="bg-[hsla(176,80%,40%,0.1)] text-[hsl(176,80%,40%)] font-medium"
-                    >
-                      <Shield className="h-4 w-4" />
-                      {!collapsed && <span>Admin</span>}
-                    </NavLink>
+                    <Shield className="h-4 w-4" />
+                    <span className="text-sm">Panel Admin</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               )}
@@ -187,37 +177,29 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      {/* Footer with user info */}
-      <SidebarFooter className="bg-[hsl(180,15%,4%)] border-t border-white/5 p-3">
-        {collapsed ? (
-          <button onClick={handleLogout} className="mx-auto">
-            <Avatar className="h-8 w-8">
+      {/* Footer */}
+      <SidebarFooter className="bg-[#0a0a0a] border-r border-white/5 border-t border-t-white/5 p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3 min-w-0">
+            <Avatar className="h-8 w-8 flex-shrink-0 ring-1 ring-white/10">
               <AvatarImage src={avatarUrl || undefined} />
-              <AvatarFallback className="bg-white/10 text-white/60 text-xs">
+              <AvatarFallback className="bg-white/5 text-white/50 text-xs">
                 {userName?.charAt(0)?.toUpperCase() || "U"}
               </AvatarFallback>
             </Avatar>
-          </button>
-        ) : (
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 min-w-0">
-              <Avatar className="h-8 w-8 flex-shrink-0">
-                <AvatarImage src={avatarUrl || undefined} />
-                <AvatarFallback className="bg-white/10 text-white/60 text-xs">
-                  {userName?.charAt(0)?.toUpperCase() || "U"}
-                </AvatarFallback>
-              </Avatar>
-              <span className="text-sm text-white/60 truncate">{userName || "Usuario"}</span>
+            <div className="min-w-0">
+              <p className="text-sm text-white/70 truncate">{userName || "Usuario"}</p>
+              <p className="text-[10px] text-white/25">Mi cuenta</p>
             </div>
-            <button
-              onClick={handleLogout}
-              className="text-white/30 hover:text-red-400 transition-colors p-1"
-              title="Cerrar sesión"
-            >
-              <LogOut className="h-4 w-4" />
-            </button>
           </div>
-        )}
+          <button
+            onClick={handleLogout}
+            className="text-white/25 hover:text-red-400 transition-colors duration-200 p-2 rounded-lg hover:bg-red-500/5"
+            title="Cerrar sesión"
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
+        </div>
       </SidebarFooter>
     </Sidebar>
   );
