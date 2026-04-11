@@ -1,12 +1,10 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { 
   Users, 
   MessageCircle, 
   Calendar, 
   HelpCircle, 
-  ChevronLeft, 
-  ChevronRight, 
   Check, 
   Shield, 
   CreditCard, 
@@ -22,12 +20,7 @@ import {
 } from "lucide-react";
 import PricingCard from "@/components/PricingCard";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import useEmblaCarousel from "embla-carousel-react";
-import dashboardMobile from "@/assets/screenshots/dashboard-mobile.png";
-import appointmentsMobile from "@/assets/screenshots/appointments-mobile.png";
-import agendaMobile from "@/assets/screenshots/agenda-mobile.png";
-import patientsMobile from "@/assets/screenshots/patients-mobile.png";
-import remindersMobile from "@/assets/screenshots/reminders-mobile.png";
+import { PLAN_DEFINITIONS, PLAN_ORDER, formatPrice } from "@/lib/plan-definitions";
 import { PLAN_DEFINITIONS, PLAN_ORDER, formatPrice } from "@/lib/plan-definitions";
 import logoWhite from "@/assets/logo-consultorio-digital-white.png";
 import { InstallAppButton } from "@/components/InstallAppButton";
