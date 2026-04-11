@@ -30,7 +30,7 @@ import { es } from "date-fns/locale";
 import { calculatePaymentStatus, type PaymentStatus } from "@/lib/payments";
 import { useBusinessId } from "@/hooks/use-business-id";
 import { useProfessionals } from "@/hooks/use-professionals";
-import { BrandFooter } from "@/components/BrandFooter";
+
 
 interface AppointmentWithRelations {
   id: string;
