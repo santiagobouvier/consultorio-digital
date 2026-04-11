@@ -125,7 +125,7 @@ const Auth = () => {
 
         <Link
           to="/"
-          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-4 transition-colors"
+          className="inline-flex items-center gap-2 text-sm text-white/40 hover:text-white/70 mb-4 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           Volver al inicio
@@ -133,33 +133,37 @@ const Auth = () => {
 
         {/* Contextual business header */}
         {showContextualLogin && (
-          <Card className="mb-4 border-primary/20 bg-primary/5">
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                <Building2 className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Ingresando a</p>
-                <p className="font-semibold text-foreground">{hostnameBusiness.name}</p>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="mb-4 rounded-xl border border-[hsla(176,80%,40%,0.2)] bg-[hsla(176,80%,40%,0.05)] p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-[hsla(176,80%,40%,0.1)] flex items-center justify-center">
+              <Building2 className="w-5 h-5 text-[hsl(176,80%,40%)]" />
+            </div>
+            <div>
+              <p className="text-sm text-white/50">Ingresando a</p>
+              <p className="font-semibold text-white">{hostnameBusiness.name}</p>
+            </div>
+          </div>
         )}
 
-        <Card className="border-border/40 bg-card/80 backdrop-blur-sm shadow-2xl">
-          <CardHeader className="space-y-1 text-center">
-            <CardTitle className="text-2xl font-bold">
+        <div
+          className="rounded-2xl border border-white/10 shadow-2xl"
+          style={{
+            backgroundColor: '#111111',
+            boxShadow: '0 8px 60px rgba(0, 165, 160, 0.08), 0 0 120px rgba(0, 165, 160, 0.04)',
+          }}
+        >
+          <div className="p-6 pb-2 text-center space-y-1">
+            <h2 className="text-2xl font-bold text-white">
               {showForgotPassword ? "Recuperar acceso" : "Bienvenido"}
-            </CardTitle>
-            <CardDescription>
+            </h2>
+            <p className="text-sm text-white/50">
               {showForgotPassword
                 ? "Te enviaremos un email para restablecer tu contraseña"
                 : showContextualLogin
                   ? `Iniciá sesión en ${hostnameBusiness.name}`
                   : "Iniciá sesión en tu cuenta profesional"
               }
-            </CardDescription>
-          </CardHeader>
+            </p>
+          </div>
           <CardContent>
             {showForgotPassword ? (
               forgotSent ? (
