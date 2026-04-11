@@ -501,9 +501,9 @@ const PatientPortalDemo = () => {
 
       {/* Header */}
       <header className="border-b bg-card sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 lg:px-8 py-3 lg:py-4 flex items-center justify-between">
+        <div className="px-4 lg:px-8 py-3 lg:py-4 flex items-center justify-between">
           <div className="flex items-center gap-3 lg:gap-4">
-            <Avatar className="h-9 w-9 lg:h-10 lg:w-10 lg:block hidden">
+            <Avatar className="h-9 w-9 lg:h-10 lg:w-10 hidden lg:flex">
               <AvatarFallback className="bg-primary/10 text-primary font-bold">SM</AvatarFallback>
             </Avatar>
             <div>
