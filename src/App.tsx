@@ -28,6 +28,7 @@ const ProfessionalRegister = lazy(() => import("./pages/ProfessionalRegister"));
 const ConsultorioOnboarding = lazy(() => import("./pages/ConsultorioOnboarding"));
 const SaasAdmin = lazy(() => import("./pages/SaasAdmin"));
 const CommandCenter = lazy(() => import("./pages/CommandCenter"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
@@ -63,6 +64,7 @@ const App = () => (
             <Route path="/registrarse-profesional" element={<ProfessionalRegister />} />
             <Route path="/onboarding-consultorio" element={<ConsultorioOnboarding />} />
             <Route path="/saas-admin" element={<SaasAdmin />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
