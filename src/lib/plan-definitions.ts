@@ -36,8 +36,8 @@ export const PLAN_DEFINITIONS: Record<string, PlanDefinition> = {
     code: "profesional",
     name: "Profesional",
     description: "Para consultorios en crecimiento",
-    maxProfessionals: 1,
-    maxPatients: 35,
+    maxProfessionals: 2,
+    maxPatients: 50,
     priceAnnual: 0, // TBD
     priceMonthly: 0, // TBD
     isHighlighted: true,
@@ -47,8 +47,8 @@ export const PLAN_DEFINITIONS: Record<string, PlanDefinition> = {
     code: "clinica",
     name: "Clínica",
     description: "Para clínicas y equipos grandes",
-    maxProfessionals: 3,
-    maxPatients: 160,
+    maxProfessionals: 5,
+    maxPatients: 200,
     priceAnnual: 0, // TBD
     priceMonthly: 0, // TBD
   },
