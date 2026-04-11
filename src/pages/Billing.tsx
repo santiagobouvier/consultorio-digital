@@ -327,6 +327,94 @@ const Billing = () => {
               </CardContent>
             </Card>
 
+            {/* Payment Method Card */}
+            <Card className="bg-[#111111] border-white/10">
+              <CardHeader className="pb-4">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-white text-lg">Método de pago</CardTitle>
+                  <div className="flex items-center gap-1.5 text-[10px] text-white/40">
+                    <Lock className="w-3 h-3" />
+                    <span>Encriptado</span>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Card preview */}
+                {subscription.mercadopago_preapproval_id ? (
+                  <div className="relative rounded-xl bg-gradient-to-br from-[#1a1a2e] to-[#16213e] p-5 border border-white/5 overflow-hidden">
+                    {/* Card chip */}
+                    <div className="flex items-center justify-between mb-6">
+                      <div className="w-10 h-7 rounded bg-gradient-to-br from-yellow-400/80 to-yellow-600/60 border border-yellow-500/30" />
+                      <div className="flex items-center gap-1">
+                        <div className="w-5 h-5 rounded-full bg-red-500/80" />
+                        <div className="w-5 h-5 rounded-full bg-yellow-500/60 -ml-2" />
+                      </div>
+                    </div>
+                    {/* Masked number */}
+                    <p className="font-mono text-lg tracking-[0.2em] text-white/80 mb-4">
+                      •••• •••• •••• ••••
+                    </p>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-[10px] text-white/30 uppercase tracking-wider">Titular</p>
+                        <p className="text-xs text-white/60">Gestionado por Mercado Pago</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-white/30 uppercase tracking-wider">Estado</p>
+                        <p className="text-xs text-green-400">Vinculada</p>
+                      </div>
+                    </div>
+                    {/* Decorative circles */}
+                    <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full bg-white/[0.02]" />
+                    <div className="absolute -right-4 -bottom-12 w-40 h-40 rounded-full bg-white/[0.015]" />
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-dashed border-white/10 p-6 text-center">
+                    <CreditCard className="w-8 h-8 mx-auto mb-2 text-white/20" />
+                    <p className="text-sm text-white/40 mb-3">
+                      No hay método de pago registrado
+                    </p>
+                    <Button
+                      size="sm"
+                      onClick={() => setShowPlanModal(true)}
+                      style={{ backgroundColor: '#00a5a0' }}
+                      className="text-white text-xs"
+                    >
+                      Agregar método de pago
+                    </Button>
+                  </div>
+                )}
+
+                {/* Security badges */}
+                <div className="flex items-center justify-between pt-2">
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-1.5">
+                      <Shield className="w-3.5 h-3.5 text-[hsl(176,80%,40%)]" />
+                      <span className="text-[10px] text-white/40">PCI DSS</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Lock className="w-3.5 h-3.5 text-[hsl(176,80%,40%)]" />
+                      <span className="text-[10px] text-white/40">SSL 256-bit</span>
+                    </div>
+                  </div>
+                  {/* Mercado Pago badge */}
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#009ee3]/10 border border-[#009ee3]/20">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                      <circle cx="12" cy="12" r="11" fill="#009ee3" />
+                      <path d="M7 12.5C7 10 9 8 12 8s5 2 5 4.5S15 17 12 17s-5-2-5-4.5z" fill="white" opacity="0.9" />
+                    </svg>
+                    <span className="text-[10px] font-medium text-[#009ee3]">Mercado Pago</span>
+                  </div>
+                </div>
+
+                <p className="text-[10px] text-white/25 leading-relaxed">
+                  Tu información de pago es procesada de forma segura por Mercado Pago. 
+                  Nunca almacenamos datos de tarjetas en nuestros servidores. 
+                  Solo podés eliminar tu método de pago desde tu cuenta de Mercado Pago.
+                </p>
+              </CardContent>
+            </Card>
+
             {/* Actions */}
             <Card className="bg-[#111111] border-white/10">
               <CardContent className="p-6">
