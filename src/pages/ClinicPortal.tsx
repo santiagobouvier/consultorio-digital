@@ -336,13 +336,32 @@ const ClinicPortal = () => {
     load();
   }, [slug]);
 
-  // Inject dynamic manifest
+  // Inject dynamic manifest (client-side generated)
   useEffect(() => {
-    if (!slug) return;
-    const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-    if (!projectId) return;
+    if (!slug || !branding) return;
 
-    const manifestUrl = `https://${projectId}.supabase.co/functions/v1/get-clinic-manifest?slug=${encodeURIComponent(slug)}&origin=${encodeURIComponent(window.location.origin)}`;
+    const manifest = {
+      name: branding.displayName,
+      short_name: branding.displayName.length > 12 ? branding.displayName.substring(0, 12) : branding.displayName,
+      description: branding.specialty ? `${branding.displayName} — ${branding.specialty}` : branding.displayName,
+      start_url: `/portal/${slug}`,
+      scope: `/portal/${slug}`,
+      display: "standalone",
+      background_color: "#ffffff",
+      theme_color: "#00a8a8",
+      icons: branding.logoUrl
+        ? [
+            { src: branding.logoUrl, sizes: "192x192", type: "image/png", purpose: "any maskable" },
+            { src: branding.logoUrl, sizes: "512x512", type: "image/png", purpose: "any maskable" },
+          ]
+        : [
+            { src: "/app-icon-192.png", sizes: "192x192", type: "image/png" },
+            { src: "/app-icon-512.png", sizes: "512x512", type: "image/png" },
+          ],
+    };
+
+    const blob = new Blob([JSON.stringify(manifest)], { type: "application/manifest+json" });
+    const manifestUrl = URL.createObjectURL(blob);
 
     // Remove existing manifest links
     document.querySelectorAll('link[rel="manifest"]').forEach((el) => el.remove());
@@ -354,8 +373,9 @@ const ClinicPortal = () => {
 
     return () => {
       link.remove();
+      URL.revokeObjectURL(manifestUrl);
     };
-  }, [slug]);
+  }, [slug, branding]);
 
   // Auth listener
   useEffect(() => {
