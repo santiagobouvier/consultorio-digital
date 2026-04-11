@@ -35,6 +35,7 @@ import {
   Building2,
   CalendarCheck,
   AlertCircle,
+  Eye,
 } from "lucide-react";
 
 interface Appointment {
