@@ -563,8 +563,8 @@ const PatientPortalDemo = () => {
         </aside>
 
         {/* Mobile Tab Bar */}
-        <div className="lg:hidden border-b bg-card sticky top-[52px] z-10">
-          <div className="flex overflow-x-auto px-2">
+        <div className="lg:hidden border-b bg-card/95 backdrop-blur-sm sticky top-[52px] z-10">
+          <div className="flex justify-around px-1">
             {TABS.map(t => {
               const Icon = t.icon;
               const isActive = tab === t.id;
@@ -572,14 +572,20 @@ const PatientPortalDemo = () => {
                 <button
                   key={t.id}
                   onClick={() => setTab(t.id)}
-                  className={`flex items-center gap-1.5 px-3 py-3 text-xs font-medium whitespace-nowrap border-b-2 transition-colors ${
+                  className={`relative flex flex-col items-center gap-0.5 px-2 py-2.5 text-[10px] sm:text-xs font-medium whitespace-nowrap transition-colors flex-1 ${
                     isActive 
-                      ? "border-primary text-primary" 
-                      : "border-transparent text-muted-foreground hover:text-foreground"
+                      ? "text-primary" 
+                      : "text-muted-foreground"
                   }`}
                 >
-                  <Icon className="h-4 w-4" />
-                  <span className="hidden sm:inline">{t.label}</span>
+                  <Icon className={`h-5 w-5 ${isActive ? "text-primary" : ""}`} />
+                  <span>{t.label}</span>
+                  {isActive && <div className="absolute bottom-0 left-2 right-2 h-0.5 bg-primary rounded-full" />}
+                  {t.id === "pagos" && pendingCount > 0 && (
+                    <span className="absolute -top-0.5 right-1 bg-destructive text-destructive-foreground text-[9px] rounded-full h-4 w-4 flex items-center justify-center">
+                      {pendingCount}
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -587,7 +593,7 @@ const PatientPortalDemo = () => {
         </div>
 
         {/* Main Content */}
-        <main className="flex-1 min-w-0 px-4 lg:px-8 py-4 lg:py-8">
+        <main className="flex-1 min-w-0 px-4 lg:px-10 xl:px-16 py-4 lg:py-8 max-w-[1200px]">
           {/* Mobile welcome */}
           <div className="lg:hidden flex items-center gap-3 mb-4">
             <Avatar className="h-10 w-10">
