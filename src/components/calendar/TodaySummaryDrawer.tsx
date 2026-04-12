@@ -447,7 +447,6 @@ export const TodaySummaryDrawer = ({
                             <CreditCard className="w-4 h-4" />
                             Cobrar
                           </Button>
-                          </Button>
                         </div>
                       </div>
                     );
@@ -485,6 +484,19 @@ export const TodaySummaryDrawer = ({
           onCreatePayment();
         }}
       />
+
+      {/* Payment Confirmation Dialog */}
+      {confirmPayment && (
+        <ConfirmPaymentDialog
+          open={!!confirmPayment}
+          onOpenChange={(isOpen) => {
+            if (!isOpen) setConfirmPayment(null);
+          }}
+          patientName={confirmPayment.patientName}
+          amount={confirmPayment.amount}
+          onConfirm={() => handleMarkPaid(confirmPayment.id)}
+        />
+      )}
     </>
   );
 };
