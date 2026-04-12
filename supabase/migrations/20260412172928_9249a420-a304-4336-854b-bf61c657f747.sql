@@ -1,0 +1,2 @@
+ALTER TABLE public.businesses DROP CONSTRAINT businesses_plan_code_check;
+ALTER TABLE public.businesses ADD CONSTRAINT businesses_plan_code_check CHECK (plan_code = ANY (ARRAY['individual','professional','advanced','enterprise','custom','starter','esencial','profesional','clinica','personalizado','inicial','equipo']));
