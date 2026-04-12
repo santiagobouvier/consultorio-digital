@@ -194,24 +194,39 @@ const SaasAdmin = () => {
   // ── Business CRUD ──
   const handleCreateBusiness = async () => {
     if (!newBusinessName.trim() || !newBusinessEmail.trim()) { toast({ title: "Error", description: "Nombre y email son requeridos", variant: "destructive" }); return; }
+    if (createMode === "test" && (!newBusinessPassword || newBusinessPassword.length < 6)) { toast({ title: "Error", description: "La contraseña debe tener al menos 6 caracteres", variant: "destructive" }); return; }
     try {
       setCreating(true);
-      const { data: existingProfile } = await supabase.from("profiles").select("id").eq("email", newBusinessEmail.trim().toLowerCase()).maybeSingle();
-      let ownerId: string;
-      if (existingProfile) { ownerId = existingProfile.id; }
-      else {
-        const { data: newUser, error: createError } = await supabase.functions.invoke("create-professional-invite", { body: { email: newBusinessEmail.trim().toLowerCase(), name: newBusinessName.trim(), businessId: null, isNewOwner: true } });
-        if (createError) throw createError;
-        ownerId = newUser.userId;
+      const { data, error } = await supabase.functions.invoke("create-business-owner", {
+        body: {
+          businessName: newBusinessName.trim(),
+          ownerEmail: newBusinessEmail.trim(),
+          planCode: newBusinessPlan,
+          mode: createMode,
+          password: createMode === "test" ? newBusinessPassword : undefined,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      if (data?.inviteToken) {
+        const link = `${window.location.origin}/invitar-profesional?token=${data.inviteToken}`;
+        setOwnerInviteLink(link);
+        toast({ title: "Consultorio creado", description: "Copiá el enlace de invitación y envialo al dueño." });
+      } else if (data?.mode === "existing") {
+        toast({ title: "Consultorio creado", description: `Asignado a usuario existente. Ya puede acceder.` });
+        setShowCreateModal(false); resetCreateForm();
+      } else {
+        toast({ title: "Consultorio creado", description: `"${newBusinessName}" creado. Credenciales: ${newBusinessEmail} / la contraseña ingresada.` });
+        setShowCreateModal(false); resetCreateForm();
       }
-      const slug = newBusinessName.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "") + "-" + Date.now().toString(36);
-      const { data: business, error: bizError } = await supabase.from("businesses").insert({ name: newBusinessName.trim(), owner_user_id: ownerId, public_slug: slug, contact_email: newBusinessEmail.trim().toLowerCase(), plan_code: newBusinessPlan }).select().single();
-      if (bizError) throw bizError;
-      await supabase.from("user_roles").insert({ user_id: ownerId, role: "owner", business_id: business.id });
-      toast({ title: "Consultorio creado", description: `"${newBusinessName}" creado exitosamente` });
-      setShowCreateModal(false); setNewBusinessName(""); setNewBusinessEmail(""); setNewBusinessPlan("inicial");
       await loadData();
     } catch (error: any) { toast({ title: "Error", description: error.message || "No se pudo crear el consultorio", variant: "destructive" }); } finally { setCreating(false); }
+  };
+
+  const resetCreateForm = () => {
+    setNewBusinessName(""); setNewBusinessEmail(""); setNewBusinessPlan("inicial");
+    setCreateMode("test"); setNewBusinessPassword(""); setOwnerInviteLink(null);
   };
 
   const loadProfessionals = async (business: BusinessWithDetails) => {
