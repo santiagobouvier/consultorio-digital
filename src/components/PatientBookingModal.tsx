@@ -1,13 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Calendar } from "@/components/ui/calendar";
 import { toast } from "@/hooks/use-toast";
-import { format } from "date-fns";
+import { format, isSameDay, addDays } from "date-fns";
 import { es } from "date-fns/locale";
-import { Calendar, Clock, Video, MapPin, Loader2 } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, Video, MapPin, Loader2, ArrowLeft, CheckCircle2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface AvailabilitySlot {
   id: string;
@@ -26,6 +28,8 @@ interface PatientBookingModalProps {
   onSuccess?: () => void;
 }
 
+type Step = "date" | "slot" | "confirm";
+
 export const PatientBookingModal = ({
   open,
   onOpenChange,
@@ -35,6 +39,8 @@ export const PatientBookingModal = ({
 }: PatientBookingModalProps) => {
   const [loading, setLoading] = useState(true);
   const [slots, setSlots] = useState<AvailabilitySlot[]>([]);
+  const [step, setStep] = useState<Step>("date");
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [selectedSlot, setSelectedSlot] = useState<AvailabilitySlot | null>(null);
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -42,21 +48,30 @@ export const PatientBookingModal = ({
   useEffect(() => {
     if (open) {
       loadAvailableSlots();
+      resetState();
     }
   }, [open, businessId]);
+
+  const resetState = () => {
+    setStep("date");
+    setSelectedDate(undefined);
+    setSelectedSlot(null);
+    setNotes("");
+  };
 
   const loadAvailableSlots = async () => {
     setLoading(true);
     try {
       const today = new Date().toISOString().slice(0, 10);
-      
-      // Query availability_slots directly - RLS will handle permissions
+      const maxDate = addDays(new Date(), 90).toISOString().slice(0, 10);
+
       const { data, error } = await supabase
         .from("availability_slots")
         .select("id, date, start_time, end_time, modality, price")
         .eq("business_id", businessId)
         .eq("status", "available")
         .gte("date", today)
+        .lte("date", maxDate)
         .order("date", { ascending: true })
         .order("start_time", { ascending: true });
 
@@ -64,22 +79,42 @@ export const PatientBookingModal = ({
       setSlots(data || []);
     } catch (error) {
       console.error("Error loading slots:", error);
-      toast({
-        title: "Error",
-        description: "No se pudieron cargar los horarios disponibles",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "No se pudieron cargar los horarios disponibles", variant: "destructive" });
     } finally {
       setLoading(false);
     }
   };
 
+  // Dates that have available slots
+  const availableDates = useMemo(() => {
+    const dates = new Set<string>();
+    slots.forEach((s) => dates.add(s.date));
+    return dates;
+  }, [slots]);
+
+  // Slots for the selected date
+  const slotsForDate = useMemo(() => {
+    if (!selectedDate) return [];
+    const dateStr = format(selectedDate, "yyyy-MM-dd");
+    return slots.filter((s) => s.date === dateStr);
+  }, [slots, selectedDate]);
+
+  const handleDateSelect = (date: Date | undefined) => {
+    if (!date) return;
+    setSelectedDate(date);
+    setSelectedSlot(null);
+    setStep("slot");
+  };
+
+  const handleSlotSelect = (slot: AvailabilitySlot) => {
+    setSelectedSlot(slot);
+    setStep("confirm");
+  };
+
   const handleBookAppointment = async () => {
     if (!selectedSlot) return;
-
     setSubmitting(true);
     try {
-      // Create the appointment
       const startAt = `${selectedSlot.date}T${selectedSlot.start_time}`;
       const endAt = `${selectedSlot.date}T${selectedSlot.end_time}`;
 
@@ -99,173 +134,255 @@ export const PatientBookingModal = ({
 
       if (appointmentError) throw appointmentError;
 
-      // Update slot status to booked
       const { error: slotError } = await supabase
         .from("availability_slots")
         .update({ status: "booked" })
         .eq("id", selectedSlot.id);
 
-      if (slotError) {
-        console.error("Error updating slot status:", slotError);
-      }
+      if (slotError) console.error("Error updating slot status:", slotError);
 
       toast({
-        title: "Cita reservada",
-        description: "Tu cita ha sido agendada. El consultorio confirmará la reserva.",
+        title: "✅ Cita solicitada",
+        description: "Tu cita fue solicitada. El profesional la confirmará pronto.",
       });
 
       onOpenChange(false);
       onSuccess?.();
-      
-      // Reset state
-      setSelectedSlot(null);
-      setNotes("");
     } catch (error: any) {
       console.error("Error booking appointment:", error);
-      toast({
-        title: "Error",
-        description: error.message || "No se pudo reservar la cita",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: error.message || "No se pudo reservar la cita", variant: "destructive" });
     } finally {
       setSubmitting(false);
     }
   };
 
-  const getModalityIcon = (modality: string) => {
-    if (modality === "online" || modality === "virtual") {
-      return <Video className="h-4 w-4" />;
-    }
-    return <MapPin className="h-4 w-4" />;
+  const isDateAvailable = (date: Date) => {
+    const dateStr = format(date, "yyyy-MM-dd");
+    return availableDates.has(dateStr);
+  };
+
+  const getModalityBadge = (modality: string) => {
+    const isOnline = modality === "online" || modality === "virtual";
+    return (
+      <span className={cn(
+        "inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium",
+        isOnline ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
+      )}>
+        {isOnline ? <Video className="h-3 w-3" /> : <MapPin className="h-3 w-3" />}
+        {isOnline ? "Online" : "Presencial"}
+      </span>
+    );
+  };
+
+  const stepTitle: Record<Step, string> = {
+    date: "Elegí una fecha",
+    slot: "Elegí un horario",
+    confirm: "Confirmá tu reserva",
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Reservar una cita</DialogTitle>
-          <DialogDescription>
-            {selectedSlot 
-              ? "Confirmá tu reserva" 
-              : "Seleccioná un horario disponible"}
-          </DialogDescription>
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto p-0">
+        <DialogHeader className="p-6 pb-2">
+          <DialogTitle className="flex items-center gap-2">
+            {step !== "date" && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 -ml-1"
+                onClick={() => {
+                  if (step === "confirm") setStep("slot");
+                  else if (step === "slot") { setStep("date"); setSelectedDate(undefined); }
+                }}
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+            )}
+            Reservar una cita
+          </DialogTitle>
+          <DialogDescription>{stepTitle[step]}</DialogDescription>
         </DialogHeader>
 
-        {loading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          </div>
-        ) : selectedSlot ? (
-          <div className="space-y-4">
-            {/* Selected slot summary */}
-            <div className="p-4 bg-muted rounded-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <span className="font-medium">
-                  {format(new Date(selectedSlot.date), "EEEE d 'de' MMMM", { locale: es })}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Clock className="h-4 w-4" />
-                {selectedSlot.start_time.slice(0, 5)} - {selectedSlot.end_time.slice(0, 5)}
-              </div>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-                {getModalityIcon(selectedSlot.modality)}
-                <span className="capitalize">{selectedSlot.modality}</span>
-                {selectedSlot.price && (
-                  <span className="ml-2">${selectedSlot.price}</span>
-                )}
-              </div>
+        <div className="px-6 pb-6">
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
-
-            {/* Notes field */}
-            <div className="space-y-2">
-              <Label htmlFor="notes">Notas adicionales (opcional)</Label>
-              <Textarea
-                id="notes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="¿Hay algo que quieras comentar antes de la cita?"
-                rows={3}
-              />
+          ) : slots.length === 0 ? (
+            <div className="text-center py-10">
+              <CalendarIcon className="h-12 w-12 text-muted-foreground mx-auto mb-3 opacity-40" />
+              <p className="text-muted-foreground font-medium mb-1">No hay turnos disponibles por el momento.</p>
+              <p className="text-sm text-muted-foreground">Contactá a tu profesional.</p>
             </div>
-
-            {/* Action buttons */}
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setSelectedSlot(null)}
-                className="flex-1"
-              >
-                Cambiar horario
-              </Button>
-              <Button
-                onClick={handleBookAppointment}
-                disabled={submitting}
-                className="flex-1"
-              >
-                {submitting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Reservando...
-                  </>
-                ) : (
-                  "Confirmar reserva"
-                )}
-              </Button>
-            </div>
-          </div>
-        ) : slots.length === 0 ? (
-          <div className="text-center py-8">
-            <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-3 opacity-50" />
-            <p className="text-muted-foreground mb-2">
-              Por el momento no hay horarios disponibles.
-            </p>
-            <p className="text-sm text-muted-foreground">
-              Contactá al consultorio para coordinar una cita.
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-3 max-h-96 overflow-y-auto">
-            {slots.map((slot) => (
-              <button
-                key={slot.id}
-                onClick={() => setSelectedSlot(slot)}
-                className="w-full p-4 border rounded-lg hover:border-primary hover:bg-accent transition-colors text-left"
-              >
-                <div className="flex items-start justify-between">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">
-                        {format(new Date(slot.date), "EEEE d 'de' MMMM", { locale: es })}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Clock className="h-4 w-4" />
-                      {slot.start_time.slice(0, 5)} - {slot.end_time.slice(0, 5)}
-                    </div>
-                    <div className="flex items-center gap-2 mt-2">
-                      <span className="text-xs px-2 py-1 bg-muted rounded flex items-center gap-1">
-                        {getModalityIcon(slot.modality)}
-                        {slot.modality}
-                      </span>
-                      {slot.price && (
-                        <span className="text-xs px-2 py-1 bg-muted rounded">
-                          ${slot.price}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="text-sm text-primary">
-                    Seleccionar →
-                  </div>
-                </div>
-              </button>
-            ))}
-          </div>
-        )}
+          ) : step === "date" ? (
+            <DateStep
+              availableDates={availableDates}
+              isDateAvailable={isDateAvailable}
+              onSelect={handleDateSelect}
+              selectedDate={selectedDate}
+            />
+          ) : step === "slot" ? (
+            <SlotStep
+              slots={slotsForDate}
+              selectedDate={selectedDate!}
+              getModalityBadge={getModalityBadge}
+              onSelect={handleSlotSelect}
+            />
+          ) : (
+            <ConfirmStep
+              slot={selectedSlot!}
+              selectedDate={selectedDate!}
+              getModalityBadge={getModalityBadge}
+              notes={notes}
+              onNotesChange={setNotes}
+              onConfirm={handleBookAppointment}
+              submitting={submitting}
+            />
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );
 };
+
+/* ─── Sub-components ─── */
+
+function DateStep({
+  availableDates,
+  isDateAvailable,
+  onSelect,
+  selectedDate,
+}: {
+  availableDates: Set<string>;
+  isDateAvailable: (d: Date) => boolean;
+  onSelect: (d: Date | undefined) => void;
+  selectedDate: Date | undefined;
+}) {
+  const today = new Date();
+
+  return (
+    <div className="flex justify-center">
+      <Calendar
+        mode="single"
+        selected={selectedDate}
+        onSelect={onSelect}
+        locale={es}
+        disabled={(date) => date < today || !isDateAvailable(date)}
+        fromDate={today}
+        toDate={addDays(today, 90)}
+        className="p-3 pointer-events-auto"
+        modifiers={{ available: (date) => isDateAvailable(date) }}
+        modifiersClassNames={{ available: "font-bold text-primary" }}
+      />
+    </div>
+  );
+}
+
+function SlotStep({
+  slots,
+  selectedDate,
+  getModalityBadge,
+  onSelect,
+}: {
+  slots: AvailabilitySlot[];
+  selectedDate: Date;
+  getModalityBadge: (m: string) => JSX.Element;
+  onSelect: (s: AvailabilitySlot) => void;
+}) {
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-muted-foreground">
+        {format(selectedDate, "EEEE d 'de' MMMM", { locale: es })}
+      </p>
+      <div className="grid gap-2 max-h-64 overflow-y-auto">
+        {slots.map((slot) => (
+          <button
+            key={slot.id}
+            onClick={() => onSelect(slot)}
+            className="flex items-center justify-between w-full p-3 border rounded-xl hover:border-primary hover:bg-accent/50 transition-colors text-left"
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5 text-sm font-medium">
+                <Clock className="h-4 w-4 text-muted-foreground" />
+                {slot.start_time.slice(0, 5)} – {slot.end_time.slice(0, 5)}
+              </div>
+              {getModalityBadge(slot.modality)}
+            </div>
+            <div className="flex items-center gap-2">
+              {slot.price != null && slot.price > 0 && (
+                <span className="text-xs text-muted-foreground">${slot.price}</span>
+              )}
+              <span className="text-xs text-primary font-medium">Elegir →</span>
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ConfirmStep({
+  slot,
+  selectedDate,
+  getModalityBadge,
+  notes,
+  onNotesChange,
+  onConfirm,
+  submitting,
+}: {
+  slot: AvailabilitySlot;
+  selectedDate: Date;
+  getModalityBadge: (m: string) => JSX.Element;
+  notes: string;
+  onNotesChange: (v: string) => void;
+  onConfirm: () => void;
+  submitting: boolean;
+}) {
+  return (
+    <div className="space-y-4">
+      <div className="p-4 bg-muted/50 rounded-xl space-y-2">
+        <div className="flex items-center gap-2">
+          <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+          <span className="font-medium capitalize">
+            {format(selectedDate, "EEEE d 'de' MMMM", { locale: es })}
+          </span>
+        </div>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Clock className="h-4 w-4" />
+          {slot.start_time.slice(0, 5)} – {slot.end_time.slice(0, 5)}
+        </div>
+        <div className="flex items-center gap-2">
+          {getModalityBadge(slot.modality)}
+          {slot.price != null && slot.price > 0 && (
+            <span className="text-sm text-muted-foreground">${slot.price}</span>
+          )}
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="booking-notes">Notas adicionales (opcional)</Label>
+        <Textarea
+          id="booking-notes"
+          value={notes}
+          onChange={(e) => onNotesChange(e.target.value)}
+          placeholder="¿Hay algo que quieras comentar antes de la cita?"
+          rows={3}
+        />
+      </div>
+
+      <Button onClick={onConfirm} disabled={submitting} className="w-full" size="lg">
+        {submitting ? (
+          <>
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            Reservando...
+          </>
+        ) : (
+          <>
+            <CheckCircle2 className="h-4 w-4 mr-2" />
+            Confirmar reserva
+          </>
+        )}
+      </Button>
+    </div>
+  );
+}
