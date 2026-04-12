@@ -64,6 +64,7 @@ const Patients = () => {
 
   useEffect(() => {
     filterPatients();
+    setCurrentPage(1);
   }, [patients, searchTerm, statusFilter]);
 
   const fetchPatients = async () => {
