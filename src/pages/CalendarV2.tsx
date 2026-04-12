@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -34,6 +34,7 @@ import { AppointmentDetailModal } from "@/components/calendar/AppointmentDetailM
 import { CreateAppointmentModal } from "@/components/CreateAppointmentModal";
 import { QuickPaymentDrawer } from "@/components/calendar/QuickPaymentDrawer";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 
 import {
   CalendarAppointment,
