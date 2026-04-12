@@ -595,7 +595,87 @@ const ClinicSettings = () => {
           </CardContent>
         </Card>
 
-        {/* Variables disponibles */}
+        {/* Dashboard Branding */}
+        <Card className="mobile-card border-primary/20">
+          <CardHeader className="px-0 pt-0 pb-4 sm:px-6 sm:pt-6">
+            <CardTitle className="text-lg font-bold flex items-center gap-2">
+              <Paintbrush className="h-5 w-5 text-primary" />
+              Personalización del Panel
+            </CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">
+              Personalizá los colores y logo de tu panel de gestión (independiente del portal del paciente)
+            </p>
+          </CardHeader>
+          <CardContent className="px-0 pb-0 sm:px-6 sm:pb-6 space-y-4">
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold">Nombre visible</Label>
+              <Input
+                value={dashboardDisplayName}
+                onChange={(e) => setDashboardDisplayName(e.target.value)}
+                placeholder="Ej: Mi Consultorio"
+                className="h-12 text-base rounded-xl"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold">URL del logo</Label>
+              <Input
+                value={dashboardLogoUrl}
+                onChange={(e) => setDashboardLogoUrl(e.target.value)}
+                placeholder="https://ejemplo.com/logo.png"
+                className="h-12 text-base rounded-xl"
+              />
+              {dashboardLogoUrl && (
+                <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-xl">
+                  <img src={dashboardLogoUrl} alt="Logo preview" className="w-10 h-10 rounded-lg object-cover" />
+                  <span className="text-sm text-muted-foreground">Vista previa del logo</span>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold">Color principal (HSL)</Label>
+              <div className="flex items-center gap-3">
+                <Input
+                  value={dashboardColor}
+                  onChange={(e) => setDashboardColor(e.target.value)}
+                  placeholder="176 100% 32%"
+                  className="h-12 text-base rounded-xl flex-1"
+                />
+                <div
+                  className="w-12 h-12 rounded-xl border border-border shrink-0"
+                  style={{ background: `hsl(${dashboardColor})` }}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">Formato: hue saturation% lightness% (ej: 220 80% 50% para azul)</p>
+              {/* Quick color presets */}
+              <div className="flex flex-wrap gap-2 pt-1">
+                {[
+                  { label: "Teal", value: "176 100% 32%" },
+                  { label: "Azul", value: "220 80% 50%" },
+                  { label: "Violeta", value: "270 70% 50%" },
+                  { label: "Rosa", value: "330 75% 55%" },
+                  { label: "Naranja", value: "25 90% 50%" },
+                  { label: "Verde", value: "150 70% 40%" },
+                ].map((preset) => (
+                  <button
+                    key={preset.label}
+                    type="button"
+                    onClick={() => setDashboardColor(preset.value)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border text-xs font-medium hover:bg-muted transition-colors"
+                  >
+                    <div
+                      className="w-3 h-3 rounded-full"
+                      style={{ background: `hsl(${preset.value})` }}
+                    />
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         <Card className="mobile-card">
           <CardHeader className="px-0 pt-0 pb-4 sm:px-6 sm:pt-6">
             <CardTitle className="text-lg font-bold">Variables disponibles</CardTitle>
