@@ -17,6 +17,7 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useDashboardBranding } from "@/contexts/DashboardBrandingContext";
 
 const navItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
@@ -36,6 +37,10 @@ export function MobileHeader() {
   const [open, setOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const { primaryColor, logoUrl, displayName } = useDashboardBranding();
+
+  const brandHsl = `hsl(${primaryColor})`;
+  const brandHsla = (alpha: number) => `hsla(${primaryColor}, ${alpha})`;
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -76,11 +81,20 @@ export function MobileHeader() {
 
         <div className="flex-1 flex justify-center">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-md bg-gradient-to-br from-[hsl(176,80%,40%)] to-[hsl(176,100%,25%)] flex items-center justify-center">
-              <CalendarDays className="h-3.5 w-3.5 text-white" />
-            </div>
+            {logoUrl ? (
+              <img src={logoUrl} alt="Logo" className="w-6 h-6 rounded-md object-cover" />
+            ) : (
+              <div
+                className="w-6 h-6 rounded-md flex items-center justify-center"
+                style={{
+                  background: `linear-gradient(135deg, ${brandHsl}, hsl(${primaryColor.split(' ')[0]} 100% 25%))`,
+                }}
+              >
+                <CalendarDays className="h-3.5 w-3.5 text-white" />
+              </div>
+            )}
             <span className="text-xs font-semibold text-white/50 tracking-wide">
-              Consultorio Digital
+              {displayName || "Consultorio Digital"}
             </span>
           </div>
         </div>
@@ -114,10 +128,27 @@ export function MobileHeader() {
           {/* Close button */}
           <div className="flex items-center justify-between h-14 px-4 border-b border-white/[0.06]">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[hsl(176,80%,40%)] to-[hsl(176,100%,25%)] flex items-center justify-center shadow-lg shadow-[hsla(176,80%,40%,0.2)]">
-                <CalendarDays className="h-4 w-4 text-white" />
-              </div>
-              <span className="text-sm font-semibold text-white/80">Consultorio</span>
+              {logoUrl ? (
+                <img
+                  src={logoUrl}
+                  alt="Logo"
+                  className="w-8 h-8 rounded-lg object-cover"
+                  style={{ boxShadow: `0 4px 12px ${brandHsla(0.2)}` }}
+                />
+              ) : (
+                <div
+                  className="w-8 h-8 rounded-lg flex items-center justify-center"
+                  style={{
+                    background: `linear-gradient(135deg, ${brandHsl}, hsl(${primaryColor.split(' ')[0]} 100% 25%))`,
+                    boxShadow: `0 4px 12px ${brandHsla(0.2)}`,
+                  }}
+                >
+                  <CalendarDays className="h-4 w-4 text-white" />
+                </div>
+              )}
+              <span className="text-sm font-semibold text-white/80">
+                {displayName || "Consultorio"}
+              </span>
             </div>
             <button
               onClick={() => setOpen(false)}
@@ -138,12 +169,16 @@ export function MobileHeader() {
                   className={cn(
                     "relative flex items-center gap-3 w-full px-3 py-3 rounded-xl transition-all duration-200 text-left",
                     active
-                      ? "bg-[hsla(176,80%,40%,0.12)] text-[hsl(176,80%,45%)]"
+                      ? "text-white"
                       : "text-white/40 hover:text-white/80 hover:bg-white/[0.04]"
                   )}
+                  style={active ? { background: brandHsla(0.12), color: brandHsl } : undefined}
                 >
                   {active && (
-                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-[hsl(176,80%,45%)]" />
+                    <div
+                      className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full"
+                      style={{ background: brandHsl }}
+                    />
                   )}
                   <item.icon className="h-[18px] w-[18px] shrink-0" />
                   <span className="text-sm font-medium">{item.title}</span>
