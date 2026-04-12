@@ -41,6 +41,7 @@ import {
   type RecurrenceType,
 } from "@/lib/payments";
 import { useBusinessId } from "@/hooks/use-business-id";
+import { ListPagination, usePagination, ITEMS_PER_PAGE } from "@/components/ListPagination";
 
 
 interface Patient {
@@ -83,6 +84,7 @@ const Payments = () => {
   const [deletingPaymentId, setDeletingPaymentId] = useState<string | null>(null);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
   const [confirmPaymentData, setConfirmPaymentData] = useState<{ id: string; amount: number; patientName: string } | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
   
   const { businessId, loading: businessLoading } = useBusinessId();
   useEffect(() => {
@@ -96,7 +98,8 @@ const Payments = () => {
     if (status) {
       setStatusFilter(status);
     }
-  }, [searchParams]);
+    setCurrentPage(1);
+  }, [searchParams, searchQuery, statusFilter, patientFilter]);
 
   const fetchData = async () => {
     if (!businessId) return;
@@ -199,6 +202,8 @@ const Payments = () => {
     return true;
   });
 
+  const { paginatedItems: pagePayments, totalPages } = usePagination(filteredPayments, currentPage);
+
   if (loading) {
     return <LoadingPage />;
   }
@@ -293,7 +298,7 @@ const Payments = () => {
               </p>
             ) : (
               <div className="space-y-2">
-                {filteredPayments.map((payment) => (
+                {pagePayments.map((payment) => (
                   <div
                     key={payment.id}
                     onClick={() => setSelectedPayment(payment)}
@@ -367,6 +372,14 @@ const Payments = () => {
             )}
           </CardContent>
         </Card>
+
+        <ListPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          totalItems={filteredPayments.length}
+          pageSize={ITEMS_PER_PAGE}
+        />
       </div>
       {editingPayment && businessId && (
         <PaymentForm

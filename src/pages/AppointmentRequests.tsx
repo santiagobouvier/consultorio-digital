@@ -24,11 +24,13 @@ import { es } from "date-fns/locale";
 import { ArrowLeft, Check, X, MessageCircle } from "lucide-react";
 import LoadingPage from "@/components/LoadingPage";
 import { useBusinessId } from "@/hooks/use-business-id";
+import { ListPagination, usePagination, ITEMS_PER_PAGE } from "@/components/ListPagination";
 
 const AppointmentRequests = () => {
   const navigate = useNavigate();
   const [requests, setRequests] = useState<any[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
   
   const { businessId, loading: businessLoading } = useBusinessId();
 
@@ -201,6 +203,8 @@ const AppointmentRequests = () => {
     }
   };
 
+  const { paginatedItems: pageRequests, totalPages } = usePagination(requests, currentPage);
+
   if (loading) {
     return <LoadingPage />;
   }
@@ -240,7 +244,7 @@ const AppointmentRequests = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {requests.map((request) => (
+                    {pageRequests.map((request) => (
                       <TableRow key={request.id}>
                         <TableCell>
                           <div>
@@ -305,6 +309,13 @@ const AppointmentRequests = () => {
             )}
           </CardContent>
         </Card>
+        <ListPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          totalItems={requests.length}
+          pageSize={ITEMS_PER_PAGE}
+        />
       </div>
     </div>
   );

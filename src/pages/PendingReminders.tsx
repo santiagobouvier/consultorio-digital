@@ -19,6 +19,7 @@ import {
 import { Send, Trash2, Bell, Mail, MessageSquare, Check, Filter, Copy, CheckSquare } from "lucide-react";
 import LoadingPage from "@/components/LoadingPage";
 import { useBusinessId } from "@/hooks/use-business-id";
+import { ListPagination, usePagination, ITEMS_PER_PAGE } from "@/components/ListPagination";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface Reminder {
@@ -80,6 +81,7 @@ const PendingReminders = () => {
   const [activeTab, setActiveTab] = useState("pending");
   const [showSendAllConfirm, setShowSendAllConfirm] = useState(false);
   const [selectedForSent, setSelectedForSent] = useState<Set<string>>(new Set());
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     if (businessId) loadReminders();
@@ -112,6 +114,11 @@ const PendingReminders = () => {
     if (activeTab === "sent") return r.status === "sent";
     return true;
   });
+
+  const { paginatedItems: pageReminders, totalPages } = usePagination(filteredReminders, currentPage);
+
+  // Reset page on tab change
+  useEffect(() => { setCurrentPage(1); }, [activeTab]);
 
   const pendingCount = reminders.filter(r => r.status === "pending_manual" || r.status === "scheduled").length;
   const sentCount = reminders.filter(r => r.status === "sent").length;
@@ -333,7 +340,7 @@ const PendingReminders = () => {
               </Card>
             ) : (
               <div className="space-y-3">
-                {filteredReminders.map((reminder) => {
+                {pageReminders.map((reminder) => {
                   const apptDt = reminder.appointment?.start_at ? formatDateTime(reminder.appointment.start_at) : null;
                   const schedDt = formatDateTime(reminder.scheduled_for);
                   const chConf = channelConfig[reminder.channel] || channelConfig.whatsapp;
@@ -422,6 +429,13 @@ const PendingReminders = () => {
                 })}
               </div>
             )}
+            <ListPagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              totalItems={filteredReminders.length}
+              pageSize={ITEMS_PER_PAGE}
+            />
           </TabsContent>
         </Tabs>
       </div>

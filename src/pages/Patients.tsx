@@ -17,6 +17,7 @@ import { Search, Plus, ChevronRight, Smartphone, Users, UserCheck, UserX, Shield
 import { useBusinessId } from "@/hooks/use-business-id";
 import LoadingPage from "@/components/LoadingPage";
 import { cn } from "@/lib/utils";
+import { ListPagination, usePagination, ITEMS_PER_PAGE } from "@/components/ListPagination";
 
 interface Patient {
   id: string;
@@ -41,7 +42,7 @@ const Patients = () => {
   });
   const [showForm, setShowForm] = useState(false);
   const [businessName, setBusinessName] = useState<string | null>(null);
-
+  const [currentPage, setCurrentPage] = useState(1);
   const { businessId, loading: businessLoading, isSuperAdmin } = useBusinessId();
 
   useEffect(() => {
@@ -63,6 +64,7 @@ const Patients = () => {
 
   useEffect(() => {
     filterPatients();
+    setCurrentPage(1);
   }, [patients, searchTerm, statusFilter]);
 
   const fetchPatients = async () => {
@@ -173,6 +175,8 @@ const Patients = () => {
     portal: patients.filter(p => p.auth_user_id !== null).length,
   }), [patients]);
 
+  const { paginatedItems: pagePatients, totalPages } = usePagination(filteredPatients, currentPage);
+
   if (businessLoading || dataLoading) {
     return <LoadingPage />;
   }
@@ -275,7 +279,7 @@ const Patients = () => {
           <>
             {/* Mobile Cards */}
             <div className="md:hidden space-y-2.5">
-              {filteredPatients.map((patient) => (
+              {pagePatients.map((patient) => (
                 <Card
                   key={patient.id}
                   className="border-border/40 shadow-sm hover:shadow-md active:scale-[0.98] transition-all cursor-pointer group"
@@ -327,7 +331,7 @@ const Patients = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredPatients.map((patient) => (
+                    {pagePatients.map((patient) => (
                       <TableRow
                         key={patient.id}
                         className="cursor-pointer hover:bg-primary/[0.03] transition-colors group"
@@ -395,10 +399,14 @@ const Patients = () => {
               </Card>
             </div>
 
-            {/* Results count */}
-            <p className="text-center text-xs text-muted-foreground">
-              Mostrando {filteredPatients.length} de {patients.length} pacientes
-            </p>
+            {/* Pagination */}
+            <ListPagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              totalItems={filteredPatients.length}
+              pageSize={ITEMS_PER_PAGE}
+            />
           </>
         )}
       </div>
