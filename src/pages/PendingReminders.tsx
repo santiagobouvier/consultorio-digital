@@ -26,13 +26,22 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Send, Trash2, Bell, Mail, MessageSquare, Check, Copy, CheckSquare,
-  Search, Pencil, XCircle, Clock, BellRing, MailCheck, X,
+  Search, Pencil, XCircle, Clock, BellRing, MailCheck, X, Plus,
 } from "lucide-react";
 import LoadingPage from "@/components/LoadingPage";
 import { useBusinessId } from "@/hooks/use-business-id";
 import { ListPagination, usePagination, ITEMS_PER_PAGE } from "@/components/ListPagination";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 
 interface Reminder {
   id: string;
