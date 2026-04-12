@@ -28,8 +28,8 @@ export const AppointmentCard = ({
       <button
         onClick={onClick}
         className={cn(
-          "w-full text-left p-2.5 rounded-xl bg-card border transition-all",
-          "hover:shadow-md active:scale-[0.98]",
+          "w-full text-left p-2.5 rounded-xl bg-card border transition-all duration-200",
+          "hover:shadow-md hover:-translate-y-0.5 active:scale-[0.97]",
           showProfessionalColor && "border-l-4"
         )}
         style={{
@@ -68,8 +68,8 @@ export const AppointmentCard = ({
     <button
       onClick={onClick}
       className={cn(
-        "w-full text-left p-4 rounded-2xl bg-card border transition-all",
-        "hover:shadow-lg active:scale-[0.98]",
+        "w-full text-left p-4 rounded-2xl bg-card border transition-all duration-200",
+        "hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.97] active:shadow-sm",
         showProfessionalColor && "border-l-4"
       )}
       style={{
