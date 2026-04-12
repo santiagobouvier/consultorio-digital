@@ -133,7 +133,7 @@ const OnboardingWizard = () => {
     if (!watchedSubdomain || watchedSubdomain.length < 3) { setSubdomainAvailable(null); return; }
     const timer = setTimeout(async () => {
       setCheckingSubdomain(true);
-      const available = await checkSubdomainAvailability(watchedSubdomain, existingBusinessId || undefined);
+      const available = await checkSubdomainAvailability(watchedSubdomain);
       setSubdomainAvailable(available);
       setCheckingSubdomain(false);
     }, 500);
@@ -144,7 +144,7 @@ const OnboardingWizard = () => {
     if (!watchedDomain) { setDomainAvailable(null); return; }
     const timer = setTimeout(async () => {
       setCheckingDomain(true);
-      const available = await checkCustomDomainAvailability(watchedDomain, existingBusinessId || undefined);
+      const available = await checkCustomDomainAvailability(watchedDomain);
       setDomainAvailable(available);
       setCheckingDomain(false);
     }, 500);
