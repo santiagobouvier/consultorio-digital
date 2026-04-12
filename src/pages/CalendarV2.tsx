@@ -8,6 +8,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { calculatePaymentStatus, type PaymentStatus } from "@/lib/payments";
 import {
   format,
+  isSameDay,
   addMonths,
   subMonths,
   addWeeks,
@@ -389,6 +390,27 @@ const CalendarV2 = () => {
   // Determine if we should show professional colors
   const showProfessionalColors = sharedCalendar && professionals.length > 1;
 
+  // Compute payments for the currently selected day (for day view)
+  const dayPayments = useMemo(() => {
+    if (viewType !== "day") return [];
+    return allPayments
+      .filter((p) => {
+        const dueDate = new Date(p.due_date);
+        return (
+          isSameDay(dueDate, currentDate) &&
+          p.status !== "cancelled" &&
+          !p.paid_at
+        );
+      })
+      .map((p) => {
+        const patient = patients.find((pat) => pat.id === p.patient_id);
+        return {
+          ...p,
+          patient_name: patient?.full_name || "Sin paciente",
+        };
+      });
+  }, [allPayments, patients, currentDate, viewType]);
+
   const loading = businessLoading || professionalsLoading;
 
   if (loading && !businessId) {
@@ -478,6 +500,10 @@ const CalendarV2 = () => {
                     onAddAppointment={() => setShowCreateModal(true)}
                     showProfessionalColors={showProfessionalColors}
                     professionals={professionals}
+                    dayPayments={dayPayments}
+                    onPaymentClick={(payment) => {
+                      navigate(`/pacientes/${payment.patient_id}`);
+                    }}
                   />
                 )}
                 {viewType === "week" && (
