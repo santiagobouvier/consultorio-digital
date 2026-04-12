@@ -340,7 +340,7 @@ const PendingReminders = () => {
               </Card>
             ) : (
               <div className="space-y-3">
-                {filteredReminders.map((reminder) => {
+                {pageReminders.map((reminder) => {
                   const apptDt = reminder.appointment?.start_at ? formatDateTime(reminder.appointment.start_at) : null;
                   const schedDt = formatDateTime(reminder.scheduled_for);
                   const chConf = channelConfig[reminder.channel] || channelConfig.whatsapp;
