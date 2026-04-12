@@ -111,9 +111,29 @@ const PendingReminders = () => {
   const [editMessage, setEditMessage] = useState("");
   const [editSaving, setEditSaving] = useState(false);
 
+  // Create manual reminder state
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [patients, setPatients] = useState<{ id: string; full_name: string; whatsapp_phone: string | null; email: string | null }[]>([]);
+  const [upcomingAppointments, setUpcomingAppointments] = useState<{ id: string; start_at: string; patient_id: string | null }[]>([]);
+  const [createForm, setCreateForm] = useState({ patientId: "", appointmentId: "", channel: "whatsapp" as "whatsapp" | "email", message: "", hoursBefore: "24" });
+  const [createSaving, setCreateSaving] = useState(false);
+
   useEffect(() => {
-    if (businessId) loadReminders();
+    if (businessId) {
+      loadReminders();
+      loadPatientsAndAppointments();
+    }
   }, [businessId]);
+
+  const loadPatientsAndAppointments = async () => {
+    if (!businessId) return;
+    const [pRes, aRes] = await Promise.all([
+      supabase.from("patients").select("id, full_name, whatsapp_phone, email").eq("business_id", businessId).eq("is_active", true).order("full_name"),
+      supabase.from("appointments").select("id, start_at, patient_id").eq("business_id", businessId).gte("start_at", new Date().toISOString()).order("start_at", { ascending: true }).limit(100),
+    ]);
+    if (pRes.data) setPatients(pRes.data);
+    if (aRes.data) setUpcomingAppointments(aRes.data);
+  };
 
   const loadReminders = async () => {
     try {
