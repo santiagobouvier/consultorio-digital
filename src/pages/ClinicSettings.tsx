@@ -142,8 +142,6 @@ const ClinicSettings = () => {
         setIsOwner(business.owner_user_id === user.id);
         // Load private clinic info for display
         setIsPrivateClinic((business as any).is_private_clinic || false);
-        setCustomSubdomain((business as any).custom_subdomain || null);
-        setCustomDomain((business as any).custom_domain || null);
       }
 
       const { data: settings, error } = await supabase
