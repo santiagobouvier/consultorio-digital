@@ -705,19 +705,68 @@ const SaasAdmin = () => {
 
       {/* ─── Modals ─── */}
       {/* Create Business */}
-      <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
+      <Dialog open={showCreateModal} onOpenChange={(open) => { if (!open) resetCreateForm(); setShowCreateModal(open); }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader><DialogTitle>Crear nuevo consultorio</DialogTitle><DialogDescription>Ingresa los datos del nuevo consultorio y su dueño</DialogDescription></DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2"><Label>Nombre del consultorio</Label><Input value={newBusinessName} onChange={e => setNewBusinessName(e.target.value)} placeholder="Ej: Consultorio Dr. García" /></div>
-            <div className="space-y-2"><Label>Email del dueño</Label><Input type="email" value={newBusinessEmail} onChange={e => setNewBusinessEmail(e.target.value)} placeholder="email@ejemplo.com" /><p className="text-xs text-muted-foreground">Si el email ya existe, se asignará ese usuario.</p></div>
-            <div className="space-y-2"><Label>Plan</Label>
-              <Select value={newBusinessPlan} onValueChange={setNewBusinessPlan}><SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{PLAN_ORDER.map(c => { const p = PLAN_DEFINITIONS[c]; return <SelectItem key={c} value={c}>{p.name} ({p.maxProfessionals === null ? "a medida" : `${p.maxProfessionals} prof, ${p.maxPatients} pac`})</SelectItem>; })}</SelectContent>
-              </Select>
+          
+          {ownerInviteLink ? (
+            <div className="space-y-4 py-4">
+              <Alert>
+                <AlertDescription>
+                  Consultorio creado. Enviá este enlace al dueño para que active su cuenta y establezca su contraseña.
+                </AlertDescription>
+              </Alert>
+              <div className="space-y-2">
+                <Label>Enlace de invitación</Label>
+                <div className="p-3 bg-muted rounded-md text-sm break-all font-mono">{ownerInviteLink}</div>
+              </div>
+              <div className="flex gap-3">
+                <Button variant="outline" className="flex-1" onClick={() => { resetCreateForm(); setShowCreateModal(false); }}>Cerrar</Button>
+                <Button className="flex-1 gap-2" onClick={async () => {
+                  try { await navigator.clipboard.writeText(ownerInviteLink); setCopied(true); toast({ title: "Enlace copiado" }); setTimeout(() => setCopied(false), 2000); } catch { toast({ title: "Error", description: "No se pudo copiar", variant: "destructive" }); }
+                }}>
+                  {copied ? <><Check className="h-4 w-4" />Copiado</> : <><Copy className="h-4 w-4" />Copiar enlace</>}
+                </Button>
+              </div>
             </div>
-          </div>
-          <div className="flex gap-3"><Button variant="outline" className="flex-1" onClick={() => setShowCreateModal(false)}>Cancelar</Button><Button className="flex-1" onClick={handleCreateBusiness} disabled={creating}>{creating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Crear</Button></div>
+          ) : (
+            <div className="space-y-4 py-4">
+              {/* Mode selector */}
+              <div className="space-y-2">
+                <Label>Modo de creación</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button type="button" variant={createMode === "test" ? "default" : "outline"} className="gap-2 h-auto py-3 flex-col" onClick={() => setCreateMode("test")}>
+                    <Terminal className="h-4 w-4" />
+                    <span className="text-xs">Test rápido</span>
+                  </Button>
+                  <Button type="button" variant={createMode === "invite" ? "default" : "outline"} className="gap-2 h-auto py-3 flex-col" onClick={() => setCreateMode("invite")}>
+                    <UserPlus className="h-4 w-4" />
+                    <span className="text-xs">Invitación real</span>
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {createMode === "test" 
+                    ? "Crea el usuario con email y contraseña directa. Ideal para pruebas internas."
+                    : "Genera un enlace de invitación. El dueño activa su cuenta y establece su contraseña."
+                  }
+                </p>
+              </div>
+
+              <div className="space-y-2"><Label>Nombre del consultorio</Label><Input value={newBusinessName} onChange={e => setNewBusinessName(e.target.value)} placeholder="Ej: Consultorio Dr. García" /></div>
+              <div className="space-y-2"><Label>Email del dueño</Label><Input type="email" value={newBusinessEmail} onChange={e => setNewBusinessEmail(e.target.value)} placeholder="email@ejemplo.com" /><p className="text-xs text-muted-foreground">Si el email ya existe, se asignará ese usuario.</p></div>
+              
+              {createMode === "test" && (
+                <div className="space-y-2"><Label>Contraseña</Label><Input type="password" value={newBusinessPassword} onChange={e => setNewBusinessPassword(e.target.value)} placeholder="Mínimo 6 caracteres" /><p className="text-xs text-muted-foreground">Contraseña para acceso directo de prueba.</p></div>
+              )}
+
+              <div className="space-y-2"><Label>Plan</Label>
+                <Select value={newBusinessPlan} onValueChange={setNewBusinessPlan}><SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{PLAN_ORDER.map(c => { const p = PLAN_DEFINITIONS[c]; return <SelectItem key={c} value={c}>{p.name} ({p.maxProfessionals === null ? "a medida" : `${p.maxProfessionals} prof, ${p.maxPatients} pac`})</SelectItem>; })}</SelectContent>
+                </Select>
+              </div>
+              <div className="flex gap-3"><Button variant="outline" className="flex-1" onClick={() => { resetCreateForm(); setShowCreateModal(false); }}>Cancelar</Button><Button className="flex-1" onClick={handleCreateBusiness} disabled={creating}>{creating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}{createMode === "test" ? "Crear" : "Crear e invitar"}</Button></div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
