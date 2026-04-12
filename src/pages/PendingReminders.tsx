@@ -115,6 +115,11 @@ const PendingReminders = () => {
     return true;
   });
 
+  const { paginatedItems: pageReminders, totalPages } = usePagination(filteredReminders, currentPage);
+
+  // Reset page on tab change
+  useEffect(() => { setCurrentPage(1); }, [activeTab]);
+
   const pendingCount = reminders.filter(r => r.status === "pending_manual" || r.status === "scheduled").length;
   const sentCount = reminders.filter(r => r.status === "sent").length;
 
