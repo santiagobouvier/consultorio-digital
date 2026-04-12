@@ -253,7 +253,7 @@ const Landing = () => {
 
             <div className="relative grid grid-cols-1 lg:grid-cols-2 gap-0">
               {/* Left side — Text + CTAs */}
-              <div className="p-6 sm:p-10 lg:p-12 xl:p-16 flex flex-col justify-center">
+              <div className="p-6 sm:p-8 lg:p-10 xl:p-12 flex flex-col justify-center">
               {/* Logo */}
                 <div className="flex justify-center lg:justify-start mb-1">
                   <img 
