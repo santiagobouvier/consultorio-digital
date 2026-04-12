@@ -1087,6 +1087,23 @@ const Landing = () => {
           0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.5; }
           50% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
         }
+        @keyframes orbFloat1 {
+          0%, 100% { transform: translate(0, 0); }
+          25% { transform: translate(60px, 40px); }
+          50% { transform: translate(-30px, 80px); }
+          75% { transform: translate(-60px, 20px); }
+        }
+        @keyframes orbFloat2 {
+          0%, 100% { transform: translate(0, 0); }
+          25% { transform: translate(-50px, 60px); }
+          50% { transform: translate(40px, -30px); }
+          75% { transform: translate(70px, 40px); }
+        }
+        @keyframes orbFloat3 {
+          0%, 100% { transform: translate(0, 0); }
+          33% { transform: translate(80px, -50px); }
+          66% { transform: translate(-60px, -30px); }
+        }
       `}</style>
     </div>
   );
