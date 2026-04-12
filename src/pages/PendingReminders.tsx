@@ -19,6 +19,7 @@ import {
 import { Send, Trash2, Bell, Mail, MessageSquare, Check, Filter, Copy, CheckSquare } from "lucide-react";
 import LoadingPage from "@/components/LoadingPage";
 import { useBusinessId } from "@/hooks/use-business-id";
+import { ListPagination, usePagination, ITEMS_PER_PAGE } from "@/components/ListPagination";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface Reminder {

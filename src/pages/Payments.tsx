@@ -41,6 +41,7 @@ import {
   type RecurrenceType,
 } from "@/lib/payments";
 import { useBusinessId } from "@/hooks/use-business-id";
+import { ListPagination, usePagination, ITEMS_PER_PAGE } from "@/components/ListPagination";
 
 
 interface Patient {

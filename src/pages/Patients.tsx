@@ -17,6 +17,7 @@ import { Search, Plus, ChevronRight, Smartphone, Users, UserCheck, UserX, Shield
 import { useBusinessId } from "@/hooks/use-business-id";
 import LoadingPage from "@/components/LoadingPage";
 import { cn } from "@/lib/utils";
+import { ListPagination, usePagination, ITEMS_PER_PAGE } from "@/components/ListPagination";
 
 interface Patient {
   id: string;

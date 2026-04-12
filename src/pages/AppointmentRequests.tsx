@@ -24,6 +24,7 @@ import { es } from "date-fns/locale";
 import { ArrowLeft, Check, X, MessageCircle } from "lucide-react";
 import LoadingPage from "@/components/LoadingPage";
 import { useBusinessId } from "@/hooks/use-business-id";
+import { ListPagination, usePagination, ITEMS_PER_PAGE } from "@/components/ListPagination";
 
 const AppointmentRequests = () => {
   const navigate = useNavigate();
