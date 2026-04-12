@@ -1320,13 +1320,16 @@ const Landing = () => {
                 </h2>
                 <p className="text-gray-400 text-sm sm:text-base leading-relaxed font-light mb-6">
                   Cada consultorio tiene una <strong className="text-white">página pública</strong> donde nuevos pacientes pueden conocerte, 
-                  ver tus servicios y <strong className="text-white">reservar un turno directamente</strong>.
+                  ver tus servicios y <strong className="text-white">reservar un turno directamente</strong>. 
+                  Además, según tu plan podés <strong className="text-white">agregar páginas extras</strong> y armar un sitio web institucional completo como complemento del portal de tus pacientes.
                 </p>
                 <ul className="space-y-3">
                   {[
                     "Página pública con tu información",
                     "Lista de servicios y especialidades",
                     "Reserva de turnos para pacientes nuevos",
+                    "Páginas adicionales según tu plan (Sobre nosotros, etc.)",
+                    "Constructor de sitio web institucional",
                     "Preparado para dominio personalizado",
                   ].map((text, i) => (
                     <li key={i} className="flex items-center gap-3 text-gray-300 text-sm">
