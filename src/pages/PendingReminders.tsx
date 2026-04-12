@@ -81,6 +81,7 @@ const PendingReminders = () => {
   const [activeTab, setActiveTab] = useState("pending");
   const [showSendAllConfirm, setShowSendAllConfirm] = useState(false);
   const [selectedForSent, setSelectedForSent] = useState<Set<string>>(new Set());
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     if (businessId) loadReminders();

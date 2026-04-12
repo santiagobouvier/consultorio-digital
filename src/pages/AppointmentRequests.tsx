@@ -309,6 +309,13 @@ const AppointmentRequests = () => {
             )}
           </CardContent>
         </Card>
+        <ListPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          totalItems={requests.length}
+          pageSize={ITEMS_PER_PAGE}
+        />
       </div>
     </div>
   );
