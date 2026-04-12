@@ -36,7 +36,9 @@ import {
   AlertTriangle,
   CheckCircle2,
   Clock,
+  Download,
 } from "lucide-react";
+import { exportCSV, todayDateString } from "@/lib/csv-export";
 import { PaymentWhatsAppMenu } from "@/components/PaymentWhatsAppMenu";
 import { PaymentForm } from "@/components/PaymentForm";
 import { GlobalPaymentForm } from "@/components/GlobalPaymentForm";
@@ -296,6 +298,26 @@ const Payments = () => {
               ))}
             </SelectContent>
           </Select>
+          <Button
+            variant="outline"
+            className="h-12 rounded-2xl border-border/50 shadow-sm bg-card gap-2"
+            onClick={() => {
+              const headers = ["Paciente", "Monto (UYU)", "Fecha de vencimiento", "Fecha de pago", "Estado", "Método de pago", "Tipo de recurrencia"];
+              const rows = filteredPayments.map((p) => [
+                p.patients?.full_name || "Desconocido",
+                `${p.amount}`,
+                new Date(p.due_date).toLocaleDateString("es-UY"),
+                p.paid_at ? new Date(p.paid_at).toLocaleDateString("es-UY") : "",
+                getPaymentStatusLabel(p.status),
+                p.method || "",
+                getRecurrenceTypeLabel(p.recurrence_type),
+              ]);
+              exportCSV(headers, rows, `pagos_${todayDateString()}.csv`);
+            }}
+          >
+            <Download className="h-4 w-4" />
+            <span className="hidden sm:inline">Exportar CSV</span>
+          </Button>
         </div>
 
         {/* Payment List */}

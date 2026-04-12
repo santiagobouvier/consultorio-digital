@@ -13,7 +13,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { PatientForm } from "@/components/PatientForm";
-import { Search, Plus, ChevronRight, Smartphone, Users, UserCheck, UserX, ShieldCheck } from "lucide-react";
+import { Search, Plus, ChevronRight, Smartphone, Users, UserCheck, UserX, ShieldCheck, Download } from "lucide-react";
+import { exportCSV, todayDateString } from "@/lib/csv-export";
 import { useBusinessId } from "@/hooks/use-business-id";
 import LoadingPage from "@/components/LoadingPage";
 import { cn } from "@/lib/utils";
@@ -262,6 +263,26 @@ const Patients = () => {
               </SelectItem>
             </SelectContent>
           </Select>
+          <Button
+            variant="outline"
+            className="h-12 rounded-2xl border-border/50 shadow-sm bg-card gap-2"
+            onClick={() => {
+              const headers = ["Nombre", "Email", "WhatsApp", "Motivo de consulta", "Estado", "Tiene portal", "Fecha de registro"];
+              const rows = filteredPatients.map((p) => [
+                p.full_name,
+                p.email || "",
+                p.whatsapp_phone || "",
+                "",
+                p.is_active ? "Activo" : "Inactivo",
+                p.auth_user_id ? "Sí" : "No",
+                new Date((p as any).created_at || "").toLocaleDateString("es-UY") || "",
+              ]);
+              exportCSV(headers, rows, `pacientes_${todayDateString()}.csv`);
+            }}
+          >
+            <Download className="h-4 w-4" />
+            <span className="hidden sm:inline">Exportar CSV</span>
+          </Button>
         </div>
 
         {/* Content */}
