@@ -232,7 +232,7 @@ const Landing = () => {
       </div>
 
       {/* Hero Section */}
-      <section className="relative min-h-[80vh] sm:min-h-[85vh] flex items-center px-4 sm:px-6 lg:px-10 py-16 sm:py-20 lg:py-24 z-10">
+      <section className="relative min-h-[80vh] sm:min-h-[85vh] flex items-center px-4 sm:px-6 lg:px-10 py-12 sm:py-16 lg:py-12 z-10">
         <div className="w-full max-w-7xl mx-auto">
           <div 
             className="relative rounded-2xl sm:rounded-3xl overflow-hidden"
