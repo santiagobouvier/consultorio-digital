@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ChevronLeft, ChevronRight, Plus, Filter } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Filter, Download } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { ViewType } from "./types";
@@ -18,6 +18,7 @@ interface CalendarHeaderProps {
   hasActiveFilters: boolean;
   activeFiltersCount: number;
   dateLabel: string;
+  onExportCSV?: () => void;
 }
 
 export const CalendarHeader = ({
@@ -31,6 +32,7 @@ export const CalendarHeader = ({
   hasActiveFilters,
   activeFiltersCount,
   dateLabel,
+  onExportCSV,
 }: CalendarHeaderProps) => {
   return (
     <div className="space-y-4">
@@ -182,6 +184,14 @@ export const CalendarHeader = ({
               </Badge>
             )}
           </Button>
+
+          {/* Export */}
+          {onExportCSV && (
+            <Button variant="outline" size="sm" onClick={onExportCSV} className="rounded-xl gap-2">
+              <Download className="h-4 w-4" />
+              Exportar
+            </Button>
+          )}
 
           {/* Add Button */}
           <Button onClick={onAddAppointment} className="rounded-xl gap-2">
