@@ -1,0 +1,305 @@
+import { useState, useEffect, useRef } from "react";
+import {
+  LayoutDashboard,
+  Users,
+  CalendarDays,
+  Receipt,
+  Clock,
+  FileText,
+  Settings,
+  Palette,
+  CreditCard,
+  BarChart3,
+  Shield,
+  LogOut,
+  ChevronRight,
+} from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { cn } from "@/lib/utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+
+const mainItems = [
+  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+  { title: "Pacientes", url: "/patients", icon: Users },
+  { title: "Agenda", url: "/agenda", icon: CalendarDays },
+  { title: "Pagos", url: "/pagos", icon: Receipt },
+  { title: "Recordatorios", url: "/recordatorios-pendientes", icon: Clock },
+  { title: "Solicitudes", url: "/solicitudes", icon: FileText },
+  { title: "Estadísticas", url: "/estadisticas", icon: BarChart3 },
+];
+
+const configItems = [
+  { title: "Facturación", url: "/billing", icon: CreditCard },
+  { title: "Mi consultorio", url: "/mi-consultorio", icon: Settings },
+  { title: "Portal", url: "/personalizar-portal", icon: Palette },
+  { title: "Horarios", url: "/horarios-disponibles", icon: Clock },
+];
+
+const MINI_WIDTH = 64;
+const EXPANDED_WIDTH = 240;
+
+export function PremiumSidebar() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [expanded, setExpanded] = useState(false);
+  const [userName, setUserName] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const hoverTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sidebarRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("name, avatar_url")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (profile) {
+        setUserName(profile.name);
+        setAvatarUrl(profile.avatar_url);
+      }
+
+      const { data: adminRole } = await supabase
+        .from("user_roles")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("role", "super_admin")
+        .maybeSingle();
+
+      setIsSuperAdmin(!!adminRole);
+    };
+    loadProfile();
+  }, []);
+
+  const handleMouseEnter = () => {
+    if (hoverTimeout.current) clearTimeout(hoverTimeout.current);
+    hoverTimeout.current = setTimeout(() => setExpanded(true), 150);
+  };
+
+  const handleMouseLeave = () => {
+    if (hoverTimeout.current) clearTimeout(hoverTimeout.current);
+    hoverTimeout.current = setTimeout(() => setExpanded(false), 300);
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate("/");
+  };
+
+  const isActive = (path: string) => location.pathname === path;
+
+  const initials = userName
+    ? userName
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .slice(0, 2)
+        .toUpperCase()
+    : "U";
+
+  const renderItem = (item: (typeof mainItems)[0]) => {
+    const active = isActive(item.url);
+
+    const button = (
+      <button
+        onClick={() => navigate(item.url)}
+        className={cn(
+          "group relative flex items-center gap-3 w-full rounded-xl transition-all duration-200",
+          expanded ? "px-3 py-2.5" : "px-0 py-2.5 justify-center",
+          active
+            ? "bg-[hsla(176,80%,40%,0.12)] text-[hsl(176,80%,45%)]"
+            : "text-white/40 hover:text-white/80 hover:bg-white/[0.04]"
+        )}
+      >
+        {/* Active indicator bar */}
+        {active && (
+          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-[hsl(176,80%,45%)]" />
+        )}
+
+        <item.icon
+          className={cn(
+            "shrink-0 transition-all duration-200",
+            expanded ? "h-[18px] w-[18px]" : "h-5 w-5",
+            active && "drop-shadow-[0_0_6px_hsla(176,80%,45%,0.4)]"
+          )}
+        />
+
+        <span
+          className={cn(
+            "text-sm font-medium whitespace-nowrap transition-all duration-200",
+            expanded
+              ? "opacity-100 translate-x-0"
+              : "opacity-0 -translate-x-2 absolute pointer-events-none"
+          )}
+        >
+          {item.title}
+        </span>
+      </button>
+    );
+
+    if (expanded) return button;
+
+    return (
+      <Tooltip key={item.url} delayDuration={0}>
+        <TooltipTrigger asChild>{button}</TooltipTrigger>
+        <TooltipContent
+          side="right"
+          sideOffset={12}
+          className="bg-[#1a1a1a] text-white/90 border-white/10 text-xs font-medium"
+        >
+          {item.title}
+        </TooltipContent>
+      </Tooltip>
+    );
+  };
+
+  return (
+    <TooltipProvider>
+      <div
+        ref={sidebarRef}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        className="hidden md:flex flex-col fixed left-0 top-0 bottom-0 z-50 transition-all duration-300 ease-out"
+        style={{ width: expanded ? EXPANDED_WIDTH : MINI_WIDTH }}
+      >
+        {/* Glassmorphism background */}
+        <div className="absolute inset-0 bg-[#0a0a0a]/95 backdrop-blur-xl border-r border-white/[0.06]" />
+
+        {/* Glow effect on expand */}
+        <div
+          className={cn(
+            "absolute inset-0 transition-opacity duration-500 pointer-events-none",
+            expanded ? "opacity-100" : "opacity-0"
+          )}
+          style={{
+            background:
+              "radial-gradient(ellipse at 50% 0%, hsla(176,80%,40%,0.06) 0%, transparent 70%)",
+          }}
+        />
+
+        {/* Content */}
+        <div className="relative flex flex-col h-full">
+          {/* Logo area */}
+          <div className="flex items-center h-16 px-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[hsl(176,80%,40%)] to-[hsl(176,100%,25%)] flex items-center justify-center shrink-0 shadow-lg shadow-[hsla(176,80%,40%,0.2)]">
+                <CalendarDays className="h-4 w-4 text-white" />
+              </div>
+              <span
+                className={cn(
+                  "text-sm font-semibold text-white/80 whitespace-nowrap tracking-tight transition-all duration-200",
+                  expanded
+                    ? "opacity-100 translate-x-0"
+                    : "opacity-0 -translate-x-2 absolute pointer-events-none"
+                )}
+              >
+                Consultorio
+              </span>
+            </div>
+          </div>
+
+          {/* Main nav */}
+          <nav className="flex-1 px-2.5 py-2 space-y-0.5 overflow-hidden">
+            {/* Section label */}
+            <div
+              className={cn(
+                "text-[10px] uppercase tracking-[0.15em] font-medium mb-2 transition-all duration-200",
+                expanded
+                  ? "text-white/20 px-3 opacity-100"
+                  : "text-transparent opacity-0 h-0 mb-0"
+              )}
+            >
+              Principal
+            </div>
+
+            {mainItems.map((item) => (
+              <div key={item.url}>{renderItem(item)}</div>
+            ))}
+
+            {/* Divider */}
+            <div className="!my-3 mx-2">
+              <div className="h-px bg-gradient-to-r from-transparent via-white/[0.08] to-transparent" />
+            </div>
+
+            {/* Config label */}
+            <div
+              className={cn(
+                "text-[10px] uppercase tracking-[0.15em] font-medium mb-2 transition-all duration-200",
+                expanded
+                  ? "text-white/20 px-3 opacity-100"
+                  : "text-transparent opacity-0 h-0 mb-0"
+              )}
+            >
+              Configuración
+            </div>
+
+            {configItems.map((item) => (
+              <div key={item.url}>{renderItem(item)}</div>
+            ))}
+
+            {isSuperAdmin &&
+              renderItem({
+                title: "Panel Admin",
+                url: "/saas-admin",
+                icon: Shield,
+              })}
+          </nav>
+
+          {/* User footer */}
+          <div className="p-2.5 border-t border-white/[0.06]">
+            <div
+              className={cn(
+                "flex items-center rounded-xl transition-all duration-200",
+                expanded ? "gap-3 px-3 py-2.5" : "justify-center py-2.5"
+              )}
+            >
+              <Avatar className="h-8 w-8 shrink-0 ring-2 ring-white/[0.08] ring-offset-1 ring-offset-[#0a0a0a]">
+                <AvatarImage src={avatarUrl || undefined} />
+                <AvatarFallback className="bg-gradient-to-br from-[hsl(176,60%,30%)] to-[hsl(176,80%,20%)] text-white/80 text-xs font-semibold">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+
+              <div
+                className={cn(
+                  "flex-1 min-w-0 transition-all duration-200",
+                  expanded
+                    ? "opacity-100 translate-x-0"
+                    : "opacity-0 -translate-x-2 absolute pointer-events-none"
+                )}
+              >
+                <p className="text-sm text-white/70 truncate font-medium">
+                  {userName || "Usuario"}
+                </p>
+              </div>
+
+              {expanded && (
+                <button
+                  onClick={handleLogout}
+                  className="text-white/20 hover:text-rose-400 transition-colors duration-200 p-1.5 rounded-lg hover:bg-rose-500/10"
+                  title="Cerrar sesión"
+                >
+                  <LogOut className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </TooltipProvider>
+  );
+}
