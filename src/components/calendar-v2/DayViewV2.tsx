@@ -244,13 +244,18 @@ export const DayViewV2 = ({
           </div>
         ) : (
           <div className="space-y-3">
-            {dayAppointments.map((apt) => (
-              <AppointmentCard
+            {dayAppointments.map((apt, index) => (
+              <div
                 key={apt.id}
-                appointment={apt}
-                onClick={() => onAppointmentClick(apt)}
-                showProfessionalColor={showProfessionalColors}
-              />
+                className="animate-fade-in"
+                style={{ animationDelay: `${index * 50}ms`, animationFillMode: "both" }}
+              >
+                <AppointmentCard
+                  appointment={apt}
+                  onClick={() => onAppointmentClick(apt)}
+                  showProfessionalColor={showProfessionalColors}
+                />
+              </div>
             ))}
           </div>
         )}
