@@ -31,6 +31,8 @@ export const PLAN_DEFINITIONS: Record<string, PlanDefinition> = {
     maxPatients: 30,
     priceAnnual: 1990,
     priceMonthly: 2490,
+    isHighlighted: true,
+    highlightLabel: "Más elegido",
   },
   profesional: {
     code: "profesional",
@@ -40,8 +42,6 @@ export const PLAN_DEFINITIONS: Record<string, PlanDefinition> = {
     maxPatients: 80,
     priceAnnual: 3590,
     priceMonthly: 4490,
-    isHighlighted: true,
-    highlightLabel: "Más elegido",
   },
   consultorio: {
     code: "consultorio",
