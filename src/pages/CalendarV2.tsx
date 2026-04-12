@@ -23,6 +23,7 @@ import { es } from "date-fns/locale";
 
 import { CalendarHeader } from "@/components/calendar-v2/CalendarHeader";
 import { ProfessionalFilter } from "@/components/calendar-v2/ProfessionalFilter";
+import { ProfessionalColorLegend } from "@/components/calendar-v2/ProfessionalColorLegend";
 import { CalendarFiltersPanel } from "@/components/calendar-v2/CalendarFiltersPanel";
 import { DayViewV2 } from "@/components/calendar-v2/DayViewV2";
 import { WeekViewV2 } from "@/components/calendar-v2/WeekViewV2";
@@ -435,6 +436,9 @@ const CalendarV2 = () => {
           />
         )}
 
+        {/* Professional color legend */}
+        {showProfessionalColors && <ProfessionalColorLegend professionals={professionals} />}
+
         {/* Calendar views */}
         {dataLoading ? (
           <div className="flex items-center justify-center py-20">
@@ -473,6 +477,7 @@ const CalendarV2 = () => {
                     }}
                     onAddAppointment={() => setShowCreateModal(true)}
                     showProfessionalColors={showProfessionalColors}
+                    professionals={professionals}
                   />
                 )}
                 {viewType === "week" && (
