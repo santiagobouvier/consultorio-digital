@@ -294,6 +294,23 @@ const ClinicSettings = () => {
         if (data) setSettingsId(data.id);
       }
 
+      // Save dashboard branding to business
+      if (businessId) {
+        const { error: brandError } = await supabase
+          .from("businesses")
+          .update({
+            dashboard_primary_color: dashboardColor || "176 100% 32%",
+            dashboard_logo_url: dashboardLogoUrl || null,
+            dashboard_display_name: dashboardDisplayName || null,
+          } as any)
+          .eq("id", businessId);
+
+        if (brandError) console.error("Error saving branding:", brandError);
+        
+        // Refresh branding context
+        await refetchBranding();
+      }
+
       toast({
         title: "Éxito",
         description: "Configuración guardada correctamente",
