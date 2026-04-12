@@ -160,32 +160,27 @@ export const TodaySummaryDrawer = ({
     }
   };
 
-  // Mark payment as paid
+  // Mark payment as paid (called from confirmation dialog)
   const handleMarkPaid = async (paymentId: string) => {
-    setLoadingPaymentId(paymentId);
-    try {
-      const { error } = await supabase
-        .from("payments")
-        .update({ 
-          status: "paid",
-          paid_at: new Date().toISOString()
-        })
-        .eq("id", paymentId);
+    const { error } = await supabase
+      .from("payments")
+      .update({ 
+        status: "paid",
+        paid_at: new Date().toISOString()
+      })
+      .eq("id", paymentId);
 
-      if (error) throw error;
+    if (error) throw error;
+    onRefresh();
+  };
 
-      toast({ title: "Pago registrado correctamente" });
-      onRefresh();
-    } catch (error) {
-      console.error("Error updating payment:", error);
-      toast({ 
-        title: "Error", 
-        description: "No se pudo registrar el pago",
-        variant: "destructive" 
-      });
-    } finally {
-      setLoadingPaymentId(null);
-    }
+  // Open confirmation dialog for a payment
+  const openPaymentConfirm = (paymentId: string, amount: number, patientId: string | null) => {
+    setConfirmPayment({
+      id: paymentId,
+      amount,
+      patientName: getPatientName(patientId),
+    });
   };
 
   // Get appointment payment for quick action
