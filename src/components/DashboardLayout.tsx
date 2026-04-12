@@ -1,20 +1,21 @@
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
+import { MobileHeader } from "@/components/MobileHeader";
 import { Menu, X } from "lucide-react";
 import { useSidebar } from "@/components/ui/sidebar";
-import { useState } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
 }
 
-function SidebarToggle() {
+function DesktopSidebarToggle() {
   const { toggleSidebar, open } = useSidebar();
 
   return (
     <button
       onClick={toggleSidebar}
-      className="fixed top-4 left-4 z-50 w-10 h-10 rounded-xl bg-[#111]/90 backdrop-blur border border-white/10 flex items-center justify-center text-white/60 hover:text-white hover:border-white/20 transition-all duration-300 shadow-lg"
+      className="fixed top-4 left-4 z-50 w-10 h-10 rounded-xl bg-[#111]/90 backdrop-blur border border-white/10 flex items-center justify-center text-white/60 hover:text-white hover:border-white/20 transition-all duration-300 shadow-lg hidden md:flex"
       aria-label={open ? "Cerrar menú" : "Abrir menú"}
     >
       <div className="relative w-5 h-5">
@@ -38,8 +39,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     <SidebarProvider defaultOpen={false}>
       <div className="min-h-screen flex w-full relative">
         <AppSidebar />
-        <SidebarToggle />
-        <main className="flex-1 min-w-0">
+        <DesktopSidebarToggle />
+        <main className="flex-1 min-w-0 flex flex-col">
+          <MobileHeader />
           {children}
         </main>
       </div>

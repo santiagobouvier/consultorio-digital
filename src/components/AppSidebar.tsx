@@ -101,7 +101,7 @@ export function AppSidebar() {
         "--sidebar-width": "280px",
       } as React.CSSProperties}
     >
-      <SidebarContent className="bg-[#0a0a0a] border-r border-white/5 pt-16">
+      <SidebarContent className="bg-[#0a0a0a] border-r border-white/5 pt-14 md:pt-16">
         {/* Main navigation */}
         <SidebarGroup>
           <SidebarGroupLabel className="text-white/25 text-[10px] uppercase tracking-widest px-4 mb-1">
