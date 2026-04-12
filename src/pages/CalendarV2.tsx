@@ -500,6 +500,10 @@ const CalendarV2 = () => {
                     onAddAppointment={() => setShowCreateModal(true)}
                     showProfessionalColors={showProfessionalColors}
                     professionals={professionals}
+                    dayPayments={dayPayments}
+                    onPaymentClick={(payment) => {
+                      navigate(`/pacientes/${payment.patient_id}`);
+                    }}
                   />
                 )}
                 {viewType === "week" && (
