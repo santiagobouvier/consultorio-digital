@@ -19,6 +19,8 @@ import {
   ArrowRight,
   Clock,
   Eye,
+  Play,
+  Quote,
 } from "lucide-react";
 import PricingCard from "@/components/PricingCard";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -38,7 +40,7 @@ const GREEN_GLOW = "rgba(0, 199, 138, 0.15)";
 const faqItems = [
   {
     question: "¿Qué incluye cada plan?",
-    answer: "Todos los planes incluyen las mismas funcionalidades: gestión de pacientes, agenda privada, portal del paciente, recordatorios automáticos por email, gestión de pagos y alertas. La diferencia está en la cantidad de profesionales y pacientes activos."
+    answer: "Todos los planes incluyen las mismas funcionalidades: gestión de pacientes, agenda privada, portal del paciente, recordatorios por WhatsApp, gestión de pagos y alertas. La diferencia está en la cantidad de profesionales y pacientes activos."
   },
   {
     question: "¿Puedo cambiar de plan en cualquier momento?",
@@ -47,10 +49,6 @@ const faqItems = [
   {
     question: "¿Qué pasa si supero el límite de pacientes?",
     answer: "Te avisaremos cuando estés cerca del límite. Para superarlo, debés solicitar un upgrade de plan manualmente."
-  },
-  {
-    question: "¿Los recordatorios por email tienen costo adicional?",
-    answer: "No, los recordatorios automáticos están incluidos en todos los planes sin límite de envíos."
   },
   {
     question: "¿Mis pacientes pueden ver información de otros pacientes?",
@@ -81,8 +79,8 @@ const currentFeatures = [
   },
   {
     icon: Bell,
-    title: "Recordatorios automáticos",
-    description: "Recordatorios de citas y pagos enviados automáticamente por email a tus pacientes.",
+    title: "Recordatorios por WhatsApp",
+    description: "Recordatorios de citas y pagos por WhatsApp con un solo clic. Tus pacientes nunca más olvidan un turno.",
   },
   {
     icon: Shield,
@@ -144,7 +142,7 @@ const Landing = () => {
         patients: patText,
         price: `${formatPrice(price)}`,
         priceNote: isAnnual ? "/ mes (pago anual)" : "/ mes",
-        savingsNote: isAnnual ? "Recomendado: ahorrás pagando anual" : undefined,
+        savingsNote: isAnnual ? "Menos de una consulta por mes" : "Menos de una consulta por mes",
         buttonText: "Empezar 7 días gratis",
         buttonLink: `/auth?plan=${planCode}&billing=${isAnnual ? 'annual' : 'monthly'}`,
         isExternal: false,
@@ -212,6 +210,63 @@ const Landing = () => {
             <p className="relative text-sm sm:text-lg md:text-xl text-gray-400 text-center mb-6 sm:mb-8 max-w-xl mx-auto leading-relaxed font-light">
               Gestioná pacientes, agenda privada, pagos y recordatorios sin planillas ni mensajes sueltos.
             </p>
+
+            {/* Dashboard Mockup - hidden on mobile */}
+            <div className="relative hidden sm:block mb-8">
+              <div 
+                className="rounded-xl border border-white/10 overflow-hidden"
+                style={{ backgroundColor: '#0a0a0a' }}
+              >
+                {/* Browser chrome */}
+                <div className="flex items-center gap-2 px-4 py-2.5 border-b border-white/5" style={{ backgroundColor: '#0f0f0f' }}>
+                  <div className="flex gap-1.5">
+                    <div className="w-2.5 h-2.5 rounded-full bg-red-500/60" />
+                    <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/60" />
+                    <div className="w-2.5 h-2.5 rounded-full bg-green-500/60" />
+                  </div>
+                  <div className="flex-1 mx-8">
+                    <div className="h-5 rounded-md bg-white/5 max-w-xs mx-auto flex items-center justify-center">
+                      <span className="text-[10px] text-gray-600">tuconsultorio.digital</span>
+                    </div>
+                  </div>
+                </div>
+                {/* Dashboard content */}
+                <div className="p-4 sm:p-6">
+                  <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-4">
+                    {[
+                      { label: "Pacientes activos", value: "24", color: GREEN },
+                      { label: "Citas esta semana", value: "12", color: BRAND },
+                      { label: "Pagos pendientes", value: "3", color: "#f59e0b" },
+                    ].map((stat) => (
+                      <div
+                        key={stat.label}
+                        className="rounded-lg border border-white/5 p-3 sm:p-4"
+                        style={{ backgroundColor: '#111111' }}
+                      >
+                        <p className="text-[10px] sm:text-xs text-gray-500 mb-1">{stat.label}</p>
+                        <p className="text-lg sm:text-2xl font-bold" style={{ color: stat.color }}>{stat.value}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="rounded-lg border border-white/5 p-3" style={{ backgroundColor: '#111111' }}>
+                      <p className="text-[10px] sm:text-xs text-gray-500 mb-2">Próximas citas</p>
+                      {["10:00 — María L.", "11:30 — Juan P.", "14:00 — Ana R."].map((cita) => (
+                        <div key={cita} className="flex items-center gap-2 py-1">
+                          <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: GREEN }} />
+                          <span className="text-[10px] sm:text-xs text-gray-400">{cita}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="rounded-lg border border-white/5 p-3" style={{ backgroundColor: '#111111' }}>
+                      <p className="text-[10px] sm:text-xs text-gray-500 mb-2">Cobros del mes</p>
+                      <p className="text-sm sm:text-lg font-bold" style={{ color: GREEN }}>$48.500</p>
+                      <p className="text-[10px] text-gray-600 mt-1">+15% vs. mes anterior</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
 
             {/* Multi-device badges */}
             <div className="relative flex justify-center gap-3 sm:gap-4 mb-8 sm:mb-10">
@@ -293,8 +348,46 @@ const Landing = () => {
         </div>
       </section>
 
+      {/* Video Placeholder Section */}
+      <section className="relative px-4 sm:px-6 py-14 sm:py-20 z-10" style={{ backgroundColor: '#050505' }}>
+        <div className="max-w-3xl mx-auto text-center">
+          <ScrollReveal>
+            <h2 className="text-xl sm:text-3xl md:text-4xl font-bold mb-6 sm:mb-10 tracking-tight">
+              Mirá cómo funciona en 2 minutos
+            </h2>
+          </ScrollReveal>
+          <ScrollReveal delay={150}>
+            <div 
+              className="relative aspect-video rounded-xl sm:rounded-2xl border border-white/10 overflow-hidden cursor-pointer group"
+              style={{ backgroundColor: '#0a0a0a' }}
+            >
+              {/* Thumbnail gradient */}
+              <div 
+                className="absolute inset-0"
+                style={{ background: `radial-gradient(circle at center, rgba(0,165,160,0.08), transparent 70%)` }}
+              />
+              {/* Play button */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
+                <div 
+                  className="w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center transition-transform duration-300 group-hover:scale-110"
+                  style={{ 
+                    backgroundColor: 'rgba(0, 165, 160, 0.2)',
+                    border: '2px solid rgba(0, 165, 160, 0.4)',
+                  }}
+                >
+                  <Play className="w-7 h-7 sm:w-9 sm:h-9 ml-1" style={{ color: BRAND }} />
+                </div>
+                <p className="text-gray-500 text-sm sm:text-base font-light">
+                  Tutorial disponible próximamente
+                </p>
+              </div>
+            </div>
+          </ScrollReveal>
+        </div>
+      </section>
+
       {/* Multi-device Section */}
-      <section className="relative px-4 sm:px-6 py-14 sm:py-24 z-10" style={{ backgroundColor: '#050505' }}>
+      <section className="relative px-4 sm:px-6 py-14 sm:py-24 z-10 bg-black">
         <div className="max-w-4xl mx-auto text-center">
           <ScrollReveal>
             <h2 className="text-xl sm:text-3xl md:text-4xl font-bold mb-4 tracking-tight">
@@ -306,44 +399,30 @@ const Landing = () => {
           </ScrollReveal>
 
           <div className="flex justify-center items-end gap-4 sm:gap-8">
-            {/* Desktop */}
             <ScrollReveal delay={100} direction="left">
               <div 
                 className="rounded-xl sm:rounded-2xl border border-white/10 p-4 sm:p-6 w-36 sm:w-52 transition-all duration-500 hover:border-white/20"
-                style={{ 
-                  backgroundColor: '#111111',
-                  boxShadow: `0 0 40px ${GREEN_GLOW}`,
-                }}
+                style={{ backgroundColor: '#111111', boxShadow: `0 0 40px ${GREEN_GLOW}` }}
               >
                 <Monitor className="w-10 h-10 sm:w-14 sm:h-14 mx-auto mb-3" style={{ color: GREEN }} />
                 <p className="text-xs sm:text-sm font-medium text-gray-300">Computadora</p>
                 <p className="text-[10px] sm:text-xs text-gray-600 mt-1">Pantalla completa</p>
               </div>
             </ScrollReveal>
-
-            {/* Tablet */}
             <ScrollReveal delay={250} direction="up">
               <div 
                 className="rounded-xl sm:rounded-2xl border border-white/10 p-4 sm:p-6 w-28 sm:w-40 transition-all duration-500 hover:border-white/20"
-                style={{ 
-                  backgroundColor: '#111111',
-                  boxShadow: `0 0 30px ${GREEN_GLOW}`,
-                }}
+                style={{ backgroundColor: '#111111', boxShadow: `0 0 30px ${GREEN_GLOW}` }}
               >
                 <Tablet className="w-8 h-8 sm:w-12 sm:h-12 mx-auto mb-3" style={{ color: GREEN }} />
                 <p className="text-xs sm:text-sm font-medium text-gray-300">Tablet</p>
                 <p className="text-[10px] sm:text-xs text-gray-600 mt-1">Consultorio móvil</p>
               </div>
             </ScrollReveal>
-
-            {/* Phone */}
             <ScrollReveal delay={400} direction="right">
               <div 
                 className="rounded-xl sm:rounded-2xl border border-white/10 p-4 sm:p-6 w-24 sm:w-32 transition-all duration-500 hover:border-white/20"
-                style={{ 
-                  backgroundColor: '#111111',
-                  boxShadow: `0 0 20px ${GREEN_GLOW}`,
-                }}
+                style={{ backgroundColor: '#111111', boxShadow: `0 0 20px ${GREEN_GLOW}` }}
               >
                 <Smartphone className="w-7 h-7 sm:w-10 sm:h-10 mx-auto mb-3" style={{ color: GREEN }} />
                 <p className="text-xs sm:text-sm font-medium text-gray-300">Celular</p>
@@ -358,7 +437,6 @@ const Landing = () => {
       <section className="relative px-4 sm:px-6 py-14 sm:py-24 bg-black z-10">
         <div className="max-w-5xl mx-auto">
           <div className="grid md:grid-cols-2 gap-8 md:gap-16">
-            {/* Problems */}
             <ScrollReveal direction="left">
               <h2 className="text-xl sm:text-2xl font-bold mb-6 text-gray-300">
                 ¿Te suena familiar?
@@ -378,24 +456,20 @@ const Landing = () => {
               </div>
             </ScrollReveal>
 
-            {/* Solution */}
             <ScrollReveal direction="right" delay={200}>
               <h2 className="text-xl sm:text-2xl font-bold mb-6" style={{ color: GREEN }}>
                 La solución
               </h2>
               <div 
                 className="p-6 rounded-xl border transition-all duration-500 hover:shadow-lg"
-                style={{ 
-                  backgroundColor: 'rgba(0, 199, 138, 0.05)',
-                  borderColor: 'rgba(0, 199, 138, 0.2)',
-                }}
+                style={{ backgroundColor: 'rgba(0, 199, 138, 0.05)', borderColor: 'rgba(0, 199, 138, 0.2)' }}
               >
                 <ul className="space-y-4">
                   {[
                     "Un sistema privado para tu consultorio",
                     "Todo centralizado y claro",
                     "Acceso para vos, tu equipo y tus pacientes",
-                    "Alertas automáticas de pagos y citas",
+                    "Alertas de pagos y recordatorios por WhatsApp",
                   ].map((text, i) => (
                     <li key={i} className="flex items-start gap-3">
                       <Check className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: GREEN }} />
@@ -428,9 +502,7 @@ const Landing = () => {
               <ScrollReveal key={feature.title} delay={index * 80}>
                 <div
                   className="group p-5 sm:p-7 rounded-xl sm:rounded-2xl border border-white/5 transition-all duration-500 hover:border-white/15 hover:-translate-y-1"
-                  style={{ 
-                    backgroundColor: '#111111',
-                  }}
+                  style={{ backgroundColor: '#111111' }}
                 >
                   <div 
                     className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl flex items-center justify-center mb-4 sm:mb-5 transition-transform duration-500 group-hover:scale-110"
@@ -451,8 +523,67 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* Key Differentiator Section */}
+      {/* "Cómo funciona" Section */}
       <section className="relative px-4 sm:px-6 py-14 sm:py-24 z-10" style={{ backgroundColor: '#080808' }}>
+        <div className="max-w-4xl mx-auto">
+          <ScrollReveal>
+            <h2 className="text-xl sm:text-3xl md:text-4xl font-bold text-center mb-10 sm:mb-16 tracking-tight">
+              Empezar es muy fácil
+            </h2>
+          </ScrollReveal>
+
+          <div className="relative grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-6">
+            {/* Connector line - desktop only */}
+            <div 
+              className="hidden md:block absolute top-12 left-[20%] right-[20%] h-px"
+              style={{ backgroundColor: 'rgba(0, 199, 138, 0.2)' }}
+            />
+
+            {[
+              {
+                step: "1",
+                title: "Creá tu cuenta gratis",
+                description: "Registrate en menos de 2 minutos. Sin tarjeta.",
+              },
+              {
+                step: "2",
+                title: "Configurá tu consultorio",
+                description: "Cargá tus pacientes, servicios y horarios disponibles.",
+              },
+              {
+                step: "3",
+                title: "Invitá a tus pacientes",
+                description: "Cada paciente accede a su portal propio con tu marca.",
+              },
+            ].map((item, index) => (
+              <ScrollReveal key={item.step} delay={index * 150}>
+                <div className="relative text-center">
+                  <div 
+                    className="w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center mx-auto mb-5 text-2xl sm:text-3xl font-bold relative z-10"
+                    style={{ 
+                      backgroundColor: '#111111',
+                      border: `2px solid ${GREEN}`,
+                      color: GREEN,
+                      boxShadow: `0 0 30px ${GREEN_GLOW}`,
+                    }}
+                  >
+                    {item.step}
+                  </div>
+                  <h3 className="text-base sm:text-lg font-semibold text-white mb-2">
+                    {item.title}
+                  </h3>
+                  <p className="text-gray-500 text-sm font-light max-w-xs mx-auto">
+                    {item.description}
+                  </p>
+                </div>
+              </ScrollReveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Key Differentiator Section */}
+      <section className="relative px-4 sm:px-6 py-14 sm:py-24 z-10 bg-black">
         <div className="max-w-4xl mx-auto">
           <ScrollReveal direction="scale">
             <div 
@@ -463,7 +594,6 @@ const Landing = () => {
                 boxShadow: '0 0 80px rgba(0, 199, 138, 0.08)',
               }}
             >
-              {/* Animated gradient orb */}
               <div 
                 className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 rounded-full blur-3xl pointer-events-none"
                 style={{ 
@@ -471,14 +601,12 @@ const Landing = () => {
                   animation: 'orbPulse 4s ease-in-out infinite',
                 }}
               />
-
               <div 
                 className="relative w-14 h-14 sm:w-16 sm:h-16 mx-auto mb-6 rounded-2xl flex items-center justify-center"
                 style={{ backgroundColor: GREEN_BG }}
               >
                 <Lock className="w-7 h-7 sm:w-8 sm:h-8" style={{ color: GREEN }} />
               </div>
-              
               <h2 className="relative text-xl sm:text-3xl md:text-4xl font-bold mb-4 tracking-tight">
                 Tu consultorio, tu sistema
               </h2>
@@ -530,30 +658,64 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* Private Clinic Premium Feature */}
+      {/* Social Proof Section */}
       <section className="relative px-4 sm:px-6 py-14 sm:py-24 z-10" style={{ backgroundColor: '#080808' }}>
+        <div className="max-w-4xl mx-auto">
+          <ScrollReveal>
+            <h2 className="text-xl sm:text-3xl md:text-4xl font-bold text-center mb-10 sm:mb-14 tracking-tight">
+              Diseñado para profesionales de salud mental en Uruguay
+            </h2>
+          </ScrollReveal>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+            {[
+              {
+                title: "7 días gratis",
+                subtitle: "Sin tarjeta de crédito requerida",
+                emoji: "🎁",
+              },
+              {
+                title: "100% privado",
+                subtitle: "Tus datos y los de tus pacientes, solo tuyos",
+                emoji: "🔒",
+              },
+              {
+                title: "Hecho en Uruguay",
+                subtitle: "Para el mercado local, en pesos uruguayos",
+                emoji: "🇺🇾",
+              },
+            ].map((stat, index) => (
+              <ScrollReveal key={stat.title} delay={index * 120}>
+                <div
+                  className="text-center p-6 sm:p-8 rounded-xl sm:rounded-2xl border border-white/5 transition-all duration-500 hover:border-white/15"
+                  style={{ backgroundColor: '#111111' }}
+                >
+                  <div className="text-3xl sm:text-4xl mb-3">{stat.emoji}</div>
+                  <h3 className="text-base sm:text-lg font-bold text-white mb-1.5">{stat.title}</h3>
+                  <p className="text-gray-500 text-xs sm:text-sm font-light">{stat.subtitle}</p>
+                </div>
+              </ScrollReveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Private Clinic Premium Feature */}
+      <section className="relative px-4 sm:px-6 py-14 sm:py-24 z-10 bg-black">
         <div className="max-w-4xl mx-auto">
           <ScrollReveal direction="scale">
             <div 
               className="rounded-2xl sm:rounded-3xl p-8 sm:p-12 border relative overflow-hidden"
-              style={{ 
-                backgroundColor: '#111111',
-                borderColor: 'rgba(255, 255, 255, 0.1)'
-              }}
+              style={{ backgroundColor: '#111111', borderColor: 'rgba(255, 255, 255, 0.1)' }}
             >
-              {/* Premium badge */}
               <div className="absolute top-4 right-4">
                 <span 
                   className="px-3 py-1 rounded-full text-xs font-medium"
-                  style={{ 
-                    backgroundColor: 'rgba(147, 51, 234, 0.2)',
-                    color: '#a78bfa'
-                  }}
+                  style={{ backgroundColor: 'rgba(147, 51, 234, 0.2)', color: '#a78bfa' }}
                 >
                   Opcional
                 </span>
               </div>
-
               <div className="flex items-center gap-4 mb-6">
                 <div 
                   className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center"
@@ -562,15 +724,10 @@ const Landing = () => {
                   <Globe className="w-6 h-6 sm:w-7 sm:h-7" style={{ color: '#a78bfa' }} />
                 </div>
                 <div>
-                  <h3 className="text-lg sm:text-xl font-bold text-white">
-                    Consultorio Privado
-                  </h3>
-                  <p className="text-gray-500 text-sm">
-                    Portal personalizado para tus pacientes
-                  </p>
+                  <h3 className="text-lg sm:text-xl font-bold text-white">Consultorio Privado</h3>
+                  <p className="text-gray-500 text-sm">Portal personalizado para tus pacientes</p>
                 </div>
               </div>
-
               <ul className="space-y-3 mb-6">
                 {[
                   "Portal exclusivo para tus pacientes",
@@ -584,10 +741,49 @@ const Landing = () => {
                   </li>
                 ))}
               </ul>
-
               <p className="text-gray-500 text-xs sm:text-sm font-light">
                 Próximamente disponible como add-on para todos los planes.
               </p>
+            </div>
+          </ScrollReveal>
+        </div>
+      </section>
+
+      {/* Testimonial Section */}
+      {/* TODO: reemplazar con testimonio real */}
+      <section className="relative px-4 sm:px-6 py-14 sm:py-24 z-10" style={{ backgroundColor: '#080808' }}>
+        <div className="max-w-3xl mx-auto">
+          <ScrollReveal>
+            <h2 className="text-xl sm:text-3xl md:text-4xl font-bold text-center mb-10 sm:mb-14 tracking-tight">
+              Lo que dicen quienes ya lo usan
+            </h2>
+          </ScrollReveal>
+
+          <ScrollReveal delay={150}>
+            <div
+              className="relative p-6 sm:p-10 rounded-xl sm:rounded-2xl border border-white/10"
+              style={{ 
+                backgroundColor: '#111111',
+                boxShadow: `0 0 40px ${GREEN_GLOW}`,
+              }}
+            >
+              <Quote className="w-8 h-8 sm:w-10 sm:h-10 mb-4" style={{ color: GREEN, opacity: 0.3 }} />
+              <p className="text-gray-300 text-sm sm:text-base md:text-lg leading-relaxed mb-6 font-light italic">
+                "Antes manejaba todo por WhatsApp y una libreta. Ahora mis pacientes reservan solos y yo recibo el recordatorio automático. Me cambió la rutina."
+              </p>
+              <div className="flex items-center gap-4">
+                {/* Avatar placeholder */}
+                <div 
+                  className="w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold"
+                  style={{ backgroundColor: GREEN_BG, color: GREEN }}
+                >
+                  MG
+                </div>
+                <div>
+                  <p className="text-white font-semibold text-sm sm:text-base">Lic. María González</p>
+                  <p className="text-gray-500 text-xs sm:text-sm">Psicóloga clínica — Montevideo</p>
+                </div>
+              </div>
             </div>
           </ScrollReveal>
         </div>
@@ -707,10 +903,7 @@ const Landing = () => {
               <div className="flex justify-center mb-4">
                 <div 
                   className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl flex items-center justify-center"
-                  style={{ 
-                    backgroundColor: GREEN_BG,
-                    boxShadow: `0 0 30px ${GREEN_GLOW}`
-                  }}
+                  style={{ backgroundColor: GREEN_BG, boxShadow: `0 0 30px ${GREEN_GLOW}` }}
                 >
                   <HelpCircle className="w-6 h-6 sm:w-7 sm:h-7" style={{ color: GREEN }} />
                 </div>
@@ -760,10 +953,7 @@ const Landing = () => {
                 <Button 
                   size="lg" 
                   className="w-full sm:w-auto h-12 sm:h-14 px-8 sm:px-12 text-sm sm:text-base font-semibold rounded-xl transition-all duration-300 hover:scale-[1.03] group"
-                  style={{ 
-                    backgroundColor: GREEN,
-                    boxShadow: `0 4px 30px rgba(0, 199, 138, 0.35)`
-                  }}
+                  style={{ backgroundColor: GREEN, boxShadow: `0 4px 30px rgba(0, 199, 138, 0.35)` }}
                 >
                   Elegir mi plan
                   <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" />
@@ -779,8 +969,6 @@ const Landing = () => {
                 </Button>
               </a>
             </div>
-            
-            {/* Install & Login */}
             <div className="flex flex-col sm:flex-row justify-center gap-3 mt-6">
               <InstallAppButton />
             </div>
@@ -816,8 +1004,6 @@ const Landing = () => {
         </div>
       </footer>
 
-      {/* Removed floating WhatsApp button - self-service model */}
-
       {/* CSS Animations */}
       <style>{`
         @keyframes heroFadeIn {
@@ -847,10 +1033,6 @@ const Landing = () => {
         @keyframes orbPulse {
           0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.5; }
           50% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
-        }
-        @keyframes whatsappPulse {
-          0%, 100% { box-shadow: 0 4px 30px rgba(0, 199, 138, 0.4); }
-          50% { box-shadow: 0 4px 40px rgba(0, 199, 138, 0.6), 0 0 20px rgba(0, 199, 138, 0.3); }
         }
       `}</style>
     </div>
