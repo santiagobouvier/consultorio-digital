@@ -209,6 +209,18 @@ export function PatientPayments({ patientId, businessId }: PatientPaymentsProps)
         }
         onSuccess={fetchPayments}
       />
+
+      {confirmPayment && (
+        <ConfirmPaymentDialog
+          open={!!confirmPayment}
+          onOpenChange={(isOpen) => {
+            if (!isOpen) setConfirmPayment(null);
+          }}
+          patientName="este paciente"
+          amount={confirmPayment.amount}
+          onConfirm={() => handleMarkAsPaid(confirmPayment.id)}
+        />
+      )}
     </>
   );
 }
