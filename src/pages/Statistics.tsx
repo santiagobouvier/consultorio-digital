@@ -36,6 +36,7 @@ const Statistics = () => {
   const [hourData, setHourData] = useState<HourData[]>([]);
   const [noShowData, setNoShowData] = useState<NoShowMonth[]>([]);
   const [inactivePatients, setInactivePatients] = useState<InactivePatient[]>([]);
+  const [inactivePage, setInactivePage] = useState(1);
 
   useEffect(() => {
     if (businessId) loadStats();
