@@ -10,7 +10,7 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 const Landing = lazy(() => import("./pages/Landing"));
 const Auth = lazy(() => import("./pages/Auth"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
-const BusinessSetup = lazy(() => import("./pages/BusinessSetup"));
+const BusinessSetup = lazy(() => import("./pages/OnboardingWizard"));
 const Patients = lazy(() => import("./pages/Patients"));
 const PatientDetail = lazy(() => import("./pages/PatientDetail"));
 const Appointments = lazy(() => import("./pages/Appointments"));
@@ -27,7 +27,8 @@ const PatientPortal = lazy(() => import("./pages/PatientPortal"));
 const PatientInvitation = lazy(() => import("./pages/PatientInvitation"));
 const ProfessionalInvitation = lazy(() => import("./pages/ProfessionalInvitation"));
 const ProfessionalRegister = lazy(() => import("./pages/ProfessionalRegister"));
-const ConsultorioOnboarding = lazy(() => import("./pages/ConsultorioOnboarding"));
+const ConsultorioOnboarding = lazy(() => import("./pages/OnboardingWizard"));
+const Statistics = lazy(() => import("./pages/Statistics"));
 const SaasAdmin = lazy(() => import("./pages/SaasAdmin"));
 const CommandCenter = lazy(() => import("./pages/CommandCenter"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
@@ -85,6 +86,7 @@ const App = () => (
             <Route path="/pagos" element={<Protected><Payments /></Protected>} />
             <Route path="/personalizar-portal" element={<Protected><PortalCustomization /></Protected>} />
             <Route path="/billing" element={<Protected><Billing /></Protected>} />
+            <Route path="/estadisticas" element={<Protected><Statistics /></Protected>} />
             <Route path="/saas-admin" element={<Protected><SaasAdmin /></Protected>} />
             
             {/* Catch-all */}

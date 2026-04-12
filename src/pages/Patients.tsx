@@ -5,26 +5,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { PatientForm } from "@/components/PatientForm";
 import { Search, Plus, ArrowLeft, ChevronRight, Smartphone } from "lucide-react";
 import { useBusinessId } from "@/hooks/use-business-id";
-
 import LoadingPage from "@/components/LoadingPage";
 
 interface Patient {
@@ -80,49 +70,62 @@ const Patients = () => {
     try {
       setDataLoading(true);
 
+      // Single optimized query: fetch patients + last/next appointment via RPC or subselect
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayISO = today.toISOString();
+
       const { data: patientsData } = await supabase
         .from("patients")
         .select("*")
         .eq("business_id", businessId)
         .order("full_name", { ascending: true });
 
-      if (!patientsData) {
+      if (!patientsData || patientsData.length === 0) {
         setPatients([]);
         return;
       }
 
-      const patientsWithAppointments = await Promise.all(
-        patientsData.map(async (patient) => {
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
+      const patientIds = patientsData.map(p => p.id);
 
-          const { data: lastAppt } = await supabase
-            .from("appointments")
-            .select("start_at")
-            .eq("patient_id", patient.id)
-            .eq("status", "attended")
-            .lt("start_at", today.toISOString())
-            .order("start_at", { ascending: false })
-            .limit(1)
-            .maybeSingle();
+      // Batch fetch: last appointments (attended, before today)
+      const { data: lastAppts } = await supabase
+        .from("appointments")
+        .select("patient_id, start_at")
+        .in("patient_id", patientIds)
+        .eq("status", "attended")
+        .lt("start_at", todayISO)
+        .order("start_at", { ascending: false });
 
-          const { data: nextAppt } = await supabase
-            .from("appointments")
-            .select("start_at")
-            .eq("patient_id", patient.id)
-            .not("status", "in", '("cancelled","no_show")')
-            .gte("start_at", today.toISOString())
-            .order("start_at", { ascending: true })
-            .limit(1)
-            .maybeSingle();
+      // Batch fetch: next appointments (not cancelled/no_show, from today)
+      const { data: nextAppts } = await supabase
+        .from("appointments")
+        .select("patient_id, start_at")
+        .in("patient_id", patientIds)
+        .not("status", "in", '("cancelled","no_show")')
+        .gte("start_at", todayISO)
+        .order("start_at", { ascending: true });
 
-          return {
-            ...patient,
-            last_appointment: lastAppt?.start_at || null,
-            next_appointment: nextAppt?.start_at || null,
-          };
-        })
-      );
+      // Build maps: patient_id -> most recent/next appointment
+      const lastMap = new Map<string, string>();
+      for (const a of lastAppts || []) {
+        if (a.patient_id && !lastMap.has(a.patient_id)) {
+          lastMap.set(a.patient_id, a.start_at);
+        }
+      }
+
+      const nextMap = new Map<string, string>();
+      for (const a of nextAppts || []) {
+        if (a.patient_id && !nextMap.has(a.patient_id)) {
+          nextMap.set(a.patient_id, a.start_at);
+        }
+      }
+
+      const patientsWithAppointments: Patient[] = patientsData.map(p => ({
+        ...p,
+        last_appointment: lastMap.get(p.id) || null,
+        next_appointment: nextMap.get(p.id) || null,
+      }));
 
       setPatients(patientsWithAppointments);
     } catch (error) {
@@ -177,16 +180,10 @@ const Patients = () => {
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6">
-
         {/* Header */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-3 min-w-0">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate("/dashboard")}
-              className="shrink-0 h-10 w-10"
-            >
+            <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")} className="shrink-0 h-10 w-10">
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
@@ -196,10 +193,7 @@ const Patients = () => {
               </p>
             </div>
           </div>
-          <Button 
-            onClick={() => setShowForm(true)} 
-            className="h-11 px-4 rounded-xl font-semibold shrink-0"
-          >
+          <Button onClick={() => setShowForm(true)} className="h-11 px-4 rounded-xl font-semibold shrink-0">
             <Plus className="h-4 w-4 sm:mr-2" />
             <span className="hidden sm:inline">Nuevo</span>
           </Button>
@@ -264,18 +258,12 @@ const Patients = () => {
                   <CardContent className="p-4 flex items-center justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <p className="text-base font-semibold text-foreground truncate">
-                          {patient.full_name}
-                        </p>
+                        <p className="text-base font-semibold text-foreground truncate">{patient.full_name}</p>
                         {patient.auth_user_id && (
-                          <span title="Tiene acceso al portal">
-                            <Smartphone className="h-4 w-4 text-primary shrink-0" />
-                          </span>
+                          <span title="Tiene acceso al portal"><Smartphone className="h-4 w-4 text-primary shrink-0" /></span>
                         )}
                         {!patient.is_active && (
-                          <Badge variant="secondary" className="text-xs shrink-0 rounded-full">
-                            Inactivo
-                          </Badge>
+                          <Badge variant="secondary" className="text-xs shrink-0 rounded-full">Inactivo</Badge>
                         )}
                       </div>
                       <p className="text-sm text-muted-foreground truncate">
@@ -308,16 +296,12 @@ const Patients = () => {
                 <TableBody>
                   {filteredPatients.map((patient) => (
                     <TableRow key={patient.id}>
-                      <TableCell className="font-medium">
-                        {patient.full_name}
-                      </TableCell>
+                      <TableCell className="font-medium">{patient.full_name}</TableCell>
                       <TableCell>{patient.email || "-"}</TableCell>
                       <TableCell>{patient.whatsapp_phone || "-"}</TableCell>
                       <TableCell>
                         {patient.auth_user_id ? (
-                          <span title="Tiene acceso al portal">
-                            <Smartphone className="h-4 w-4 text-primary" />
-                          </span>
+                          <span title="Tiene acceso al portal"><Smartphone className="h-4 w-4 text-primary" /></span>
                         ) : (
                           <span className="text-muted-foreground">-</span>
                         )}
@@ -330,11 +314,7 @@ const Patients = () => {
                       <TableCell>{formatDate(patient.last_appointment)}</TableCell>
                       <TableCell>{formatDate(patient.next_appointment)}</TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => navigate(`/patients/${patient.id}`)}
-                        >
+                        <Button variant="outline" size="sm" onClick={() => navigate(`/patients/${patient.id}`)}>
                           Ver detalle
                         </Button>
                       </TableCell>
