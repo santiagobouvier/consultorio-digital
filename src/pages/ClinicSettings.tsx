@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, Copy, ExternalLink, RotateCcw, UserPlus, Users, Crown, User, Link, Check } from "lucide-react";
+import { ArrowLeft, Save, Copy, ExternalLink, RotateCcw, UserPlus, Users, Crown, User, Link, Check, Paintbrush, Upload } from "lucide-react";
+import { useDashboardBranding } from "@/contexts/DashboardBrandingContext";
 import { DomainSettingsCard } from "@/components/DomainSettingsCard";
 import { ProfessionalInviteModal } from "@/components/ProfessionalInviteModal";
 import { Badge } from "@/components/ui/badge";
@@ -55,6 +56,13 @@ const ClinicSettings = () => {
 
   // Private clinic info
   const [isPrivateClinic, setIsPrivateClinic] = useState(false);
+
+  // Dashboard branding
+  const [dashboardColor, setDashboardColor] = useState("176 100% 32%");
+  const [dashboardLogoUrl, setDashboardLogoUrl] = useState("");
+  const [dashboardDisplayName, setDashboardDisplayName] = useState("");
+  const [uploadingDashLogo, setUploadingDashLogo] = useState(false);
+  const { refetch: refetchBranding } = useDashboardBranding();
 
   useEffect(() => {
     checkAuth();
