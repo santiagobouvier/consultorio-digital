@@ -348,7 +348,6 @@ const PendingReminders = () => {
 
   const selectedPatientForCreate = patients.find(p => p.id === createForm.patientId);
   const appointmentsForPatient = upcomingAppointments.filter(a => a.patient_id === createForm.patientId);
-  };
 
   const formatDateTime = (isoDate: string) => {
     const date = new Date(isoDate);
