@@ -279,7 +279,7 @@ const Patients = () => {
           <>
             {/* Mobile Cards */}
             <div className="md:hidden space-y-2.5">
-              {filteredPatients.map((patient) => (
+              {pagePatients.map((patient) => (
                 <Card
                   key={patient.id}
                   className="border-border/40 shadow-sm hover:shadow-md active:scale-[0.98] transition-all cursor-pointer group"
@@ -331,7 +331,7 @@ const Patients = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredPatients.map((patient) => (
+                    {pagePatients.map((patient) => (
                       <TableRow
                         key={patient.id}
                         className="cursor-pointer hover:bg-primary/[0.03] transition-colors group"
@@ -399,10 +399,14 @@ const Patients = () => {
               </Card>
             </div>
 
-            {/* Results count */}
-            <p className="text-center text-xs text-muted-foreground">
-              Mostrando {filteredPatients.length} de {patients.length} pacientes
-            </p>
+            {/* Pagination */}
+            <ListPagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              totalItems={filteredPatients.length}
+              pageSize={ITEMS_PER_PAGE}
+            />
           </>
         )}
       </div>
