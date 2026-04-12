@@ -26,13 +26,22 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Send, Trash2, Bell, Mail, MessageSquare, Check, Copy, CheckSquare,
-  Search, Pencil, XCircle, Clock, BellRing, MailCheck, X,
+  Search, Pencil, XCircle, Clock, BellRing, MailCheck, X, Plus,
 } from "lucide-react";
 import LoadingPage from "@/components/LoadingPage";
 import { useBusinessId } from "@/hooks/use-business-id";
 import { ListPagination, usePagination, ITEMS_PER_PAGE } from "@/components/ListPagination";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 
 interface Reminder {
   id: string;
@@ -102,9 +111,29 @@ const PendingReminders = () => {
   const [editMessage, setEditMessage] = useState("");
   const [editSaving, setEditSaving] = useState(false);
 
+  // Create manual reminder state
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [patients, setPatients] = useState<{ id: string; full_name: string; whatsapp_phone: string | null; email: string | null }[]>([]);
+  const [upcomingAppointments, setUpcomingAppointments] = useState<{ id: string; start_at: string; patient_id: string | null }[]>([]);
+  const [createForm, setCreateForm] = useState({ patientId: "", appointmentId: "", channel: "whatsapp" as "whatsapp" | "email", message: "", hoursBefore: "24" });
+  const [createSaving, setCreateSaving] = useState(false);
+
   useEffect(() => {
-    if (businessId) loadReminders();
+    if (businessId) {
+      loadReminders();
+      loadPatientsAndAppointments();
+    }
   }, [businessId]);
+
+  const loadPatientsAndAppointments = async () => {
+    if (!businessId) return;
+    const [pRes, aRes] = await Promise.all([
+      supabase.from("patients").select("id, full_name, whatsapp_phone, email").eq("business_id", businessId).eq("is_active", true).order("full_name"),
+      supabase.from("appointments").select("id, start_at, patient_id").eq("business_id", businessId).gte("start_at", new Date().toISOString()).order("start_at", { ascending: true }).limit(100),
+    ]);
+    if (pRes.data) setPatients(pRes.data);
+    if (aRes.data) setUpcomingAppointments(aRes.data);
+  };
 
   const loadReminders = async () => {
     try {
@@ -279,6 +308,46 @@ const PendingReminders = () => {
     ));
     toast({ title: `✓ ${group.reminders.length} enviados a ${group.patientName}` });
   };
+
+  const createManualReminder = async () => {
+    if (!businessId || !createForm.patientId || !createForm.appointmentId || !createForm.message.trim()) return;
+    setCreateSaving(true);
+    try {
+      const appt = upcomingAppointments.find(a => a.id === createForm.appointmentId);
+      if (!appt) throw new Error("Cita no encontrada");
+
+      const apptDate = new Date(appt.start_at);
+      const hours = parseInt(createForm.hoursBefore);
+      const scheduledFor = new Date(apptDate);
+      scheduledFor.setHours(scheduledFor.getHours() - hours);
+
+      const { error } = await supabase.from("scheduled_reminders").insert({
+        appointment_id: createForm.appointmentId,
+        patient_id: createForm.patientId,
+        business_id: businessId,
+        scheduled_for: scheduledFor.toISOString(),
+        message: createForm.message,
+        channel: createForm.channel,
+        type: "reminder",
+        status: createForm.channel === "email" ? "scheduled" : "pending_manual",
+        auto_send: createForm.channel === "email",
+      });
+      if (error) throw error;
+
+      await loadReminders();
+      setShowCreateModal(false);
+      setCreateForm({ patientId: "", appointmentId: "", channel: "whatsapp", message: "", hoursBefore: "24" });
+      toast({ title: "✓ Recordatorio creado" });
+    } catch (err) {
+      console.error(err);
+      toast({ title: "Error", description: "No se pudo crear el recordatorio", variant: "destructive" });
+    } finally {
+      setCreateSaving(false);
+    }
+  };
+
+  const selectedPatientForCreate = patients.find(p => p.id === createForm.patientId);
+  const appointmentsForPatient = upcomingAppointments.filter(a => a.patient_id === createForm.patientId);
 
   const formatDateTime = (isoDate: string) => {
     const date = new Date(isoDate);
@@ -660,6 +729,104 @@ const PendingReminders = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* ── Create Manual Reminder ── */}
+      <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Crear recordatorio</DialogTitle>
+            <DialogDescription>Creá un recordatorio manual para un paciente</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Paciente</label>
+              <Select value={createForm.patientId} onValueChange={v => setCreateForm(f => ({ ...f, patientId: v, appointmentId: "" }))}>
+                <SelectTrigger className="rounded-xl"><SelectValue placeholder="Seleccionar paciente" /></SelectTrigger>
+                <SelectContent>
+                  {patients.map(p => (
+                    <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {createForm.patientId && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Cita próxima</label>
+                {appointmentsForPatient.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Este paciente no tiene citas próximas</p>
+                ) : (
+                  <Select value={createForm.appointmentId} onValueChange={v => setCreateForm(f => ({ ...f, appointmentId: v }))}>
+                    <SelectTrigger className="rounded-xl"><SelectValue placeholder="Seleccionar cita" /></SelectTrigger>
+                    <SelectContent>
+                      {appointmentsForPatient.map(a => (
+                        <SelectItem key={a.id} value={a.id}>
+                          {format(new Date(a.start_at), "d MMM yyyy · HH:mm", { locale: es })}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Canal</label>
+                <Select value={createForm.channel} onValueChange={(v: "whatsapp" | "email") => setCreateForm(f => ({ ...f, channel: v }))}>
+                  <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                    <SelectItem value="email">Email</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Anticipación</label>
+                <Select value={createForm.hoursBefore} onValueChange={v => setCreateForm(f => ({ ...f, hoursBefore: v }))}>
+                  <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">1 hora antes</SelectItem>
+                    <SelectItem value="24">1 día antes</SelectItem>
+                    <SelectItem value="48">2 días antes</SelectItem>
+                    <SelectItem value="168">1 semana antes</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Mensaje</label>
+              <Textarea
+                value={createForm.message}
+                onChange={e => setCreateForm(f => ({ ...f, message: e.target.value }))}
+                rows={4}
+                className="rounded-xl"
+                placeholder={selectedPatientForCreate ? `Hola ${selectedPatientForCreate.full_name}, te recuerdo tu próxima sesión...` : "Escribí el mensaje del recordatorio..."}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCreateModal(false)} className="rounded-xl">Cancelar</Button>
+            <Button
+              onClick={createManualReminder}
+              disabled={createSaving || !createForm.patientId || !createForm.appointmentId || !createForm.message.trim()}
+              className="rounded-xl"
+            >
+              {createSaving ? "Creando..." : "Crear recordatorio"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── FAB ── */}
+      <Button
+        onClick={() => setShowCreateModal(true)}
+        className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg z-50"
+        size="icon"
+      >
+        <Plus className="h-6 w-6" />
+      </Button>
     </div>
   );
 };
