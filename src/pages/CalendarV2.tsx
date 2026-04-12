@@ -483,6 +483,27 @@ const CalendarV2 = () => {
           hasActiveFilters={hasActiveFilters}
           activeFiltersCount={activeFiltersCount}
           dateLabel={getDateLabel()}
+          onExportCSV={() => {
+            const headers = ["Fecha", "Hora inicio", "Hora fin", "Paciente", "Profesional", "Servicio", "Modalidad", "Estado", "Estado de pago", "Notas"];
+            const statusMap: Record<string, string> = { pending: "Pendiente", confirmed: "Confirmada", attended: "Atendida", cancelled: "Cancelada", no_show: "No asistió" };
+            const rows = filteredAppointments.map((a) => {
+              const start = new Date(a.start_at);
+              const end = new Date(a.end_at);
+              return [
+                start.toLocaleDateString("es-UY"),
+                start.toLocaleTimeString("es-UY", { hour: "2-digit", minute: "2-digit" }),
+                end.toLocaleTimeString("es-UY", { hour: "2-digit", minute: "2-digit" }),
+                (a.patients as any)?.full_name || a.contact_name || "",
+                a.professional?.name || "",
+                (a.services as any)?.name || "",
+                a.modality || "",
+                statusMap[a.status] || a.status,
+                a.payment_status || "",
+                "",
+              ];
+            });
+            exportCSV(headers, rows, `citas_${todayDateString()}.csv`);
+          }}
         />
 
         {/* Professional filter chips (for shared calendar) */}
