@@ -3,9 +3,21 @@ import { format, isSameDay } from "date-fns";
 import { es } from "date-fns/locale";
 import { CalendarAppointment, Professional } from "./types";
 import { AppointmentCard } from "./AppointmentCard";
-import { CalendarDays, Plus, Clock } from "lucide-react";
+import { CalendarDays, Plus, Clock, AlertTriangle, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { calculatePaymentStatus } from "@/lib/payments";
+
+export interface DayPayment {
+  id: string;
+  patient_id: string;
+  patient_name: string;
+  due_date: string;
+  amount: number;
+  status: string;
+  paid_at: string | null;
+}
 
 interface DayViewV2Props {
   currentDate: Date;
@@ -14,6 +26,8 @@ interface DayViewV2Props {
   onAddAppointment: () => void;
   showProfessionalColors: boolean;
   professionals?: Professional[];
+  dayPayments?: DayPayment[];
+  onPaymentClick?: (payment: DayPayment) => void;
 }
 
 const HOUR_HEIGHT = 60;
@@ -106,6 +120,8 @@ export const DayViewV2 = ({
   onAddAppointment,
   showProfessionalColors,
   professionals = [],
+  dayPayments = [],
+  onPaymentClick,
 }: DayViewV2Props) => {
   const dayAppointments = useMemo(
     () =>
