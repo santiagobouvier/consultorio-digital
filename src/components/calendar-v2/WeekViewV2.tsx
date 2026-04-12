@@ -75,7 +75,7 @@ export const WeekViewV2 = ({
     <>
       {/* Mobile Week View - Vertical scroll */}
       <div className="md:hidden space-y-3">
-        {days.map((day) => {
+        {days.map((day, dayIndex) => {
           const dayAppointments = getAppointmentsForDay(day);
           const isCurrentDay = isToday(day);
 
@@ -83,9 +83,10 @@ export const WeekViewV2 = ({
             <div
               key={day.toISOString()}
               className={cn(
-                "bg-card rounded-2xl border overflow-hidden",
+                "bg-card rounded-2xl border overflow-hidden animate-fade-in",
                 isCurrentDay && "ring-2 ring-primary"
               )}
+              style={{ animationDelay: `${dayIndex * 60}ms`, animationFillMode: "both" }}
             >
               <button
                 onClick={() => onDayClick(day)}
@@ -140,7 +141,11 @@ export const WeekViewV2 = ({
         })}
 
         <div className="fixed bottom-6 right-6 z-40">
-          <Button onClick={onAddAppointment} size="lg" className="h-14 w-14 rounded-full shadow-lg">
+          <Button 
+            onClick={onAddAppointment} 
+            size="lg" 
+            className="h-14 w-14 rounded-full shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:scale-105 active:scale-95 transition-all duration-200"
+          >
             <Plus className="h-6 w-6" />
           </Button>
         </div>

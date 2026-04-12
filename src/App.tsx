@@ -14,7 +14,7 @@ const BusinessSetup = lazy(() => import("./pages/OnboardingWizard"));
 const Patients = lazy(() => import("./pages/Patients"));
 const PatientDetail = lazy(() => import("./pages/PatientDetail"));
 const Appointments = lazy(() => import("./pages/Appointments"));
-const Agenda = lazy(() => import("./pages/Agenda"));
+const Agenda = lazy(() => import("./pages/CalendarV2"));
 const PendingReminders = lazy(() => import("./pages/PendingReminders"));
 const ClinicSettings = lazy(() => import("./pages/ClinicSettings"));
 const AvailableSlots = lazy(() => import("./pages/AvailableSlots"));

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -34,6 +34,7 @@ import { AppointmentDetailModal } from "@/components/calendar/AppointmentDetailM
 import { CreateAppointmentModal } from "@/components/CreateAppointmentModal";
 import { QuickPaymentDrawer } from "@/components/calendar/QuickPaymentDrawer";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 
 import {
   CalendarAppointment,
@@ -63,6 +64,10 @@ const CalendarV2 = () => {
   const isMobile = useIsMobile();
   const { businessId, loading: businessLoading } = useBusinessId();
   const { professionals, loading: professionalsLoading, currentUserId, isOwner } = useProfessionals(businessId);
+
+  // Animation state for view transitions
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [transitionDirection, setTransitionDirection] = useState<"left" | "right" | "none">("none");
 
   // Calendar state - default to month on desktop
   const [viewType, setViewType] = useState<ViewType>("month");
@@ -330,20 +335,33 @@ const CalendarV2 = () => {
 
   // Navigation
   const navigateDate = (direction: "prev" | "next") => {
-    switch (viewType) {
-      case "month":
-        setCurrentDate(direction === "prev" ? subMonths(currentDate, 1) : addMonths(currentDate, 1));
-        break;
-      case "week":
-        setCurrentDate(direction === "prev" ? subWeeks(currentDate, 1) : addWeeks(currentDate, 1));
-        break;
-      case "day":
-        setCurrentDate(direction === "prev" ? subDays(currentDate, 1) : addDays(currentDate, 1));
-        break;
-    }
+    setTransitionDirection(direction === "prev" ? "right" : "left");
+    setIsTransitioning(true);
+    
+    setTimeout(() => {
+      switch (viewType) {
+        case "month":
+          setCurrentDate(direction === "prev" ? subMonths(currentDate, 1) : addMonths(currentDate, 1));
+          break;
+        case "week":
+          setCurrentDate(direction === "prev" ? subWeeks(currentDate, 1) : addWeeks(currentDate, 1));
+          break;
+        case "day":
+          setCurrentDate(direction === "prev" ? subDays(currentDate, 1) : addDays(currentDate, 1));
+          break;
+      }
+      setTransitionDirection("none");
+      setIsTransitioning(false);
+    }, 150);
   };
 
-  const goToToday = () => setCurrentDate(new Date());
+  const goToToday = () => {
+    setIsTransitioning(true);
+    setTimeout(() => {
+      setCurrentDate(new Date());
+      setIsTransitioning(false);
+    }, 150);
+  };
 
   const handleDayClick = (date: Date) => {
     setCurrentDate(date);
@@ -415,17 +433,43 @@ const CalendarV2 = () => {
 
   if (loading && !businessId) {
     return (
-      <div className="min-h-screen bg-background p-4 sm:p-6 space-y-6">
+      <div className="min-h-screen bg-background p-4 sm:p-6 space-y-6 animate-fade-in">
+        {/* Header skeleton */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Skeleton className="h-10 w-10 rounded-xl" />
+            <Skeleton className="h-10 w-10 rounded-xl" />
+            <Skeleton className="h-8 w-48 rounded-lg" />
+          </div>
+          <div className="flex gap-2">
+            <Skeleton className="h-10 w-10 rounded-xl" />
+            <Skeleton className="h-10 w-10 rounded-xl" />
+          </div>
+        </div>
+        {/* Tabs skeleton */}
         <Skeleton className="h-12 w-full rounded-xl" />
-        <Skeleton className="h-10 w-full rounded-xl" />
-        <Skeleton className="h-[400px] w-full rounded-2xl" />
+        {/* Calendar skeleton */}
+        <div className="space-y-2">
+          <div className="grid grid-cols-7 gap-1">
+            {Array.from({ length: 7 }).map((_, i) => (
+              <Skeleton key={i} className="h-8 rounded-lg" />
+            ))}
+          </div>
+          {Array.from({ length: 5 }).map((_, row) => (
+            <div key={row} className="grid grid-cols-7 gap-1">
+              {Array.from({ length: 7 }).map((_, col) => (
+                <Skeleton key={col} className="h-16 rounded-xl" />
+              ))}
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-4">
+      <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-4 animate-fade-in">
         {/* Header */}
         <CalendarHeader
           currentDate={currentDate}
@@ -450,92 +494,107 @@ const CalendarV2 = () => {
 
         {/* Filters panel */}
         {showFilters && (
-          <CalendarFiltersPanel
-            filters={filters}
-            onFiltersChange={setFilters}
-            patients={patients}
-            onClear={clearFilters}
-          />
+          <div className="animate-scale-in">
+            <CalendarFiltersPanel
+              filters={filters}
+              onFiltersChange={setFilters}
+              patients={patients}
+              onClear={clearFilters}
+            />
+          </div>
         )}
 
         {/* Professional color legend */}
         {showProfessionalColors && <ProfessionalColorLegend professionals={professionals} />}
 
-        {/* Calendar views */}
-        {dataLoading ? (
-          <div className="flex items-center justify-center py-20">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary" />
-          </div>
-        ) : (
-          <>
-            {/* Desktop: Use DesktopCalendarLayout for month view */}
-            {!isMobile && viewType === "month" ? (
-              <DesktopCalendarLayout
-                currentDate={currentDate}
-                appointments={filteredAppointments}
-                onAppointmentClick={(apt) => {
-                  setSelectedAppointment(apt);
-                  setShowAppointmentModal(true);
-                }}
-                onCreateAppointment={(date) => {
-                  if (date) setSelectedDateForAction(date);
-                  setShowCreateModal(true);
-                }}
-                onCreatePayment={(date) => {
-                  if (date) setSelectedDateForAction(date);
-                  setShowPaymentDrawer(true);
-                }}
-                showProfessionalColors={showProfessionalColors}
-              />
-            ) : (
-              <>
-                {viewType === "day" && (
-                  <DayViewV2
-                    currentDate={currentDate}
-                    appointments={filteredAppointments}
-                    onAppointmentClick={(apt) => {
-                      setSelectedAppointment(apt);
-                      setShowAppointmentModal(true);
-                    }}
-                    onAddAppointment={() => setShowCreateModal(true)}
-                    showProfessionalColors={showProfessionalColors}
-                    professionals={professionals}
-                    dayPayments={dayPayments}
-                    onPaymentClick={(payment) => {
-                      navigate(`/pacientes/${payment.patient_id}`);
-                    }}
-                  />
-                )}
-                {viewType === "week" && (
-                  <WeekViewV2
-                    currentDate={currentDate}
-                    appointments={filteredAppointments}
-                    onAppointmentClick={(apt) => {
-                      setSelectedAppointment(apt);
-                      setShowAppointmentModal(true);
-                    }}
-                    onDayClick={handleDayClick}
-                    onAddAppointment={() => setShowCreateModal(true)}
-                    showProfessionalColors={showProfessionalColors}
-                  />
-                )}
-                {viewType === "month" && isMobile && (
-                  <MonthViewV2
-                    currentDate={currentDate}
-                    appointments={filteredAppointments}
-                    onAppointmentClick={(apt) => {
-                      setSelectedAppointment(apt);
-                      setShowAppointmentModal(true);
-                    }}
-                    onDayClick={handleDayClick}
-                    onAddAppointment={() => setShowCreateModal(true)}
-                    showProfessionalColors={showProfessionalColors}
-                  />
-                )}
-              </>
-            )}
-          </>
-        )}
+        {/* Calendar views with transition */}
+        <div
+          className={cn(
+            "transition-all duration-200 ease-out",
+            isTransitioning && transitionDirection === "left" && "opacity-0 -translate-x-4",
+            isTransitioning && transitionDirection === "right" && "opacity-0 translate-x-4",
+            isTransitioning && transitionDirection === "none" && "opacity-0 scale-95",
+            !isTransitioning && "opacity-100 translate-x-0 scale-100"
+          )}
+        >
+          {dataLoading ? (
+            <div className="flex flex-col items-center justify-center py-20 gap-3">
+              <div className="relative">
+                <div className="animate-spin rounded-full h-12 w-12 border-4 border-muted border-t-primary" />
+              </div>
+              <p className="text-sm text-muted-foreground animate-pulse">Cargando agenda...</p>
+            </div>
+          ) : (
+            <>
+              {/* Desktop: Use DesktopCalendarLayout for month view */}
+              {!isMobile && viewType === "month" ? (
+                <DesktopCalendarLayout
+                  currentDate={currentDate}
+                  appointments={filteredAppointments}
+                  onAppointmentClick={(apt) => {
+                    setSelectedAppointment(apt);
+                    setShowAppointmentModal(true);
+                  }}
+                  onCreateAppointment={(date) => {
+                    if (date) setSelectedDateForAction(date);
+                    setShowCreateModal(true);
+                  }}
+                  onCreatePayment={(date) => {
+                    if (date) setSelectedDateForAction(date);
+                    setShowPaymentDrawer(true);
+                  }}
+                  showProfessionalColors={showProfessionalColors}
+                />
+              ) : (
+                <>
+                  {viewType === "day" && (
+                    <DayViewV2
+                      currentDate={currentDate}
+                      appointments={filteredAppointments}
+                      onAppointmentClick={(apt) => {
+                        setSelectedAppointment(apt);
+                        setShowAppointmentModal(true);
+                      }}
+                      onAddAppointment={() => setShowCreateModal(true)}
+                      showProfessionalColors={showProfessionalColors}
+                      professionals={professionals}
+                      dayPayments={dayPayments}
+                      onPaymentClick={(payment) => {
+                        navigate(`/pacientes/${payment.patient_id}`);
+                      }}
+                    />
+                  )}
+                  {viewType === "week" && (
+                    <WeekViewV2
+                      currentDate={currentDate}
+                      appointments={filteredAppointments}
+                      onAppointmentClick={(apt) => {
+                        setSelectedAppointment(apt);
+                        setShowAppointmentModal(true);
+                      }}
+                      onDayClick={handleDayClick}
+                      onAddAppointment={() => setShowCreateModal(true)}
+                      showProfessionalColors={showProfessionalColors}
+                    />
+                  )}
+                  {viewType === "month" && isMobile && (
+                    <MonthViewV2
+                      currentDate={currentDate}
+                      appointments={filteredAppointments}
+                      onAppointmentClick={(apt) => {
+                        setSelectedAppointment(apt);
+                        setShowAppointmentModal(true);
+                      }}
+                      onDayClick={handleDayClick}
+                      onAddAppointment={() => setShowCreateModal(true)}
+                      showProfessionalColors={showProfessionalColors}
+                    />
+                  )}
+                </>
+              )}
+            </>
+          )}
+        </div>
 
         {/* Appointment detail modal */}
         <AppointmentDetailModal
