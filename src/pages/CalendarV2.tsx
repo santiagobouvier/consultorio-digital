@@ -174,7 +174,7 @@ const CalendarV2 = () => {
           patient_id,
           service_id,
           professional_id,
-          patients (full_name),
+          patients (full_name, whatsapp_phone, email),
           services (name)
         `)
         .eq("business_id", businessId)
