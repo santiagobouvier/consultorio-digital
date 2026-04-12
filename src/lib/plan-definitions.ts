@@ -55,16 +55,7 @@ export const PLAN_DEFINITIONS: Record<string, PlanDefinition> = {
   clinica: {
     code: "clinica",
     name: "Clínica",
-    description: "Para clínicas sin límites",
-    maxProfessionals: null,
-    maxPatients: null,
-    priceAnnual: 0,
-    priceMonthly: 0,
-  },
-  personalizado: {
-    code: "personalizado",
-    name: "Personalizado",
-    description: "A medida para tus necesidades",
+    description: "Para clínicas sin límites — contactanos",
     maxProfessionals: null,
     maxPatients: null,
     priceAnnual: 0,
@@ -74,7 +65,7 @@ export const PLAN_DEFINITIONS: Record<string, PlanDefinition> = {
 
 // Ordered list for UI display (personalizado excluded from public pricing)
 export const PLAN_ORDER = ["emprendedor", "esencial", "profesional", "consultorio", "clinica"];
-export const PLAN_ORDER_WITH_CUSTOM = ["emprendedor", "esencial", "profesional", "consultorio", "clinica", "personalizado"];
+export const PLAN_ORDER_WITH_CUSTOM = ["emprendedor", "esencial", "profesional", "consultorio", "clinica"];
 
 // Helper functions
 export function getPlanDefinition(planCode: string): PlanDefinition {
@@ -88,7 +79,7 @@ export function getPlanName(planCode: string): string {
 
 export function getPlanLimits(planCode: string, customLimits?: { maxProfessionals?: number | null; maxPatients?: number | null }) {
   const normalized = normalizePlanCode(planCode);
-  if ((normalized === "personalizado" || normalized === "clinica") && customLimits) {
+  if (normalized === "clinica" && customLimits) {
     return {
       maxProfessionals: customLimits.maxProfessionals ?? null,
       maxPatients: customLimits.maxPatients ?? null,
