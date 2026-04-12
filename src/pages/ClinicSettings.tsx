@@ -128,7 +128,7 @@ const ClinicSettings = () => {
             contact_email: user.email || "",
             timezone: "America/Montevideo"
           })
-          .select("id, public_slug, owner_user_id, is_private_clinic, custom_subdomain, custom_domain")
+          .select("id, public_slug, owner_user_id, is_private_clinic, custom_subdomain, custom_domain, dashboard_primary_color, dashboard_logo_url, dashboard_display_name")
           .single();
 
         if (createError) {
@@ -141,15 +141,18 @@ const ClinicSettings = () => {
           return;
         }
 
-        business = newBusiness;
+        business = newBusiness as any;
       }
 
       if (business) {
         setPublicSlug(business.public_slug);
         setBusinessId(business.id);
         setIsOwner(business.owner_user_id === user.id);
-        // Load private clinic info for display
         setIsPrivateClinic((business as any).is_private_clinic || false);
+        // Load dashboard branding
+        setDashboardColor((business as any).dashboard_primary_color || "176 100% 32%");
+        setDashboardLogoUrl((business as any).dashboard_logo_url || "");
+        setDashboardDisplayName((business as any).dashboard_display_name || "");
       }
 
       const { data: settings, error } = await supabase
