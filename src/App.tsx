@@ -10,7 +10,7 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 const Landing = lazy(() => import("./pages/Landing"));
 const Auth = lazy(() => import("./pages/Auth"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
-const BusinessSetup = lazy(() => import("./pages/BusinessSetup"));
+const BusinessSetup = lazy(() => import("./pages/OnboardingWizard"));
 const Patients = lazy(() => import("./pages/Patients"));
 const PatientDetail = lazy(() => import("./pages/PatientDetail"));
 const Appointments = lazy(() => import("./pages/Appointments"));
