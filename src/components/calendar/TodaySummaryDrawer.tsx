@@ -20,6 +20,7 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { QuickActionSheet } from "./QuickActionSheet";
+import { ConfirmPaymentDialog } from "@/components/ConfirmPaymentDialog";
 
 interface Appointment {
   id: string;
@@ -72,6 +73,7 @@ export const TodaySummaryDrawer = ({
   const [loadingAppointmentId, setLoadingAppointmentId] = useState<string | null>(null);
   const [loadingPaymentId, setLoadingPaymentId] = useState<string | null>(null);
   const [showActionSheet, setShowActionSheet] = useState(false);
+  const [confirmPayment, setConfirmPayment] = useState<{ id: string; amount: number; patientName: string } | null>(null);
 
   const today = new Date();
   const todayStart = startOfDay(today);
