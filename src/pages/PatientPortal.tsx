@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { PWAInstallBanner } from "@/components/PWAInstallBanner";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -277,6 +278,9 @@ const PatientPortal = () => {
             <span className="font-medium text-sm">{overallPaymentStatus.message}</span>
           </div>
         </div>
+
+        {/* PWA Install Banner */}
+        <PWAInstallBanner />
 
         <Tabs defaultValue="resumen" className="w-full">
           <TabsList className="w-full grid grid-cols-5 mb-4">
