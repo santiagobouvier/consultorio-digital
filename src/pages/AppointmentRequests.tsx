@@ -30,6 +30,7 @@ const AppointmentRequests = () => {
   const navigate = useNavigate();
   const [requests, setRequests] = useState<any[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
   
   const { businessId, loading: businessLoading } = useBusinessId();
 
@@ -202,6 +203,8 @@ const AppointmentRequests = () => {
     }
   };
 
+  const { paginatedItems: pageRequests, totalPages } = usePagination(requests, currentPage);
+
   if (loading) {
     return <LoadingPage />;
   }
@@ -241,7 +244,7 @@ const AppointmentRequests = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {requests.map((request) => (
+                    {pageRequests.map((request) => (
                       <TableRow key={request.id}>
                         <TableCell>
                           <div>
