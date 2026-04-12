@@ -232,10 +232,10 @@ const Landing = () => {
       </div>
 
       {/* Hero Section */}
-      <section className="relative min-h-[85vh] sm:min-h-screen flex flex-col items-center justify-center px-4 sm:px-6 py-12 sm:py-24 z-10">
-        <div className="w-full max-w-3xl mx-auto">
+      <section className="relative min-h-[80vh] sm:min-h-[85vh] flex items-center px-4 sm:px-6 lg:px-10 py-12 sm:py-16 lg:py-12 z-10">
+        <div className="w-full max-w-7xl mx-auto">
           <div 
-            className="relative rounded-2xl sm:rounded-3xl p-6 sm:p-10 md:p-14"
+            className="relative rounded-2xl sm:rounded-3xl overflow-hidden"
             style={{ 
               backgroundColor: '#111111',
               boxShadow: `0 8px 60px ${BRAND_GLOW}, 0 0 120px rgba(0, 165, 160, 0.06)`,
@@ -251,157 +251,150 @@ const Landing = () => {
               }}
             />
 
-            {/* Logo */}
-            <div className="relative flex justify-center mb-0">
-              <img 
-                src={logoWhite} 
-                alt="Tu Consultorio Digital" 
-                className="h-40 sm:h-56 w-auto"
-                style={{ animation: 'logoFloat 6s ease-in-out infinite' }}
-              />
-            </div>
-            
-            {/* Title */}
-            <h1 className="relative text-2xl sm:text-4xl md:text-5xl font-bold tracking-tight text-center mb-4 sm:mb-6 leading-tight -mt-6 sm:-mt-10">
-              Tu consultorio ordenado:
-              <span 
-                className="block bg-clip-text text-transparent"
-                style={{ 
-                  backgroundImage: `linear-gradient(135deg, ${BRAND}, ${GREEN})`,
-                }}
-              >
-                pacientes, agenda y pagos
-              </span>
-              <span className="block">en un solo lugar</span>
-            </h1>
-            
-            {/* Subtitle */}
-            <p className="relative text-sm sm:text-lg md:text-xl text-gray-400 text-center mb-6 sm:mb-8 max-w-xl mx-auto leading-relaxed font-light">
-              Gestioná pacientes, agenda privada, pagos y recordatorios sin planillas ni mensajes sueltos.
-            </p>
-
-            {/* Dashboard Mockup - hidden on mobile */}
-            <div className="relative hidden sm:block mb-8">
-              <div 
-                className="rounded-xl border border-white/10 overflow-hidden"
-                style={{ backgroundColor: '#0a0a0a' }}
-              >
-                {/* Browser chrome */}
-                <div className="flex items-center gap-2 px-4 py-2.5 border-b border-white/5" style={{ backgroundColor: '#0f0f0f' }}>
-                  <div className="flex gap-1.5">
-                    <div className="w-2.5 h-2.5 rounded-full bg-red-500/60" />
-                    <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/60" />
-                    <div className="w-2.5 h-2.5 rounded-full bg-green-500/60" />
-                  </div>
-                  <div className="flex-1 mx-8">
-                    <div className="h-5 rounded-md bg-white/5 max-w-xs mx-auto flex items-center justify-center">
-                      <span className="text-[10px] text-gray-600">tuconsultorio.digital</span>
-                    </div>
-                  </div>
+            <div className="relative grid grid-cols-1 lg:grid-cols-2 gap-0">
+              {/* Left side — Text + CTAs */}
+              <div className="p-6 sm:p-8 lg:p-10 xl:p-12 flex flex-col justify-center">
+              {/* Logo */}
+                <div className="flex justify-center lg:justify-start mb-1">
+                  <img 
+                    src={logoWhite} 
+                    alt="Tu Consultorio Digital" 
+                    className="h-20 sm:h-24 lg:h-28 w-auto"
+                    style={{ animation: 'logoFloat 6s ease-in-out infinite' }}
+                  />
                 </div>
-                {/* Dashboard content */}
-                <div className="p-4 sm:p-6">
-                  <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-4">
-                    {[
-                      { label: "Pacientes activos", value: "24", color: GREEN },
-                      { label: "Citas esta semana", value: "12", color: BRAND },
-                      { label: "Pagos pendientes", value: "3", color: "#f59e0b" },
-                    ].map((stat) => (
-                      <div
-                        key={stat.label}
-                        className="rounded-lg border border-white/5 p-3 sm:p-4"
-                        style={{ backgroundColor: '#111111' }}
-                      >
-                        <p className="text-[10px] sm:text-xs text-gray-500 mb-1">{stat.label}</p>
-                        <p className="text-lg sm:text-2xl font-bold" style={{ color: stat.color }}>{stat.value}</p>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="rounded-lg border border-white/5 p-3" style={{ backgroundColor: '#111111' }}>
-                      <p className="text-[10px] sm:text-xs text-gray-500 mb-2">Próximas citas</p>
-                      {["10:00 — María L.", "11:30 — Juan P.", "14:00 — Ana R."].map((cita) => (
-                        <div key={cita} className="flex items-center gap-2 py-1">
-                          <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: GREEN }} />
-                          <span className="text-[10px] sm:text-xs text-gray-400">{cita}</span>
-                        </div>
-                      ))}
+                
+                {/* Title */}
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl xl:text-[2.7rem] font-bold tracking-tight text-center lg:text-left mb-3 sm:mb-4 leading-tight">
+                  Tu consultorio ordenado:
+                  <span 
+                    className="block bg-clip-text text-transparent"
+                    style={{ backgroundImage: `linear-gradient(135deg, ${BRAND}, ${GREEN})` }}
+                  >
+                    pacientes, agenda y pagos
+                  </span>
+                  <span className="block">en un solo lugar</span>
+                </h1>
+                
+                {/* Subtitle */}
+                <p className="text-sm sm:text-base lg:text-lg text-gray-400 text-center lg:text-left mb-4 lg:mb-6 max-w-lg mx-auto lg:mx-0 leading-relaxed font-light">
+                  Gestioná pacientes, agenda privada, pagos y recordatorios sin planillas ni mensajes sueltos.
+                </p>
+
+                {/* Multi-device badges */}
+                <div className="flex justify-center lg:justify-start gap-3 mb-5 lg:mb-6">
+                  {[
+                    { icon: Monitor, label: "Computadora" },
+                    { icon: Tablet, label: "Tablet" },
+                    { icon: Smartphone, label: "Celular" },
+                  ].map((device, i) => (
+                    <div 
+                      key={device.label}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/10 text-gray-400 text-xs"
+                      style={{
+                        backgroundColor: 'rgba(255,255,255,0.03)',
+                        animation: `badgePop 0.5s cubic-bezier(0.16,1,0.3,1) ${600 + i * 120}ms both`,
+                      }}
+                    >
+                      <device.icon className="w-3.5 h-3.5" style={{ color: GREEN }} />
+                      {device.label}
                     </div>
-                    <div className="rounded-lg border border-white/5 p-3" style={{ backgroundColor: '#111111' }}>
-                      <p className="text-[10px] sm:text-xs text-gray-500 mb-2">Cobros del mes</p>
-                      <p className="text-sm sm:text-lg font-bold" style={{ color: GREEN }}>$48.500</p>
-                      <p className="text-[10px] text-gray-600 mt-1">+15% vs. mes anterior</p>
+                  ))}
+                </div>
+                
+                {/* CTA Buttons */}
+                <div 
+                  className="flex flex-col sm:flex-row justify-center lg:justify-start gap-3"
+                  style={{ animation: 'fadeSlideUp 0.7s cubic-bezier(0.16,1,0.3,1) 0.4s both' }}
+                >
+                  <a href="#pricing">
+                    <Button 
+                      size="lg" 
+                      className="w-full sm:w-auto h-12 px-8 text-sm font-semibold rounded-xl transition-all duration-300 hover:scale-[1.03] group"
+                      style={{ backgroundColor: BRAND, boxShadow: `0 4px 30px ${BRAND_SHADOW}` }}
+                    >
+                      Empezar 7 días gratis
+                      <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" />
+                    </Button>
+                  </a>
+                  <a href="/auth">
+                    <Button 
+                      variant="outline"
+                      size="lg" 
+                      className="w-full sm:w-auto h-12 px-8 text-sm font-semibold rounded-xl transition-all duration-300 bg-transparent text-white border-white/20 hover:bg-white/5 hover:border-white/30"
+                    >
+                      Ya tengo cuenta
+                    </Button>
+                  </a>
+                </div>
+
+                {/* Install app - compact */}
+                <div 
+                  className="flex justify-center lg:justify-start mt-3"
+                  style={{ animation: 'fadeSlideUp 0.7s cubic-bezier(0.16,1,0.3,1) 0.6s both' }}
+                >
+                  <InstallAppButton />
+                </div>
+              </div>
+
+              {/* Right side — Dashboard Mockup (desktop only) */}
+              <div className="hidden lg:flex items-center justify-center p-6 lg:p-8 xl:p-10" style={{ backgroundColor: '#0c0c0c' }}>
+                <div className="w-full max-w-md xl:max-w-lg">
+                  <div 
+                    className="rounded-xl border border-white/10 overflow-hidden"
+                    style={{ backgroundColor: '#0a0a0a' }}
+                  >
+                    {/* Browser chrome */}
+                    <div className="flex items-center gap-2 px-4 py-2.5 border-b border-white/5" style={{ backgroundColor: '#0f0f0f' }}>
+                      <div className="flex gap-1.5">
+                        <div className="w-2.5 h-2.5 rounded-full bg-red-500/60" />
+                        <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/60" />
+                        <div className="w-2.5 h-2.5 rounded-full bg-green-500/60" />
+                      </div>
+                      <div className="flex-1 mx-6">
+                        <div className="h-5 rounded-md bg-white/5 max-w-[200px] mx-auto flex items-center justify-center">
+                          <span className="text-[10px] text-gray-600">tuconsultorio.digital</span>
+                        </div>
+                      </div>
+                    </div>
+                    {/* Dashboard content */}
+                    <div className="p-4">
+                      <div className="grid grid-cols-3 gap-3 mb-3">
+                        {[
+                          { label: "Pacientes activos", value: "24", color: GREEN },
+                          { label: "Citas esta semana", value: "12", color: BRAND },
+                          { label: "Pagos pendientes", value: "3", color: "#f59e0b" },
+                        ].map((stat) => (
+                          <div
+                            key={stat.label}
+                            className="rounded-lg border border-white/5 p-3"
+                            style={{ backgroundColor: '#111111' }}
+                          >
+                            <p className="text-[9px] text-gray-500 mb-1">{stat.label}</p>
+                            <p className="text-lg font-bold" style={{ color: stat.color }}>{stat.value}</p>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="rounded-lg border border-white/5 p-3" style={{ backgroundColor: '#111111' }}>
+                          <p className="text-[9px] text-gray-500 mb-2">Próximas citas</p>
+                          {["10:00 — María L.", "11:30 — Juan P.", "14:00 — Ana R."].map((cita) => (
+                            <div key={cita} className="flex items-center gap-2 py-1">
+                              <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: GREEN }} />
+                              <span className="text-[10px] text-gray-400">{cita}</span>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="rounded-lg border border-white/5 p-3" style={{ backgroundColor: '#111111' }}>
+                          <p className="text-[9px] text-gray-500 mb-2">Cobros del mes</p>
+                          <p className="text-lg font-bold" style={{ color: GREEN }}>$48.500</p>
+                          <p className="text-[10px] text-gray-600 mt-1">+15% vs. mes anterior</p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
-
-            {/* Multi-device badges */}
-            <div className="relative flex justify-center gap-3 sm:gap-4 mb-8 sm:mb-10">
-              {[
-                { icon: Monitor, label: "Computadora" },
-                { icon: Tablet, label: "Tablet" },
-                { icon: Smartphone, label: "Celular" },
-              ].map((device, i) => (
-                <div 
-                  key={device.label}
-                  className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border border-white/10 text-gray-400 text-xs sm:text-sm"
-                  style={{
-                    backgroundColor: 'rgba(255,255,255,0.03)',
-                    animation: `badgePop 0.5s cubic-bezier(0.16,1,0.3,1) ${600 + i * 120}ms both`,
-                  }}
-                >
-                  <device.icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" style={{ color: GREEN }} />
-                  {device.label}
-                </div>
-              ))}
-            </div>
-            
-            {/* CTA Buttons */}
-            <div 
-              className="relative flex flex-col sm:flex-row justify-center gap-4"
-              style={{ animation: 'fadeSlideUp 0.7s cubic-bezier(0.16,1,0.3,1) 0.4s both' }}
-            >
-              <a href="#pricing">
-                <Button 
-                  size="lg" 
-                  className="w-full sm:w-auto h-12 sm:h-14 px-8 sm:px-12 text-sm sm:text-base font-semibold rounded-xl transition-all duration-300 hover:scale-[1.03] group"
-                  style={{ 
-                    backgroundColor: BRAND,
-                    boxShadow: `0 4px 30px ${BRAND_SHADOW}`
-                  }}
-                >
-                  Empezar 7 días gratis
-                  <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" />
-                </Button>
-              </a>
-              <a href="/auth">
-                <Button 
-                  variant="outline"
-                  size="lg" 
-                  className="w-full sm:w-auto h-12 sm:h-14 px-8 sm:px-12 text-sm sm:text-base font-semibold rounded-xl transition-all duration-300 bg-transparent text-white border-white/20 hover:bg-white/5 hover:border-white/30"
-                >
-                  Ya tengo cuenta
-                </Button>
-              </a>
-            </div>
-
-            {/* Install & Login */}
-            <div 
-              className="relative flex flex-col sm:flex-row justify-center gap-3 mt-6 pt-6 border-t border-white/10"
-              style={{ animation: 'fadeSlideUp 0.7s cubic-bezier(0.16,1,0.3,1) 0.6s both' }}
-            >
-              <InstallAppButton />
-              <a href="/auth" className="w-full sm:w-auto">
-                <Button 
-                  variant="outline" 
-                  size="lg"
-                  className="w-full sm:w-auto h-12 sm:h-14 px-8 sm:px-12 text-sm sm:text-base font-semibold rounded-xl gap-2 bg-transparent text-white border-white/20 hover:bg-white/5"
-                >
-                  Iniciar sesión
-                </Button>
-              </a>
             </div>
           </div>
         </div>
