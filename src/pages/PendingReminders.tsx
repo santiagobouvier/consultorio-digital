@@ -730,6 +730,104 @@ const PendingReminders = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* ── Create Manual Reminder ── */}
+      <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Crear recordatorio</DialogTitle>
+            <DialogDescription>Creá un recordatorio manual para un paciente</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Paciente</label>
+              <Select value={createForm.patientId} onValueChange={v => setCreateForm(f => ({ ...f, patientId: v, appointmentId: "" }))}>
+                <SelectTrigger className="rounded-xl"><SelectValue placeholder="Seleccionar paciente" /></SelectTrigger>
+                <SelectContent>
+                  {patients.map(p => (
+                    <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {createForm.patientId && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Cita próxima</label>
+                {appointmentsForPatient.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Este paciente no tiene citas próximas</p>
+                ) : (
+                  <Select value={createForm.appointmentId} onValueChange={v => setCreateForm(f => ({ ...f, appointmentId: v }))}>
+                    <SelectTrigger className="rounded-xl"><SelectValue placeholder="Seleccionar cita" /></SelectTrigger>
+                    <SelectContent>
+                      {appointmentsForPatient.map(a => (
+                        <SelectItem key={a.id} value={a.id}>
+                          {format(new Date(a.start_at), "d MMM yyyy · HH:mm", { locale: es })}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Canal</label>
+                <Select value={createForm.channel} onValueChange={(v: "whatsapp" | "email") => setCreateForm(f => ({ ...f, channel: v }))}>
+                  <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                    <SelectItem value="email">Email</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Anticipación</label>
+                <Select value={createForm.hoursBefore} onValueChange={v => setCreateForm(f => ({ ...f, hoursBefore: v }))}>
+                  <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">1 hora antes</SelectItem>
+                    <SelectItem value="24">1 día antes</SelectItem>
+                    <SelectItem value="48">2 días antes</SelectItem>
+                    <SelectItem value="168">1 semana antes</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Mensaje</label>
+              <Textarea
+                value={createForm.message}
+                onChange={e => setCreateForm(f => ({ ...f, message: e.target.value }))}
+                rows={4}
+                className="rounded-xl"
+                placeholder={selectedPatientForCreate ? `Hola ${selectedPatientForCreate.full_name}, te recuerdo tu próxima sesión...` : "Escribí el mensaje del recordatorio..."}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCreateModal(false)} className="rounded-xl">Cancelar</Button>
+            <Button
+              onClick={createManualReminder}
+              disabled={createSaving || !createForm.patientId || !createForm.appointmentId || !createForm.message.trim()}
+              className="rounded-xl"
+            >
+              {createSaving ? "Creando..." : "Crear recordatorio"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── FAB ── */}
+      <Button
+        onClick={() => setShowCreateModal(true)}
+        className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg z-50"
+        size="icon"
+      >
+        <Plus className="h-6 w-6" />
+      </Button>
     </div>
   );
 };
