@@ -53,10 +53,8 @@ const ClinicSettings = () => {
   const [autoAcceptBookings, setAutoAcceptBookings] = useState(false);
   const [publicSlug, setPublicSlug] = useState("");
 
-  // Private clinic info (read-only display)
+  // Private clinic info
   const [isPrivateClinic, setIsPrivateClinic] = useState(false);
-  const [customSubdomain, setCustomSubdomain] = useState<string | null>(null);
-  const [customDomain, setCustomDomain] = useState<string | null>(null);
 
   useEffect(() => {
     checkAuth();
