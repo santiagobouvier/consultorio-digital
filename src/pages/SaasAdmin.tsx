@@ -126,6 +126,9 @@ const SaasAdmin = () => {
   const [newBusinessName, setNewBusinessName] = useState("");
   const [newBusinessEmail, setNewBusinessEmail] = useState("");
   const [newBusinessPlan, setNewBusinessPlan] = useState("inicial");
+  const [createMode, setCreateMode] = useState<"test" | "invite">("test");
+  const [newBusinessPassword, setNewBusinessPassword] = useState("");
+  const [ownerInviteLink, setOwnerInviteLink] = useState<string | null>(null);
   const [showAddProfessionalModal, setShowAddProfessionalModal] = useState(false);
   const [newProfName, setNewProfName] = useState("");
   const [newProfEmail, setNewProfEmail] = useState("");
