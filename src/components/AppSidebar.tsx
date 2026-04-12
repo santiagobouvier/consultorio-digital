@@ -10,6 +10,7 @@ import {
   FileText,
   LogOut,
   Shield,
+  BarChart3,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -36,6 +37,7 @@ const mainItems = [
   { title: "Pagos", url: "/pagos", icon: Receipt },
   { title: "Recordatorios", url: "/recordatorios-pendientes", icon: Clock },
   { title: "Solicitudes", url: "/solicitudes", icon: FileText },
+  { title: "Estadísticas", url: "/estadisticas", icon: BarChart3 },
 ];
 
 const configItems = [
