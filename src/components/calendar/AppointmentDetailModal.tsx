@@ -10,8 +10,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { User, Calendar, MapPin, Video, Clock, CreditCard, MessageCircle, AlertCircle } from "lucide-react";
+import { User, Calendar, MapPin, Video, Clock, CreditCard, MessageCircle, AlertCircle, BellRing } from "lucide-react";
 import { PaymentForm } from "@/components/PaymentForm";
+import { ReminderModal } from "@/components/ReminderModal";
 import { calculatePaymentStatus, type PaymentStatus } from "@/lib/payments";
 
 interface Appointment {
@@ -24,7 +25,7 @@ interface Appointment {
   payment_status: string | null;
   patient_id: string | null;
   service_id: string | null;
-  patients: { full_name: string } | null;
+  patients: { full_name: string; whatsapp_phone?: string | null; email?: string | null } | null;
   services: { name: string } | null;
   paymentColor?: string;
   patientPaymentStatus?: PaymentStatus;
@@ -47,6 +48,7 @@ export const AppointmentDetailModal = ({
 }: AppointmentDetailModalProps) => {
   const navigate = useNavigate();
   const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const [showReminderModal, setShowReminderModal] = useState(false);
 
   if (!appointment) return null;
 
@@ -63,14 +65,10 @@ export const AppointmentDetailModal = ({
 
   const getPaymentStatusInfo = (color?: string) => {
     switch (color) {
-      case "green":
-        return { label: "Al día", bgColor: "bg-green-500", textColor: "text-green-600" };
-      case "orange":
-        return { label: "Por vencer", bgColor: "bg-orange-500", textColor: "text-orange-600" };
-      case "red":
-        return { label: "Vencido", bgColor: "bg-red-500", textColor: "text-red-600" };
-      default:
-        return null;
+      case "green": return { label: "Al día", bgColor: "bg-green-500", textColor: "text-green-600" };
+      case "orange": return { label: "Por vencer", bgColor: "bg-orange-500", textColor: "text-orange-600" };
+      case "red": return { label: "Vencido", bgColor: "bg-red-500", textColor: "text-red-600" };
+      default: return null;
     }
   };
 
@@ -94,33 +92,6 @@ export const AppointmentDetailModal = ({
     onPaymentRegistered?.();
   };
 
-  // Generate WhatsApp reminder message based on payment status
-  const getWhatsAppMessage = () => {
-    const patientName = appointment.patients?.full_name || "paciente";
-    const appointmentDate = format(new Date(appointment.start_at), "EEEE d 'de' MMMM", { locale: es });
-    const appointmentTime = format(new Date(appointment.start_at), "HH:mm");
-
-    if (appointment.paymentColor === "orange") {
-      return encodeURIComponent(
-        `Hola ${patientName}, te recordamos que tu pago está próximo a vencer. Tu próxima cita está programada para el ${appointmentDate} a las ${appointmentTime}. Por favor regulariza tu situación para continuar con tus consultas. ¡Gracias!`
-      );
-    } else if (appointment.paymentColor === "red") {
-      return encodeURIComponent(
-        `Hola ${patientName}, te informamos que tu pago se encuentra vencido. Tu próxima cita está programada para el ${appointmentDate} a las ${appointmentTime}. Por favor comunícate con nosotros para regularizar tu situación. ¡Gracias!`
-      );
-    }
-    return null;
-  };
-
-  const handleSendReminder = () => {
-    // This would need the patient's phone number - for now just navigate to patient
-    if (appointment.patient_id) {
-      navigate(`/patients/${appointment.patient_id}`);
-      onClose();
-    }
-  };
-
-  const whatsappMessage = getWhatsAppMessage();
   const showPaymentReminder = appointment.paymentColor === "orange" || appointment.paymentColor === "red";
 
   return (
@@ -145,15 +116,11 @@ export const AppointmentDetailModal = ({
                   {appointment.patients?.full_name || "Sin paciente"}
                 </p>
                 {appointment.services?.name && (
-                  <p className="text-sm text-muted-foreground">
-                    {appointment.services.name}
-                  </p>
+                  <p className="text-sm text-muted-foreground">{appointment.services.name}</p>
                 )}
               </div>
               <div className="flex flex-col items-end gap-1 shrink-0">
-                <Badge variant={statusInfo.variant} className="rounded-full">
-                  {statusInfo.label}
-                </Badge>
+                <Badge variant={statusInfo.variant} className="rounded-full">{statusInfo.label}</Badge>
                 {paymentInfo && (
                   <Badge variant="outline" className="rounded-full text-xs flex items-center gap-1">
                     <span className={`w-1.5 h-1.5 rounded-full ${paymentInfo.bgColor}`} />
@@ -166,23 +133,20 @@ export const AppointmentDetailModal = ({
             {/* Payment Warning */}
             {showPaymentReminder && (
               <div className={`flex items-start gap-3 p-3 rounded-xl ${
-                appointment.paymentColor === "red" 
-                  ? "bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900" 
+                appointment.paymentColor === "red"
+                  ? "bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900"
                   : "bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-900"
               }`}>
                 <AlertCircle className={`h-5 w-5 shrink-0 ${
                   appointment.paymentColor === "red" ? "text-red-600" : "text-orange-600"
                 }`} />
-                <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-medium ${
-                    appointment.paymentColor === "red" ? "text-red-700 dark:text-red-400" : "text-orange-700 dark:text-orange-400"
-                  }`}>
-                    {appointment.paymentColor === "red" 
-                      ? "Este paciente tiene un pago vencido"
-                      : "Este paciente tiene un pago próximo a vencer"
-                    }
-                  </p>
-                </div>
+                <p className={`text-sm font-medium ${
+                  appointment.paymentColor === "red" ? "text-red-700 dark:text-red-400" : "text-orange-700 dark:text-orange-400"
+                }`}>
+                  {appointment.paymentColor === "red"
+                    ? "Este paciente tiene un pago vencido"
+                    : "Este paciente tiene un pago próximo a vencer"}
+                </p>
               </div>
             )}
 
@@ -218,7 +182,6 @@ export const AppointmentDetailModal = ({
 
             {/* Actions */}
             <div className="space-y-2 pt-2">
-              {/* Primary actions */}
               <div className="flex flex-col sm:flex-row gap-2">
                 {appointment.patient_id && (
                   <Button onClick={handleViewPatient} className="flex-1 rounded-xl">
@@ -226,43 +189,46 @@ export const AppointmentDetailModal = ({
                     Ver paciente
                   </Button>
                 )}
-                <Button
-                  variant="outline"
-                  onClick={handleViewAppointment}
-                  className="flex-1 rounded-xl"
-                >
+                <Button variant="outline" onClick={handleViewAppointment} className="flex-1 rounded-xl">
                   <Calendar className="h-4 w-4 mr-2" />
                   Ver citas
                 </Button>
               </div>
 
-              {/* Payment actions */}
-              {appointment.patient_id && businessId && (
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <Button
-                    variant="secondary"
-                    onClick={() => setShowPaymentForm(true)}
-                    className="flex-1 rounded-xl"
-                  >
+              <div className="flex flex-col sm:flex-row gap-2">
+                {appointment.patient_id && businessId && (
+                  <Button variant="secondary" onClick={() => setShowPaymentForm(true)} className="flex-1 rounded-xl">
                     <CreditCard className="h-4 w-4 mr-2" />
                     Registrar pago
                   </Button>
-                  
-                  {showPaymentReminder && (
-                    <Button
-                      variant="outline"
-                      onClick={handleSendReminder}
-                      className={`flex-1 rounded-xl ${
-                        appointment.paymentColor === "red"
-                          ? "text-red-600 hover:text-red-700 border-red-200 hover:border-red-300 hover:bg-red-50"
-                          : "text-orange-600 hover:text-orange-700 border-orange-200 hover:border-orange-300 hover:bg-orange-50"
-                      }`}
-                    >
-                      <MessageCircle className="h-4 w-4 mr-2" />
-                      Enviar recordatorio
-                    </Button>
-                  )}
-                </div>
+                )}
+
+                {/* Reminder button */}
+                {appointment.patient_id && (
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowReminderModal(true)}
+                    className="flex-1 rounded-xl"
+                  >
+                    <BellRing className="h-4 w-4 mr-2" />
+                    Enviar recordatorio
+                  </Button>
+                )}
+              </div>
+
+              {showPaymentReminder && appointment.patient_id && (
+                <Button
+                  variant="outline"
+                  onClick={handleViewPatient}
+                  className={`w-full rounded-xl ${
+                    appointment.paymentColor === "red"
+                      ? "text-red-600 hover:text-red-700 border-red-200 hover:border-red-300 hover:bg-red-50"
+                      : "text-orange-600 hover:text-orange-700 border-orange-200 hover:border-orange-300 hover:bg-orange-50"
+                  }`}
+                >
+                  <MessageCircle className="h-4 w-4 mr-2" />
+                  Recordatorio de pago
+                </Button>
               )}
             </div>
           </div>
@@ -277,6 +243,23 @@ export const AppointmentDetailModal = ({
           patientId={appointment.patient_id}
           businessId={businessId}
           onSuccess={handlePaymentSuccess}
+        />
+      )}
+
+      {/* Reminder Modal */}
+      {appointment.patient_id && (
+        <ReminderModal
+          open={showReminderModal}
+          onOpenChange={setShowReminderModal}
+          appointmentId={appointment.id}
+          patientId={appointment.patient_id}
+          patientName={appointment.patients?.full_name || "Paciente"}
+          patientPhone={appointment.patients?.whatsapp_phone || null}
+          patientEmail={appointment.patients?.email || null}
+          appointmentDate={format(new Date(appointment.start_at), "d 'de' MMMM", { locale: es })}
+          appointmentTime={format(new Date(appointment.start_at), "HH:mm")}
+          modality={appointment.modality || "presencial"}
+          location={appointment.location || null}
         />
       )}
     </>
