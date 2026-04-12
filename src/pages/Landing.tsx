@@ -154,13 +154,72 @@ const Landing = () => {
 
   return (
     <div className="min-h-screen bg-black text-white overflow-x-hidden">
-      {/* Animated background gradient */}
-      <div 
-        className="fixed inset-0 pointer-events-none z-0"
-        style={{
-          background: `radial-gradient(ellipse 80% 50% at 50% -20%, ${BRAND_GLOW}, transparent)`,
-        }}
-      />
+      {/* Animated parallax background */}
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+        {/* Top glow */}
+        <div 
+          style={{
+            position: 'absolute',
+            top: '-20%',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: '140%',
+            height: '60%',
+            background: `radial-gradient(ellipse 80% 50% at 50% 50%, ${BRAND_GLOW}, transparent)`,
+          }}
+        />
+        {/* Floating orbs */}
+        <div 
+          style={{
+            position: 'absolute',
+            top: '10%',
+            left: '15%',
+            width: '400px',
+            height: '400px',
+            borderRadius: '50%',
+            background: `radial-gradient(circle, rgba(0, 165, 160, 0.06), transparent 70%)`,
+            animation: 'orbFloat1 20s ease-in-out infinite',
+            filter: 'blur(40px)',
+          }}
+        />
+        <div 
+          style={{
+            position: 'absolute',
+            top: '40%',
+            right: '10%',
+            width: '350px',
+            height: '350px',
+            borderRadius: '50%',
+            background: `radial-gradient(circle, rgba(0, 199, 138, 0.05), transparent 70%)`,
+            animation: 'orbFloat2 25s ease-in-out infinite',
+            filter: 'blur(50px)',
+          }}
+        />
+        <div 
+          style={{
+            position: 'absolute',
+            top: '70%',
+            left: '40%',
+            width: '500px',
+            height: '500px',
+            borderRadius: '50%',
+            background: `radial-gradient(circle, rgba(0, 165, 160, 0.04), transparent 70%)`,
+            animation: 'orbFloat3 30s ease-in-out infinite',
+            filter: 'blur(60px)',
+          }}
+        />
+        {/* Grid pattern overlay */}
+        <div 
+          style={{
+            position: 'absolute',
+            inset: 0,
+            backgroundImage: `linear-gradient(rgba(0,165,160,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0,165,160,0.03) 1px, transparent 1px)`,
+            backgroundSize: '60px 60px',
+            maskImage: 'linear-gradient(to bottom, transparent, rgba(0,0,0,0.5) 20%, rgba(0,0,0,0.5) 80%, transparent)',
+            WebkitMaskImage: 'linear-gradient(to bottom, transparent, rgba(0,0,0,0.5) 20%, rgba(0,0,0,0.5) 80%, transparent)',
+          }}
+        />
+      </div>
 
       {/* Hero Section */}
       <section className="relative min-h-[85vh] sm:min-h-screen flex flex-col items-center justify-center px-4 sm:px-6 py-12 sm:py-24 z-10">
@@ -661,12 +720,6 @@ const Landing = () => {
       {/* Social Proof Section */}
       <section className="relative px-4 sm:px-6 py-14 sm:py-24 z-10" style={{ backgroundColor: '#080808' }}>
         <div className="max-w-4xl mx-auto">
-          <ScrollReveal>
-            <h2 className="text-xl sm:text-3xl md:text-4xl font-bold text-center mb-10 sm:mb-14 tracking-tight">
-              Diseñado para profesionales de salud mental en Uruguay
-            </h2>
-          </ScrollReveal>
-
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
             {[
               {
@@ -1033,6 +1086,23 @@ const Landing = () => {
         @keyframes orbPulse {
           0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.5; }
           50% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
+        }
+        @keyframes orbFloat1 {
+          0%, 100% { transform: translate(0, 0); }
+          25% { transform: translate(60px, 40px); }
+          50% { transform: translate(-30px, 80px); }
+          75% { transform: translate(-60px, 20px); }
+        }
+        @keyframes orbFloat2 {
+          0%, 100% { transform: translate(0, 0); }
+          25% { transform: translate(-50px, 60px); }
+          50% { transform: translate(40px, -30px); }
+          75% { transform: translate(70px, 40px); }
+        }
+        @keyframes orbFloat3 {
+          0%, 100% { transform: translate(0, 0); }
+          33% { transform: translate(80px, -50px); }
+          66% { transform: translate(-60px, -30px); }
         }
       `}</style>
     </div>
