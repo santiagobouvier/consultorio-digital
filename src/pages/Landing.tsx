@@ -277,12 +277,12 @@ const Landing = () => {
                 </h1>
                 
                 {/* Subtitle */}
-                <p className="text-sm sm:text-base lg:text-lg text-gray-400 text-center lg:text-left mb-6 lg:mb-8 max-w-lg mx-auto lg:mx-0 leading-relaxed font-light">
+                <p className="text-sm sm:text-base lg:text-lg text-gray-400 text-center lg:text-left mb-4 lg:mb-6 max-w-lg mx-auto lg:mx-0 leading-relaxed font-light">
                   Gestioná pacientes, agenda privada, pagos y recordatorios sin planillas ni mensajes sueltos.
                 </p>
 
                 {/* Multi-device badges */}
-                <div className="flex justify-center lg:justify-start gap-3 mb-6 lg:mb-8">
+                <div className="flex justify-center lg:justify-start gap-3 mb-5 lg:mb-6">
                   {[
                     { icon: Monitor, label: "Computadora" },
                     { icon: Tablet, label: "Tablet" },
