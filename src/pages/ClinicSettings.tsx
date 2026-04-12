@@ -92,7 +92,7 @@ const ClinicSettings = () => {
       // Include private clinic fields for display
       let { data: business } = await supabase
         .from("businesses")
-        .select("id, public_slug, owner_user_id, is_private_clinic, custom_subdomain, custom_domain")
+        .select("id, public_slug, owner_user_id, is_private_clinic, custom_subdomain, custom_domain, dashboard_primary_color, dashboard_logo_url, dashboard_display_name")
         .eq("owner_user_id", user.id)
         .maybeSingle();
 
@@ -108,7 +108,7 @@ const ClinicSettings = () => {
         if (userRole?.business_id) {
           const { data: memberBusiness } = await supabase
             .from("businesses")
-            .select("id, public_slug, owner_user_id, is_private_clinic, custom_subdomain, custom_domain")
+            .select("id, public_slug, owner_user_id, is_private_clinic, custom_subdomain, custom_domain, dashboard_primary_color, dashboard_logo_url, dashboard_display_name")
             .eq("id", userRole.business_id)
             .single();
           
