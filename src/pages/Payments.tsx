@@ -98,7 +98,8 @@ const Payments = () => {
     if (status) {
       setStatusFilter(status);
     }
-  }, [searchParams]);
+    setCurrentPage(1);
+  }, [searchParams, searchQuery, statusFilter, patientFilter]);
 
   const fetchData = async () => {
     if (!businessId) return;
