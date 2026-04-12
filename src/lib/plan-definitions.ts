@@ -1,5 +1,5 @@
 // Single source of truth for all plan definitions
-// 5 plans: Emprendedor, Esencial, Profesional, Consultorio, Clínica + Personalizado (admin only)
+// 4 plans: Emprendedor, Esencial, Profesional, Consultorio + Personalizado (admin only)
 
 export interface PlanDefinition {
   code: string;
@@ -52,10 +52,10 @@ export const PLAN_DEFINITIONS: Record<string, PlanDefinition> = {
     priceAnnual: 6390,
     priceMonthly: 7990,
   },
-  clinica: {
-    code: "clinica",
-    name: "Clínica",
-    description: "Para clínicas sin límites — contactanos",
+  personalizado: {
+    code: "personalizado",
+    name: "Personalizado",
+    description: "A medida para tus necesidades",
     maxProfessionals: null,
     maxPatients: null,
     priceAnnual: 0,
@@ -64,8 +64,8 @@ export const PLAN_DEFINITIONS: Record<string, PlanDefinition> = {
 };
 
 // Ordered list for UI display (personalizado excluded from public pricing)
-export const PLAN_ORDER = ["emprendedor", "esencial", "profesional", "consultorio", "clinica"];
-export const PLAN_ORDER_WITH_CUSTOM = ["emprendedor", "esencial", "profesional", "consultorio", "clinica"];
+export const PLAN_ORDER = ["emprendedor", "esencial", "profesional", "consultorio"];
+export const PLAN_ORDER_WITH_CUSTOM = ["emprendedor", "esencial", "profesional", "consultorio", "personalizado"];
 
 // Helper functions
 export function getPlanDefinition(planCode: string): PlanDefinition {
@@ -79,7 +79,7 @@ export function getPlanName(planCode: string): string {
 
 export function getPlanLimits(planCode: string, customLimits?: { maxProfessionals?: number | null; maxPatients?: number | null }) {
   const normalized = normalizePlanCode(planCode);
-  if (normalized === "clinica" && customLimits) {
+  if (normalized === "personalizado" && customLimits) {
     return {
       maxProfessionals: customLimits.maxProfessionals ?? null,
       maxPatients: customLimits.maxPatients ?? null,
@@ -109,9 +109,9 @@ export const LEGACY_PLAN_MAP: Record<string, string> = {
   professional: "profesional",
   advanced: "consultorio",
   equipo: "consultorio",
-  enterprise: "clinica",
-  custom: "clinica",
-  personalizado: "clinica",
+  enterprise: "personalizado",
+  clinica: "personalizado",
+  custom: "personalizado",
 };
 
 export function normalizePlanCode(planCode: string): string {
