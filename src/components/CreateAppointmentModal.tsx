@@ -19,6 +19,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
+import { useBusinessId } from "@/hooks/use-business-id";
+import { useProfessionals } from "@/hooks/use-professionals";
 
 interface Patient {
   id: string;
@@ -39,15 +41,31 @@ export function CreateAppointmentModal({
   onSuccess,
 }: CreateAppointmentModalProps) {
   const navigate = useNavigate();
+  const { businessId } = useBusinessId();
+  const { professionals, currentUserId, isOwner } = useProfessionals(businessId);
+
   const [loading, setLoading] = useState(false);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [selectedPatientId, setSelectedPatientId] = useState(patientId || "");
+  const [selectedProfessionalId, setSelectedProfessionalId] = useState("");
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [duration, setDuration] = useState("60");
   const [modality, setModality] = useState("presencial");
   const [location, setLocation] = useState("");
   const [notes, setNotes] = useState("");
+
+  // Set default professional
+  useEffect(() => {
+    if (!open) return;
+    if (!isOwner && currentUserId) {
+      setSelectedProfessionalId(currentUserId);
+    } else if (professionals.length === 1) {
+      setSelectedProfessionalId(professionals[0].userId);
+    } else if (!selectedProfessionalId && currentUserId) {
+      setSelectedProfessionalId(currentUserId);
+    }
+  }, [open, professionals, currentUserId, isOwner]);
 
   useEffect(() => {
     if (open && !patientId) {
@@ -60,21 +78,12 @@ export function CreateAppointmentModal({
 
   const fetchPatients = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: business } = await supabase
-        .from("businesses")
-        .select("id")
-        .eq("owner_user_id", user.id)
-        .maybeSingle();
-
-      if (!business) return;
+      if (!businessId) return;
 
       const { data } = await supabase
         .from("patients")
         .select("id, full_name")
-        .eq("business_id", business.id)
+        .eq("business_id", businessId)
         .eq("is_active", true)
         .order("full_name");
 
@@ -108,27 +117,16 @@ export function CreateAppointmentModal({
     try {
       setLoading(true);
 
-      // Get current user's business
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Usuario no autenticado");
+      if (!businessId) throw new Error("No se encontró el consultorio");
 
-      const { data: business } = await supabase
-        .from("businesses")
-        .select("id")
-        .eq("owner_user_id", user.id)
-        .maybeSingle();
-
-      if (!business) throw new Error("No se encontró el consultorio");
-
-      // Calculate start_at and end_at
       const startAt = new Date(`${date}T${time}`);
       const endAt = new Date(startAt);
       endAt.setMinutes(endAt.getMinutes() + parseInt(duration));
 
-      // Insert appointment
       const { error } = await supabase.from("appointments").insert({
-        business_id: business.id,
+        business_id: businessId,
         patient_id: selectedPatientId,
+        professional_id: selectedProfessionalId || null,
         start_at: startAt.toISOString(),
         end_at: endAt.toISOString(),
         modality,
@@ -145,7 +143,6 @@ export function CreateAppointmentModal({
         description: "Cita creada correctamente",
       });
 
-      // Reset form
       setDate("");
       setTime("");
       setDuration("60");
@@ -153,11 +150,9 @@ export function CreateAppointmentModal({
       setLocation("");
       setNotes("");
       setSelectedPatientId(patientId || "");
-      
+
       onOpenChange(false);
       onSuccess();
-      
-      // Navigate to agenda
       navigate("/agenda");
     } catch (error) {
       console.error("Error creating appointment:", error);
@@ -170,6 +165,9 @@ export function CreateAppointmentModal({
       setLoading(false);
     }
   };
+
+  const showProfessionalSelector = professionals.length > 1;
+  const isProfessionalLocked = !isOwner;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -196,6 +194,40 @@ export function CreateAppointmentModal({
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+            )}
+
+            {/* Profesional */}
+            {showProfessionalSelector && (
+              <div className="space-y-2">
+                <Label htmlFor="professional" className="text-sm font-semibold">Profesional</Label>
+                <Select
+                  value={selectedProfessionalId}
+                  onValueChange={setSelectedProfessionalId}
+                  disabled={isProfessionalLocked}
+                >
+                  <SelectTrigger id="professional" className="h-12 text-base rounded-xl">
+                    <SelectValue placeholder="Selecciona un profesional" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {professionals.map((prof) => (
+                      <SelectItem key={prof.userId} value={prof.userId}>
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="w-3 h-3 rounded-full shrink-0"
+                            style={{ backgroundColor: prof.color }}
+                          />
+                          {prof.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {isProfessionalLocked && (
+                  <p className="text-xs text-muted-foreground">
+                    Solo puedes crear citas para tu agenda
+                  </p>
+                )}
               </div>
             )}
 
@@ -298,8 +330,8 @@ export function CreateAppointmentModal({
             >
               Cancelar
             </Button>
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               disabled={loading}
               className="h-12 rounded-xl text-base font-semibold flex-1"
             >
