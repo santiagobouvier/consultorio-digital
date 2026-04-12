@@ -136,6 +136,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "appointments_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public_branding"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "appointments_patient_id_fkey"
             columns: ["patient_id"]
             isOneToOne: false
@@ -197,6 +204,13 @@ export type Database = {
             columns: ["business_id"]
             isOneToOne: false
             referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "availability_slots_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public_branding"
             referencedColumns: ["id"]
           },
         ]
@@ -446,6 +460,13 @@ export type Database = {
             referencedRelation: "businesses"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "patients_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public_branding"
+            referencedColumns: ["id"]
+          },
         ]
       }
       payments: {
@@ -542,6 +563,13 @@ export type Database = {
             columns: ["business_id"]
             isOneToOne: false
             referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_portal_invites_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public_branding"
             referencedColumns: ["id"]
           },
         ]
@@ -672,6 +700,13 @@ export type Database = {
             referencedRelation: "businesses"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "services_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public_branding"
+            referencedColumns: ["id"]
+          },
         ]
       }
       subscriptions: {
@@ -734,6 +769,13 @@ export type Database = {
             referencedRelation: "businesses"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "subscriptions_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public_branding"
+            referencedColumns: ["id"]
+          },
         ]
       }
       user_roles: {
@@ -769,11 +811,74 @@ export type Database = {
             referencedRelation: "businesses"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "user_roles_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public_branding"
+            referencedColumns: ["id"]
+          },
         ]
       }
     }
     Views: {
-      [_ in never]: never
+      businesses_public_branding: {
+        Row: {
+          custom_domain: string | null
+          custom_subdomain: string | null
+          dashboard_display_name: string | null
+          dashboard_logo_url: string | null
+          dashboard_primary_color: string | null
+          id: string | null
+          is_private_clinic: boolean | null
+          name: string | null
+          portal_clinic_display_name: string | null
+          portal_dark_primary_color: string | null
+          portal_logo_url: string | null
+          portal_primary_color: string | null
+          portal_theme_preset: string | null
+          public_slug: string | null
+          shared_calendar: boolean | null
+          specialty: string | null
+        }
+        Insert: {
+          custom_domain?: string | null
+          custom_subdomain?: string | null
+          dashboard_display_name?: string | null
+          dashboard_logo_url?: string | null
+          dashboard_primary_color?: string | null
+          id?: string | null
+          is_private_clinic?: boolean | null
+          name?: string | null
+          portal_clinic_display_name?: string | null
+          portal_dark_primary_color?: string | null
+          portal_logo_url?: string | null
+          portal_primary_color?: string | null
+          portal_theme_preset?: string | null
+          public_slug?: string | null
+          shared_calendar?: boolean | null
+          specialty?: string | null
+        }
+        Update: {
+          custom_domain?: string | null
+          custom_subdomain?: string | null
+          dashboard_display_name?: string | null
+          dashboard_logo_url?: string | null
+          dashboard_primary_color?: string | null
+          id?: string | null
+          is_private_clinic?: boolean | null
+          name?: string | null
+          portal_clinic_display_name?: string | null
+          portal_dark_primary_color?: string | null
+          portal_logo_url?: string | null
+          portal_primary_color?: string | null
+          portal_theme_preset?: string | null
+          public_slug?: string | null
+          shared_calendar?: boolean | null
+          specialty?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       can_add_patient: { Args: { p_business_id: string }; Returns: boolean }
