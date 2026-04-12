@@ -24,6 +24,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useDashboardBranding } from "@/contexts/DashboardBrandingContext";
 
 const mainItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
@@ -54,6 +55,11 @@ export function PremiumSidebar() {
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const hoverTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
+  const { primaryColor, logoUrl, displayName } = useDashboardBranding();
+
+  // Dynamic color styles
+  const brandHsl = `hsl(${primaryColor})`;
+  const brandHsla = (alpha: number) => `hsla(${primaryColor.replace(/%/g, '%')}, ${alpha})`;
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -121,21 +127,25 @@ export function PremiumSidebar() {
           "group relative flex items-center gap-3 w-full rounded-xl transition-all duration-200",
           expanded ? "px-3 py-2.5" : "px-0 py-2.5 justify-center",
           active
-            ? "bg-[hsla(176,80%,40%,0.12)] text-[hsl(176,80%,45%)]"
+            ? "text-white"
             : "text-white/40 hover:text-white/80 hover:bg-white/[0.04]"
         )}
+        style={active ? { background: brandHsla(0.12), color: brandHsl } : undefined}
       >
         {/* Active indicator bar */}
         {active && (
-          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-[hsl(176,80%,45%)]" />
+          <div
+            className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full"
+            style={{ background: brandHsl }}
+          />
         )}
 
         <item.icon
           className={cn(
             "shrink-0 transition-all duration-200",
-            expanded ? "h-[18px] w-[18px]" : "h-5 w-5",
-            active && "drop-shadow-[0_0_6px_hsla(176,80%,45%,0.4)]"
+            expanded ? "h-[18px] w-[18px]" : "h-5 w-5"
           )}
+          style={active ? { filter: `drop-shadow(0 0 6px ${brandHsla(0.4)})` } : undefined}
         />
 
         <span
@@ -186,8 +196,7 @@ export function PremiumSidebar() {
             expanded ? "opacity-100" : "opacity-0"
           )}
           style={{
-            background:
-              "radial-gradient(ellipse at 50% 0%, hsla(176,80%,40%,0.06) 0%, transparent 70%)",
+            background: `radial-gradient(ellipse at 50% 0%, ${brandHsla(0.06)} 0%, transparent 70%)`,
           }}
         />
 
@@ -196,9 +205,24 @@ export function PremiumSidebar() {
           {/* Logo area */}
           <div className="flex items-center h-16 px-4">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[hsl(176,80%,40%)] to-[hsl(176,100%,25%)] flex items-center justify-center shrink-0 shadow-lg shadow-[hsla(176,80%,40%,0.2)]">
-                <CalendarDays className="h-4 w-4 text-white" />
-              </div>
+              {logoUrl ? (
+                <img
+                  src={logoUrl}
+                  alt="Logo"
+                  className="w-8 h-8 rounded-lg object-cover shrink-0"
+                  style={{ boxShadow: `0 4px 12px ${brandHsla(0.2)}` }}
+                />
+              ) : (
+                <div
+                  className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                  style={{
+                    background: `linear-gradient(135deg, ${brandHsl}, hsl(${primaryColor.split(' ')[0]} 100% 25%))`,
+                    boxShadow: `0 4px 12px ${brandHsla(0.2)}`,
+                  }}
+                >
+                  <CalendarDays className="h-4 w-4 text-white" />
+                </div>
+              )}
               <span
                 className={cn(
                   "text-sm font-semibold text-white/80 whitespace-nowrap tracking-tight transition-all duration-200",
@@ -207,14 +231,13 @@ export function PremiumSidebar() {
                     : "opacity-0 -translate-x-2 absolute pointer-events-none"
                 )}
               >
-                Consultorio
+                {displayName || "Consultorio"}
               </span>
             </div>
           </div>
 
           {/* Main nav */}
           <nav className="flex-1 px-2.5 py-2 space-y-0.5 overflow-hidden">
-            {/* Section label */}
             <div
               className={cn(
                 "text-[10px] uppercase tracking-[0.15em] font-medium mb-2 transition-all duration-200",
@@ -230,12 +253,10 @@ export function PremiumSidebar() {
               <div key={item.url}>{renderItem(item)}</div>
             ))}
 
-            {/* Divider */}
             <div className="!my-3 mx-2">
               <div className="h-px bg-gradient-to-r from-transparent via-white/[0.08] to-transparent" />
             </div>
 
-            {/* Config label */}
             <div
               className={cn(
                 "text-[10px] uppercase tracking-[0.15em] font-medium mb-2 transition-all duration-200",
@@ -269,7 +290,12 @@ export function PremiumSidebar() {
             >
               <Avatar className="h-8 w-8 shrink-0 ring-2 ring-white/[0.08] ring-offset-1 ring-offset-[#0a0a0a]">
                 <AvatarImage src={avatarUrl || undefined} />
-                <AvatarFallback className="bg-gradient-to-br from-[hsl(176,60%,30%)] to-[hsl(176,80%,20%)] text-white/80 text-xs font-semibold">
+                <AvatarFallback
+                  className="text-white/80 text-xs font-semibold"
+                  style={{
+                    background: `linear-gradient(135deg, hsl(${primaryColor.split(' ')[0]} 60% 30%), hsl(${primaryColor.split(' ')[0]} 80% 20%))`,
+                  }}
+                >
                   {initials}
                 </AvatarFallback>
               </Avatar>

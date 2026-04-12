@@ -210,6 +210,9 @@ export type Database = {
           custom_max_patients: number | null
           custom_max_professionals: number | null
           custom_subdomain: string | null
+          dashboard_display_name: string | null
+          dashboard_logo_url: string | null
+          dashboard_primary_color: string | null
           id: string
           is_active: boolean
           is_demo: boolean
@@ -239,6 +242,9 @@ export type Database = {
           custom_max_patients?: number | null
           custom_max_professionals?: number | null
           custom_subdomain?: string | null
+          dashboard_display_name?: string | null
+          dashboard_logo_url?: string | null
+          dashboard_primary_color?: string | null
           id?: string
           is_active?: boolean
           is_demo?: boolean
@@ -268,6 +274,9 @@ export type Database = {
           custom_max_patients?: number | null
           custom_max_professionals?: number | null
           custom_subdomain?: string | null
+          dashboard_display_name?: string | null
+          dashboard_logo_url?: string | null
+          dashboard_primary_color?: string | null
           id?: string
           is_active?: boolean
           is_demo?: boolean
