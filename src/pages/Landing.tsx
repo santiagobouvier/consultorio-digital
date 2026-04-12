@@ -328,21 +328,12 @@ const Landing = () => {
                   </a>
                 </div>
 
-                {/* Install & Login */}
+                {/* Install app - compact */}
                 <div 
-                  className="flex flex-col sm:flex-row justify-center lg:justify-start gap-3 mt-5 pt-5 border-t border-white/10"
+                  className="flex justify-center lg:justify-start mt-3"
                   style={{ animation: 'fadeSlideUp 0.7s cubic-bezier(0.16,1,0.3,1) 0.6s both' }}
                 >
                   <InstallAppButton />
-                  <a href="/auth" className="w-full sm:w-auto">
-                    <Button 
-                      variant="outline" 
-                      size="lg"
-                      className="w-full sm:w-auto h-12 px-8 text-sm font-semibold rounded-xl gap-2 bg-transparent text-white border-white/20 hover:bg-white/5"
-                    >
-                      Iniciar sesión
-                    </Button>
-                  </a>
                 </div>
               </div>
 
