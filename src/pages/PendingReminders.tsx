@@ -309,6 +309,47 @@ const PendingReminders = () => {
     toast({ title: `✓ ${group.reminders.length} enviados a ${group.patientName}` });
   };
 
+  const createManualReminder = async () => {
+    if (!businessId || !createForm.patientId || !createForm.appointmentId || !createForm.message.trim()) return;
+    setCreateSaving(true);
+    try {
+      const appt = upcomingAppointments.find(a => a.id === createForm.appointmentId);
+      if (!appt) throw new Error("Cita no encontrada");
+
+      const apptDate = new Date(appt.start_at);
+      const hours = parseInt(createForm.hoursBefore);
+      const scheduledFor = new Date(apptDate);
+      scheduledFor.setHours(scheduledFor.getHours() - hours);
+
+      const { error } = await supabase.from("scheduled_reminders").insert({
+        appointment_id: createForm.appointmentId,
+        patient_id: createForm.patientId,
+        business_id: businessId,
+        scheduled_for: scheduledFor.toISOString(),
+        message: createForm.message,
+        channel: createForm.channel,
+        type: "reminder",
+        status: createForm.channel === "email" ? "scheduled" : "pending_manual",
+        auto_send: createForm.channel === "email",
+      });
+      if (error) throw error;
+
+      await loadReminders();
+      setShowCreateModal(false);
+      setCreateForm({ patientId: "", appointmentId: "", channel: "whatsapp", message: "", hoursBefore: "24" });
+      toast({ title: "✓ Recordatorio creado" });
+    } catch (err) {
+      console.error(err);
+      toast({ title: "Error", description: "No se pudo crear el recordatorio", variant: "destructive" });
+    } finally {
+      setCreateSaving(false);
+    }
+  };
+
+  const selectedPatientForCreate = patients.find(p => p.id === createForm.patientId);
+  const appointmentsForPatient = upcomingAppointments.filter(a => a.patient_id === createForm.patientId);
+  };
+
   const formatDateTime = (isoDate: string) => {
     const date = new Date(isoDate);
     return {
