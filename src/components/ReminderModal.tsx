@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -9,211 +9,183 @@ import {
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Bell, Send } from "lucide-react";
+import { Bell, Send, Mail, MessageSquare } from "lucide-react";
+import { useBusinessId } from "@/hooks/use-business-id";
 
 interface ReminderModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   appointmentId: string;
+  patientId: string | null;
   patientName: string;
   patientPhone: string | null;
+  patientEmail: string | null;
   appointmentDate: string;
   appointmentTime: string;
   modality: string;
   location: string | null;
 }
 
-interface Patient {
-  id: string;
-}
-
 export const ReminderModal = ({
   open,
   onOpenChange,
   appointmentId,
+  patientId,
   patientName,
   patientPhone,
+  patientEmail,
   appointmentDate,
   appointmentTime,
   modality,
   location,
 }: ReminderModalProps) => {
   const [loading, setLoading] = useState(false);
-  const [reminderTemplate, setReminderTemplate] = useState(
-    "Hola {{paciente}}, te recuerdo tu sesión del {{fecha}} a las {{hora}}. Modalidad: {{modalidad}}. {{link}}"
-  );
+  const { businessId } = useBusinessId();
 
-  useEffect(() => {
-    loadClinicSettings();
-  }, []);
-
-  const loadClinicSettings = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: settings } = await supabase
-        .from("clinic_settings")
-        .select("default_reminder_message")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (settings?.default_reminder_message) {
-        setReminderTemplate(settings.default_reminder_message);
-      }
-    } catch (error) {
-      console.error("Error loading clinic settings:", error);
-    }
+  const buildMessage = () => {
+    return `Hola ${patientName}, te recuerdo tu sesión del ${appointmentDate} a las ${appointmentTime}. Modalidad: ${modality === "online" ? "Online" : "Presencial"}. ${location || ""}`.trim();
   };
 
-  const getTemplates = () => {
-    return {
-      reminder: reminderTemplate,
-    };
-  };
-
-  const formatMessage = (template: string) => {
-    return template
-      .replace("{{paciente}}", patientName)
-      .replace("{{fecha}}", appointmentDate)
-      .replace("{{hora}}", appointmentTime)
-      .replace("{{modalidad}}", modality === "online" ? "Online" : "Presencial")
-      .replace("{{link}}", location || "");
-  };
-
-  const scheduleReminder = async (daysBeforeOrNow: number | "now") => {
+  const sendNowWhatsApp = () => {
     if (!patientPhone) {
-      toast({
-        title: "Error",
-        description: "El paciente no tiene número de teléfono",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Sin número de teléfono", variant: "destructive" });
       return;
     }
+    const phone = patientPhone.replace(/\D/g, "");
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(buildMessage())}`;
+    window.open(url, "_blank");
+    toast({ title: "WhatsApp abierto" });
+    onOpenChange(false);
+  };
 
+  const scheduleReminder = async (hoursBeforeOrNow: number, channel: "email" | "whatsapp") => {
+    if (!businessId) return;
     setLoading(true);
-
     try {
-      const templates = getTemplates();
-      const message = formatMessage(templates.reminder);
+      const { data: appt } = await supabase
+        .from("appointments")
+        .select("start_at")
+        .eq("id", appointmentId)
+        .single();
 
-      if (daysBeforeOrNow === "now") {
-        // Enviar ahora - abrir WhatsApp
-        const phone = patientPhone.replace(/\D/g, "");
-        const encodedMessage = encodeURIComponent(message);
-        const url = `https://wa.me/${phone}?text=${encodedMessage}`;
-        window.open(url, "_blank");
-        
-        toast({
-          title: "WhatsApp abierto",
-          description: "Se abrió WhatsApp con el mensaje preparado",
+      if (!appt) throw new Error("Cita no encontrada");
+
+      const apptDate = new Date(appt.start_at);
+      const scheduledDate = new Date(apptDate);
+      scheduledDate.setHours(scheduledDate.getHours() - hoursBeforeOrNow);
+
+      const message = buildMessage();
+
+      const { error } = await supabase
+        .from("scheduled_reminders")
+        .insert({
+          appointment_id: appointmentId,
+          patient_id: patientId!,
+          business_id: businessId,
+          scheduled_for: scheduledDate.toISOString(),
+          message,
+          channel,
+          type: "reminder",
+          status: channel === "email" ? "scheduled" : "pending_manual",
+          auto_send: channel === "email",
         });
-      } else {
-        // Programar recordatorio en la base de datos
-        // Obtener la fecha original de la cita desde la BD
-        const { data: appointmentData, error: appointmentError } = await supabase
-          .from("appointments")
-          .select("patient_id, start_at")
-          .eq("id", appointmentId)
-          .single();
 
-        if (appointmentError || !appointmentData) {
-          throw new Error("No se pudo obtener la información de la cita");
-        }
+      if (error) throw error;
 
-        // Calcular la fecha del recordatorio
-        const appointmentDateTime = new Date(appointmentData.start_at);
-        const scheduledDate = new Date(appointmentDateTime);
-        scheduledDate.setDate(scheduledDate.getDate() - daysBeforeOrNow);
-
-        // Insertar en la tabla scheduled_reminders
-        const { error: insertError } = await supabase
-          .from("scheduled_reminders")
-          .insert({
-            appointment_id: appointmentId,
-            patient_id: appointmentData.patient_id,
-            scheduled_for: scheduledDate.toISOString(),
-            message,
-          });
-
-        if (insertError) throw insertError;
-
-        toast({
-          title: "Recordatorio programado",
-          description: `Se programó el recordatorio para ${scheduledDate.toLocaleDateString("es-UY")}`,
-        });
-      }
-
+      toast({
+        title: "Recordatorio programado",
+        description: `${channel === "email" ? "Email" : "WhatsApp"} programado para ${scheduledDate.toLocaleDateString("es-UY")}`,
+      });
       onOpenChange(false);
     } catch (error) {
-      console.error("Error scheduling reminder:", error);
-      toast({
-        title: "Error",
-        description: "No se pudo programar el recordatorio",
-        variant: "destructive",
-      });
+      console.error("Error:", error);
+      toast({ title: "Error", description: "No se pudo programar", variant: "destructive" });
     } finally {
       setLoading(false);
     }
   };
 
+  const hasPhone = !!patientPhone;
+  const hasEmail = !!patientEmail;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Programar recordatorio</DialogTitle>
+          <DialogTitle>Enviar recordatorio</DialogTitle>
           <DialogDescription>
-            Elegí cuándo enviar el recordatorio a {patientName}
+            Elegí canal y cuándo enviar el recordatorio a {patientName}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-3 mt-4">
-          <Button
-            className="w-full justify-start"
-            variant="outline"
-            onClick={() => scheduleReminder("now")}
-            disabled={loading || !patientPhone}
-          >
-            <Send className="h-4 w-4 mr-2" />
-            Enviar ahora
-          </Button>
+        <div className="space-y-4 mt-2">
+          {/* WhatsApp section */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-sm font-medium text-green-400">
+              <MessageSquare className="h-4 w-4" />
+              WhatsApp
+            </div>
+            <Button
+              className="w-full justify-start rounded-xl"
+              variant="outline"
+              onClick={sendNowWhatsApp}
+              disabled={loading || !hasPhone}
+            >
+              <Send className="h-4 w-4 mr-2" />
+              Enviar ahora
+            </Button>
+            <Button
+              className="w-full justify-start rounded-xl"
+              variant="outline"
+              onClick={() => scheduleReminder(24, "whatsapp")}
+              disabled={loading || !hasPhone}
+            >
+              <Bell className="h-4 w-4 mr-2" />
+              Programar 1 día antes
+            </Button>
+            <Button
+              className="w-full justify-start rounded-xl"
+              variant="outline"
+              onClick={() => scheduleReminder(168, "whatsapp")}
+              disabled={loading || !hasPhone}
+            >
+              <Bell className="h-4 w-4 mr-2" />
+              Programar 1 semana antes
+            </Button>
+            {!hasPhone && (
+              <p className="text-xs text-muted-foreground">Sin número de teléfono configurado</p>
+            )}
+          </div>
 
-          <Button
-            className="w-full justify-start"
-            variant="outline"
-            onClick={() => scheduleReminder(1)}
-            disabled={loading || !patientPhone}
-          >
-            <Bell className="h-4 w-4 mr-2" />
-            Recordar 1 día antes
-          </Button>
-
-          <Button
-            className="w-full justify-start"
-            variant="outline"
-            onClick={() => scheduleReminder(7)}
-            disabled={loading || !patientPhone}
-          >
-            <Bell className="h-4 w-4 mr-2" />
-            Recordar 1 semana antes
-          </Button>
-
-          <Button
-            className="w-full justify-start"
-            variant="outline"
-            onClick={() => scheduleReminder(30)}
-            disabled={loading || !patientPhone}
-          >
-            <Bell className="h-4 w-4 mr-2" />
-            Recordar 1 mes antes
-          </Button>
+          {/* Email section */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-sm font-medium text-blue-400">
+              <Mail className="h-4 w-4" />
+              Email
+            </div>
+            <Button
+              className="w-full justify-start rounded-xl"
+              variant="outline"
+              onClick={() => scheduleReminder(24, "email")}
+              disabled={loading || !hasEmail}
+            >
+              <Bell className="h-4 w-4 mr-2" />
+              Programar 1 día antes
+            </Button>
+            <Button
+              className="w-full justify-start rounded-xl"
+              variant="outline"
+              onClick={() => scheduleReminder(168, "email")}
+              disabled={loading || !hasEmail}
+            >
+              <Bell className="h-4 w-4 mr-2" />
+              Programar 1 semana antes
+            </Button>
+            {!hasEmail && (
+              <p className="text-xs text-muted-foreground">Sin email configurado</p>
+            )}
+          </div>
         </div>
-
-        {!patientPhone && (
-          <p className="text-sm text-muted-foreground mt-4">
-            El paciente no tiene número de teléfono configurado
-          </p>
-        )}
       </DialogContent>
     </Dialog>
   );

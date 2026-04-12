@@ -294,6 +294,8 @@ export type Database = {
       clinic_settings: {
         Row: {
           auto_accept_bookings: boolean
+          auto_email_reminders: boolean
+          auto_whatsapp_reminders: boolean
           clinic_name: string | null
           cover_image_url: string | null
           created_at: string
@@ -302,6 +304,7 @@ export type Database = {
           default_reminder_message: string | null
           id: string
           logo_url: string | null
+          reminder_hours_before: number
           specialty: string | null
           updated_at: string
           user_id: string
@@ -309,6 +312,8 @@ export type Database = {
         }
         Insert: {
           auto_accept_bookings?: boolean
+          auto_email_reminders?: boolean
+          auto_whatsapp_reminders?: boolean
           clinic_name?: string | null
           cover_image_url?: string | null
           created_at?: string
@@ -317,6 +322,7 @@ export type Database = {
           default_reminder_message?: string | null
           id?: string
           logo_url?: string | null
+          reminder_hours_before?: number
           specialty?: string | null
           updated_at?: string
           user_id: string
@@ -324,6 +330,8 @@ export type Database = {
         }
         Update: {
           auto_accept_bookings?: boolean
+          auto_email_reminders?: boolean
+          auto_whatsapp_reminders?: boolean
           clinic_name?: string | null
           cover_image_url?: string | null
           created_at?: string
@@ -332,6 +340,7 @@ export type Database = {
           default_reminder_message?: string | null
           id?: string
           logo_url?: string | null
+          reminder_hours_before?: number
           specialty?: string | null
           updated_at?: string
           user_id?: string
@@ -558,30 +567,42 @@ export type Database = {
       scheduled_reminders: {
         Row: {
           appointment_id: string
+          auto_send: boolean
+          business_id: string
+          channel: string
           created_at: string
           id: string
           message: string
           patient_id: string
           scheduled_for: string
-          sent: boolean
+          status: string
+          type: string
         }
         Insert: {
           appointment_id: string
+          auto_send?: boolean
+          business_id: string
+          channel?: string
           created_at?: string
           id?: string
           message: string
           patient_id: string
           scheduled_for: string
-          sent?: boolean
+          status?: string
+          type?: string
         }
         Update: {
           appointment_id?: string
+          auto_send?: boolean
+          business_id?: string
+          channel?: string
           created_at?: string
           id?: string
           message?: string
           patient_id?: string
           scheduled_for?: string
-          sent?: boolean
+          status?: string
+          type?: string
         }
         Relationships: [
           {
