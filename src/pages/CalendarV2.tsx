@@ -68,9 +68,6 @@ const CalendarV2 = () => {
   // Animation state for view transitions
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [transitionDirection, setTransitionDirection] = useState<"left" | "right" | "none">("none");
-  const isMobile = useIsMobile();
-  const { businessId, loading: businessLoading } = useBusinessId();
-  const { professionals, loading: professionalsLoading, currentUserId, isOwner } = useProfessionals(businessId);
 
   // Calendar state - default to month on desktop
   const [viewType, setViewType] = useState<ViewType>("month");
