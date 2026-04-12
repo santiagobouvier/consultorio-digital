@@ -429,6 +429,13 @@ const PendingReminders = () => {
                 })}
               </div>
             )}
+            <ListPagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              totalItems={filteredReminders.length}
+              pageSize={ITEMS_PER_PAGE}
+            />
           </TabsContent>
         </Tabs>
       </div>
