@@ -202,6 +202,8 @@ const Payments = () => {
     return true;
   });
 
+  const { paginatedItems: pagePayments, totalPages } = usePagination(filteredPayments, currentPage);
+
   if (loading) {
     return <LoadingPage />;
   }
@@ -296,7 +298,7 @@ const Payments = () => {
               </p>
             ) : (
               <div className="space-y-2">
-                {filteredPayments.map((payment) => (
+                {pagePayments.map((payment) => (
                   <div
                     key={payment.id}
                     onClick={() => setSelectedPayment(payment)}
