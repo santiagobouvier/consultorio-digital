@@ -110,7 +110,8 @@ export const LEGACY_PLAN_MAP: Record<string, string> = {
   advanced: "consultorio",
   equipo: "consultorio",
   enterprise: "clinica",
-  custom: "personalizado",
+  custom: "clinica",
+  personalizado: "clinica",
 };
 
 export function normalizePlanCode(planCode: string): string {
