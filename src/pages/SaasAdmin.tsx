@@ -297,8 +297,7 @@ const SaasAdmin = () => {
     try {
       setDeleting(true);
       const businessId = businessToDelete.id;
-      const { data: appointmentIds } = await supabase.from("appointments").select("id").eq("business_id", businessId);
-      if (appointmentIds?.length) { await supabase.from("scheduled_reminders").delete().in("appointment_id", appointmentIds.map(a => a.id)); }
+      await supabase.from("scheduled_reminders").delete().eq("business_id", businessId);
       await supabase.from("payments").delete().eq("business_id", businessId);
       await supabase.from("appointments").delete().eq("business_id", businessId);
       await supabase.from("availability_slots").delete().eq("business_id", businessId);
