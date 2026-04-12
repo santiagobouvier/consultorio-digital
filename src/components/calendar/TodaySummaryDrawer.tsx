@@ -20,6 +20,7 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { QuickActionSheet } from "./QuickActionSheet";
+import { ConfirmPaymentDialog } from "@/components/ConfirmPaymentDialog";
 
 interface Appointment {
   id: string;
@@ -72,6 +73,7 @@ export const TodaySummaryDrawer = ({
   const [loadingAppointmentId, setLoadingAppointmentId] = useState<string | null>(null);
   const [loadingPaymentId, setLoadingPaymentId] = useState<string | null>(null);
   const [showActionSheet, setShowActionSheet] = useState(false);
+  const [confirmPayment, setConfirmPayment] = useState<{ id: string; amount: number; patientName: string } | null>(null);
 
   const today = new Date();
   const todayStart = startOfDay(today);
@@ -158,32 +160,27 @@ export const TodaySummaryDrawer = ({
     }
   };
 
-  // Mark payment as paid
+  // Mark payment as paid (called from confirmation dialog)
   const handleMarkPaid = async (paymentId: string) => {
-    setLoadingPaymentId(paymentId);
-    try {
-      const { error } = await supabase
-        .from("payments")
-        .update({ 
-          status: "paid",
-          paid_at: new Date().toISOString()
-        })
-        .eq("id", paymentId);
+    const { error } = await supabase
+      .from("payments")
+      .update({ 
+        status: "paid",
+        paid_at: new Date().toISOString()
+      })
+      .eq("id", paymentId);
 
-      if (error) throw error;
+    if (error) throw error;
+    onRefresh();
+  };
 
-      toast({ title: "Pago registrado correctamente" });
-      onRefresh();
-    } catch (error) {
-      console.error("Error updating payment:", error);
-      toast({ 
-        title: "Error", 
-        description: "No se pudo registrar el pago",
-        variant: "destructive" 
-      });
-    } finally {
-      setLoadingPaymentId(null);
-    }
+  // Open confirmation dialog for a payment
+  const openPaymentConfirm = (paymentId: string, amount: number, patientId: string | null) => {
+    setConfirmPayment({
+      id: paymentId,
+      amount,
+      patientName: getPatientName(patientId),
+    });
   };
 
   // Get appointment payment for quick action
@@ -377,14 +374,9 @@ export const TodaySummaryDrawer = ({
                               size="sm"
                               variant="outline"
                               className="flex-1 h-10 rounded-xl text-sm font-medium gap-1.5 text-emerald-600 border-emerald-200 hover:bg-emerald-50"
-                              onClick={() => handleMarkPaid(pendingPayment.id)}
-                              disabled={loadingPaymentId === pendingPayment.id}
+                              onClick={() => openPaymentConfirm(pendingPayment.id, pendingPayment.amount, apt.patient_id)}
                             >
-                              {loadingPaymentId === pendingPayment.id ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                              ) : (
-                                <DollarSign className="w-4 h-4" />
-                              )}
+                              <DollarSign className="w-4 h-4" />
                               Cobrar ${pendingPayment.amount.toLocaleString()}
                             </Button>
                           )}
@@ -450,14 +442,9 @@ export const TodaySummaryDrawer = ({
                                 ? "bg-rose-600 hover:bg-rose-700"
                                 : "bg-amber-600 hover:bg-amber-700"
                             )}
-                            onClick={() => handleMarkPaid(payment.id)}
-                            disabled={isLoading}
+                            onClick={() => openPaymentConfirm(payment.id, payment.amount, payment.patient_id)}
                           >
-                            {isLoading ? (
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : (
-                              <CreditCard className="w-4 h-4" />
-                            )}
+                            <CreditCard className="w-4 h-4" />
                             Cobrar
                           </Button>
                         </div>
@@ -497,6 +484,19 @@ export const TodaySummaryDrawer = ({
           onCreatePayment();
         }}
       />
+
+      {/* Payment Confirmation Dialog */}
+      {confirmPayment && (
+        <ConfirmPaymentDialog
+          open={!!confirmPayment}
+          onOpenChange={(isOpen) => {
+            if (!isOpen) setConfirmPayment(null);
+          }}
+          patientName={confirmPayment.patientName}
+          amount={confirmPayment.amount}
+          onConfirm={() => handleMarkPaid(confirmPayment.id)}
+        />
+      )}
     </>
   );
 };

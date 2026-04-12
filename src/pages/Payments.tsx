@@ -28,6 +28,7 @@ import {
 import { ArrowLeft, Search, Filter, RefreshCw, Pencil, Trash2 } from "lucide-react";
 import { PaymentWhatsAppMenu } from "@/components/PaymentWhatsAppMenu";
 import { PaymentForm } from "@/components/PaymentForm";
+import { ConfirmPaymentDialog } from "@/components/ConfirmPaymentDialog";
 import LoadingPage from "@/components/LoadingPage";
 import { PaymentDetailDrawer } from "@/components/PaymentDetailDrawer";
 import {
@@ -81,6 +82,7 @@ const Payments = () => {
   const [editingPayment, setEditingPayment] = useState<Payment | null>(null);
   const [deletingPaymentId, setDeletingPaymentId] = useState<string | null>(null);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
+  const [confirmPaymentData, setConfirmPaymentData] = useState<{ id: string; amount: number; patientName: string } | null>(null);
   
   const { businessId, loading: businessLoading } = useBusinessId();
   useEffect(() => {
@@ -416,32 +418,38 @@ const Payments = () => {
             setEditingPayment(selectedPayment);
           }
         }}
-        onMarkAsPaid={async () => {
+        onMarkAsPaid={() => {
           if (selectedPayment) {
-            try {
-              const { error } = await supabase
-                .from("payments")
-                .update({ paid_at: new Date().toISOString(), status: "paid" })
-                .eq("id", selectedPayment.id);
-              
-              if (error) throw error;
-              
-              toast({
-                title: "Éxito",
-                description: "Pago marcado como pagado",
-              });
-              fetchData();
-            } catch (error) {
-              console.error("Error marking payment as paid:", error);
-              toast({
-                title: "Error",
-                description: "No se pudo actualizar el pago",
-                variant: "destructive",
-              });
-            }
+            setConfirmPaymentData({
+              id: selectedPayment.id,
+              amount: selectedPayment.amount,
+              patientName: selectedPayment.patients?.full_name || "Paciente",
+            });
           }
         }}
       />
+
+      {confirmPaymentData && (
+        <ConfirmPaymentDialog
+          open={!!confirmPaymentData}
+          onOpenChange={(isOpen) => {
+            if (!isOpen) {
+              setConfirmPaymentData(null);
+              setSelectedPayment(null);
+            }
+          }}
+          patientName={confirmPaymentData.patientName}
+          amount={confirmPaymentData.amount}
+          onConfirm={async () => {
+            const { error } = await supabase
+              .from("payments")
+              .update({ paid_at: new Date().toISOString(), status: "paid" })
+              .eq("id", confirmPaymentData.id);
+            if (error) throw error;
+            fetchData();
+          }}
+        />
+      )}
     </div>
   );
 };

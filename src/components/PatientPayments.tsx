@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Check, Edit, MoreVertical } from "lucide-react";
 import { PaymentForm } from "@/components/PaymentForm";
+import { ConfirmPaymentDialog } from "@/components/ConfirmPaymentDialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -69,28 +70,16 @@ export function PatientPayments({ patientId, businessId }: PatientPaymentsProps)
     }
   };
 
+  const [confirmPayment, setConfirmPayment] = useState<{ id: string; amount: number } | null>(null);
+
   const handleMarkAsPaid = async (paymentId: string) => {
-    try {
-      const { error } = await supabase
-        .from("payments")
-        .update({ paid_at: new Date().toISOString(), status: "paid" })
-        .eq("id", paymentId);
+    const { error } = await supabase
+      .from("payments")
+      .update({ paid_at: new Date().toISOString(), status: "paid" })
+      .eq("id", paymentId);
 
-      if (error) throw error;
-
-      toast({
-        title: "Éxito",
-        description: "Pago marcado como pagado",
-      });
-      fetchPayments();
-    } catch (error) {
-      console.error("Error marking payment as paid:", error);
-      toast({
-        title: "Error",
-        description: "No se pudo actualizar el pago",
-        variant: "destructive",
-      });
-    }
+    if (error) throw error;
+    fetchPayments();
   };
 
   const handleEdit = (payment: Payment) => {
@@ -181,7 +170,7 @@ export function PatientPayments({ patientId, businessId }: PatientPaymentsProps)
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleMarkAsPaid(payment.id)}>
+                        <DropdownMenuItem onClick={() => setConfirmPayment({ id: payment.id, amount: payment.amount })}>
                           <Check className="h-4 w-4 mr-2" />
                           Marcar como pagado
                         </DropdownMenuItem>
@@ -220,6 +209,18 @@ export function PatientPayments({ patientId, businessId }: PatientPaymentsProps)
         }
         onSuccess={fetchPayments}
       />
+
+      {confirmPayment && (
+        <ConfirmPaymentDialog
+          open={!!confirmPayment}
+          onOpenChange={(isOpen) => {
+            if (!isOpen) setConfirmPayment(null);
+          }}
+          patientName="este paciente"
+          amount={confirmPayment.amount}
+          onConfirm={() => handleMarkAsPaid(confirmPayment.id)}
+        />
+      )}
     </>
   );
 }
