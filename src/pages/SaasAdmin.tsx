@@ -296,22 +296,14 @@ const SaasAdmin = () => {
     if (!businessToDelete || !deleteConfirmChecked) return;
     try {
       setDeleting(true);
-      const businessId = businessToDelete.id;
-      await supabase.from("scheduled_reminders").delete().eq("business_id", businessId);
-      await supabase.from("payments").delete().eq("business_id", businessId);
-      await supabase.from("appointments").delete().eq("business_id", businessId);
-      await supabase.from("availability_slots").delete().eq("business_id", businessId);
-      const { data: patientIds } = await supabase.from("patients").select("id").eq("business_id", businessId);
-      if (patientIds?.length) { await supabase.from("patient_portal_invites").delete().in("patient_id", patientIds.map(p => p.id)); }
-      await supabase.from("patients").delete().eq("business_id", businessId);
-      await supabase.from("services").delete().eq("business_id", businessId);
-      await supabase.from("professional_portal_invites").delete().eq("business_id", businessId);
-      await supabase.from("user_roles").delete().eq("business_id", businessId);
-      const { error: bizError } = await supabase.from("businesses").delete().eq("id", businessId);
-      if (bizError) throw bizError;
-      toast({ title: "Consultorio eliminado", description: `"${businessToDelete.name}" eliminado` });
+      const { data, error } = await supabase.functions.invoke("delete-business", {
+        body: { businessId: businessToDelete.id },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast({ title: "Consultorio eliminado", description: `"${businessToDelete.name}" y todos sus datos fueron eliminados.` });
       setShowDeleteModal(false); setBusinessToDelete(null); await loadData();
-    } catch { toast({ title: "Error", description: "No se pudo eliminar. Probá de nuevo.", variant: "destructive" }); } finally { setDeleting(false); }
+    } catch (error: any) { toast({ title: "Error al eliminar", description: error.message || "No se pudo eliminar. Probá de nuevo.", variant: "destructive" }); } finally { setDeleting(false); }
   };
 
   const openEditModal = (b: BusinessWithDetails) => {
@@ -837,15 +829,15 @@ const SaasAdmin = () => {
         <AlertDialogContent className="sm:max-w-md">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2 text-destructive"><AlertTriangle className="h-5 w-5" />Eliminar consultorio</AlertDialogTitle>
-            <AlertDialogDescription className="space-y-3"><p>¿Eliminar <strong>"{businessToDelete?.name}"</strong>? Se borrarán todos sus datos permanentemente.</p><p className="text-xs text-muted-foreground">Profesionales, pacientes, citas, pagos, recordatorios, servicios e invitaciones.</p></AlertDialogDescription>
+            <AlertDialogDescription className="space-y-3"><p>Estás por eliminar el consultorio <strong>"{businessToDelete?.name}"</strong> y todos sus datos. Esta acción es irreversible.</p><p className="text-xs text-muted-foreground">Se eliminarán: profesionales, pacientes, citas, pagos, recordatorios, servicios, slots, invitaciones y suscripciones.</p></AlertDialogDescription>
           </AlertDialogHeader>
           <div className="py-4">
             <div className="flex items-start gap-3 p-3 bg-destructive/5 border border-destructive/20 rounded-lg">
               <Checkbox id="deleteConfirm" checked={deleteConfirmChecked} onCheckedChange={c => setDeleteConfirmChecked(c === true)} className="mt-0.5" />
-              <Label htmlFor="deleteConfirm" className="text-sm font-normal cursor-pointer leading-relaxed">Entiendo que esta acción es irreversible</Label>
+              <Label htmlFor="deleteConfirm" className="text-sm font-normal cursor-pointer leading-relaxed">Entiendo que esta acción es irreversible y se perderán todos los datos</Label>
             </div>
           </div>
-          <div className="flex gap-3"><Button variant="outline" className="flex-1" onClick={() => { setShowDeleteModal(false); setBusinessToDelete(null); setDeleteConfirmChecked(false); }}>Cancelar</Button><Button variant="destructive" className="flex-1" onClick={handleDeleteBusiness} disabled={!deleteConfirmChecked || deleting}>{deleting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Eliminar</Button></div>
+          <div className="flex gap-3"><Button variant="outline" className="flex-1" onClick={() => { setShowDeleteModal(false); setBusinessToDelete(null); setDeleteConfirmChecked(false); }}>Cancelar</Button><Button variant="destructive" className="flex-1" onClick={handleDeleteBusiness} disabled={!deleteConfirmChecked || deleting}>{deleting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Eliminar definitivamente</Button></div>
         </AlertDialogContent>
       </AlertDialog>
 
