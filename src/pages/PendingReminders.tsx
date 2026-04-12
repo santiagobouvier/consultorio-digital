@@ -4,8 +4,19 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
-import { Send, Trash2, Bell, Mail, MessageSquare, Check, Filter } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Send, Trash2, Bell, Mail, MessageSquare, Check, Filter, Copy, CheckSquare } from "lucide-react";
 import LoadingPage from "@/components/LoadingPage";
 import { useBusinessId } from "@/hooks/use-business-id";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -34,6 +45,14 @@ interface Reminder {
   };
 }
 
+interface GroupedReminders {
+  patientName: string;
+  patientId: string;
+  reminders: Reminder[];
+  combinedMessage: string;
+  phone: string | null;
+}
+
 const channelConfig: Record<string, { label: string; icon: typeof Mail; color: string }> = {
   email: { label: "Email", icon: Mail, color: "bg-blue-500/10 text-blue-400 border-blue-500/20" },
   whatsapp: { label: "WhatsApp", icon: MessageSquare, color: "bg-green-500/10 text-green-400 border-green-500/20" },
@@ -59,6 +78,8 @@ const PendingReminders = () => {
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("pending");
+  const [showSendAllConfirm, setShowSendAllConfirm] = useState(false);
+  const [selectedForSent, setSelectedForSent] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (businessId) loadReminders();
@@ -95,6 +116,39 @@ const PendingReminders = () => {
   const pendingCount = reminders.filter(r => r.status === "pending_manual" || r.status === "scheduled").length;
   const sentCount = reminders.filter(r => r.status === "sent").length;
 
+  // Group WhatsApp reminders by patient
+  const groupedByPatient: GroupedReminders[] = (() => {
+    const whatsappPending = filteredReminders.filter(
+      r => r.channel === "whatsapp" && (r.status === "pending_manual" || r.status === "scheduled")
+    );
+    const groups = new Map<string, Reminder[]>();
+    for (const r of whatsappPending) {
+      const key = r.patient_id;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(r);
+    }
+    return Array.from(groups.entries())
+      .filter(([_, rems]) => rems.length > 1)
+      .map(([patientId, rems]) => ({
+        patientId,
+        patientName: rems[0].patient?.full_name || "Sin paciente",
+        reminders: rems,
+        combinedMessage: rems.map(r => r.message).join("\n\n---\n\n"),
+        phone: rems[0].patient?.whatsapp_phone || null,
+      }));
+  })();
+
+  const hasGroupedReminders = groupedByPatient.length > 0;
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast({ title: "Mensaje copiado al portapapeles" });
+    } catch {
+      toast({ title: "Error", description: "No se pudo copiar", variant: "destructive" });
+    }
+  };
+
   const sendWhatsApp = async (reminder: Reminder) => {
     if (!reminder.patient?.whatsapp_phone) {
       toast({ title: "Error", description: "El paciente no tiene teléfono", variant: "destructive" });
@@ -104,31 +158,30 @@ const PendingReminders = () => {
     const url = `https://wa.me/${phone}?text=${encodeURIComponent(reminder.message)}`;
     window.open(url, "_blank");
 
-    await supabase
-      .from("scheduled_reminders")
-      .update({ status: "sent" })
-      .eq("id", reminder.id);
-
+    await supabase.from("scheduled_reminders").update({ status: "sent" }).eq("id", reminder.id);
     setReminders((prev) => prev.map((r) => r.id === reminder.id ? { ...r, status: "sent" } : r));
     toast({ title: "WhatsApp abierto", description: "Se marcó como enviado" });
   };
 
-  const markAsSent = async (reminder: Reminder) => {
-    await supabase
-      .from("scheduled_reminders")
-      .update({ status: "sent" })
-      .eq("id", reminder.id);
-
-    setReminders((prev) => prev.map((r) => r.id === reminder.id ? { ...r, status: "sent" } : r));
+  const markAsSent = async (reminderId: string) => {
+    await supabase.from("scheduled_reminders").update({ status: "sent" }).eq("id", reminderId);
+    setReminders((prev) => prev.map((r) => r.id === reminderId ? { ...r, status: "sent" } : r));
+    setSelectedForSent(prev => { const n = new Set(prev); n.delete(reminderId); return n; });
     toast({ title: "Marcado como enviado" });
+  };
+
+  const markMultipleAsSent = async (ids: string[]) => {
+    for (const id of ids) {
+      await supabase.from("scheduled_reminders").update({ status: "sent" }).eq("id", id);
+    }
+    setReminders(prev => prev.map(r => ids.includes(r.id) ? { ...r, status: "sent" } : r));
+    setSelectedForSent(new Set());
+    toast({ title: `${ids.length} recordatorios marcados como enviados` });
   };
 
   const deleteReminder = async (reminderId: string) => {
     try {
-      const { error } = await supabase
-        .from("scheduled_reminders")
-        .delete()
-        .eq("id", reminderId);
+      const { error } = await supabase.from("scheduled_reminders").delete().eq("id", reminderId);
       if (error) throw error;
       setReminders((prev) => prev.filter((r) => r.id !== reminderId));
       toast({ title: "Recordatorio eliminado" });
@@ -137,15 +190,31 @@ const PendingReminders = () => {
     }
   };
 
+  const whatsappPendingForSendAll = filteredReminders.filter(
+    (r) => r.channel === "whatsapp" && r.status === "pending_manual" && r.patient?.whatsapp_phone
+  );
+
   const sendAllWhatsApp = async () => {
-    const whatsappPending = filteredReminders.filter(
-      (r) => r.channel === "whatsapp" && r.status === "pending_manual" && r.patient?.whatsapp_phone
-    );
-    for (const reminder of whatsappPending) {
+    setShowSendAllConfirm(false);
+    for (const reminder of whatsappPendingForSendAll) {
       await sendWhatsApp(reminder);
-      // Small delay between opens
       await new Promise((resolve) => setTimeout(resolve, 1500));
     }
+  };
+
+  const sendGroupedWhatsApp = async (group: GroupedReminders) => {
+    if (!group.phone) return;
+    const phone = group.phone.replace(/\D/g, "");
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(group.combinedMessage)}`;
+    window.open(url, "_blank");
+
+    for (const r of group.reminders) {
+      await supabase.from("scheduled_reminders").update({ status: "sent" }).eq("id", r.id);
+    }
+    setReminders(prev => prev.map(r =>
+      group.reminders.some(gr => gr.id === r.id) ? { ...r, status: "sent" } : r
+    ));
+    toast({ title: `${group.reminders.length} recordatorios enviados a ${group.patientName}` });
   };
 
   const formatDateTime = (isoDate: string) => {
@@ -156,12 +225,19 @@ const PendingReminders = () => {
     };
   };
 
+  const toggleSelectForSent = (id: string) => {
+    setSelectedForSent(prev => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id); else n.add(id);
+      return n;
+    });
+  };
+
   if (loading) return <LoadingPage />;
 
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 space-y-5">
-        {/* Header */}
         <div>
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">Recordatorios</h1>
           <p className="text-sm text-muted-foreground mt-1">
@@ -169,7 +245,6 @@ const PendingReminders = () => {
           </p>
         </div>
 
-        {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <TabsList>
@@ -192,24 +267,66 @@ const PendingReminders = () => {
               </TabsTrigger>
             </TabsList>
 
-            {activeTab === "pending" && filteredReminders.some(r => r.channel === "whatsapp" && r.status === "pending_manual") && (
-              <Button size="sm" onClick={sendAllWhatsApp} className="rounded-xl gap-2">
-                <Send className="h-4 w-4" />
-                Enviar todos WhatsApp
-              </Button>
-            )}
+            <div className="flex gap-2">
+              {selectedForSent.size > 0 && (
+                <Button size="sm" variant="outline" onClick={() => markMultipleAsSent(Array.from(selectedForSent))} className="rounded-xl gap-2">
+                  <CheckSquare className="h-4 w-4" />
+                  Marcar {selectedForSent.size} como enviados
+                </Button>
+              )}
+              {activeTab === "pending" && whatsappPendingForSendAll.length > 0 && (
+                <Button size="sm" onClick={() => setShowSendAllConfirm(true)} className="rounded-xl gap-2">
+                  <Send className="h-4 w-4" />
+                  Enviar todos WhatsApp
+                </Button>
+              )}
+            </div>
           </div>
 
           <TabsContent value={activeTab} className="mt-4">
+            {/* Grouped reminders section */}
+            {activeTab === "pending" && hasGroupedReminders && (
+              <div className="mb-4 space-y-3">
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                  Agrupados por paciente
+                </h3>
+                {groupedByPatient.map(group => (
+                  <Card key={group.patientId} className="border-primary/20">
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="rounded-full">{group.reminders.length} recordatorios</Badge>
+                            <p className="font-semibold">{group.patientName}</p>
+                          </div>
+                          <p className="text-sm text-muted-foreground line-clamp-2">{group.combinedMessage.slice(0, 120)}...</p>
+                        </div>
+                        <div className="flex gap-2 shrink-0">
+                          <Button size="sm" variant="outline" className="rounded-xl gap-1.5 h-8" onClick={() => copyToClipboard(group.combinedMessage)}>
+                            <Copy className="h-3.5 w-3.5" />
+                            Copiar
+                          </Button>
+                          {group.phone && (
+                            <Button size="sm" className="rounded-xl gap-1.5 h-8" onClick={() => sendGroupedWhatsApp(group)}>
+                              <Send className="h-3.5 w-3.5" />
+                              Enviar junto
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+
             {filteredReminders.length === 0 ? (
               <Card>
                 <CardContent className="py-12 text-center">
                   <Bell className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                   <p className="text-muted-foreground">
-                    {activeTab === "pending"
-                      ? "No hay recordatorios pendientes"
-                      : activeTab === "sent"
-                      ? "No hay recordatorios enviados"
+                    {activeTab === "pending" ? "No hay recordatorios pendientes"
+                      : activeTab === "sent" ? "No hay recordatorios enviados"
                       : "No hay recordatorios"}
                   </p>
                 </CardContent>
@@ -217,24 +334,31 @@ const PendingReminders = () => {
             ) : (
               <div className="space-y-3">
                 {filteredReminders.map((reminder) => {
-                  const apptDt = reminder.appointment?.start_at
-                    ? formatDateTime(reminder.appointment.start_at)
-                    : null;
+                  const apptDt = reminder.appointment?.start_at ? formatDateTime(reminder.appointment.start_at) : null;
                   const schedDt = formatDateTime(reminder.scheduled_for);
                   const chConf = channelConfig[reminder.channel] || channelConfig.whatsapp;
                   const stConf = statusConfig[reminder.status] || statusConfig.scheduled;
                   const ChannelIcon = chConf.icon;
+                  const isPending = reminder.status === "pending_manual" || reminder.status === "scheduled";
 
                   return (
                     <Card key={reminder.id} className="overflow-hidden">
                       <CardContent className="p-4">
                         <div className="flex items-start gap-3">
-                          {/* Channel icon */}
+                          {/* Checkbox for bulk mark as sent */}
+                          {isPending && (
+                            <div className="pt-1">
+                              <Checkbox
+                                checked={selectedForSent.has(reminder.id)}
+                                onCheckedChange={() => toggleSelectForSent(reminder.id)}
+                              />
+                            </div>
+                          )}
+
                           <div className={`p-2 rounded-lg shrink-0 ${chConf.color}`}>
                             <ChannelIcon className="h-4 w-4" />
                           </div>
 
-                          {/* Content */}
                           <div className="flex-1 min-w-0 space-y-2">
                             <div className="flex items-start justify-between gap-2">
                               <div>
@@ -264,36 +388,27 @@ const PendingReminders = () => {
                                 {reminder.auto_send ? "⚡ Auto" : "✋ Manual"} · Programado: {schedDt.date} {schedDt.time}
                               </p>
 
-                              {(reminder.status === "pending_manual" || reminder.status === "scheduled") && (
+                              {isPending && (
                                 <div className="flex gap-2">
+                                  {/* Copy message button */}
+                                  <Button size="sm" variant="ghost" className="rounded-xl gap-1.5 h-8" onClick={() => copyToClipboard(reminder.message)}>
+                                    <Copy className="h-3.5 w-3.5" />
+                                    <span className="hidden sm:inline">Copiar</span>
+                                  </Button>
+
                                   {reminder.channel === "whatsapp" && (
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="rounded-xl gap-1.5 h-8"
-                                      onClick={() => sendWhatsApp(reminder)}
-                                    >
+                                    <Button size="sm" variant="outline" className="rounded-xl gap-1.5 h-8" onClick={() => sendWhatsApp(reminder)}>
                                       <Send className="h-3.5 w-3.5" />
                                       WhatsApp
                                     </Button>
                                   )}
-                                  {reminder.channel === "email" && (
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="rounded-xl gap-1.5 h-8"
-                                      onClick={() => markAsSent(reminder)}
-                                    >
-                                      <Check className="h-3.5 w-3.5" />
-                                      Marcar enviado
-                                    </Button>
-                                  )}
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    className="rounded-xl h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                                    onClick={() => deleteReminder(reminder.id)}
-                                  >
+
+                                  <Button size="sm" variant="outline" className="rounded-xl gap-1.5 h-8" onClick={() => markAsSent(reminder.id)}>
+                                    <Check className="h-3.5 w-3.5" />
+                                    <span className="hidden sm:inline">Enviado</span>
+                                  </Button>
+
+                                  <Button size="sm" variant="ghost" className="rounded-xl h-8 w-8 p-0 text-muted-foreground hover:text-destructive" onClick={() => deleteReminder(reminder.id)}>
                                     <Trash2 className="h-3.5 w-3.5" />
                                   </Button>
                                 </div>
@@ -310,6 +425,27 @@ const PendingReminders = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Send All Confirmation Dialog */}
+      <AlertDialog open={showSendAllConfirm} onOpenChange={setShowSendAllConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Enviar todos los WhatsApp</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se abrirán <strong>{whatsappPendingForSendAll.length}</strong> ventanas de WhatsApp de forma secuencial.
+              Cada mensaje se enviará con un intervalo de 1.5 segundos.
+              <br /><br />
+              ¿Deseas continuar?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={sendAllWhatsApp}>
+              Enviar {whatsappPendingForSendAll.length} mensajes
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
