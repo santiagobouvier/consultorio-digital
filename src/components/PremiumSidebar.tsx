@@ -237,7 +237,7 @@ export function PremiumSidebar() {
           </div>
 
           {/* Main nav */}
-          <nav className="flex-1 px-2.5 py-2 space-y-0.5 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+          <nav className="flex-1 px-2.5 py-2 space-y-0.5 overflow-y-auto overflow-x-hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             <div
               className={cn(
                 "text-[10px] uppercase tracking-[0.15em] font-medium mb-2 transition-all duration-200",
