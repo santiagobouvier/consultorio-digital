@@ -493,7 +493,7 @@ const CalendarV2 = () => {
                 start.toLocaleDateString("es-UY"),
                 start.toLocaleTimeString("es-UY", { hour: "2-digit", minute: "2-digit" }),
                 end.toLocaleTimeString("es-UY", { hour: "2-digit", minute: "2-digit" }),
-                (a.patients as any)?.full_name || a.contact_name || "",
+                a.patients?.full_name || "",
                 a.professional?.name || "",
                 (a.services as any)?.name || "",
                 a.modality || "",
