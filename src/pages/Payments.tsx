@@ -372,6 +372,14 @@ const Payments = () => {
             )}
           </CardContent>
         </Card>
+
+        <ListPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          totalItems={filteredPayments.length}
+          pageSize={ITEMS_PER_PAGE}
+        />
       </div>
       {editingPayment && businessId && (
         <PaymentForm
