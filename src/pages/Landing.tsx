@@ -21,6 +21,16 @@ import {
   Eye,
   Play,
   Quote,
+  Palette,
+  CalendarCheck,
+  Download,
+  BarChart3,
+  Link2,
+  UserPlus,
+  Send,
+  LayoutDashboard,
+  MessageCircle,
+  ExternalLink,
 } from "lucide-react";
 import PricingCard from "@/components/PricingCard";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
