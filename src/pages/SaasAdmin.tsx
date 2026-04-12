@@ -829,15 +829,15 @@ const SaasAdmin = () => {
         <AlertDialogContent className="sm:max-w-md">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2 text-destructive"><AlertTriangle className="h-5 w-5" />Eliminar consultorio</AlertDialogTitle>
-            <AlertDialogDescription className="space-y-3"><p>¿Eliminar <strong>"{businessToDelete?.name}"</strong>? Se borrarán todos sus datos permanentemente.</p><p className="text-xs text-muted-foreground">Profesionales, pacientes, citas, pagos, recordatorios, servicios e invitaciones.</p></AlertDialogDescription>
+            <AlertDialogDescription className="space-y-3"><p>Estás por eliminar el consultorio <strong>"{businessToDelete?.name}"</strong> y todos sus datos. Esta acción es irreversible.</p><p className="text-xs text-muted-foreground">Se eliminarán: profesionales, pacientes, citas, pagos, recordatorios, servicios, slots, invitaciones y suscripciones.</p></AlertDialogDescription>
           </AlertDialogHeader>
           <div className="py-4">
             <div className="flex items-start gap-3 p-3 bg-destructive/5 border border-destructive/20 rounded-lg">
               <Checkbox id="deleteConfirm" checked={deleteConfirmChecked} onCheckedChange={c => setDeleteConfirmChecked(c === true)} className="mt-0.5" />
-              <Label htmlFor="deleteConfirm" className="text-sm font-normal cursor-pointer leading-relaxed">Entiendo que esta acción es irreversible</Label>
+              <Label htmlFor="deleteConfirm" className="text-sm font-normal cursor-pointer leading-relaxed">Entiendo que esta acción es irreversible y se perderán todos los datos</Label>
             </div>
           </div>
-          <div className="flex gap-3"><Button variant="outline" className="flex-1" onClick={() => { setShowDeleteModal(false); setBusinessToDelete(null); setDeleteConfirmChecked(false); }}>Cancelar</Button><Button variant="destructive" className="flex-1" onClick={handleDeleteBusiness} disabled={!deleteConfirmChecked || deleting}>{deleting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Eliminar</Button></div>
+          <div className="flex gap-3"><Button variant="outline" className="flex-1" onClick={() => { setShowDeleteModal(false); setBusinessToDelete(null); setDeleteConfirmChecked(false); }}>Cancelar</Button><Button variant="destructive" className="flex-1" onClick={handleDeleteBusiness} disabled={!deleteConfirmChecked || deleting}>{deleting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Eliminar definitivamente</Button></div>
         </AlertDialogContent>
       </AlertDialog>
 
