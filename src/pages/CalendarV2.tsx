@@ -335,20 +335,33 @@ const CalendarV2 = () => {
 
   // Navigation
   const navigateDate = (direction: "prev" | "next") => {
-    switch (viewType) {
-      case "month":
-        setCurrentDate(direction === "prev" ? subMonths(currentDate, 1) : addMonths(currentDate, 1));
-        break;
-      case "week":
-        setCurrentDate(direction === "prev" ? subWeeks(currentDate, 1) : addWeeks(currentDate, 1));
-        break;
-      case "day":
-        setCurrentDate(direction === "prev" ? subDays(currentDate, 1) : addDays(currentDate, 1));
-        break;
-    }
+    setTransitionDirection(direction === "prev" ? "right" : "left");
+    setIsTransitioning(true);
+    
+    setTimeout(() => {
+      switch (viewType) {
+        case "month":
+          setCurrentDate(direction === "prev" ? subMonths(currentDate, 1) : addMonths(currentDate, 1));
+          break;
+        case "week":
+          setCurrentDate(direction === "prev" ? subWeeks(currentDate, 1) : addWeeks(currentDate, 1));
+          break;
+        case "day":
+          setCurrentDate(direction === "prev" ? subDays(currentDate, 1) : addDays(currentDate, 1));
+          break;
+      }
+      setTransitionDirection("none");
+      setIsTransitioning(false);
+    }, 150);
   };
 
-  const goToToday = () => setCurrentDate(new Date());
+  const goToToday = () => {
+    setIsTransitioning(true);
+    setTimeout(() => {
+      setCurrentDate(new Date());
+      setIsTransitioning(false);
+    }, 150);
+  };
 
   const handleDayClick = (date: Date) => {
     setCurrentDate(date);
