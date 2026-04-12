@@ -18,14 +18,14 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { CalendarGrid } from "@/components/calendar/CalendarGrid";
 import { WeekView } from "@/components/calendar/WeekView";
-import { DayView } from "@/components/calendar/DayView";
+import { DayView, type DayPayment } from "@/components/calendar/DayView";
 import { AppointmentDetailModal } from "@/components/calendar/AppointmentDetailModal";
 import { PatientSummary } from "@/components/calendar/PatientSummary";
 import { QuickAppointmentDrawer } from "@/components/calendar/QuickAppointmentDrawer";
 import { QuickPaymentDrawer } from "@/components/calendar/QuickPaymentDrawer";
 import { QuickActionSheet } from "@/components/calendar/QuickActionSheet";
 import { TodaySummaryDrawer } from "@/components/calendar/TodaySummaryDrawer";
-import { format, addMonths, subMonths, addWeeks, subWeeks, addDays, subDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek, subMonths as subMonthsFn, isToday } from "date-fns";
+import { format, addMonths, subMonths, addWeeks, subWeeks, addDays, subDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek, subMonths as subMonthsFn, isSameDay, isToday } from "date-fns";
 import { es } from "date-fns/locale";
 import { calculatePaymentStatus, type PaymentStatus } from "@/lib/payments";
 import { useBusinessId } from "@/hooks/use-business-id";
@@ -348,6 +348,35 @@ const Agenda = () => {
     return result;
   }, [appointmentsWithPaymentColors, selectedPatientId, selectedProfessionalId, statusFilter, paymentStatusFilter]);
 
+  const dayPayments = useMemo<DayPayment[]>(() => {
+    return allPayments
+      .filter((payment) => {
+        if (payment.paid_at || payment.status === "paid" || payment.status === "cancelled") {
+          return false;
+        }
+
+        if (!isSameDay(new Date(payment.due_date), currentDate)) {
+          return false;
+        }
+
+        if (selectedPatientId && payment.patient_id !== selectedPatientId) {
+          return false;
+        }
+
+        return true;
+      })
+      .map((payment) => ({
+        id: payment.id,
+        patient_id: payment.patient_id,
+        patient_name: patients.find((patient) => patient.id === payment.patient_id)?.full_name || "Sin paciente",
+        due_date: payment.due_date,
+        amount: payment.amount,
+        status: payment.status,
+        paid_at: payment.paid_at,
+      }))
+      .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime());
+  }, [allPayments, currentDate, patients, selectedPatientId]);
+
   // Calculate patient payment status for PatientSummary
   const patientPaymentStatus = useMemo(() => {
     if (!selectedPatientId || selectedPatientPayments.length === 0) return "sin_pagos";
@@ -620,6 +649,7 @@ const Agenda = () => {
                 appointments={filteredAppointments}
                 onAppointmentClick={handleAppointmentClick}
                 selectedPatientId={selectedPatientId}
+                dayPayments={dayPayments}
               />
             )}
           </>
