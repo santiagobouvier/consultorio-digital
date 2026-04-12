@@ -175,6 +175,8 @@ const Patients = () => {
     portal: patients.filter(p => p.auth_user_id !== null).length,
   }), [patients]);
 
+  const { paginatedItems: pagePatients, totalPages } = usePagination(filteredPatients, currentPage);
+
   if (businessLoading || dataLoading) {
     return <LoadingPage />;
   }
