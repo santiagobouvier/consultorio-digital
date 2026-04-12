@@ -254,18 +254,18 @@ const Landing = () => {
             <div className="relative grid grid-cols-1 lg:grid-cols-2 gap-0">
               {/* Left side — Text + CTAs */}
               <div className="p-6 sm:p-10 lg:p-12 xl:p-16 flex flex-col justify-center">
-                {/* Logo */}
-                <div className="flex justify-center lg:justify-start mb-2">
+              {/* Logo */}
+                <div className="flex justify-center lg:justify-start mb-1">
                   <img 
                     src={logoWhite} 
                     alt="Tu Consultorio Digital" 
-                    className="h-28 sm:h-36 lg:h-40 w-auto"
+                    className="h-20 sm:h-24 lg:h-28 w-auto"
                     style={{ animation: 'logoFloat 6s ease-in-out infinite' }}
                   />
                 </div>
                 
                 {/* Title */}
-                <h1 className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold tracking-tight text-center lg:text-left mb-4 sm:mb-5 leading-tight -mt-4 sm:-mt-6">
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl xl:text-[2.7rem] font-bold tracking-tight text-center lg:text-left mb-3 sm:mb-4 leading-tight">
                   Tu consultorio ordenado:
                   <span 
                     className="block bg-clip-text text-transparent"
