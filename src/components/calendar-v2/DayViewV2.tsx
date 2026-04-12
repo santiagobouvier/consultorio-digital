@@ -256,7 +256,59 @@ export const DayViewV2 = ({
         )}
       </div>
 
-      {/* Floating Add button - Mobile */}
+      {/* Pending payments for this day */}
+      {dayPayments.length > 0 && (
+        <div className="bg-card rounded-2xl border p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <CreditCard className="h-4 w-4 text-muted-foreground" />
+            <h3 className="text-sm font-semibold">
+              Pagos del día ({dayPayments.length})
+            </h3>
+          </div>
+          {dayPayments.map((payment) => {
+            const payStatus = calculatePaymentStatus({
+              due_date: payment.due_date,
+              paid_at: payment.paid_at,
+              status: payment.status,
+            });
+            const isOverdue = payStatus === "overdue";
+            const isDueSoon = payStatus === "due_soon";
+            
+            return (
+              <div
+                key={payment.id}
+                onClick={() => onPaymentClick?.(payment)}
+                className={cn(
+                  "p-3 rounded-xl border-l-4 cursor-pointer transition-all hover:shadow-md",
+                  isOverdue && "bg-rose-50 dark:bg-rose-950/30 border-l-rose-500",
+                  isDueSoon && "bg-amber-50 dark:bg-amber-950/30 border-l-amber-500",
+                  !isOverdue && !isDueSoon && "bg-emerald-50 dark:bg-emerald-950/30 border-l-emerald-500"
+                )}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-sm">{payment.patient_name}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      ${payment.amount.toLocaleString()}
+                    </p>
+                  </div>
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "rounded-full text-xs",
+                      isOverdue && "border-rose-300 text-rose-700 dark:text-rose-400",
+                      isDueSoon && "border-amber-300 text-amber-700 dark:text-amber-400"
+                    )}
+                  >
+                    <AlertTriangle className="h-3 w-3 mr-1" />
+                    {isOverdue ? "Vencido" : isDueSoon ? "Por vencer" : "Pendiente"}
+                  </Badge>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
       {dayAppointments.length > 0 && (
         <div className="md:hidden fixed bottom-6 right-6 z-40">
           <Button onClick={onAddAppointment} size="lg" className="h-14 w-14 rounded-full shadow-lg">
