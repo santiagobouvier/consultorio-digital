@@ -374,14 +374,9 @@ export const TodaySummaryDrawer = ({
                               size="sm"
                               variant="outline"
                               className="flex-1 h-10 rounded-xl text-sm font-medium gap-1.5 text-emerald-600 border-emerald-200 hover:bg-emerald-50"
-                              onClick={() => handleMarkPaid(pendingPayment.id)}
-                              disabled={loadingPaymentId === pendingPayment.id}
+                              onClick={() => openPaymentConfirm(pendingPayment.id, pendingPayment.amount, apt.patient_id)}
                             >
-                              {loadingPaymentId === pendingPayment.id ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                              ) : (
-                                <DollarSign className="w-4 h-4" />
-                              )}
+                              <DollarSign className="w-4 h-4" />
                               Cobrar ${pendingPayment.amount.toLocaleString()}
                             </Button>
                           )}
@@ -447,15 +442,11 @@ export const TodaySummaryDrawer = ({
                                 ? "bg-rose-600 hover:bg-rose-700"
                                 : "bg-amber-600 hover:bg-amber-700"
                             )}
-                            onClick={() => handleMarkPaid(payment.id)}
-                            disabled={isLoading}
+                            onClick={() => openPaymentConfirm(payment.id, payment.amount, payment.patient_id)}
                           >
-                            {isLoading ? (
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : (
-                              <CreditCard className="w-4 h-4" />
-                            )}
+                            <CreditCard className="w-4 h-4" />
                             Cobrar
+                          </Button>
                           </Button>
                         </div>
                       </div>
