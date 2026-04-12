@@ -42,7 +42,7 @@ const Patients = () => {
   });
   const [showForm, setShowForm] = useState(false);
   const [businessName, setBusinessName] = useState<string | null>(null);
-
+  const [currentPage, setCurrentPage] = useState(1);
   const { businessId, loading: businessLoading, isSuperAdmin } = useBusinessId();
 
   useEffect(() => {

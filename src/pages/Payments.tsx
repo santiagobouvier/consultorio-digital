@@ -84,6 +84,7 @@ const Payments = () => {
   const [deletingPaymentId, setDeletingPaymentId] = useState<string | null>(null);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
   const [confirmPaymentData, setConfirmPaymentData] = useState<{ id: string; amount: number; patientName: string } | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
   
   const { businessId, loading: businessLoading } = useBusinessId();
   useEffect(() => {
