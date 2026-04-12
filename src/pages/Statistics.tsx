@@ -147,6 +147,7 @@ const Statistics = () => {
   };
 
   const maxHourCount = Math.max(...hourData.map(h => h.count), 1);
+  const { paginatedItems: pageInactive, totalPages: inactiveTotalPages } = usePagination(inactivePatients, inactivePage);
 
   if (bizLoading || loading) return <LoadingPage />;
 
@@ -248,8 +249,8 @@ const Statistics = () => {
                 🎉 Todos tus pacientes activos tuvieron cita recientemente
               </p>
             ) : (
-              <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                {inactivePatients.map(p => (
+              <div className="space-y-2">
+                {pageInactive.map(p => (
                   <div
                     key={p.id}
                     className="flex items-center justify-between gap-3 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors"
@@ -260,7 +261,7 @@ const Statistics = () => {
                       <p className="text-xs text-muted-foreground">{p.email || "Sin email"}</p>
                     </div>
                     <div className="text-right shrink-0">
-                      <p className="text-sm font-semibold text-orange-500">{p.daysSinceLast} días</p>
+                      <p className="text-sm font-semibold text-[hsl(var(--warning))]">{p.daysSinceLast} días</p>
                       <p className="text-xs text-muted-foreground">
                         {p.lastAppointment
                           ? new Date(p.lastAppointment).toLocaleDateString("es-UY", { day: "2-digit", month: "2-digit", year: "2-digit" })
@@ -269,6 +270,13 @@ const Statistics = () => {
                     </div>
                   </div>
                 ))}
+                <ListPagination
+                  currentPage={inactivePage}
+                  totalPages={inactiveTotalPages}
+                  onPageChange={setInactivePage}
+                  totalItems={inactivePatients.length}
+                  pageSize={ITEMS_PER_PAGE}
+                />
               </div>
             )}
           </CardContent>
