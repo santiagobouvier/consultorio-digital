@@ -448,53 +448,6 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* Multi-device Section */}
-      <section className="relative px-4 sm:px-6 py-14 sm:py-24 z-10 bg-black">
-        <div className="max-w-4xl mx-auto text-center">
-          <ScrollReveal>
-            <h2 className="text-xl sm:text-3xl md:text-4xl font-bold mb-4 tracking-tight">
-              Usalo desde cualquier dispositivo
-            </h2>
-            <p className="text-gray-500 text-sm sm:text-lg font-light max-w-2xl mx-auto mb-10 sm:mb-14">
-              Accedé a tu consultorio desde la computadora, la tablet o el celular. Sin instalar nada — funciona directo desde el navegador.
-            </p>
-          </ScrollReveal>
-
-          <div className="flex justify-center items-end gap-4 sm:gap-8">
-            <ScrollReveal delay={100} direction="left">
-              <div 
-                className="rounded-xl sm:rounded-2xl border border-white/10 p-4 sm:p-6 w-36 sm:w-52 transition-all duration-500 hover:border-white/20"
-                style={{ backgroundColor: '#111111', boxShadow: `0 0 40px ${GREEN_GLOW}` }}
-              >
-                <Monitor className="w-10 h-10 sm:w-14 sm:h-14 mx-auto mb-3" style={{ color: GREEN }} />
-                <p className="text-xs sm:text-sm font-medium text-gray-300">Computadora</p>
-                <p className="text-[10px] sm:text-xs text-gray-600 mt-1">Pantalla completa</p>
-              </div>
-            </ScrollReveal>
-            <ScrollReveal delay={250} direction="up">
-              <div 
-                className="rounded-xl sm:rounded-2xl border border-white/10 p-4 sm:p-6 w-28 sm:w-40 transition-all duration-500 hover:border-white/20"
-                style={{ backgroundColor: '#111111', boxShadow: `0 0 30px ${GREEN_GLOW}` }}
-              >
-                <Tablet className="w-8 h-8 sm:w-12 sm:h-12 mx-auto mb-3" style={{ color: GREEN }} />
-                <p className="text-xs sm:text-sm font-medium text-gray-300">Tablet</p>
-                <p className="text-[10px] sm:text-xs text-gray-600 mt-1">Consultorio móvil</p>
-              </div>
-            </ScrollReveal>
-            <ScrollReveal delay={400} direction="right">
-              <div 
-                className="rounded-xl sm:rounded-2xl border border-white/10 p-4 sm:p-6 w-24 sm:w-32 transition-all duration-500 hover:border-white/20"
-                style={{ backgroundColor: '#111111', boxShadow: `0 0 20px ${GREEN_GLOW}` }}
-              >
-                <Smartphone className="w-7 h-7 sm:w-10 sm:h-10 mx-auto mb-3" style={{ color: GREEN }} />
-                <p className="text-xs sm:text-sm font-medium text-gray-300">Celular</p>
-                <p className="text-[10px] sm:text-xs text-gray-600 mt-1">En tu bolsillo</p>
-              </div>
-            </ScrollReveal>
-          </div>
-        </div>
-      </section>
-
       {/* Problem → Solution Section */}
       <section className="relative px-4 sm:px-6 py-14 sm:py-24 bg-black z-10">
         <div className="max-w-5xl mx-auto">
