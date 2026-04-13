@@ -23,6 +23,13 @@ if (isPreviewHost || isInIframe) {
   registerSW({
     immediate: true,
   });
+
+  // Register push notification service worker
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("/push-sw.js").catch((err) => {
+      console.warn("Push SW registration failed:", err);
+    });
+  }
 }
 
 createRoot(document.getElementById("root")!).render(<App />);

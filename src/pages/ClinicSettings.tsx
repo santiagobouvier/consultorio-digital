@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, Copy, ExternalLink, RotateCcw, UserPlus, Users, Crown, User, Link, Check, Paintbrush, Upload } from "lucide-react";
+import { ArrowLeft, Save, Copy, ExternalLink, RotateCcw, UserPlus, Users, Crown, User, Link, Check, Paintbrush, Upload, Bell } from "lucide-react";
+import { NotificationActivationCard } from "@/components/NotificationActivationCard";
 import { useDashboardBranding } from "@/contexts/DashboardBrandingContext";
 import { DomainSettingsCard } from "@/components/DomainSettingsCard";
 import { ProfessionalInviteModal } from "@/components/ProfessionalInviteModal";
@@ -402,6 +403,19 @@ const ClinicSettings = () => {
             </CardContent>
           </Card>
         )}
+
+        {/* Notificaciones Push */}
+        <Card className="mobile-card">
+          <CardHeader className="px-0 pt-0 pb-4 sm:px-6 sm:pt-6">
+            <CardTitle className="text-lg font-bold flex items-center gap-2">
+              <Bell className="h-5 w-5" />
+              Notificaciones
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-0 pb-0 sm:px-6 sm:pb-6">
+            <NotificationActivationCard variant="full" />
+          </CardContent>
+        </Card>
 
         {/* Domain Settings */}
         {isOwner && businessId && (

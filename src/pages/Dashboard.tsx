@@ -14,6 +14,7 @@ import { CreateAppointmentModal } from "@/components/CreateAppointmentModal";
 import { GlobalPaymentForm } from "@/components/GlobalPaymentForm";
 import { calculatePaymentStatus, formatCurrency } from "@/lib/payments";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { NotificationActivationCard } from "@/components/NotificationActivationCard";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -602,6 +603,9 @@ const Dashboard = () => {
             </Button>
           </div>
         </div>
+
+        {/* Push Notification Activation */}
+        <NotificationActivationCard variant="full" />
 
         {/* Plan Usage Card */}
         <PlanUsageCard businessId={businessId} />

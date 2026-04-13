@@ -20,6 +20,7 @@ import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { calculatePaymentStatus, formatCurrency, getRecurrenceTypeLabel, PaymentStatus, RecurrenceType } from "@/lib/payments";
 import { PatientBookingModal } from "@/components/PatientBookingModal";
+import { NotificationActivationCard } from "@/components/NotificationActivationCard";
 
 interface PatientData {
   id: string;
@@ -281,6 +282,11 @@ const PatientPortal = () => {
 
         {/* PWA Install Banner */}
         <PWAInstallBanner />
+
+        {/* Push Notification Activation */}
+        <div className="mb-4">
+          <NotificationActivationCard variant="full" />
+        </div>
 
         <Tabs defaultValue="resumen" className="w-full">
           <TabsList className="w-full grid grid-cols-5 mb-4">
