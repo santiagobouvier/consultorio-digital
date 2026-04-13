@@ -17,6 +17,8 @@ interface PricingCardProps {
   savingsNote?: string;
   buttonText: string;
   buttonLink: string;
+  buyText?: string;
+  buyLink?: string;
   isExternal?: boolean;
   isHighlighted?: boolean;
   highlightLabel?: string;
@@ -33,6 +35,8 @@ const PricingCard = ({
   savingsNote,
   buttonText,
   buttonLink,
+  buyText,
+  buyLink,
   isExternal = false,
   isHighlighted = false,
   highlightLabel,
@@ -142,6 +146,17 @@ const PricingCard = ({
           >
             {buttonText}
           </Button>
+        </Link>
+      )}
+
+      {/* Buy Now link */}
+      {buyText && buyLink && (
+        <Link to={buyLink}>
+          <button
+            className="w-full mt-2 text-xs text-gray-500 hover:text-white transition-colors underline underline-offset-2"
+          >
+            {buyText}
+          </button>
         </Link>
       )}
 

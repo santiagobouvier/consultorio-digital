@@ -187,6 +187,8 @@ const Landing = () => {
         savingsNote: isAnnual ? "Menos de una consulta por mes" : "Menos de una consulta por mes",
         buttonText: "Empezar 7 días gratis",
         buttonLink: `/auth?plan=${planCode}&billing=${isAnnual ? 'annual' : 'monthly'}`,
+        buyText: "Comprar ahora sin prueba",
+        buyLink: `/auth?plan=${planCode}&billing=${isAnnual ? 'annual' : 'monthly'}&skip_trial=true`,
         isExternal: false,
         isHighlighted: plan.isHighlighted || false,
         highlightLabel: plan.highlightLabel,
