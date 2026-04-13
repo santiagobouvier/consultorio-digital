@@ -50,7 +50,7 @@ const GREEN_GLOW = "rgba(0, 199, 138, 0.15)";
 const faqItems = [
   {
     question: "¿Qué incluye cada plan?",
-    answer: "Todos los planes incluyen las mismas funcionalidades: gestión de pacientes, agenda privada, portal del paciente, recordatorios por WhatsApp, gestión de pagos y alertas. La diferencia está en la cantidad de profesionales y pacientes activos."
+    answer: "Todos los planes incluyen portal del paciente, agenda, pagos, recordatorios por WhatsApp, estadísticas y app instalable. La diferencia está en la cantidad de profesionales, pacientes activos y funcionalidades avanzadas como la web pública."
   },
   {
     question: "¿Puedo cambiar de plan en cualquier momento?",
@@ -66,39 +66,6 @@ const faqItems = [
   },
 ];
 
-const currentFeatures = [
-  {
-    icon: Users,
-    title: "Gestión de Pacientes",
-    description: "Ficha completa por paciente con historial de citas, notas privadas y estado de pagos.",
-  },
-  {
-    icon: Calendar,
-    title: "Agenda Privada",
-    description: "Solo accesible para vos y tus pacientes. Control total de horarios y disponibilidad.",
-  },
-  {
-    icon: UserCheck,
-    title: "Portal del Paciente",
-    description: "Cada paciente accede con su usuario, ve sus citas, historial y puede reservar turnos.",
-  },
-  {
-    icon: CreditCard,
-    title: "Gestión de Pagos",
-    description: "Registro de pagos mensuales o por cita. Alertas de vencidos y por vencer.",
-  },
-  {
-    icon: Bell,
-    title: "Recordatorios por WhatsApp",
-    description: "Recordatorios de citas y pagos por WhatsApp con un solo clic. Tus pacientes nunca más olvidan un turno.",
-  },
-  {
-    icon: Shield,
-    title: "Multi-profesional",
-    description: "Agregá profesionales a tu consultorio. Cada uno con su acceso a la agenda compartida.",
-  },
-];
-
 const problems = [
   { icon: AlertTriangle, text: "Agenda desordenada entre cuadernos y apps" },
   { icon: AlertTriangle, text: "Pagos que se olvidan o no se registran" },
@@ -106,28 +73,86 @@ const problems = [
   { icon: AlertTriangle, text: "Información repartida en planillas y apps" },
 ];
 
-const benefits = [
-  {
-    icon: Lock,
-    title: "Privacidad total",
-    description: "Tu agenda no es pública. Solo tus pacientes acceden.",
-  },
-  {
-    icon: Eye,
-    title: "Todo centralizado",
-    description: "Pacientes, citas, pagos y recordatorios en un solo lugar.",
-  },
-  {
-    icon: Clock,
-    title: "Ahorro de tiempo",
-    description: "Menos mensajes sueltos, menos olvidos, menos errores.",
-  },
-  {
-    icon: Sparkles,
-    title: "Imagen profesional",
-    description: "Un sistema propio que transmite orden y seriedad.",
-  },
+// Per-plan feature definitions
+const allFeatures = [
+  "Portal del paciente",
+  "Agenda privada",
+  "Gestión de pagos y alertas",
+  "Recordatorios por WhatsApp",
+  "Dashboard financiero",
+  "App instalable (PWA)",
+  "Invitación de pacientes por link",
+  "Exportación CSV",
+  "Reserva online de turnos",
+  "Estadísticas y métricas",
+  "Web pública del consultorio",
+  "Calendario multi-profesional",
+  "Invitación de profesionales",
+  "Marca blanca (logo y colores)",
+  "Dominio personalizado",
 ];
+
+const planFeatures: Record<string, string[]> = {
+  emprendedor: [
+    "Portal del paciente",
+    "Agenda privada",
+    "Gestión de pagos y alertas",
+    "Recordatorios por WhatsApp",
+    "Dashboard financiero",
+    "App instalable (PWA)",
+    "Invitación de pacientes por link",
+    "Exportación CSV",
+    "Reserva online de turnos",
+    "Estadísticas y métricas",
+  ],
+  esencial: [
+    "Portal del paciente",
+    "Agenda privada",
+    "Gestión de pagos y alertas",
+    "Recordatorios por WhatsApp",
+    "Dashboard financiero",
+    "App instalable (PWA)",
+    "Invitación de pacientes por link",
+    "Exportación CSV",
+    "Reserva online de turnos",
+    "Estadísticas y métricas",
+    "Web pública del consultorio",
+    "Marca blanca (logo y colores)",
+  ],
+  profesional: [
+    "Portal del paciente",
+    "Agenda privada",
+    "Gestión de pagos y alertas",
+    "Recordatorios por WhatsApp",
+    "Dashboard financiero",
+    "App instalable (PWA)",
+    "Invitación de pacientes por link",
+    "Exportación CSV",
+    "Reserva online de turnos",
+    "Estadísticas y métricas",
+    "Web pública del consultorio",
+    "Calendario multi-profesional",
+    "Invitación de profesionales",
+    "Marca blanca (logo y colores)",
+  ],
+  consultorio: [
+    "Portal del paciente",
+    "Agenda privada",
+    "Gestión de pagos y alertas",
+    "Recordatorios por WhatsApp",
+    "Dashboard financiero",
+    "App instalable (PWA)",
+    "Invitación de pacientes por link",
+    "Exportación CSV",
+    "Reserva online de turnos",
+    "Estadísticas y métricas",
+    "Web pública del consultorio",
+    "Calendario multi-profesional",
+    "Invitación de profesionales",
+    "Marca blanca (logo y colores)",
+    "Dominio personalizado",
+  ],
+};
 
 const Landing = () => {
   const [isAnnual, setIsAnnual] = useState(true);
@@ -143,6 +168,12 @@ const Landing = () => {
         ? "1 profesional" 
         : `Hasta ${plan.maxProfessionals} profesionales`;
       const patText = `Hasta ${plan.maxPatients} pacientes activos`;
+
+      const includedFeatures = planFeatures[planCode] || [];
+      const features = allFeatures.map(f => ({
+        text: f,
+        included: includedFeatures.includes(f),
+      }));
       
       return {
         id: planCode,
@@ -158,6 +189,7 @@ const Landing = () => {
         isExternal: false,
         isHighlighted: plan.isHighlighted || false,
         highlightLabel: plan.highlightLabel,
+        features,
       };
     });
   };
@@ -166,7 +198,6 @@ const Landing = () => {
     <div className="min-h-screen bg-black text-white overflow-x-hidden">
       {/* Animated parallax background */}
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-        {/* Top glow */}
         <div 
           style={{
             position: 'absolute',
@@ -178,7 +209,6 @@ const Landing = () => {
             background: `radial-gradient(ellipse 80% 50% at 50% 50%, ${BRAND_GLOW}, transparent)`,
           }}
         />
-        {/* Floating orbs */}
         <div 
           style={{
             position: 'absolute',
@@ -218,7 +248,6 @@ const Landing = () => {
             filter: 'blur(60px)',
           }}
         />
-        {/* Grid pattern overlay */}
         <div 
           style={{
             position: 'absolute',
@@ -242,7 +271,6 @@ const Landing = () => {
               animation: 'heroFadeIn 1s cubic-bezier(0.16,1,0.3,1) forwards',
             }}
           >
-            {/* Glow ring */}
             <div 
               className="absolute -inset-px rounded-2xl sm:rounded-3xl pointer-events-none"
               style={{
@@ -252,9 +280,7 @@ const Landing = () => {
             />
 
             <div className="relative grid grid-cols-1 lg:grid-cols-2 gap-0">
-              {/* Left side — Text + CTAs */}
               <div className="p-6 sm:p-8 lg:p-10 xl:p-12 flex flex-col justify-center">
-              {/* Logo */}
                 <div className="flex justify-center lg:justify-start mb-1">
                   <img 
                     src={logoWhite} 
@@ -264,7 +290,6 @@ const Landing = () => {
                   />
                 </div>
                 
-                {/* Title */}
                 <h1 className="text-2xl sm:text-3xl lg:text-4xl xl:text-[2.7rem] font-bold tracking-tight text-center lg:text-left mb-3 sm:mb-4 leading-tight">
                   Tu consultorio ordenado:
                   <span 
@@ -276,12 +301,10 @@ const Landing = () => {
                   <span className="block">en un solo lugar</span>
                 </h1>
                 
-                {/* Subtitle */}
                 <p className="text-sm sm:text-base lg:text-lg text-gray-400 text-center lg:text-left mb-4 lg:mb-6 max-w-lg mx-auto lg:mx-0 leading-relaxed font-light">
                   Gestioná pacientes, agenda privada, pagos y recordatorios sin planillas ni mensajes sueltos.
                 </p>
 
-                {/* Multi-device badges */}
                 <div className="flex justify-center lg:justify-start gap-3 mb-5 lg:mb-6">
                   {[
                     { icon: Monitor, label: "Computadora" },
@@ -302,7 +325,6 @@ const Landing = () => {
                   ))}
                 </div>
                 
-                {/* CTA Buttons */}
                 <div 
                   className="flex flex-col sm:flex-row justify-center lg:justify-start gap-3"
                   style={{ animation: 'fadeSlideUp 0.7s cubic-bezier(0.16,1,0.3,1) 0.4s both' }}
@@ -328,7 +350,6 @@ const Landing = () => {
                   </a>
                 </div>
 
-                {/* Install app - compact */}
                 <div 
                   className="flex justify-center lg:justify-start mt-3"
                   style={{ animation: 'fadeSlideUp 0.7s cubic-bezier(0.16,1,0.3,1) 0.6s both' }}
@@ -337,14 +358,12 @@ const Landing = () => {
                 </div>
               </div>
 
-              {/* Right side — Dashboard Mockup (desktop only) */}
               <div className="hidden lg:flex items-center justify-center p-6 lg:p-8 xl:p-10" style={{ backgroundColor: '#0c0c0c' }}>
                 <div className="w-full max-w-md xl:max-w-lg">
                   <div 
                     className="rounded-xl border border-white/10 overflow-hidden"
                     style={{ backgroundColor: '#0a0a0a' }}
                   >
-                    {/* Browser chrome */}
                     <div className="flex items-center gap-2 px-4 py-2.5 border-b border-white/5" style={{ backgroundColor: '#0f0f0f' }}>
                       <div className="flex gap-1.5">
                         <div className="w-2.5 h-2.5 rounded-full bg-red-500/60" />
@@ -357,7 +376,6 @@ const Landing = () => {
                         </div>
                       </div>
                     </div>
-                    {/* Dashboard content */}
                     <div className="p-4">
                       <div className="grid grid-cols-3 gap-3 mb-3">
                         {[
@@ -399,7 +417,6 @@ const Landing = () => {
           </div>
         </div>
 
-        {/* Scroll indicator */}
         <div 
           className="absolute bottom-8 left-1/2 -translate-x-1/2"
           style={{ animation: 'scrollBounce 2s ease-in-out infinite' }}
@@ -423,12 +440,10 @@ const Landing = () => {
               className="relative aspect-video rounded-xl sm:rounded-2xl border border-white/10 overflow-hidden cursor-pointer group"
               style={{ backgroundColor: '#0a0a0a' }}
             >
-              {/* Thumbnail gradient */}
               <div 
                 className="absolute inset-0"
                 style={{ background: `radial-gradient(circle at center, rgba(0,165,160,0.08), transparent 70%)` }}
               />
-              {/* Play button */}
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
                 <div 
                   className="w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center transition-transform duration-300 group-hover:scale-110"
@@ -498,76 +513,41 @@ const Landing = () => {
         </div>
       </section>
 
-
-
-      <section className="relative px-4 sm:px-6 py-14 sm:py-24 z-10 bg-black">
-        <div className="max-w-4xl mx-auto">
-          <ScrollReveal direction="scale">
-            <div 
-              className="rounded-2xl sm:rounded-3xl p-8 sm:p-12 text-center border relative overflow-hidden"
-              style={{ 
-                backgroundColor: '#111111',
-                borderColor: 'rgba(0, 199, 138, 0.2)',
-                boxShadow: '0 0 80px rgba(0, 199, 138, 0.08)',
-              }}
-            >
-              <div 
-                className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 rounded-full blur-3xl pointer-events-none"
-                style={{ 
-                  background: `radial-gradient(circle, rgba(0,199,138,0.12), transparent 70%)`,
-                  animation: 'orbPulse 4s ease-in-out infinite',
-                }}
-              />
-              <div 
-                className="relative w-14 h-14 sm:w-16 sm:h-16 mx-auto mb-6 rounded-2xl flex items-center justify-center"
-                style={{ backgroundColor: GREEN_BG }}
-              >
-                <Lock className="w-7 h-7 sm:w-8 sm:h-8" style={{ color: GREEN }} />
-              </div>
-              <h2 className="relative text-xl sm:text-3xl md:text-4xl font-bold mb-4 tracking-tight">
-                Tu consultorio, tu sistema
-              </h2>
-              <p className="relative text-lg sm:text-xl mb-6" style={{ color: GREEN }}>
-                Un sistema privado, no una agenda pública
-              </p>
-              <p className="relative text-gray-400 text-sm sm:text-base max-w-2xl mx-auto leading-relaxed font-light">
-                A diferencia de plataformas públicas donde cualquiera puede agendar, acá solo tus pacientes acceden a tu agenda. 
-                Más control, menos cancelaciones, imagen más profesional.
-              </p>
-            </div>
-          </ScrollReveal>
-        </div>
-      </section>
-
-      {/* Benefits Section */}
-      <section className="relative px-4 sm:px-6 py-14 sm:py-28 bg-black z-10">
+      {/* "Cómo funciona" Section */}
+      <section className="relative px-4 sm:px-6 py-14 sm:py-24 z-10" style={{ backgroundColor: '#080808' }}>
         <div className="max-w-4xl mx-auto">
           <ScrollReveal>
-            <h2 className="text-xl sm:text-3xl md:text-4xl font-bold text-center mb-8 sm:mb-16 tracking-tight">
-              Por qué elegir este sistema
+            <h2 className="text-xl sm:text-3xl md:text-4xl font-bold text-center mb-10 sm:mb-16 tracking-tight">
+              Empezar es muy fácil
             </h2>
           </ScrollReveal>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-            {benefits.map((benefit, index) => (
-              <ScrollReveal key={benefit.title} delay={index * 100}>
-                <div
-                  className="group flex items-start gap-4 sm:gap-5 p-5 sm:p-6 rounded-xl sm:rounded-2xl border border-white/5 transition-all duration-500 hover:border-white/15 hover:-translate-y-1"
-                  style={{ backgroundColor: '#111111' }}
-                >
+
+          <div className="relative grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-6">
+            <div 
+              className="hidden md:block absolute top-12 left-[20%] right-[20%] h-px"
+              style={{ backgroundColor: 'rgba(0, 199, 138, 0.2)' }}
+            />
+
+            {[
+              { step: "1", title: "Creá tu cuenta gratis", description: "Registrate en menos de 2 minutos. Sin tarjeta." },
+              { step: "2", title: "Configurá tu consultorio", description: "Cargá tus pacientes, servicios y horarios disponibles." },
+              { step: "3", title: "Invitá a tus pacientes", description: "Cada paciente accede a su portal propio con tu marca." },
+            ].map((item, index) => (
+              <ScrollReveal key={item.step} delay={index * 150}>
+                <div className="relative text-center">
                   <div 
-                    className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0 transition-transform duration-500 group-hover:scale-110"
-                    style={{ backgroundColor: GREEN_BG }}
+                    className="w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center mx-auto mb-5 text-2xl sm:text-3xl font-bold relative z-10"
+                    style={{ 
+                      backgroundColor: '#111111',
+                      border: `2px solid ${GREEN}`,
+                      color: GREEN,
+                      boxShadow: `0 0 30px ${GREEN_GLOW}`,
+                    }}
                   >
-                    <benefit.icon className="w-5 h-5 sm:w-6 sm:h-6" style={{ color: GREEN }} />
+                    {item.step}
                   </div>
-                  <div>
-                    <h3 className="text-sm sm:text-base text-white font-semibold mb-1 tracking-tight">
-                      {benefit.title}
-                    </h3>
-                    <p className="text-gray-500 text-xs sm:text-sm font-light">
-                      {benefit.description}
-                    </p>
-                  </div>
+                  <h3 className="text-base sm:text-lg font-semibold text-white mb-2">{item.title}</h3>
+                  <p className="text-gray-500 text-sm font-light max-w-xs mx-auto">{item.description}</p>
                 </div>
               </ScrollReveal>
             ))}
@@ -575,26 +555,657 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* Social Proof Section */}
+      {/* ═══════════════════════════════════════════════════════════ */}
+      {/* FEATURE SHOWCASES                                         */}
+      {/* ═══════════════════════════════════════════════════════════ */}
+
+      {/* ── Portal del Paciente con Marca Blanca ── */}
+      <section className="relative px-4 sm:px-6 py-14 sm:py-24 z-10 bg-black">
+        <div className="max-w-5xl mx-auto">
+          <div className="grid md:grid-cols-2 gap-8 md:gap-14 items-center">
+            <ScrollReveal direction="left">
+              <div>
+                <div 
+                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium mb-6"
+                  style={{ backgroundColor: 'rgba(147, 51, 234, 0.15)', color: '#a78bfa' }}
+                >
+                  <Palette className="w-3.5 h-3.5" />
+                  Marca blanca
+                </div>
+                <h2 className="text-xl sm:text-3xl md:text-4xl font-bold mb-4 tracking-tight">
+                  Tu portal, tu marca
+                </h2>
+                <p className="text-gray-400 text-sm sm:text-base leading-relaxed font-light mb-6">
+                  Cada paciente accede a un portal exclusivo con <strong className="text-white">tu logo, tus colores y tu nombre</strong>. 
+                  Parece tu propia aplicación — porque lo es.
+                </p>
+                <ul className="space-y-3">
+                  {[
+                    "Logo y nombre personalizados",
+                    "Colores para modo claro y oscuro",
+                    "URL propia con tu marca",
+                    "Experiencia profesional para tus pacientes",
+                  ].map((text, i) => (
+                    <li key={i} className="flex items-center gap-3 text-gray-300 text-sm">
+                      <Check className="w-4 h-4 flex-shrink-0" style={{ color: GREEN }} />
+                      {text}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </ScrollReveal>
+
+            <ScrollReveal direction="right" delay={200}>
+              <div className="flex justify-center">
+                <div 
+                  className="relative w-56 sm:w-64 rounded-[2rem] border-2 p-3 overflow-hidden"
+                  style={{ borderColor: 'rgba(147, 51, 234, 0.3)', backgroundColor: '#0a0a0a' }}
+                >
+                  <div className="w-20 h-5 rounded-b-xl mx-auto mb-3" style={{ backgroundColor: '#0a0a0a', border: '1px solid rgba(255,255,255,0.1)', borderTop: 'none' }} />
+                  <div className="rounded-xl overflow-hidden" style={{ backgroundColor: '#f8f9fa' }}>
+                    <div className="p-3 text-center" style={{ backgroundColor: '#a78bfa' }}>
+                      <div className="w-8 h-8 rounded-full bg-white/20 mx-auto mb-1" />
+                      <p className="text-white text-[10px] font-bold">Tu Consultorio</p>
+                    </div>
+                    <div className="flex border-b border-gray-200">
+                      {["Resumen", "Citas", "Pagos"].map((tab, i) => (
+                        <div key={tab} className={`flex-1 text-center py-1.5 text-[8px] font-medium ${i === 0 ? 'text-purple-600 border-b-2 border-purple-500' : 'text-gray-400'}`}>
+                          {tab}
+                        </div>
+                      ))}
+                    </div>
+                    <div className="p-2.5 space-y-2">
+                      <div className="rounded-lg bg-white p-2 shadow-sm border border-gray-100">
+                        <p className="text-[8px] text-gray-500">Próxima cita</p>
+                        <p className="text-[9px] font-bold text-gray-800">Martes 15, 10:00</p>
+                      </div>
+                      <div className="rounded-lg bg-white p-2 shadow-sm border border-gray-100">
+                        <p className="text-[8px] text-gray-500">Estado de pagos</p>
+                        <div className="flex items-center gap-1 mt-0.5">
+                          <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                          <p className="text-[9px] text-green-600 font-medium">Al día</p>
+                        </div>
+                      </div>
+                      <div className="rounded-lg bg-purple-50 p-2 border border-purple-100">
+                        <p className="text-[8px] text-purple-600 font-medium">Reservar nuevo turno →</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex justify-center py-2 mt-1">
+                    <div className="w-16 h-1 rounded-full bg-white/20" />
+                  </div>
+                </div>
+              </div>
+            </ScrollReveal>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Reserva Online de Turnos ── */}
       <section className="relative px-4 sm:px-6 py-14 sm:py-24 z-10" style={{ backgroundColor: '#080808' }}>
+        <div className="max-w-5xl mx-auto">
+          <div className="grid md:grid-cols-2 gap-8 md:gap-14 items-center">
+            <ScrollReveal direction="left">
+              <div 
+                className="rounded-xl sm:rounded-2xl border border-white/10 overflow-hidden"
+                style={{ backgroundColor: '#111111' }}
+              >
+                <div className="p-4 sm:p-6">
+                  <p className="text-xs text-gray-500 mb-3 font-medium">Seleccioná un horario</p>
+                  <div className="grid grid-cols-7 gap-1 mb-4">
+                    {["L","M","M","J","V","S","D"].map((d) => (
+                      <div key={d} className="text-[9px] text-gray-600 text-center py-1">{d}</div>
+                    ))}
+                    {Array.from({length: 14}, (_, i) => {
+                      const day = i + 10;
+                      const available = [11, 13, 15, 18, 20, 22].includes(day);
+                      const selected = day === 15;
+                      return (
+                        <div
+                          key={i}
+                          className="text-[10px] text-center py-1.5 rounded-md transition-colors"
+                          style={{
+                            backgroundColor: selected ? GREEN : available ? 'rgba(0,199,138,0.1)' : 'transparent',
+                            color: selected ? 'white' : available ? GREEN : '#444',
+                            fontWeight: selected || available ? 600 : 400,
+                          }}
+                        >
+                          {day}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <p className="text-[10px] text-gray-500 mb-2">Horarios para Mar 15</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {["09:00", "10:30", "14:00", "15:30", "17:00"].map((time, i) => (
+                      <div
+                        key={time}
+                        className="text-center text-[10px] py-2 rounded-lg border transition-all"
+                        style={{
+                          backgroundColor: i === 2 ? GREEN : '#1a1a1a',
+                          borderColor: i === 2 ? GREEN : 'rgba(255,255,255,0.08)',
+                          color: i === 2 ? 'white' : '#aaa',
+                          fontWeight: i === 2 ? 600 : 400,
+                        }}
+                      >
+                        {time}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </ScrollReveal>
+
+            <ScrollReveal direction="right" delay={200}>
+              <div>
+                <div 
+                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium mb-6"
+                  style={{ backgroundColor: GREEN_BG, color: GREEN }}
+                >
+                  <CalendarCheck className="w-3.5 h-3.5" />
+                  Autogestión
+                </div>
+                <h2 className="text-xl sm:text-3xl md:text-4xl font-bold mb-4 tracking-tight">
+                  Tus pacientes reservan solos
+                </h2>
+                <p className="text-gray-400 text-sm sm:text-base leading-relaxed font-light mb-6">
+                  El paciente entra al portal, ve tus <strong className="text-white">horarios disponibles en tiempo real</strong>, 
+                  elige fecha y hora, y listo. Sin mensajes de ida y vuelta.
+                </p>
+                <ul className="space-y-3">
+                  {[
+                    "Calendario con disponibilidad real",
+                    "Selección de modalidad (presencial / online)",
+                    "Confirmación instantánea",
+                    "El turno aparece directo en tu agenda",
+                  ].map((text, i) => (
+                    <li key={i} className="flex items-center gap-3 text-gray-300 text-sm">
+                      <Check className="w-4 h-4 flex-shrink-0" style={{ color: GREEN }} />
+                      {text}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </ScrollReveal>
+          </div>
+        </div>
+      </section>
+
+      {/* ── PWA Instalable con Branding ── */}
+      <section className="relative px-4 sm:px-6 py-14 sm:py-24 z-10 bg-black">
+        <div className="max-w-4xl mx-auto">
+          <ScrollReveal>
+            <div className="text-center mb-10 sm:mb-14">
+              <div 
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium mb-6"
+                style={{ backgroundColor: 'rgba(59, 130, 246, 0.15)', color: '#60a5fa' }}
+              >
+                <Download className="w-3.5 h-3.5" />
+                App instalable
+              </div>
+              <h2 className="text-xl sm:text-3xl md:text-4xl font-bold mb-4 tracking-tight">
+                Tu app en el celular de cada paciente
+              </h2>
+              <p className="text-gray-400 text-sm sm:text-base font-light max-w-2xl mx-auto">
+                Tus pacientes instalan el portal como una app en su celular. 
+                Aparece con <strong className="text-white">tu nombre y tu logo</strong> en la pantalla de inicio.
+              </p>
+            </div>
+          </ScrollReveal>
+
+          <ScrollReveal delay={200}>
+            <div className="flex justify-center items-end gap-6 sm:gap-10">
+              {[
+                { emoji: "🩺", name: "Mi Psicólogo", label: "Consultorio A", color: '#a78bfa' },
+                { emoji: "💆", name: "Centro Bienestar", label: "Consultorio B", color: GREEN },
+                { emoji: "🏥", name: "Clínica Salud", label: "Consultorio C", color: BRAND },
+              ].map((phone) => (
+                <div key={phone.label} className="text-center">
+                  <div 
+                    className="w-20 sm:w-28 rounded-2xl border p-2 mb-3"
+                    style={{ borderColor: 'rgba(59, 130, 246, 0.2)', backgroundColor: '#0a0a0a' }}
+                  >
+                    <div className="rounded-xl p-3 flex flex-col items-center" style={{ backgroundColor: '#111' }}>
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl mb-1.5 flex items-center justify-center text-lg" style={{ backgroundColor: phone.color }}>
+                        {phone.emoji}
+                      </div>
+                      <p className="text-[7px] sm:text-[8px] text-gray-400 truncate w-full text-center">{phone.name}</p>
+                    </div>
+                  </div>
+                  <p className="text-[10px] sm:text-xs text-gray-500">{phone.label}</p>
+                </div>
+              ))}
+            </div>
+          </ScrollReveal>
+        </div>
+      </section>
+
+      {/* ── Calendario Multi-profesional ── */}
+      <section className="relative px-4 sm:px-6 py-14 sm:py-24 z-10" style={{ backgroundColor: '#080808' }}>
+        <div className="max-w-5xl mx-auto">
+          <div className="grid md:grid-cols-2 gap-8 md:gap-14 items-center">
+            <ScrollReveal direction="left">
+              <div>
+                <div 
+                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium mb-6"
+                  style={{ backgroundColor: GREEN_BG, color: GREEN }}
+                >
+                  <Calendar className="w-3.5 h-3.5" />
+                  Agenda inteligente
+                </div>
+                <h2 className="text-xl sm:text-3xl md:text-4xl font-bold mb-4 tracking-tight">
+                  Agenda compartida,{" "}
+                  <span style={{ color: GREEN }}>visión clara</span>
+                </h2>
+                <p className="text-gray-400 text-sm sm:text-base leading-relaxed font-light mb-6">
+                  Vista diaria, semanal y mensual con <strong className="text-white">colores por profesional</strong>. 
+                  Filtrá por profesional, arrastrá citas y controlá la disponibilidad de todo el equipo.
+                </p>
+                <ul className="space-y-3">
+                  {[
+                    "Colores distintos para cada profesional",
+                    "Filtros rápidos por profesional",
+                    "Vistas: día, semana, mes",
+                    "Pagos pendientes del día en la agenda",
+                  ].map((text, i) => (
+                    <li key={i} className="flex items-center gap-3 text-gray-300 text-sm">
+                      <Check className="w-4 h-4 flex-shrink-0" style={{ color: GREEN }} />
+                      {text}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </ScrollReveal>
+
+            <ScrollReveal direction="right" delay={200}>
+              <div 
+                className="rounded-xl sm:rounded-2xl border border-white/10 overflow-hidden"
+                style={{ backgroundColor: '#111111' }}
+              >
+                <div className="flex items-center justify-between p-3 border-b border-white/5">
+                  <p className="text-xs font-medium text-white">Martes 15 de Abril</p>
+                  <div className="flex gap-1">
+                    {["Día", "Sem", "Mes"].map((v, i) => (
+                      <span 
+                        key={v} 
+                        className="text-[9px] px-2 py-1 rounded-md"
+                        style={{ 
+                          backgroundColor: i === 0 ? 'rgba(0,199,138,0.15)' : 'transparent',
+                          color: i === 0 ? GREEN : '#666',
+                        }}
+                      >
+                        {v}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <div className="p-3 space-y-2">
+                  {[
+                    { time: "09:00", name: "María López", color: "#60a5fa", duration: "50 min" },
+                    { time: "10:00", name: "Juan Pérez", color: "#a78bfa", duration: "50 min" },
+                    { time: "10:00", name: "Ana Rodríguez", color: "#60a5fa", duration: "50 min" },
+                    { time: "11:00", name: "Carlos Fernández", color: "#a78bfa", duration: "50 min" },
+                    { time: "14:00", name: "Laura García", color: "#60a5fa", duration: "50 min" },
+                  ].map((appt, i) => (
+                    <div key={i} className="flex items-center gap-3 p-2 rounded-lg" style={{ backgroundColor: '#1a1a1a' }}>
+                      <div className="w-1 h-8 rounded-full" style={{ backgroundColor: appt.color }} />
+                      <div className="flex-1">
+                        <p className="text-[10px] text-gray-500">{appt.time}</p>
+                        <p className="text-xs text-white font-medium">{appt.name}</p>
+                      </div>
+                      <span className="text-[9px] text-gray-600">{appt.duration}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-4 px-3 pb-3">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#60a5fa' }} />
+                    <span className="text-[9px] text-gray-500">Dra. Martínez</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#a78bfa' }} />
+                    <span className="text-[9px] text-gray-500">Lic. Gómez</span>
+                  </div>
+                </div>
+              </div>
+            </ScrollReveal>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Gestión de Pagos ── */}
+      <section className="relative px-4 sm:px-6 py-14 sm:py-24 z-10 bg-black">
+        <div className="max-w-5xl mx-auto">
+          <div className="grid md:grid-cols-2 gap-8 md:gap-14 items-center">
+            <ScrollReveal direction="left">
+              <div 
+                className="rounded-xl sm:rounded-2xl border border-white/10 overflow-hidden"
+                style={{ backgroundColor: '#111111' }}
+              >
+                <div className="p-4 sm:p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <p className="text-xs font-medium text-white">Pagos — Abril 2025</p>
+                    <span className="text-[9px] px-2 py-1 rounded-md" style={{ backgroundColor: GREEN_BG, color: GREEN }}>
+                      Exportar CSV
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 mb-4">
+                    {[
+                      { label: "Cobrado", value: "$48.500", color: GREEN },
+                      { label: "Pendiente", value: "$12.800", color: "#f59e0b" },
+                      { label: "Vencido", value: "$3.200", color: "#ef4444" },
+                    ].map((s) => (
+                      <div key={s.label} className="rounded-lg p-2 text-center" style={{ backgroundColor: '#1a1a1a' }}>
+                        <p className="text-[8px] text-gray-500">{s.label}</p>
+                        <p className="text-xs font-bold" style={{ color: s.color }}>{s.value}</p>
+                      </div>
+                    ))}
+                  </div>
+                  {[
+                    { name: "María L.", amount: "$2.500", status: "Pagado", statusColor: GREEN },
+                    { name: "Juan P.", amount: "$2.500", status: "Pendiente", statusColor: "#f59e0b" },
+                    { name: "Ana R.", amount: "$2.500", status: "Vencido", statusColor: "#ef4444" },
+                  ].map((p, i) => (
+                    <div key={i} className="flex items-center justify-between py-2.5 border-t border-white/5">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full flex items-center justify-center text-[8px] font-bold" style={{ backgroundColor: GREEN_BG, color: GREEN }}>
+                          {p.name[0]}
+                        </div>
+                        <span className="text-xs text-white">{p.name}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-gray-400">{p.amount}</span>
+                        <span className="text-[9px] px-2 py-0.5 rounded-full font-medium" style={{ color: p.statusColor, backgroundColor: `${p.statusColor}15` }}>
+                          {p.status}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </ScrollReveal>
+
+            <ScrollReveal direction="right" delay={200}>
+              <div>
+                <div 
+                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium mb-6"
+                  style={{ backgroundColor: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b' }}
+                >
+                  <CreditCard className="w-3.5 h-3.5" />
+                  Flujo de caja
+                </div>
+                <h2 className="text-xl sm:text-3xl md:text-4xl font-bold mb-4 tracking-tight">
+                  Control total de tus cobros
+                </h2>
+                <p className="text-gray-400 text-sm sm:text-base leading-relaxed font-light mb-6">
+                  Registrá pagos por cita o mensuales, controlá deudas pendientes y 
+                  <strong className="text-white"> enviá recordatorios de cobro por WhatsApp</strong> con un clic.
+                </p>
+                <ul className="space-y-3">
+                  {[
+                    "Pagos por cita o suscripción mensual",
+                    "Alertas de vencidos y por vencer",
+                    "Recordatorios de cobro por WhatsApp",
+                    "Exportación a CSV para tu contador",
+                    "Historial completo por paciente",
+                  ].map((text, i) => (
+                    <li key={i} className="flex items-center gap-3 text-gray-300 text-sm">
+                      <Check className="w-4 h-4 flex-shrink-0" style={{ color: '#f59e0b' }} />
+                      {text}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </ScrollReveal>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Invitaciones — Pacientes y Profesionales ── */}
+      <section className="relative px-4 sm:px-6 py-14 sm:py-24 z-10" style={{ backgroundColor: '#080808' }}>
+        <div className="max-w-5xl mx-auto">
+          <ScrollReveal>
+            <div className="text-center mb-10 sm:mb-14">
+              <h2 className="text-xl sm:text-3xl md:text-4xl font-bold mb-4 tracking-tight">
+                Sumá pacientes y colegas en segundos
+              </h2>
+              <p className="text-gray-400 text-sm sm:text-base font-light max-w-2xl mx-auto">
+                Generás un link, lo mandás por WhatsApp y listo. Sin formularios complicados.
+              </p>
+            </div>
+          </ScrollReveal>
+
+          <div className="grid md:grid-cols-2 gap-6">
+            <ScrollReveal delay={100}>
+              <div
+                className="p-6 sm:p-8 rounded-xl sm:rounded-2xl border border-white/5 transition-all duration-500 hover:border-white/15"
+                style={{ backgroundColor: '#111111' }}
+              >
+                <div 
+                  className="w-12 h-12 rounded-xl flex items-center justify-center mb-5"
+                  style={{ backgroundColor: GREEN_BG }}
+                >
+                  <Send className="w-6 h-6" style={{ color: GREEN }} />
+                </div>
+                <h3 className="text-lg font-bold text-white mb-2">Invitar pacientes</h3>
+                <p className="text-gray-500 text-sm leading-relaxed font-light mb-4">
+                  Generá un link de invitación único para cada paciente. Lo mandás por WhatsApp y el paciente se activa solo en tu portal.
+                </p>
+                <div className="flex items-center gap-2 text-[10px]">
+                  <span className="px-2 py-1 rounded-md text-gray-400" style={{ backgroundColor: '#1a1a1a' }}>Generar link</span>
+                  <ArrowRight className="w-3 h-3 text-gray-600" />
+                  <span className="px-2 py-1 rounded-md text-gray-400" style={{ backgroundColor: '#1a1a1a' }}>
+                    <MessageCircle className="w-3 h-3 inline mr-1" style={{ color: '#25d366' }} />
+                    WhatsApp
+                  </span>
+                  <ArrowRight className="w-3 h-3 text-gray-600" />
+                  <span className="px-2 py-1 rounded-md font-medium" style={{ backgroundColor: GREEN_BG, color: GREEN }}>✓ Activo</span>
+                </div>
+              </div>
+            </ScrollReveal>
+
+            <ScrollReveal delay={250}>
+              <div
+                className="p-6 sm:p-8 rounded-xl sm:rounded-2xl border border-white/5 transition-all duration-500 hover:border-white/15"
+                style={{ backgroundColor: '#111111' }}
+              >
+                <div 
+                  className="w-12 h-12 rounded-xl flex items-center justify-center mb-5"
+                  style={{ backgroundColor: 'rgba(147, 51, 234, 0.1)' }}
+                >
+                  <UserPlus className="w-6 h-6" style={{ color: '#a78bfa' }} />
+                </div>
+                <h3 className="text-lg font-bold text-white mb-2">Sumar profesionales</h3>
+                <p className="text-gray-500 text-sm leading-relaxed font-light mb-4">
+                  Invitá colegas por email. Se registran solos, quedan vinculados a tu consultorio y aparecen en la agenda compartida.
+                </p>
+                <div className="flex items-center gap-2 text-[10px]">
+                  <span className="px-2 py-1 rounded-md text-gray-400" style={{ backgroundColor: '#1a1a1a' }}>Invitar por email</span>
+                  <ArrowRight className="w-3 h-3 text-gray-600" />
+                  <span className="px-2 py-1 rounded-md text-gray-400" style={{ backgroundColor: '#1a1a1a' }}>Se registra</span>
+                  <ArrowRight className="w-3 h-3 text-gray-600" />
+                  <span className="px-2 py-1 rounded-md font-medium" style={{ backgroundColor: 'rgba(147, 51, 234, 0.1)', color: '#a78bfa' }}>✓ En tu equipo</span>
+                </div>
+              </div>
+            </ScrollReveal>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Estadísticas y Centro de Control ── */}
+      <section className="relative px-4 sm:px-6 py-14 sm:py-24 z-10 bg-black">
+        <div className="max-w-5xl mx-auto">
+          <div className="grid md:grid-cols-2 gap-8 md:gap-14 items-center">
+            <ScrollReveal direction="left">
+              <div>
+                <div 
+                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium mb-6"
+                  style={{ backgroundColor: 'rgba(59, 130, 246, 0.15)', color: '#60a5fa' }}
+                >
+                  <BarChart3 className="w-3.5 h-3.5" />
+                  Visibilidad
+                </div>
+                <h2 className="text-xl sm:text-3xl md:text-4xl font-bold mb-4 tracking-tight">
+                  Entendé tu consultorio con datos
+                </h2>
+                <p className="text-gray-400 text-sm sm:text-base leading-relaxed font-light mb-6">
+                  Dashboard con métricas en tiempo real. <strong className="text-white">Centro de control</strong> con el resumen del día y acciones rápidas.
+                </p>
+                <ul className="space-y-3">
+                  {[
+                    "Pacientes activos y tendencias",
+                    "Citas por período y por profesional",
+                    "Ingresos y cobros pendientes",
+                    "Resumen diario con acciones rápidas",
+                  ].map((text, i) => (
+                    <li key={i} className="flex items-center gap-3 text-gray-300 text-sm">
+                      <Check className="w-4 h-4 flex-shrink-0" style={{ color: '#60a5fa' }} />
+                      {text}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </ScrollReveal>
+
+            <ScrollReveal direction="right" delay={200}>
+              <div 
+                className="rounded-xl sm:rounded-2xl border border-white/10 overflow-hidden p-4 sm:p-6"
+                style={{ backgroundColor: '#111111' }}
+              >
+                <p className="text-xs font-medium text-white mb-4">Centro de Control</p>
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  {[
+                    { label: "Citas hoy", value: "5", icon: "📅" },
+                    { label: "Pacientes activos", value: "24", icon: "👥" },
+                    { label: "Cobros pendientes", value: "3", icon: "💰" },
+                    { label: "Recordatorios", value: "2", icon: "🔔" },
+                  ].map((s) => (
+                    <div key={s.label} className="rounded-lg p-3 flex items-center gap-3" style={{ backgroundColor: '#1a1a1a' }}>
+                      <span className="text-lg">{s.icon}</span>
+                      <div>
+                        <p className="text-[9px] text-gray-500">{s.label}</p>
+                        <p className="text-sm font-bold text-white">{s.value}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-[10px] text-gray-500 mb-2">Citas por semana</p>
+                <div className="flex items-end gap-1.5 h-16">
+                  {[40, 65, 50, 80, 60, 90, 75].map((h, i) => (
+                    <div 
+                      key={i}
+                      className="flex-1 rounded-t-sm transition-all"
+                      style={{ 
+                        height: `${h}%`, 
+                        backgroundColor: i === 5 ? GREEN : 'rgba(0,199,138,0.2)',
+                      }}
+                    />
+                  ))}
+                </div>
+                <div className="flex justify-between mt-1">
+                  {["L","M","M","J","V","S","D"].map(d => (
+                    <span key={d} className="text-[8px] text-gray-600 flex-1 text-center">{d}</span>
+                  ))}
+                </div>
+              </div>
+            </ScrollReveal>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Sitio Web Público del Consultorio ── */}
+      <section className="relative px-4 sm:px-6 py-14 sm:py-24 z-10" style={{ backgroundColor: '#080808' }}>
+        <div className="max-w-5xl mx-auto">
+          <div className="grid md:grid-cols-2 gap-8 md:gap-14 items-center">
+            <ScrollReveal direction="left">
+              <div 
+                className="rounded-xl sm:rounded-2xl border border-white/10 overflow-hidden"
+                style={{ backgroundColor: '#0a0a0a' }}
+              >
+                <div className="flex items-center gap-2 px-3 py-2 border-b border-white/5" style={{ backgroundColor: '#0f0f0f' }}>
+                  <div className="flex gap-1">
+                    <div className="w-2 h-2 rounded-full bg-red-500/60" />
+                    <div className="w-2 h-2 rounded-full bg-yellow-500/60" />
+                    <div className="w-2 h-2 rounded-full bg-green-500/60" />
+                  </div>
+                  <div className="flex-1 mx-4">
+                    <div className="h-4 rounded bg-white/5 max-w-[200px] mx-auto flex items-center justify-center">
+                      <span className="text-[8px] text-gray-600">tuconsultorio.digital/consultorio/mi-clinica</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-4">
+                  <div className="text-center mb-3">
+                    <div className="w-12 h-12 rounded-full mx-auto mb-2 flex items-center justify-center text-xl" style={{ backgroundColor: GREEN_BG }}>
+                      🏥
+                    </div>
+                    <p className="text-sm font-bold text-white">Centro Bienestar</p>
+                    <p className="text-[9px] text-gray-500">Psicología clínica • Montevideo</p>
+                  </div>
+                  <div className="rounded-lg p-3 mb-2" style={{ backgroundColor: '#111' }}>
+                    <p className="text-[9px] text-gray-500 mb-1">Servicios disponibles</p>
+                    {["Consulta individual", "Terapia de pareja", "Orientación familiar"].map(s => (
+                      <div key={s} className="flex items-center gap-2 py-1">
+                        <Check className="w-2.5 h-2.5" style={{ color: GREEN }} />
+                        <span className="text-[10px] text-gray-300">{s}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div 
+                    className="rounded-lg p-2.5 text-center text-[10px] font-medium"
+                    style={{ backgroundColor: GREEN, color: 'white' }}
+                  >
+                    Reservar turno →
+                  </div>
+                </div>
+              </div>
+            </ScrollReveal>
+
+            <ScrollReveal direction="right" delay={200}>
+              <div>
+                <div 
+                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium mb-6"
+                  style={{ backgroundColor: GREEN_BG, color: GREEN }}
+                >
+                  <Globe className="w-3.5 h-3.5" />
+                  Presencia online
+                </div>
+                <h2 className="text-xl sm:text-3xl md:text-4xl font-bold mb-4 tracking-tight">
+                  Tu página web incluida
+                </h2>
+                <p className="text-gray-400 text-sm sm:text-base leading-relaxed font-light mb-6">
+                  Cada consultorio tiene una <strong className="text-white">página pública</strong> donde nuevos pacientes pueden conocerte, 
+                  ver tus servicios y <strong className="text-white">reservar un turno directamente</strong>. 
+                  Según tu plan podés <strong className="text-white">agregar páginas extras</strong> y armar un sitio web institucional completo.
+                </p>
+                <ul className="space-y-3">
+                  {[
+                    "Página pública con tu información",
+                    "Lista de servicios y especialidades",
+                    "Reserva de turnos para pacientes nuevos",
+                    "Páginas adicionales según tu plan",
+                    "Preparado para dominio personalizado",
+                  ].map((text, i) => (
+                    <li key={i} className="flex items-center gap-3 text-gray-300 text-sm">
+                      <Check className="w-4 h-4 flex-shrink-0" style={{ color: GREEN }} />
+                      {text}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </ScrollReveal>
+          </div>
+        </div>
+      </section>
+
+      {/* Social Proof Section */}
+      <section className="relative px-4 sm:px-6 py-14 sm:py-24 z-10 bg-black">
         <div className="max-w-4xl mx-auto">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
             {[
-              {
-                title: "7 días gratis",
-                subtitle: "Sin tarjeta de crédito requerida",
-                emoji: "🎁",
-              },
-              {
-                title: "100% privado",
-                subtitle: "Tus datos y los de tus pacientes, solo tuyos",
-                emoji: "🔒",
-              },
-              {
-                title: "Hecho en Uruguay",
-                subtitle: "Para el mercado local, en pesos uruguayos",
-                emoji: "🇺🇾",
-              },
+              { title: "7 días gratis", subtitle: "Sin tarjeta de crédito requerida", emoji: "🎁" },
+              { title: "100% privado", subtitle: "Tus datos y los de tus pacientes, solo tuyos", emoji: "🔒" },
+              { title: "Hecho en Uruguay", subtitle: "Para el mercado local, en pesos uruguayos", emoji: "🇺🇾" },
             ].map((stat, index) => (
               <ScrollReveal key={stat.title} delay={index * 120}>
                 <div
@@ -611,57 +1222,7 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* Private Clinic Premium Feature */}
-      <section className="relative px-4 sm:px-6 py-14 sm:py-24 z-10 bg-black">
-        <div className="max-w-4xl mx-auto">
-          <ScrollReveal direction="scale">
-            <div 
-              className="rounded-2xl sm:rounded-3xl p-8 sm:p-12 border relative overflow-hidden"
-              style={{ backgroundColor: '#111111', borderColor: 'rgba(255, 255, 255, 0.1)' }}
-            >
-              <div className="absolute top-4 right-4">
-                <span 
-                  className="px-3 py-1 rounded-full text-xs font-medium"
-                  style={{ backgroundColor: 'rgba(147, 51, 234, 0.2)', color: '#a78bfa' }}
-                >
-                  Opcional
-                </span>
-              </div>
-              <div className="flex items-center gap-4 mb-6">
-                <div 
-                  className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center"
-                  style={{ backgroundColor: 'rgba(147, 51, 234, 0.1)' }}
-                >
-                  <Globe className="w-6 h-6 sm:w-7 sm:h-7" style={{ color: '#a78bfa' }} />
-                </div>
-                <div>
-                  <h3 className="text-lg sm:text-xl font-bold text-white">Consultorio Privado</h3>
-                  <p className="text-gray-500 text-sm">Portal personalizado para tus pacientes</p>
-                </div>
-              </div>
-              <ul className="space-y-3 mb-6">
-                {[
-                  "Portal exclusivo para tus pacientes",
-                  "Acceso privado y seguro",
-                  "Preparado para dominio o subdominio propio",
-                  "Imagen profesional frente a tus pacientes",
-                ].map((text, i) => (
-                  <li key={i} className="flex items-center gap-3 text-gray-300 text-sm sm:text-base">
-                    <Check className="w-4 h-4 flex-shrink-0" style={{ color: '#a78bfa' }} />
-                    {text}
-                  </li>
-                ))}
-              </ul>
-              <p className="text-gray-500 text-xs sm:text-sm font-light">
-                Próximamente disponible como add-on para todos los planes.
-              </p>
-            </div>
-          </ScrollReveal>
-        </div>
-      </section>
-
       {/* Testimonial Section */}
-      {/* TODO: reemplazar con testimonio real */}
       <section className="relative px-4 sm:px-6 py-14 sm:py-24 z-10" style={{ backgroundColor: '#080808' }}>
         <div className="max-w-3xl mx-auto">
           <ScrollReveal>
@@ -683,7 +1244,6 @@ const Landing = () => {
                 "Antes manejaba todo por WhatsApp y una libreta. Ahora mis pacientes reservan solos y yo recibo el recordatorio automático. Me cambió la rutina."
               </p>
               <div className="flex items-center gap-4">
-                {/* Avatar placeholder */}
                 <div 
                   className="w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold"
                   style={{ backgroundColor: GREEN_BG, color: GREEN }}
