@@ -183,7 +183,7 @@ const Landing = () => {
         professionals: profText,
         patients: patText,
         price: `${formatPrice(price)}`,
-        priceNote: isAnnual ? "/ mes (pago anual)" : "/ mes",
+        priceNote: isAnnual ? "UYU / mes (pago anual)" : "UYU / mes",
         savingsNote: isAnnual ? "Menos de una consulta por mes" : "Menos de una consulta por mes",
         buttonText: "Empezar 7 días gratis",
         buttonLink: `/auth?plan=${planCode}&billing=${isAnnual ? 'annual' : 'monthly'}`,
@@ -1298,16 +1298,22 @@ const Landing = () => {
               </div>
               
               {isAnnual && (
-                <p 
-                  className="text-xs sm:text-sm font-medium px-4 py-1.5 rounded-full"
+                <div 
+                  className="flex items-center gap-2 text-xs sm:text-sm font-medium px-4 py-1.5 rounded-full"
                   style={{ 
                     backgroundColor: GREEN_BG,
                     color: GREEN,
                     animation: 'fadeSlideUp 0.4s ease-out both',
                   }}
                 >
-                  💳 Hasta 12 cuotas sin interés
-                </p>
+                  <img 
+                    src="https://www.mercadopago.com/org-img/MP3/home/logomp3.gif" 
+                    alt="Mercado Pago" 
+                    className="h-4 sm:h-5 w-auto"
+                    loading="lazy"
+                  />
+                  <span>Hasta 12 cuotas sin interés con Mercado Pago</span>
+                </div>
               )}
             </div>
           </ScrollReveal>
