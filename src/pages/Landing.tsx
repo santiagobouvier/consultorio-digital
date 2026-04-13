@@ -1481,6 +1481,15 @@ const Landing = () => {
               />
             </a>
           </div>
+          {/* Badges: Mercado Pago + Uruguay */}
+          <div className="flex items-center gap-4 mt-2 opacity-40">
+            <img 
+              src="https://imgmp.mlstatic.com/org-img/banners/uy/medios/120x240.jpg" 
+              alt="Mercado Pago - Medios de pago" 
+              className="h-8 sm:h-10 w-auto rounded"
+              loading="lazy"
+            />
+          </div>
         </div>
       </footer>
 
