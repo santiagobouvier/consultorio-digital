@@ -117,6 +117,7 @@ const planFeatures: Record<string, string[]> = {
     "Reserva online de turnos",
     "Estadísticas y métricas",
     "Marca blanca (logo y colores)",
+    "Dominio personalizado",
   ],
   profesional: [
     "Portal del paciente",
@@ -133,6 +134,7 @@ const planFeatures: Record<string, string[]> = {
     "Calendario multi-profesional",
     "Invitación de profesionales",
     "Marca blanca (logo y colores)",
+    "Dominio personalizado",
   ],
   consultorio: [
     "Portal del paciente",
