@@ -20,6 +20,7 @@ import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { calculatePaymentStatus, formatCurrency, getRecurrenceTypeLabel, PaymentStatus, RecurrenceType } from "@/lib/payments";
 import { PatientBookingModal } from "@/components/PatientBookingModal";
+import { NotificationActivationCard } from "@/components/NotificationActivationCard";
 
 interface PatientData {
   id: string;
