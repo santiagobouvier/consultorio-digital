@@ -85,11 +85,11 @@ const allFeatures = [
   "Exportación CSV",
   "Reserva online de turnos",
   "Estadísticas y métricas",
+  "Marca blanca (logo y colores)",
+  "Dominio personalizado",
   "Web pública del consultorio",
   "Calendario multi-profesional",
   "Invitación de profesionales",
-  "Marca blanca (logo y colores)",
-  "Dominio personalizado",
 ];
 
 const planFeatures: Record<string, string[]> = {
@@ -130,11 +130,11 @@ const planFeatures: Record<string, string[]> = {
     "Exportación CSV",
     "Reserva online de turnos",
     "Estadísticas y métricas",
+    "Marca blanca (logo y colores)",
+    "Dominio personalizado",
     "Web pública del consultorio",
     "Calendario multi-profesional",
     "Invitación de profesionales",
-    "Marca blanca (logo y colores)",
-    "Dominio personalizado",
   ],
   consultorio: [
     "Portal del paciente",
@@ -147,14 +147,13 @@ const planFeatures: Record<string, string[]> = {
     "Exportación CSV",
     "Reserva online de turnos",
     "Estadísticas y métricas",
+    "Marca blanca (logo y colores)",
+    "Dominio personalizado",
     "Web pública del consultorio",
     "Calendario multi-profesional",
     "Invitación de profesionales",
-    "Marca blanca (logo y colores)",
-    "Dominio personalizado",
   ],
 };
-
 const Landing = () => {
   const [isAnnual, setIsAnnual] = useState(true);
   const whatsappPersonalizado = "https://wa.me/59891093977?text=Hola,%20quiero%20un%20plan%20personalizado%20para%20mi%20consultorio.";

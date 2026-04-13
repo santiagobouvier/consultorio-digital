@@ -527,6 +527,12 @@ const Billing = () => {
                       <Check className="w-3.5 h-3.5 text-[#00c78a]" />
                       <span>Hasta {p.maxPatients ?? "∞"} pacientes</span>
                     </div>
+                    {p.hasPublicWeb && (
+                      <div className="flex items-center gap-2 text-white/60">
+                        <Check className="w-3.5 h-3.5 text-[#00c78a]" />
+                        <span>Web pública incluida</span>
+                      </div>
+                    )}
                   </div>
 
                   <Button
