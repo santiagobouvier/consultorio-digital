@@ -116,7 +116,6 @@ const planFeatures: Record<string, string[]> = {
     "Exportación CSV",
     "Reserva online de turnos",
     "Estadísticas y métricas",
-    "Web pública del consultorio",
     "Marca blanca (logo y colores)",
   ],
   profesional: [
