@@ -89,7 +89,7 @@ export function usePushNotifications() {
 
       const reg = await navigator.serviceWorker.ready;
       const sub = await reg.pushManager.subscribe({
-        userApplicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+        userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
       });
 
