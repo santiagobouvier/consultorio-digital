@@ -9,6 +9,7 @@ export interface PlanDefinition {
   maxPatients: number | null; // null = unlimited
   priceAnnual: number; // Monthly price when paying annually (UYU)
   priceMonthly: number; // Monthly price when paying monthly (UYU)
+  hasPublicWeb: boolean;
   isHighlighted?: boolean;
   highlightLabel?: string;
 }
@@ -17,40 +18,44 @@ export const PLAN_DEFINITIONS: Record<string, PlanDefinition> = {
   emprendedor: {
     code: "emprendedor",
     name: "Emprendedor",
-    description: "Para empezar con tu consultorio digital",
+    description: "Para empezar tu consultorio digital",
     maxProfessionals: 1,
     maxPatients: 15,
-    priceAnnual: 990,
-    priceMonthly: 1290,
+    priceAnnual: 1290,
+    priceMonthly: 1690,
+    hasPublicWeb: false,
   },
   esencial: {
     code: "esencial",
     name: "Esencial",
-    description: "Para profesionales independientes",
+    description: "Para el profesional independiente establecido",
     maxProfessionals: 1,
-    maxPatients: 30,
-    priceAnnual: 1990,
-    priceMonthly: 2490,
+    maxPatients: 40,
+    priceAnnual: 2790,
+    priceMonthly: 3490,
+    hasPublicWeb: false,
     isHighlighted: true,
     highlightLabel: "Más elegido",
   },
   profesional: {
     code: "profesional",
     name: "Profesional",
-    description: "Para consultorios en crecimiento",
-    maxProfessionals: 2,
-    maxPatients: 80,
-    priceAnnual: 3590,
-    priceMonthly: 4490,
+    description: "Para consultorios en crecimiento con equipo",
+    maxProfessionals: 3,
+    maxPatients: 120,
+    priceAnnual: 4790,
+    priceMonthly: 5990,
+    hasPublicWeb: true,
   },
   consultorio: {
     code: "consultorio",
     name: "Consultorio",
-    description: "Para consultorios y equipos grandes",
-    maxProfessionals: 5,
-    maxPatients: 250,
-    priceAnnual: 6390,
-    priceMonthly: 7990,
+    description: "Para clínicas y equipos grandes",
+    maxProfessionals: 8,
+    maxPatients: 300,
+    priceAnnual: 8790,
+    priceMonthly: 10990,
+    hasPublicWeb: true,
   },
   personalizado: {
     code: "personalizado",
@@ -60,6 +65,7 @@ export const PLAN_DEFINITIONS: Record<string, PlanDefinition> = {
     maxPatients: null,
     priceAnnual: 0,
     priceMonthly: 0,
+    hasPublicWeb: true,
   },
 };
 
