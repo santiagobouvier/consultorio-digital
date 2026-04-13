@@ -282,6 +282,11 @@ const PatientPortal = () => {
         {/* PWA Install Banner */}
         <PWAInstallBanner />
 
+        {/* Push Notification Activation */}
+        <div className="mb-4">
+          <NotificationActivationCard variant="full" />
+        </div>
+
         <Tabs defaultValue="resumen" className="w-full">
           <TabsList className="w-full grid grid-cols-5 mb-4">
             <TabsTrigger value="resumen" className="text-xs sm:text-sm">

@@ -403,6 +403,19 @@ const ClinicSettings = () => {
           </Card>
         )}
 
+        {/* Notificaciones Push */}
+        <Card className="mobile-card">
+          <CardHeader className="px-0 pt-0 pb-4 sm:px-6 sm:pt-6">
+            <CardTitle className="text-lg font-bold flex items-center gap-2">
+              <Bell className="h-5 w-5" />
+              Notificaciones
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-0 pb-0 sm:px-6 sm:pb-6">
+            <NotificationActivationCard variant="full" />
+          </CardContent>
+        </Card>
+
         {/* Domain Settings */}
         {isOwner && businessId && (
           <DomainSettingsCard businessId={businessId} isOwner={isOwner} />

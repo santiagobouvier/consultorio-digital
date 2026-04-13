@@ -603,6 +603,9 @@ const Dashboard = () => {
           </div>
         </div>
 
+        {/* Push Notification Activation */}
+        <NotificationActivationCard variant="full" />
+
         {/* Plan Usage Card */}
         <PlanUsageCard businessId={businessId} />
 
