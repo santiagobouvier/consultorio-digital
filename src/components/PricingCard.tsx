@@ -1,6 +1,11 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Check } from "lucide-react";
+import { Check, X } from "lucide-react";
+
+interface PricingFeature {
+  text: string;
+  included: boolean;
+}
 
 interface PricingCardProps {
   name: string;
@@ -15,15 +20,8 @@ interface PricingCardProps {
   isExternal?: boolean;
   isHighlighted?: boolean;
   highlightLabel?: string;
+  features?: PricingFeature[];
 }
-
-const features = [
-  "Portal del paciente",
-  "Agenda inteligente",
-  "Pagos + alertas de vencimiento",
-  "Dashboard financiero",
-  "Recordatorios semi-automáticos por WhatsApp",
-];
 
 const PricingCard = ({
   name,
@@ -38,10 +36,11 @@ const PricingCard = ({
   isExternal = false,
   isHighlighted = false,
   highlightLabel,
+  features = [],
 }: PricingCardProps) => {
   return (
     <div
-      className={`relative p-6 sm:p-7 md:p-8 rounded-xl sm:rounded-2xl border transition-all duration-300 ${
+      className={`relative p-6 sm:p-7 md:p-8 rounded-xl sm:rounded-2xl border transition-all duration-300 flex flex-col ${
         isHighlighted
           ? "border-[#00c78a]/50"
           : "border-white/5 hover:border-white/10"
@@ -147,11 +146,15 @@ const PricingCard = ({
       )}
 
       {/* Features List */}
-      <div className="mt-5 sm:mt-6 pt-5 sm:pt-6 border-t border-white/10 space-y-2.5 sm:space-y-3">
+      <div className="mt-5 sm:mt-6 pt-5 sm:pt-6 border-t border-white/10 space-y-2 sm:space-y-2.5 flex-1">
         {features.map((feature) => (
-          <div key={feature} className="flex items-center gap-2 text-sm text-gray-400">
-            <Check className="w-4 h-4 flex-shrink-0" style={{ color: "#00c78a" }} />
-            <span>{feature}</span>
+          <div key={feature.text} className={`flex items-center gap-2 text-xs sm:text-sm ${feature.included ? 'text-gray-400' : 'text-gray-600 line-through'}`}>
+            {feature.included ? (
+              <Check className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "#00c78a" }} />
+            ) : (
+              <X className="w-3.5 h-3.5 flex-shrink-0 text-gray-600" />
+            )}
+            <span>{feature.text}</span>
           </div>
         ))}
       </div>
