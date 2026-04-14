@@ -36,29 +36,34 @@ const Auth = () => {
   const planDef = selectedPlan ? getPlanDefinition(selectedPlan) : null;
   const planPrice = planDef ? (billingPeriod === "annual" ? planDef.priceAnnual : planDef.priceMonthly) : 0;
 
+  // Anti-loop guard — prevent multiple concurrent redirects
+  const [redirecting, setRedirecting] = useState(false);
+
   const redirectByRole = useCallback(async () => {
+    if (redirecting) return;
+    setRedirecting(true);
+
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) { setRedirecting(false); return; }
 
     const { data: superAdminRole } = await supabase
       .from("user_roles").select("role").eq("user_id", user.id).eq("role", "super_admin").maybeSingle();
-    if (superAdminRole) { navigate("/saas-admin"); return; }
+    if (superAdminRole) { navigate("/saas-admin", { replace: true }); return; }
 
     const { data: patientRole } = await supabase
       .from("user_roles").select("role").eq("user_id", user.id).eq("role", "patient").maybeSingle();
-    if (patientRole) { navigate("/portal-paciente"); return; }
+    if (patientRole) { navigate("/portal-paciente", { replace: true }); return; }
 
     const { data: professionalRole } = await supabase
       .from("user_roles").select("role, business_id").eq("user_id", user.id).eq("role", "professional").maybeSingle();
-    if (professionalRole) { navigate("/dashboard"); return; }
+    if (professionalRole) { navigate("/dashboard", { replace: true }); return; }
 
     const { data: business } = await supabase
       .from("businesses").select("id, onboarding_completed").eq("owner_user_id", user.id).maybeSingle();
     if (business) {
       if (!business.onboarding_completed) {
-        navigate("/onboarding-consultorio");
+        navigate("/onboarding-consultorio", { replace: true });
       } else {
-        // Check if has MP subscription already
         const { data: sub } = await supabase
           .from("subscriptions")
           .select("mercadopago_preapproval_id")
@@ -67,15 +72,15 @@ const Auth = () => {
           .limit(1)
           .maybeSingle();
         if (sub?.mercadopago_preapproval_id) {
-          navigate("/dashboard");
+          navigate("/dashboard", { replace: true });
         } else {
-          navigate("/activar-prueba");
+          navigate("/activar-prueba", { replace: true });
         }
       }
     } else {
-      navigate("/configurar-negocio");
+      navigate("/configurar-negocio", { replace: true });
     }
-  }, [navigate]);
+  }, [navigate, redirecting]);
 
   // Poll for email verification when awaiting
   useEffect(() => {
@@ -105,26 +110,18 @@ const Auth = () => {
     };
   }, [awaitingVerification, redirectByRole]);
 
-  // Handle post-verification redirect (user clicks email link)
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event) => {
-      if (event === "SIGNED_IN" && !awaitingVerification) {
-        // Could be post-verification or OAuth callback
-        await redirectByRole();
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [awaitingVerification, redirectByRole]);
-
   // If user already has a session, redirect immediately (don't show the form)
+  // Single listener — no duplicate onAuthStateChange
   useEffect(() => {
+    let cancelled = false;
     const checkExistingSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        await redirectByRole();
+      if (session?.user && !cancelled) {
+        redirectByRole();
       }
     };
     checkExistingSession();
+    return () => { cancelled = true; };
   }, [redirectByRole]);
 
   const handleSubmit = async (e: React.FormEvent) => {

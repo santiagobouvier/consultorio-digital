@@ -22,8 +22,7 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
     const getBusinessId = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        navigate("/auth");
-        return;
+        navigate("/auth", { replace: true });
       }
 
       // Get business via RPC
@@ -83,7 +82,7 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
 
       if (!sub?.mercadopago_preapproval_id) {
         // No MP activation — redirect to activate trial
-        navigate("/activar-prueba");
+        navigate("/activar-prueba", { replace: true });
         return;
       }
 
