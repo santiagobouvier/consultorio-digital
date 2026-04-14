@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, lazy, Suspense } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -38,6 +38,7 @@ interface Business {
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const isMobile = useIsMobile();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [userName, setUserName] = useState("");
@@ -78,10 +79,20 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
+    // Show success toast if coming from MP payment
+    if (searchParams.get("subscription") === "success") {
+      toast({
+        title: "¡Bienvenido!",
+        description: "Tu prueba gratuita de 7 días está activa.",
+      });
+      // Clean up the URL
+      searchParams.delete("subscription");
+      setSearchParams(searchParams, { replace: true });
+    }
+
     // Check if coming from SaaS admin with selected business
     const saasSelectedBusiness = sessionStorage.getItem("saas_selected_business");
     if (saasSelectedBusiness) {
-      // Keep the business ID in session for other pages to use
       fetchDashboardData(saasSelectedBusiness);
     } else {
       fetchDashboardData();

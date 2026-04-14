@@ -137,7 +137,7 @@ serve(async (req) => {
         },
       },
       payer_email: user.email,
-      back_url: `${req.headers.get("origin") || "https://agenda-psicologia.lovable.app"}/billing?subscription=success`,
+      back_url: `${req.headers.get("origin") || "https://consultoriodigital.app"}/activating?subscription=success`,
       status: "pending",
     };
 
