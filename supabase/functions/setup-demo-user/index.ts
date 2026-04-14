@@ -23,8 +23,15 @@ serve(async (req) => {
     });
 
     const demoEmail = 'demo@consultorio.app';
-    const demoPassword = '12345678';
+    const demoPassword = Deno.env.get('DEMO_USER_PASSWORD');
     const demoName = 'Usuario Demo';
+
+    if (!demoPassword) {
+      return new Response(
+        JSON.stringify({ error: 'DEMO_USER_PASSWORD secret not configured' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Check if demo business exists
     const { data: demoBusiness, error: bizError } = await supabaseAdmin
