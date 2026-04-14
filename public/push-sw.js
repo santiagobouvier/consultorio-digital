@@ -1,6 +1,17 @@
 // Custom service worker for push notification handling
 // This file is loaded alongside the workbox-generated SW
 
+self.addEventListener("message", (event) => {
+  if (event.data?.type !== "CLEAR_APP_CACHES") return;
+
+  event.waitUntil(
+    caches.keys().then(async (cacheNames) => {
+      await Promise.all(cacheNames.map((cacheName) => caches.delete(cacheName)));
+      event.ports?.[0]?.postMessage({ ok: true });
+    })
+  );
+});
+
 self.addEventListener("push", (event) => {
   if (!event.data) return;
 

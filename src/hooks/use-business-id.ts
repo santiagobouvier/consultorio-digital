@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { hardResetBrowserSession } from "@/lib/session-recovery";
 
 const SAAS_SELECTED_BUSINESS_KEY = "saas_selected_business";
 
@@ -31,9 +32,25 @@ export const useBusinessId = (redirectIfNoBusiness = true): UseBusinessIdResult 
     try {
       setLoading(true);
 
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError) {
+        await hardResetBrowserSession({ redirectTo: "/auth?session=expired" });
+        return;
+      }
+
       if (!user) {
         navigate("/auth");
+        return;
+      }
+
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (!profile || profileError) {
+        await hardResetBrowserSession({ redirectTo: "/auth?session=expired" });
         return;
       }
 

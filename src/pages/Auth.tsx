@@ -15,6 +15,7 @@ const Auth = () => {
   const [searchParams] = useSearchParams();
   const selectedPlan = searchParams.get("plan");
   const billingPeriod = searchParams.get("billing") || "annual";
+  const sessionStatus = searchParams.get("session");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -35,6 +36,12 @@ const Auth = () => {
 
   const planDef = selectedPlan ? getPlanDefinition(selectedPlan) : null;
   const planPrice = planDef ? (billingPeriod === "annual" ? planDef.priceAnnual : planDef.priceMonthly) : 0;
+
+  useEffect(() => {
+    if (sessionStatus === "expired") {
+      toast.error("Tu sesión expiró, por favor ingresá de nuevo");
+    }
+  }, [sessionStatus]);
 
   // Anti-loop guard — prevent multiple concurrent redirects
   const [redirecting, setRedirecting] = useState(false);

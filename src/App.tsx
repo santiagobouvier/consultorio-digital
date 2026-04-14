@@ -3,8 +3,10 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { supabase } from "@/integrations/supabase/client";
+import { clearServiceWorkerCaches } from "@/lib/session-recovery";
 
 // Lazy load all pages for optimal performance
 const Landing = lazy(() => import("./pages/Landing"));
@@ -51,57 +53,71 @@ const Protected = ({ children }: { children: React.ReactNode }) => (
   </SubscriptionGuard>
 );
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Suspense fallback={null}>
-          <Routes>
-            {/* Public routes */}
-            <Route path="/" element={<Landing />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/auth/callback" element={<AuthCallback />} />
-            <Route path="/configurar-negocio" element={<BusinessSetup />} />
-            <Route path="/consultorio/:slug" element={<PublicClinic />} />
-            <Route path="/consultorio/:slug/reservar" element={<PublicBooking />} />
-            <Route path="/pago-plan/:planId" element={<PlanPayment />} />
-            <Route path="/portal-paciente" element={<PatientPortal />} />
-            <Route path="/portal-paciente/invitacion" element={<PatientInvitation />} />
-            <Route path="/invitar-profesional" element={<ProfessionalInvitation />} />
-            <Route path="/registrarse-profesional" element={<ProfessionalRegister />} />
-            <Route path="/onboarding-consultorio" element={<ConsultorioOnboarding />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/activar-prueba" element={<ActivateTrial />} />
-            <Route path="/activating" element={<Activating />} />
-            <Route path="/portal-paciente/demo" element={<PatientPortalDemo />} />
-            <Route path="/portal/:slug" element={<ClinicPortal />} />
-            
-            {/* Protected routes - require active subscription + sidebar */}
-            <Route path="/dashboard" element={<Protected><Dashboard /></Protected>} />
-            <Route path="/patients" element={<Protected><Patients /></Protected>} />
-            <Route path="/patients/:id" element={<Protected><PatientDetail /></Protected>} />
-            <Route path="/appointments" element={<Protected><Appointments /></Protected>} />
-            <Route path="/agenda" element={<Protected><Agenda /></Protected>} />
-            <Route path="/centro-control" element={<Protected><CommandCenter /></Protected>} />
-            <Route path="/recordatorios-pendientes" element={<Protected><PendingReminders /></Protected>} />
-            <Route path="/mi-consultorio" element={<Protected><ClinicSettings /></Protected>} />
-            <Route path="/horarios-disponibles" element={<Protected><AvailableSlots /></Protected>} />
-            <Route path="/solicitudes" element={<Protected><AppointmentRequests /></Protected>} />
-            <Route path="/pagos" element={<Protected><Payments /></Protected>} />
-            <Route path="/personalizar-portal" element={<Protected><PortalCustomization /></Protected>} />
-            <Route path="/billing" element={<Protected><Billing /></Protected>} />
-            <Route path="/estadisticas" element={<Protected><Statistics /></Protected>} />
-            <Route path="/saas-admin" element={<Protected><SaasAdmin /></Protected>} />
-            
-            {/* Catch-all */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </Suspense>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+const App = () => {
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_OUT") {
+        void clearServiceWorkerCaches();
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Suspense fallback={null}>
+            <Routes>
+              {/* Public routes */}
+              <Route path="/" element={<Landing />} />
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/auth/callback" element={<AuthCallback />} />
+              <Route path="/configurar-negocio" element={<BusinessSetup />} />
+              <Route path="/consultorio/:slug" element={<PublicClinic />} />
+              <Route path="/consultorio/:slug/reservar" element={<PublicBooking />} />
+              <Route path="/pago-plan/:planId" element={<PlanPayment />} />
+              <Route path="/portal-paciente" element={<PatientPortal />} />
+              <Route path="/portal-paciente/invitacion" element={<PatientInvitation />} />
+              <Route path="/invitar-profesional" element={<ProfessionalInvitation />} />
+              <Route path="/registrarse-profesional" element={<ProfessionalRegister />} />
+              <Route path="/onboarding-consultorio" element={<ConsultorioOnboarding />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/activar-prueba" element={<ActivateTrial />} />
+              <Route path="/activating" element={<Activating />} />
+              <Route path="/portal-paciente/demo" element={<PatientPortalDemo />} />
+              <Route path="/portal/:slug" element={<ClinicPortal />} />
+
+              {/* Protected routes - require active subscription + sidebar */}
+              <Route path="/dashboard" element={<Protected><Dashboard /></Protected>} />
+              <Route path="/patients" element={<Protected><Patients /></Protected>} />
+              <Route path="/patients/:id" element={<Protected><PatientDetail /></Protected>} />
+              <Route path="/appointments" element={<Protected><Appointments /></Protected>} />
+              <Route path="/agenda" element={<Protected><Agenda /></Protected>} />
+              <Route path="/centro-control" element={<Protected><CommandCenter /></Protected>} />
+              <Route path="/recordatorios-pendientes" element={<Protected><PendingReminders /></Protected>} />
+              <Route path="/mi-consultorio" element={<Protected><ClinicSettings /></Protected>} />
+              <Route path="/horarios-disponibles" element={<Protected><AvailableSlots /></Protected>} />
+              <Route path="/solicitudes" element={<Protected><AppointmentRequests /></Protected>} />
+              <Route path="/pagos" element={<Protected><Payments /></Protected>} />
+              <Route path="/personalizar-portal" element={<Protected><PortalCustomization /></Protected>} />
+              <Route path="/billing" element={<Protected><Billing /></Protected>} />
+              <Route path="/estadisticas" element={<Protected><Statistics /></Protected>} />
+              <Route path="/saas-admin" element={<Protected><SaasAdmin /></Protected>} />
+
+              {/* Catch-all */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;
