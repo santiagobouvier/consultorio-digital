@@ -132,7 +132,32 @@ const Billing = () => {
     }
   };
 
-  const handleSelectPlan = async (planCode: string) => {
+  const handleCancelSubscription = async () => {
+    const confirmed = window.confirm(
+      subscription?.status === "trial"
+        ? "¿Seguro que querés cancelar tu prueba gratuita? No se realizó ningún cobro."
+        : "¿Seguro que querés cancelar tu suscripción?"
+    );
+    if (!confirmed) return;
+
+    try {
+      const { data, error } = await supabase.functions.invoke("cancel-subscription");
+      if (error) throw error;
+
+      if (subscription?.status === "trial") {
+        toast.success("Tu prueba fue cancelada. No se realizó ningún cobro.");
+        navigate("/");
+      } else {
+        toast.success("Suscripción cancelada correctamente.");
+        fetchBillingData();
+      }
+    } catch (err: any) {
+      console.error("Cancel error:", err);
+      toast.error("Error al cancelar. Intentá de nuevo.");
+    }
+  };
+
+
     if (!businessId) return;
     setCheckoutLoading(planCode);
 
