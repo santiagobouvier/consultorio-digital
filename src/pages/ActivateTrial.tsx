@@ -18,42 +18,68 @@ const ActivateTrial = () => {
   const [billingPeriod, setBillingPeriod] = useState<"monthly" | "annual">("annual");
 
   useEffect(() => {
+    let cancelled = false;
+
+    const checkState = async () => {
+      // Wait for session to be ready (avoid race with token exchange)
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session?.user) {
+        // Don't redirect immediately — wait for auth to settle
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
+          if (event === "SIGNED_IN" && newSession?.user && !cancelled) {
+            subscription.unsubscribe();
+            runCheck(newSession.user.id);
+          }
+        });
+        // Timeout: if no session after 8s, redirect to auth
+        setTimeout(() => {
+          subscription.unsubscribe();
+          if (!cancelled) navigate("/auth", { replace: true });
+        }, 8000);
+        return;
+      }
+
+      await runCheck(session.user.id);
+    };
+
+    const runCheck = async (userId: string) => {
+      if (cancelled) return;
+
+      const { data: business } = await supabase
+        .from("businesses")
+        .select("id, plan_code, billing_period, onboarding_completed")
+        .eq("owner_user_id", userId)
+        .maybeSingle();
+
+      if (cancelled) return;
+      if (!business) { navigate("/configurar-negocio", { replace: true }); return; }
+      if (!business.onboarding_completed) { navigate("/onboarding-consultorio", { replace: true }); return; }
+
+      // Check if already has an active/trial subscription with MP
+      const { data: sub } = await supabase
+        .from("subscriptions")
+        .select("status, mercadopago_preapproval_id")
+        .eq("business_id", business.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (cancelled) return;
+      if (sub?.mercadopago_preapproval_id) {
+        navigate("/dashboard", { replace: true });
+        return;
+      }
+
+      setBusinessId(business.id);
+      setPlanCode(business.plan_code || "emprendedor");
+      setBillingPeriod((business.billing_period as "monthly" | "annual") || "annual");
+      setLoading(false);
+    };
+
     checkState();
-  }, []);
-
-  const checkState = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { navigate("/auth"); return; }
-
-    const { data: business } = await supabase
-      .from("businesses")
-      .select("id, plan_code, billing_period, onboarding_completed")
-      .eq("owner_user_id", user.id)
-      .maybeSingle();
-
-    if (!business) { navigate("/configurar-negocio"); return; }
-    if (!business.onboarding_completed) { navigate("/onboarding-consultorio"); return; }
-
-    // Check if already has an active/trial subscription with MP
-    const { data: sub } = await supabase
-      .from("subscriptions")
-      .select("status, mercadopago_preapproval_id")
-      .eq("business_id", business.id)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (sub?.mercadopago_preapproval_id) {
-      // Already activated with MP - go to dashboard
-      navigate("/dashboard");
-      return;
-    }
-
-    setBusinessId(business.id);
-    setPlanCode(business.plan_code || "emprendedor");
-    setBillingPeriod((business.billing_period as "monthly" | "annual") || "annual");
-    setLoading(false);
-  };
+    return () => { cancelled = true; };
+  }, [navigate]);
 
   const handleActivate = async () => {
     setActivating(true);
