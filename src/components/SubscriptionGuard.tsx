@@ -138,6 +138,7 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
     checkActivation();
   }, [businessId, status, loading, authLoading, isSuperAdmin, navigate]);
 
+  if (sessionInvalid) return <LoadingPage />;
   if (authLoading || loading || checkingActivation || !activationChecked) return <LoadingPage />;
 
   // No business yet — let them through to setup
