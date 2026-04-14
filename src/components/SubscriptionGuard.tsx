@@ -6,22 +6,11 @@ import LoadingPage from "@/components/LoadingPage";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertTriangle, CreditCard } from "lucide-react";
-import { toast } from "sonner";
+import { hardResetBrowserSession } from "@/lib/session-recovery";
 
 interface SubscriptionGuardProps {
   children: ReactNode;
 }
-
-const clearSessionAndRedirect = async (navigate: ReturnType<typeof useNavigate>) => {
-  try {
-    await supabase.auth.signOut();
-  } catch (_) {}
-  // Clear all local/session storage to prevent stale state
-  localStorage.clear();
-  sessionStorage.clear();
-  toast.error("Tu sesión expiró, por favor ingresá de nuevo");
-  navigate("/auth", { replace: true });
-};
 
 const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
   const navigate = useNavigate();
@@ -31,13 +20,20 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
   const [checkingActivation, setCheckingActivation] = useState(true);
   const [activationChecked, setActivationChecked] = useState(false);
   const [sessionInvalid, setSessionInvalid] = useState(false);
+  const hasSuccessfulSubscriptionRedirect = searchParams.get("subscription") === "success";
 
   useEffect(() => {
     const getBusinessId = async () => {
       try {
         const { data: { user }, error: userError } = await supabase.auth.getUser();
-        
-        if (!user || userError) {
+
+        if (userError) {
+          setSessionInvalid(true);
+          await hardResetBrowserSession({ redirectTo: "/auth?session=expired" });
+          return;
+        }
+
+        if (!user) {
           // No session — just redirect to auth, no need to clear
           navigate("/auth", { replace: true });
           return;
@@ -54,7 +50,7 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
           // Session exists but user not found in DB — inconsistent state
           console.warn("SubscriptionGuard: session exists but profile not found in DB, clearing session");
           setSessionInvalid(true);
-          await clearSessionAndRedirect(navigate);
+          await hardResetBrowserSession({ redirectTo: "/auth?session=expired" });
           return;
         }
 
@@ -65,7 +61,7 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
       } catch (err) {
         console.error("SubscriptionGuard: unexpected error", err);
         setSessionInvalid(true);
-        await clearSessionAndRedirect(navigate);
+        await hardResetBrowserSession({ redirectTo: "/auth?session=expired" });
       }
     };
     getBusinessId();
@@ -96,7 +92,7 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
     }
 
     // If user just came from MP payment, don't block — let them through
-    if (searchParams.get("subscription") === "success") {
+    if (hasSuccessfulSubscriptionRedirect) {
       setCheckingActivation(false);
       setActivationChecked(true);
       return;
@@ -136,7 +132,7 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
     };
 
     checkActivation();
-  }, [businessId, status, loading, authLoading, isSuperAdmin, navigate]);
+  }, [businessId, status, loading, authLoading, isSuperAdmin, navigate, hasSuccessfulSubscriptionRedirect]);
 
   if (sessionInvalid) return <LoadingPage />;
   if (authLoading || loading || checkingActivation || !activationChecked) return <LoadingPage />;

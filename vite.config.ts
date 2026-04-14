@@ -18,11 +18,6 @@ export default defineConfig(({ mode }) => ({
       devOptions: {
         enabled: false,
       },
-      includeAssets: [
-        "favicon.png",
-        "app-icon-512.png",
-        "assets/logo-footer.png",
-      ],
       manifest: {
         id: "/",
         scope: "/",
