@@ -14,7 +14,7 @@ const getServiceWorkerRegistrations = async (): Promise<ServiceWorkerRegistratio
   }
 
   try {
-    return await navigator.serviceWorker.getRegistrations();
+    return Array.from(await navigator.serviceWorker.getRegistrations());
   } catch (error) {
     console.warn("No pudimos leer los service workers registrados", error);
     return [];
