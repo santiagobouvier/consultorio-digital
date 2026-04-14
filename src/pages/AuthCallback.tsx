@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/Logo";
@@ -6,34 +6,42 @@ import { CheckCircle2 } from "lucide-react";
 
 /**
  * Handles Supabase auth redirects (email verification, OAuth callbacks).
- * Establishes session from URL tokens, then redirects based on user state.
+ * Establishes session from URL tokens, then redirects ONCE based on user state.
  */
 const AuthCallback = () => {
   const navigate = useNavigate();
+  const hasRedirected = useRef(false);
 
   useEffect(() => {
+    // Guard: only run once
+    if (hasRedirected.current) return;
+
     const handleCallback = async () => {
-      // Supabase client auto-detects tokens in the URL hash and establishes session
-      // We just need to wait for the session to be available
       const { data: { session }, error } = await supabase.auth.getSession();
 
       if (error || !session?.user) {
-        // If no session yet, listen for auth state change (token exchange may be async)
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
-          if (event === "SIGNED_IN" && newSession?.user) {
+        // Token exchange may be async — listen for state change
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
+          if (event === "SIGNED_IN" && newSession?.user && !hasRedirected.current) {
+            hasRedirected.current = true;
             subscription.unsubscribe();
-            await redirectByState(newSession.user.id);
+            // Fire and forget — no await inside callback
+            redirectByState(newSession.user.id);
           }
         });
 
-        // Timeout fallback — if nothing happens in 10s, go to /auth
+        // Timeout fallback
         setTimeout(() => {
           subscription.unsubscribe();
-          navigate("/auth", { replace: true });
+          if (!hasRedirected.current) {
+            hasRedirected.current = true;
+            navigate("/auth", { replace: true });
+          }
         }, 10000);
         return;
       }
 
+      hasRedirected.current = true;
       await redirectByState(session.user.id);
     };
 
@@ -62,7 +70,6 @@ const AuthCallback = () => {
           navigate("/onboarding-consultorio", { replace: true });
           return;
         }
-        // Check subscription with MP
         const { data: sub } = await supabase
           .from("subscriptions")
           .select("mercadopago_preapproval_id")
