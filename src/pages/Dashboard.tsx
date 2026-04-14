@@ -67,6 +67,7 @@ const Dashboard = () => {
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [allBusinesses, setAllBusinesses] = useState<Business[]>([]);
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
+  const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null);
 
   const statusMap: Record<string, string> = {
     pending: "pendiente",
@@ -200,6 +201,18 @@ const Dashboard = () => {
       const { data: bizInfo } = await supabase
         .from("businesses").select("is_demo").eq("id", currentBusinessId).maybeSingle();
       setIsDemo(bizInfo?.is_demo || false);
+
+      // Check trial status for banner
+      const { data: subData } = await supabase
+        .from("subscriptions")
+        .select("status, trial_ends_at")
+        .eq("business_id", currentBusinessId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (subData?.status === "trial" && subData.trial_ends_at) {
+        setTrialEndsAt(subData.trial_ends_at);
+      }
 
       const { count: patientsCount } = await supabase
         .from("patients")
