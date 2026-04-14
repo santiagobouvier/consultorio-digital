@@ -9,6 +9,7 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 // Lazy load all pages for optimal performance
 const Landing = lazy(() => import("./pages/Landing"));
 const Auth = lazy(() => import("./pages/Auth"));
+const AuthCallback = lazy(() => import("./pages/AuthCallback"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const BusinessSetup = lazy(() => import("./pages/OnboardingWizard"));
 const Patients = lazy(() => import("./pages/Patients"));
@@ -60,6 +61,7 @@ const App = () => (
             {/* Public routes */}
             <Route path="/" element={<Landing />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/configurar-negocio" element={<BusinessSetup />} />
             <Route path="/consultorio/:slug" element={<PublicClinic />} />
             <Route path="/consultorio/:slug/reservar" element={<PublicBooking />} />
