@@ -174,13 +174,6 @@ const ActivateTrial = () => {
               <MessageCircle className="w-4 h-4" />
               ¿Tenés dudas? Contactanos por WhatsApp
             </a>
-
-            <button
-              onClick={() => navigate("/dashboard")}
-              className="w-full text-xs text-white/30 hover:text-white/50 transition-colors py-1"
-            >
-              Omitir por ahora (usar trial sin tarjeta)
-            </button>
           </div>
         </div>
       </div>
