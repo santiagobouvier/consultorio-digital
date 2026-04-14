@@ -6,10 +6,22 @@ import LoadingPage from "@/components/LoadingPage";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertTriangle, CreditCard } from "lucide-react";
+import { toast } from "sonner";
 
 interface SubscriptionGuardProps {
   children: ReactNode;
 }
+
+const clearSessionAndRedirect = async (navigate: ReturnType<typeof useNavigate>) => {
+  try {
+    await supabase.auth.signOut();
+  } catch (_) {}
+  // Clear all local/session storage to prevent stale state
+  localStorage.clear();
+  sessionStorage.clear();
+  toast.error("Tu sesión expiró, por favor ingresá de nuevo");
+  navigate("/auth", { replace: true });
+};
 
 const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
   const navigate = useNavigate();
@@ -18,18 +30,43 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
   const [authLoading, setAuthLoading] = useState(true);
   const [checkingActivation, setCheckingActivation] = useState(true);
   const [activationChecked, setActivationChecked] = useState(false);
+  const [sessionInvalid, setSessionInvalid] = useState(false);
 
   useEffect(() => {
     const getBusinessId = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        navigate("/auth", { replace: true });
-      }
+      try {
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        
+        if (!user || userError) {
+          // No session — just redirect to auth, no need to clear
+          navigate("/auth", { replace: true });
+          return;
+        }
 
-      // Get business via RPC
-      const { data } = await supabase.rpc("get_user_business_id", { _user_id: user.id });
-      setBusinessId(data || null);
-      setAuthLoading(false);
+        // Verify user exists in profiles (DB state matches session)
+        const { data: profile, error: profileError } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (!profile || profileError) {
+          // Session exists but user not found in DB — inconsistent state
+          console.warn("SubscriptionGuard: session exists but profile not found in DB, clearing session");
+          setSessionInvalid(true);
+          await clearSessionAndRedirect(navigate);
+          return;
+        }
+
+        // Get business via RPC
+        const { data } = await supabase.rpc("get_user_business_id", { _user_id: user.id });
+        setBusinessId(data || null);
+        setAuthLoading(false);
+      } catch (err) {
+        console.error("SubscriptionGuard: unexpected error", err);
+        setSessionInvalid(true);
+        await clearSessionAndRedirect(navigate);
+      }
     };
     getBusinessId();
   }, [navigate]);
@@ -101,6 +138,7 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
     checkActivation();
   }, [businessId, status, loading, authLoading, isSuperAdmin, navigate]);
 
+  if (sessionInvalid) return <LoadingPage />;
   if (authLoading || loading || checkingActivation || !activationChecked) return <LoadingPage />;
 
   // No business yet — let them through to setup
