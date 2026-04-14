@@ -132,6 +132,30 @@ const Billing = () => {
     }
   };
 
+  const handleCancelSubscription = async () => {
+    const confirmed = window.confirm(
+      subscription?.status === "trial"
+        ? "¿Seguro que querés cancelar tu prueba gratuita? No se realizó ningún cobro."
+        : "¿Seguro que querés cancelar tu suscripción?"
+    );
+    if (!confirmed) return;
+
+    try {
+      const { data, error } = await supabase.functions.invoke("cancel-subscription");
+      if (error) throw error;
+
+      if (subscription?.status === "trial") {
+        toast.success("Tu prueba fue cancelada. No se realizó ningún cobro.");
+        navigate("/");
+      } else {
+        toast.success("Suscripción cancelada correctamente.");
+        fetchBillingData();
+      }
+    } catch (err: any) {
+      console.error("Cancel error:", err);
+      toast.error("Error al cancelar. Intentá de nuevo.");
+    }
+  };
   const handleSelectPlan = async (planCode: string) => {
     if (!businessId) return;
     setCheckoutLoading(planCode);
@@ -431,9 +455,9 @@ const Billing = () => {
                     <Button
                       variant="outline"
                       className="flex-1 border-red-500/20 text-red-400 hover:bg-red-500/10"
-                      onClick={() => toast.info("La cancelación se implementará próximamente.")}
+                      onClick={handleCancelSubscription}
                     >
-                      Cancelar suscripción
+                      {subscription.status === "trial" ? "Cancelar prueba gratuita" : "Cancelar suscripción"}
                     </Button>
                   )}
                 </div>

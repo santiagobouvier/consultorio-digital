@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "@/hooks/use-toast";
-import { Users, CalendarPlus, CalendarDays, UserPlus, Bell, LogOut, Camera, CreditCard, AlertTriangle, Clock, Plus, EyeOff, Eye, Smartphone, Building2, ChevronDown, Shield, Settings, ArrowRight, Palette } from "lucide-react";
+import { Users, CalendarPlus, CalendarDays, UserPlus, Bell, LogOut, Camera, CreditCard, AlertTriangle, Clock, Plus, EyeOff, Eye, Smartphone, Building2, ChevronDown, Shield, Settings, ArrowRight, Palette, Sparkles } from "lucide-react";
 import { MonthlyHighlights } from "@/components/MonthlyHighlights";
 import LoadingPage from "@/components/LoadingPage";
 import { PlanUsageCard } from "@/components/PlanUsageCard";
@@ -67,6 +67,7 @@ const Dashboard = () => {
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [allBusinesses, setAllBusinesses] = useState<Business[]>([]);
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
+  const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null);
 
   const statusMap: Record<string, string> = {
     pending: "pendiente",
@@ -200,6 +201,18 @@ const Dashboard = () => {
       const { data: bizInfo } = await supabase
         .from("businesses").select("is_demo").eq("id", currentBusinessId).maybeSingle();
       setIsDemo(bizInfo?.is_demo || false);
+
+      // Check trial status for banner
+      const { data: subData } = await supabase
+        .from("subscriptions")
+        .select("status, trial_ends_at")
+        .eq("business_id", currentBusinessId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (subData?.status === "trial" && subData.trial_ends_at) {
+        setTrialEndsAt(subData.trial_ends_at);
+      }
 
       const { count: patientsCount } = await supabase
         .from("patients")
@@ -506,6 +519,29 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-2xl mx-auto p-4 sm:p-6 space-y-6">
+        {/* Trial Banner */}
+        {trialEndsAt && (
+          <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-3 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-blue-400 flex-shrink-0" />
+              <p className="text-xs text-blue-300">
+                Tu prueba gratuita vence el{" "}
+                <span className="font-medium">
+                  {new Date(trialEndsAt).toLocaleDateString("es-UY", { day: "numeric", month: "long" })}
+                </span>
+                . Podés cancelar antes sin costo.
+              </p>
+            </div>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-blue-400 hover:text-blue-300 text-xs flex-shrink-0 h-7 px-2"
+              onClick={() => navigate("/billing")}
+            >
+              Ver plan
+            </Button>
+          </div>
+        )}
         {/* Super Admin Business Selector */}
         {isSuperAdmin && allBusinesses.length > 0 && (
           <Card className="mobile-card-compact bg-primary/5 border-primary/30">

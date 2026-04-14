@@ -37,6 +37,7 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const PatientPortalDemo = lazy(() => import("./pages/PatientPortalDemo"));
 const PortalCustomization = lazy(() => import("./pages/PortalCustomization"));
 const ClinicPortal = lazy(() => import("./pages/ClinicPortal"));
+const ActivateTrial = lazy(() => import("./pages/ActivateTrial"));
 const SubscriptionGuard = lazy(() => import("./components/SubscriptionGuard"));
 
 const queryClient = new QueryClient();
@@ -69,6 +70,7 @@ const App = () => (
             <Route path="/registrarse-profesional" element={<ProfessionalRegister />} />
             <Route path="/onboarding-consultorio" element={<ConsultorioOnboarding />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/activar-prueba" element={<ActivateTrial />} />
             <Route path="/portal-paciente/demo" element={<PatientPortalDemo />} />
             <Route path="/portal/:slug" element={<ClinicPortal />} />
             

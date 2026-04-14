@@ -221,7 +221,7 @@ const OnboardingWizard = () => {
       }, { onConflict: "user_id" });
 
       toast.success("¡Consultorio configurado correctamente!");
-      navigate("/dashboard");
+      navigate("/activar-prueba");
     } catch (error: any) {
       console.error("Error saving:", error);
       toast.error("Error al guardar los datos. Intentá de nuevo.");

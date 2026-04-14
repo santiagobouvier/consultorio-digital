@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { ArrowLeft, Building2, Mail, Eye, EyeOff, Sparkles } from "lucide-react";
+import { ArrowLeft, Building2, Mail, Eye, EyeOff, Sparkles, CheckCircle2 } from "lucide-react";
 import { useHostnameBusiness } from "@/hooks/use-hostname-business";
 import { Logo } from "@/components/Logo";
 import { getPlanDefinition, formatPrice } from "@/lib/plan-definitions";
@@ -27,6 +27,8 @@ const Auth = () => {
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotSent, setForgotSent] = useState(false);
   const [isSignUp, setIsSignUp] = useState(!!selectedPlan);
+  const [awaitingVerification, setAwaitingVerification] = useState(false);
+  const [emailVerified, setEmailVerified] = useState(false);
   const navigate = useNavigate();
 
   const { business: hostnameBusiness, loading: businessLoading } = useHostnameBusiness();
@@ -34,7 +36,7 @@ const Auth = () => {
   const planDef = selectedPlan ? getPlanDefinition(selectedPlan) : null;
   const planPrice = planDef ? (billingPeriod === "annual" ? planDef.priceAnnual : planDef.priceMonthly) : 0;
 
-  const redirectByRole = async () => {
+  const redirectByRole = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
@@ -51,39 +53,84 @@ const Auth = () => {
     if (professionalRole) { navigate("/dashboard"); return; }
 
     const { data: business } = await supabase
-      .from("businesses").select("id, onboarding_completed, name").eq("owner_user_id", user.id).maybeSingle();
+      .from("businesses").select("id, onboarding_completed").eq("owner_user_id", user.id).maybeSingle();
     if (business) {
-      navigate(business.onboarding_completed ? "/dashboard" : "/onboarding-consultorio");
-    } else if (selectedPlan) {
-      // New user with plan — redirect to checkout
-      await createSubscription();
+      if (!business.onboarding_completed) {
+        navigate("/onboarding-consultorio");
+      } else {
+        // Check if has MP subscription already
+        const { data: sub } = await supabase
+          .from("subscriptions")
+          .select("mercadopago_preapproval_id")
+          .eq("business_id", business.id)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (sub?.mercadopago_preapproval_id) {
+          navigate("/dashboard");
+        } else {
+          navigate("/activar-prueba");
+        }
+      }
     } else {
       navigate("/configurar-negocio");
     }
-  };
+  }, [navigate]);
 
-  const createSubscription = async () => {
-    try {
-      const { data, error } = await supabase.functions.invoke("create-subscription", {
-        body: {
-          plan_code: selectedPlan,
-          billing_period: billingPeriod,
-        },
-      });
-
-      if (error) throw error;
-
-      if (data?.checkout_url) {
-        window.location.href = data.checkout_url;
-      } else {
-        navigate("/dashboard");
+  // Poll for email verification when awaiting
+  useEffect(() => {
+    if (!awaitingVerification) return;
+    
+    const interval = setInterval(async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        setEmailVerified(true);
+        clearInterval(interval);
+        setTimeout(() => redirectByRole(), 2000);
       }
-    } catch (err: any) {
-      console.error("Subscription error:", err);
-      toast.error("Error al crear la suscripción. Intentá de nuevo.");
-      navigate("/dashboard");
-    }
-  };
+    }, 3000);
+
+    // Also listen for auth state changes (e.g. user clicks link in same browser)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_IN") {
+        setEmailVerified(true);
+        clearInterval(interval);
+        setTimeout(() => redirectByRole(), 2000);
+      }
+    });
+
+    return () => {
+      clearInterval(interval);
+      subscription.unsubscribe();
+    };
+  }, [awaitingVerification, redirectByRole]);
+
+  // Handle post-verification redirect (user clicks email link)
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event) => {
+      if (event === "SIGNED_IN" && !awaitingVerification) {
+        // Could be post-verification or OAuth callback
+        await redirectByRole();
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [awaitingVerification, redirectByRole]);
+
+  // Handle post-OAuth redirect
+  useEffect(() => {
+    const checkPostAuth = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const pendingPlan = localStorage.getItem("pending_plan");
+      if (pendingPlan && selectedPlan) {
+        localStorage.removeItem("pending_plan");
+        localStorage.removeItem("pending_billing");
+        await redirectByRole();
+      }
+    };
+    checkPostAuth();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,13 +142,11 @@ const Auth = () => {
           password,
           options: {
             data: { full_name: name },
-            emailRedirectTo: selectedPlan
-              ? `${window.location.origin}/auth?plan=${selectedPlan}&billing=${billingPeriod}`
-              : window.location.origin,
+            emailRedirectTo: `${window.location.origin}/auth`,
           },
         });
         if (error) throw error;
-        toast.success("¡Revisá tu email para confirmar tu cuenta!");
+        setAwaitingVerification(true);
         return;
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -119,16 +164,13 @@ const Auth = () => {
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
     try {
-      // Store plan info before redirect
       if (selectedPlan) {
         localStorage.setItem("pending_plan", selectedPlan);
         localStorage.setItem("pending_billing", billingPeriod);
       }
 
       const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: selectedPlan
-          ? `${window.location.origin}/auth?plan=${selectedPlan}&billing=${billingPeriod}`
-          : window.location.origin,
+        redirect_uri: `${window.location.origin}/auth`,
       });
       if (result.error) {
         toast.error("Error al iniciar sesión con Google");
@@ -144,31 +186,6 @@ const Auth = () => {
       setGoogleLoading(false);
     }
   };
-
-  // Handle post-OAuth redirect
-  useEffect(() => {
-    const checkPostAuth = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const pendingPlan = localStorage.getItem("pending_plan");
-      if (pendingPlan && selectedPlan) {
-        localStorage.removeItem("pending_plan");
-        localStorage.removeItem("pending_billing");
-
-        // Check if user already has a business
-        const { data: business } = await supabase
-          .from("businesses").select("id").eq("owner_user_id", user.id).maybeSingle();
-
-        if (!business) {
-          await createSubscription();
-        } else {
-          await redirectByRole();
-        }
-      }
-    };
-    checkPostAuth();
-  }, []);
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -191,6 +208,56 @@ const Auth = () => {
   };
 
   const showContextualLogin = hostnameBusiness && !businessLoading;
+
+  // Verification waiting screen
+  if (awaitingVerification) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[hsl(180,15%,4%)] p-4">
+        <div
+          className="fixed inset-0 pointer-events-none"
+          style={{ background: "radial-gradient(ellipse 60% 40% at 50% 0%, hsla(176,80%,40%,0.1), transparent)" }}
+        />
+        <div className="relative z-10 w-full max-w-md">
+          <div className="flex justify-center mb-6">
+            <Logo variant="full" size="4xl" showTagline={false} />
+          </div>
+          <div
+            className="rounded-2xl border border-white/10 shadow-2xl p-8 text-center"
+            style={{ backgroundColor: '#111111' }}
+          >
+            {emailVerified ? (
+              <>
+                <div className="mx-auto w-16 h-16 rounded-full bg-[hsla(160,80%,50%,0.15)] flex items-center justify-center mb-4 animate-in zoom-in duration-300">
+                  <CheckCircle2 className="w-8 h-8 text-[hsl(160,80%,50%)]" />
+                </div>
+                <h2 className="text-xl font-bold text-white mb-2">¡Email confirmado!</h2>
+                <p className="text-sm text-white/50">Redirigiendo...</p>
+              </>
+            ) : (
+              <>
+                <div className="mx-auto w-16 h-16 rounded-full bg-[hsla(176,80%,40%,0.1)] flex items-center justify-center mb-4">
+                  <Mail className="w-8 h-8 text-[hsl(176,80%,40%)] animate-pulse" />
+                </div>
+                <h2 className="text-xl font-bold text-white mb-2">Revisá tu email</h2>
+                <p className="text-sm text-white/50 mb-1">
+                  Enviamos un link de verificación a
+                </p>
+                <p className="text-sm font-medium text-white mb-4">{email}</p>
+                <p className="text-xs text-white/30">
+                  Hacé clic en el link del email para continuar. Esta pantalla se actualiza automáticamente.
+                </p>
+                <div className="mt-6 flex items-center justify-center gap-2 text-white/20">
+                  <div className="w-1.5 h-1.5 rounded-full bg-white/30 animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <div className="w-1.5 h-1.5 rounded-full bg-white/30 animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <div className="w-1.5 h-1.5 rounded-full bg-white/30 animate-bounce" style={{ animationDelay: "300ms" }} />
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[hsl(180,15%,4%)] p-4">
