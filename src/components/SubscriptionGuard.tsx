@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useSubscriptionStatus } from "@/hooks/use-subscription-status";
 import LoadingPage from "@/components/LoadingPage";
@@ -13,6 +13,7 @@ interface SubscriptionGuardProps {
 
 const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [businessId, setBusinessId] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [checkingActivation, setCheckingActivation] = useState(true);
@@ -52,6 +53,13 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
 
     // Only check for trial status
     if (status !== "trial") {
+      setCheckingActivation(false);
+      setActivationChecked(true);
+      return;
+    }
+
+    // If user just came from MP payment, don't block — let them through
+    if (searchParams.get("subscription") === "success") {
       setCheckingActivation(false);
       setActivationChecked(true);
       return;
