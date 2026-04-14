@@ -15,6 +15,8 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
   const navigate = useNavigate();
   const [businessId, setBusinessId] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [checkingActivation, setCheckingActivation] = useState(true);
+  const [activationChecked, setActivationChecked] = useState(false);
 
   useEffect(() => {
     const getBusinessId = async () => {
@@ -34,7 +36,65 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
 
   const { status, loading, trialDaysLeft, isSuperAdmin } = useSubscriptionStatus(businessId);
 
-  if (authLoading || loading) return <LoadingPage />;
+  // Check if trial user has activated with MP (has preapproval ID)
+  useEffect(() => {
+    if (loading || authLoading || !businessId) {
+      setCheckingActivation(false);
+      setActivationChecked(true);
+      return;
+    }
+
+    // Super admins skip this check
+    if (isSuperAdmin) {
+      setCheckingActivation(false);
+      setActivationChecked(true);
+      return;
+    }
+
+    // Only check for trial status
+    if (status !== "trial") {
+      setCheckingActivation(false);
+      setActivationChecked(true);
+      return;
+    }
+
+    const checkActivation = async () => {
+      // Check if business is demo
+      const { data: business } = await supabase
+        .from("businesses")
+        .select("is_demo")
+        .eq("id", businessId)
+        .maybeSingle();
+
+      if (business?.is_demo) {
+        setCheckingActivation(false);
+        setActivationChecked(true);
+        return;
+      }
+
+      // Check if subscription has MP preapproval
+      const { data: sub } = await supabase
+        .from("subscriptions")
+        .select("mercadopago_preapproval_id")
+        .eq("business_id", businessId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!sub?.mercadopago_preapproval_id) {
+        // No MP activation — redirect to activate trial
+        navigate("/activar-prueba");
+        return;
+      }
+
+      setCheckingActivation(false);
+      setActivationChecked(true);
+    };
+
+    checkActivation();
+  }, [businessId, status, loading, authLoading, isSuperAdmin, navigate]);
+
+  if (authLoading || loading || checkingActivation || !activationChecked) return <LoadingPage />;
 
   // No business yet — let them through to setup
   if (!businessId) return <>{children}</>;
