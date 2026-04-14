@@ -156,8 +156,7 @@ const Billing = () => {
       toast.error("Error al cancelar. Intentá de nuevo.");
     }
   };
-
-
+  const handleSelectPlan = async (planCode: string) => {
     if (!businessId) return;
     setCheckoutLoading(planCode);
 
