@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -37,6 +36,7 @@ const MODALITIES = [
 ];
 
 const TOTAL_STEPS = 4;
+const MAX_PRELOADER_MS = 3000;
 
 const businessSchema = z.object({
   name: z.string().min(1, "El nombre es obligatorio").max(100),
@@ -45,7 +45,6 @@ const businessSchema = z.object({
   public_slug: z.string().min(1, "El slug es obligatorio").max(50).regex(/^[a-z0-9-]+$/, "Solo minúsculas, números y guiones"),
   custom_subdomain: z.string().min(3, "Mínimo 3 caracteres").max(30).regex(/^[a-z0-9-]+$/, "Solo minúsculas, números y guiones"),
   custom_domain: z.string().max(100).regex(/^$|^[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,}$/, "Dominio inválido").optional().or(z.literal("")),
-  // Extra fields for onboarding steps
   city: z.string().max(100).optional().or(z.literal("")),
   welcomeMessage: z.string().max(500).optional().or(z.literal("")),
   contactPhone: z.string().max(30).optional().or(z.literal("")),
@@ -66,6 +65,8 @@ const OnboardingWizard = () => {
   const [checkingDomain, setCheckingDomain] = useState(false);
   const [existingBusinessId, setExistingBusinessId] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const initializationStartedRef = useRef(false);
+  const wizardHasControlRef = useRef(false);
 
   const form = useForm<WizardFormData>({
     resolver: zodResolver(businessSchema),
@@ -81,75 +82,173 @@ const OnboardingWizard = () => {
   const watchedDomain = form.watch("custom_domain");
 
   useEffect(() => {
-    checkAuth();
-  }, []);
+    if (!loading) {
+      wizardHasControlRef.current = true;
+    }
+  }, [loading]);
 
-  const checkAuth = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { navigate("/auth"); return; }
-    setUserId(user.id);
-    form.setValue("contact_email", user.email || "");
+  useEffect(() => {
+    if (!loading) return;
 
-    // Check roles
-    const { data: superAdminRole } = await supabase.from("user_roles").select("role").eq("user_id", user.id).eq("role", "super_admin").maybeSingle();
-    if (superAdminRole) { navigate("/saas-admin"); return; }
+    const timeoutId = window.setTimeout(() => {
+      wizardHasControlRef.current = true;
+      setLoading(false);
+    }, MAX_PRELOADER_MS);
 
-    const { data: patientRole } = await supabase.from("user_roles").select("role").eq("user_id", user.id).eq("role", "patient").maybeSingle();
-    if (patientRole) { navigate("/portal-paciente"); return; }
+    return () => window.clearTimeout(timeoutId);
+  }, [loading]);
 
-    // Check existing business
-    const { data: business } = await supabase
-      .from("businesses")
-      .select("id, name, specialty, timezone, public_slug, custom_subdomain, custom_domain, contact_email, onboarding_completed")
-      .eq("owner_user_id", user.id)
-      .maybeSingle();
+  useEffect(() => {
+    if (initializationStartedRef.current) return;
+    initializationStartedRef.current = true;
 
-    if (business?.onboarding_completed) { navigate("/dashboard"); return; }
+    let cancelled = false;
 
-    if (business) {
-      setExistingBusinessId(business.id);
-      form.reset({
-        name: business.name || "",
-        specialty: business.specialty || "",
-        contact_email: business.contact_email || user.email || "",
-        public_slug: business.public_slug || "",
-        custom_subdomain: business.custom_subdomain || "",
-        custom_domain: business.custom_domain || "",
-        timezone: business.timezone || "America/Montevideo",
-        modality: "mixto", city: "", welcomeMessage: "", contactPhone: "",
-      });
-      // Pre-fill from clinic_settings
-      const { data: cs } = await supabase.from("clinic_settings").select("*").eq("user_id", user.id).maybeSingle();
-      if (cs) {
-        form.setValue("welcomeMessage", cs.welcome_message || "");
+    const checkAuth = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (cancelled) return;
+
+        if (!user) {
+          if (!wizardHasControlRef.current) {
+            navigate("/auth", { replace: true });
+          }
+          return;
+        }
+
+        setUserId(user.id);
+
+        if (!form.getValues("contact_email")) {
+          form.setValue("contact_email", user.email || "", { shouldDirty: false });
+        }
+
+        const [{ data: superAdminRole }, { data: patientRole }] = await Promise.all([
+          supabase.from("user_roles").select("role").eq("user_id", user.id).eq("role", "super_admin").maybeSingle(),
+          supabase.from("user_roles").select("role").eq("user_id", user.id).eq("role", "patient").maybeSingle(),
+        ]);
+
+        if (cancelled) return;
+
+        if (superAdminRole) {
+          if (!wizardHasControlRef.current) {
+            navigate("/saas-admin", { replace: true });
+          }
+          return;
+        }
+
+        if (patientRole) {
+          if (!wizardHasControlRef.current) {
+            navigate("/portal-paciente", { replace: true });
+          }
+          return;
+        }
+
+        const { data: business } = await supabase
+          .from("businesses")
+          .select("id, name, specialty, timezone, public_slug, custom_subdomain, custom_domain, contact_email, onboarding_completed")
+          .eq("owner_user_id", user.id)
+          .maybeSingle();
+
+        if (cancelled) return;
+
+        if (business?.onboarding_completed) {
+          if (!wizardHasControlRef.current) {
+            navigate("/dashboard", { replace: true });
+          }
+          return;
+        }
+
+        if (business) {
+          setExistingBusinessId(business.id);
+
+          if (!wizardHasControlRef.current) {
+            form.reset({
+              name: business.name || "",
+              specialty: business.specialty || "",
+              contact_email: business.contact_email || user.email || "",
+              public_slug: business.public_slug || "",
+              custom_subdomain: business.custom_subdomain || "",
+              custom_domain: business.custom_domain || "",
+              timezone: business.timezone || "America/Montevideo",
+              modality: "mixto",
+              city: "",
+              welcomeMessage: "",
+              contactPhone: "",
+            });
+          }
+
+          const { data: cs } = await supabase
+            .from("clinic_settings")
+            .select("welcome_message")
+            .eq("user_id", user.id)
+            .maybeSingle();
+
+          if (cancelled) return;
+
+          if (cs?.welcome_message && !wizardHasControlRef.current) {
+            form.setValue("welcomeMessage", cs.welcome_message, { shouldDirty: false });
+          }
+        }
+      } catch (error) {
+        console.error("Error loading onboarding:", error);
+        if (!wizardHasControlRef.current) {
+          toast.error("No pudimos cargar la configuración del consultorio.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
+    };
+
+    void checkAuth();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [form, navigate]);
+
+  useEffect(() => {
+    if (currentStep !== 2 || !watchedSubdomain || watchedSubdomain.length < 3) {
+      setSubdomainAvailable(null);
+      return;
     }
 
-    setLoading(false);
-  };
-
-  // Debounced availability checks
-  useEffect(() => {
-    if (!watchedSubdomain || watchedSubdomain.length < 3) { setSubdomainAvailable(null); return; }
+    let active = true;
     const timer = setTimeout(async () => {
       setCheckingSubdomain(true);
       const available = await checkSubdomainAvailability(watchedSubdomain);
+      if (!active) return;
       setSubdomainAvailable(available);
       setCheckingSubdomain(false);
     }, 500);
-    return () => clearTimeout(timer);
-  }, [watchedSubdomain, existingBusinessId]);
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [currentStep, watchedSubdomain]);
 
   useEffect(() => {
-    if (!watchedDomain) { setDomainAvailable(null); return; }
+    if (currentStep !== 2 || !watchedDomain) {
+      setDomainAvailable(null);
+      return;
+    }
+
+    let active = true;
     const timer = setTimeout(async () => {
       setCheckingDomain(true);
       const available = await checkCustomDomainAvailability(watchedDomain);
+      if (!active) return;
       setDomainAvailable(available);
       setCheckingDomain(false);
     }, 500);
-    return () => clearTimeout(timer);
-  }, [watchedDomain, existingBusinessId]);
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [currentStep, watchedDomain]);
 
   const handleNameChange = (value: string) => {
     const subdomain = value
