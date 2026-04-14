@@ -116,21 +116,16 @@ const Auth = () => {
     return () => subscription.unsubscribe();
   }, [awaitingVerification, redirectByRole]);
 
-  // Handle post-OAuth redirect
+  // If user already has a session, redirect immediately (don't show the form)
   useEffect(() => {
-    const checkPostAuth = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const pendingPlan = localStorage.getItem("pending_plan");
-      if (pendingPlan && selectedPlan) {
-        localStorage.removeItem("pending_plan");
-        localStorage.removeItem("pending_billing");
+    const checkExistingSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
         await redirectByRole();
       }
     };
-    checkPostAuth();
-  }, []);
+    checkExistingSession();
+  }, [redirectByRole]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -142,7 +137,7 @@ const Auth = () => {
           password,
           options: {
             data: { full_name: name },
-            emailRedirectTo: `${window.location.origin}/auth`,
+            emailRedirectTo: `${window.location.origin}/auth/callback`,
           },
         });
         if (error) throw error;
@@ -170,7 +165,7 @@ const Auth = () => {
       }
 
       const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: `${window.location.origin}/auth`,
+        redirect_uri: `${window.location.origin}/auth/callback`,
       });
       if (result.error) {
         toast.error("Error al iniciar sesión con Google");
