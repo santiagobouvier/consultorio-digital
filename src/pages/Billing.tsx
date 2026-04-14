@@ -431,9 +431,9 @@ const Billing = () => {
                     <Button
                       variant="outline"
                       className="flex-1 border-red-500/20 text-red-400 hover:bg-red-500/10"
-                      onClick={() => toast.info("La cancelación se implementará próximamente.")}
+                      onClick={handleCancelSubscription}
                     >
-                      Cancelar suscripción
+                      {subscription.status === "trial" ? "Cancelar prueba gratuita" : "Cancelar suscripción"}
                     </Button>
                   )}
                 </div>
