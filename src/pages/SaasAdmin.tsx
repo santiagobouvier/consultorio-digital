@@ -150,6 +150,10 @@ const SaasAdmin = () => {
   const [editPlan, setEditPlan] = useState("");
   const [editIsActive, setEditIsActive] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [showActivateModal, setShowActivateModal] = useState(false);
+  const [businessToActivate, setBusinessToActivate] = useState<BusinessWithDetails | null>(null);
+  const [activatePlan, setActivatePlan] = useState<string>("esencial");
+  const [activating, setActivating] = useState(false);
 
   useEffect(() => { checkAccessAndLoad(); }, []);
 
