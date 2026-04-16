@@ -43,6 +43,7 @@ const ClinicPortal = lazy(() => import("./pages/ClinicPortal"));
 const ActivateTrial = lazy(() => import("./pages/ActivateTrial"));
 const Activating = lazy(() => import("./pages/Activating"));
 const SubscriptionGuard = lazy(() => import("./components/SubscriptionGuard"));
+const SuperAdminGuard = lazy(() => import("./components/SuperAdminGuard"));
 
 const queryClient = new QueryClient();
 
