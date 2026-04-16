@@ -653,6 +653,7 @@ const SaasAdmin = () => {
                             {[
                               { icon: Eye, action: () => enterBusiness(business.id), tip: "Ver" },
                               { icon: Pencil, action: () => openEditModal(business), tip: "Editar" },
+                              { icon: Zap, action: () => openActivateModal(business), tip: "Activar" },
                               { icon: UserCog, action: () => loadProfessionals(business), tip: "Equipo" },
                               { icon: Globe, action: () => openPrivateClinicModal(business), tip: "Dominio" },
                             ].map(({ icon: I, action, tip }) => (
