@@ -54,18 +54,34 @@ Deno.serve(async (req) => {
 
     const email = ownerEmail.trim().toLowerCase();
 
-    // Check if user already exists
+    // Check if user exists in profiles
     const { data: existingProfile } = await supabase
       .from("profiles")
       .select("id")
       .eq("email", email)
       .maybeSingle();
 
+    // Also check auth.users (profile may be missing even if auth user exists)
+    let existingAuthUserId: string | null = null;
+    if (!existingProfile) {
+      const { data: authList } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 });
+      const found = authList?.users?.find((u: any) => u.email?.toLowerCase() === email);
+      if (found) existingAuthUserId = found.id;
+    }
+
     let ownerId: string;
+    const userAlreadyExists = !!existingProfile || !!existingAuthUserId;
 
     if (existingProfile) {
-      // User already exists - just use them
       ownerId = existingProfile.id;
+    } else if (existingAuthUserId) {
+      // Auth user exists but no profile — create profile and reuse
+      ownerId = existingAuthUserId;
+      await supabase.from("profiles").insert({
+        id: ownerId,
+        name: businessName,
+        email,
+      });
     } else if (mode === "test") {
       // TEST MODE: Create user with password, auto-confirmed
       if (!password || password.length < 6) {
