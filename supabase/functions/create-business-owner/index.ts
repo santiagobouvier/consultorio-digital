@@ -115,19 +115,26 @@ Deno.serve(async (req) => {
       });
 
       if (createError) {
-        console.error("Error creating user:", createError);
-        return new Response(JSON.stringify({ error: createError.message || "Error creating user" }), {
-          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        const msg = (createError.message || "").toLowerCase();
+        if (msg.includes("already") && msg.includes("registered")) {
+          const recoveredId = await findAuthUserByEmail(email);
+          if (!recoveredId) {
+            return new Response(JSON.stringify({ error: "El email ya está registrado pero no se pudo recuperar el usuario" }), {
+              status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+          ownerId = recoveredId;
+          await supabase.from("profiles").upsert({ id: ownerId, name: businessName, email });
+        } else {
+          console.error("Error creating user:", createError);
+          return new Response(JSON.stringify({ error: createError.message || "Error creating user" }), {
+            status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      } else {
+        ownerId = newUser.user.id;
+        await supabase.from("profiles").insert({ id: ownerId, name: businessName, email });
       }
-
-      ownerId = newUser.user.id;
-
-      await supabase.from("profiles").insert({
-        id: ownerId,
-        name: businessName,
-        email,
-      });
     } else {
       // INVITATION MODE: Create user with temp password, generate invite token
       const tempPassword = crypto.randomUUID() + crypto.randomUUID();
@@ -139,19 +146,26 @@ Deno.serve(async (req) => {
       });
 
       if (createError) {
-        console.error("Error creating user:", createError);
-        return new Response(JSON.stringify({ error: createError.message || "Error creating user" }), {
-          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        const msg = (createError.message || "").toLowerCase();
+        if (msg.includes("already") && msg.includes("registered")) {
+          const recoveredId = await findAuthUserByEmail(email);
+          if (!recoveredId) {
+            return new Response(JSON.stringify({ error: "El email ya está registrado pero no se pudo recuperar el usuario" }), {
+              status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+          ownerId = recoveredId;
+          await supabase.from("profiles").upsert({ id: ownerId, name: businessName, email });
+        } else {
+          console.error("Error creating user:", createError);
+          return new Response(JSON.stringify({ error: createError.message || "Error creating user" }), {
+            status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      } else {
+        ownerId = newUser.user.id;
+        await supabase.from("profiles").insert({ id: ownerId, name: businessName, email });
       }
-
-      ownerId = newUser.user.id;
-
-      await supabase.from("profiles").insert({
-        id: ownerId,
-        name: businessName,
-        email,
-      });
     }
 
     // Create the business
