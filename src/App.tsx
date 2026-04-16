@@ -109,7 +109,7 @@ const App = () => {
               <Route path="/personalizar-portal" element={<Protected><PortalCustomization /></Protected>} />
               <Route path="/billing" element={<Protected><Billing /></Protected>} />
               <Route path="/estadisticas" element={<Protected><Statistics /></Protected>} />
-              <Route path="/saas-admin" element={<Protected><SaasAdmin /></Protected>} />
+              <Route path="/saas-admin" element={<SuperAdminGuard><Protected><SaasAdmin /></Protected></SuperAdminGuard>} />
 
               {/* Catch-all */}
               <Route path="*" element={<NotFound />} />
