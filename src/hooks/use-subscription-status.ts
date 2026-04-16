@@ -94,13 +94,14 @@ export const useSubscriptionStatus = (businessId: string | null): UseSubscriptio
         }
       } catch (err) {
         console.error("Error checking subscription:", err);
-        setStatus("none");
+        if (!cancelled) setStatus("none");
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     check();
+    return () => { cancelled = true; };
   }, [businessId]);
 
   return { status, loading, trialDaysLeft, isSuperAdmin };
