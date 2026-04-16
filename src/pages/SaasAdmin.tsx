@@ -756,6 +756,7 @@ const SaasAdmin = () => {
                                 <DropdownMenuItem onClick={() => enterBusiness(business.id)}><LogIn className="h-4 w-4 mr-2" />Entrar</DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem onClick={() => openEditModal(business)}><Pencil className="h-4 w-4 mr-2" />Editar</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => openActivateModal(business)}><Zap className="h-4 w-4 mr-2" />Activar suscripción</DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => openPrivateClinicModal(business)}><Globe className="h-4 w-4 mr-2" />Dominio</DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem onClick={() => openDeleteModal(business)} className="text-destructive focus:text-destructive focus:bg-destructive/10"><Trash2 className="h-4 w-4 mr-2" />Eliminar</DropdownMenuItem>
