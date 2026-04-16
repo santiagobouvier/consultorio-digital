@@ -72,13 +72,15 @@ const AuthCallback = () => {
         }
         const { data: sub } = await supabase
           .from("subscriptions")
-          .select("mercadopago_preapproval_id")
+          .select("status, mercadopago_preapproval_id")
           .eq("business_id", business.id)
           .order("created_at", { ascending: false })
           .limit(1)
           .maybeSingle();
 
-        if (business.is_demo || sub?.mercadopago_preapproval_id) {
+        const hasActivatedAccess = business.is_demo || sub?.status === "active" || !!sub?.mercadopago_preapproval_id;
+
+        if (hasActivatedAccess) {
           navigate("/dashboard", { replace: true });
         } else {
           navigate("/activar-prueba", { replace: true });
