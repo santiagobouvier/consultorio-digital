@@ -170,7 +170,7 @@ Deno.serve(async (req) => {
 
     // For invitation mode with new users, generate an invite token
     let inviteToken: string | null = null;
-    if (!existingProfile && mode === "invite") {
+    if (!userAlreadyExists && mode === "invite") {
       inviteToken = crypto.randomUUID();
       await supabase.from("professional_portal_invites").insert({
         business_id: business.id,
@@ -178,7 +178,7 @@ Deno.serve(async (req) => {
         email,
         name: businessName.trim(),
         token: inviteToken,
-        expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days
+        expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
       });
     }
 
@@ -186,9 +186,9 @@ Deno.serve(async (req) => {
       success: true,
       businessId: business.id,
       ownerId,
-      isExistingUser: !!existingProfile,
+      isExistingUser: userAlreadyExists,
       inviteToken,
-      mode: existingProfile ? "existing" : mode,
+      mode: userAlreadyExists ? "existing" : mode,
     }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
