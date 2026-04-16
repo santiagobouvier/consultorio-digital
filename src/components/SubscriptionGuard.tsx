@@ -154,7 +154,9 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
   }, [businessId, status, loading, authLoading, isSuperAdmin, navigate, hasSuccessfulSubscriptionRedirect]);
 
   if (sessionInvalid) return <LoadingPage />;
-  if (authLoading || loading || checkingActivation || !activationChecked) return <LoadingPage />;
+  if (authLoading) return <LoadingPage />;
+  // Si hay businessId, esperar también al status de suscripción y la verificación de activación
+  if (businessId && (loading || checkingActivation || !activationChecked)) return <LoadingPage />;
 
   // No business yet — let them through to setup
   if (!businessId) return <>{children}</>;
