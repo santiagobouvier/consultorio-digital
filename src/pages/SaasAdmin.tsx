@@ -324,7 +324,80 @@ const SaasAdmin = () => {
     } catch (error: any) { toast({ title: "Error", description: error.message || "No se pudo actualizar", variant: "destructive" }); } finally { setSaving(false); }
   };
 
-  const demoBusinessExists = businesses.some(b => b.isDemo);
+  const openActivateModal = (b: BusinessWithDetails) => {
+    setBusinessToActivate(b);
+    const normalized = normalizePlanCode(b.planCode);
+    const valid = ["emprendedor", "esencial", "profesional", "consultorio"].includes(normalized) ? normalized : "esencial";
+    setActivatePlan(valid);
+    setShowActivateModal(true);
+  };
+
+  const handleActivateSubscription = async () => {
+    if (!businessToActivate) return;
+    try {
+      setActivating(true);
+      const trialEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+      const periodEnd = trialEnd;
+
+      // Buscar suscripción más reciente
+      const { data: existingSub } = await supabase
+        .from("subscriptions")
+        .select("id")
+        .eq("business_id", businessToActivate.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (existingSub?.id) {
+        const { error: subErr } = await supabase
+          .from("subscriptions")
+          .update({
+            status: "active",
+            plan_code: activatePlan,
+            trial_ends_at: trialEnd,
+            current_period_start: new Date().toISOString(),
+            current_period_end: periodEnd,
+            cancelled_at: null,
+          })
+          .eq("id", existingSub.id);
+        if (subErr) throw subErr;
+      } else {
+        // Crear suscripción si no existe (super_admin tiene permiso)
+        const { error: insErr } = await supabase.from("subscriptions").insert({
+          business_id: businessToActivate.id,
+          plan_code: activatePlan,
+          status: "active",
+          trial_ends_at: trialEnd,
+          current_period_start: new Date().toISOString(),
+          current_period_end: periodEnd,
+          billing_period: "monthly",
+          amount: 0,
+          currency: "UYU",
+        });
+        if (insErr) throw insErr;
+      }
+
+      // Activar el business y actualizar plan_code
+      const { error: bizErr } = await supabase
+        .from("businesses")
+        .update({ is_active: true, plan_code: activatePlan })
+        .eq("id", businessToActivate.id);
+      if (bizErr) throw bizErr;
+
+      toast({ title: "Suscripción activada correctamente" });
+      setShowActivateModal(false);
+      setBusinessToActivate(null);
+      await loadData();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "No se pudo activar la suscripción",
+        variant: "destructive",
+      });
+    } finally {
+      setActivating(false);
+    }
+  };
   const demoBusiness = businesses.find(b => b.isDemo);
 
   const handleCreateDemo = async () => {
