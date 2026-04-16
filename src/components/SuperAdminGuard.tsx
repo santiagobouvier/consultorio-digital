@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import LoadingPage from "@/components/LoadingPage";
+import { isCurrentUserSuperAdmin } from "@/lib/admin-access";
 
 /**
  * Guard que solo permite renderizar el contenido si el usuario actual
@@ -31,16 +32,11 @@ export const SuperAdminGuard = ({ children }: { children: React.ReactNode }) => 
           return;
         }
 
-        const { data: superAdminRole, error: roleErr } = await supabase
-          .from("user_roles")
-          .select("id")
-          .eq("user_id", user.id)
-          .eq("role", "super_admin")
-          .maybeSingle();
+        const isSuperAdmin = await isCurrentUserSuperAdmin(user.id);
 
         if (cancelled) return;
 
-        if (roleErr || !superAdminRole) {
+        if (!isSuperAdmin) {
           toast({
             title: "Acceso denegado",
             description: "No tenés permisos para acceder a esta sección",

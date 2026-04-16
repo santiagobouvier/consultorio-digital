@@ -10,6 +10,7 @@ import { ArrowLeft, Building2, Mail, Eye, EyeOff, Sparkles, CheckCircle2 } from 
 import { useHostnameBusiness } from "@/hooks/use-hostname-business";
 import { Logo } from "@/components/Logo";
 import { getPlanDefinition, formatPrice } from "@/lib/plan-definitions";
+import { isCurrentUserSuperAdmin } from "@/lib/admin-access";
 
 const Auth = () => {
   const [searchParams] = useSearchParams();
@@ -53,9 +54,8 @@ const Auth = () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setRedirecting(false); return; }
 
-    const { data: superAdminRole } = await supabase
-      .from("user_roles").select("role").eq("user_id", user.id).eq("role", "super_admin").maybeSingle();
-    if (superAdminRole) { navigate("/saas-admin", { replace: true }); return; }
+    const isSuperAdmin = await isCurrentUserSuperAdmin(user.id);
+    if (isSuperAdmin) { navigate("/saas-admin", { replace: true }); return; }
 
     const { data: patientRole } = await supabase
       .from("user_roles").select("role").eq("user_id", user.id).eq("role", "patient").maybeSingle();

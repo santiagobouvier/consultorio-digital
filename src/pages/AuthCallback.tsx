@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/Logo";
 import { CheckCircle2 } from "lucide-react";
+import { isCurrentUserSuperAdmin } from "@/lib/admin-access";
 
 /**
  * Handles Supabase auth redirects (email verification, OAuth callbacks).
@@ -47,9 +48,8 @@ const AuthCallback = () => {
 
     const redirectByState = async (userId: string) => {
       // Check super_admin
-      const { data: superAdminRole } = await supabase
-        .from("user_roles").select("role").eq("user_id", userId).eq("role", "super_admin").maybeSingle();
-      if (superAdminRole) { navigate("/saas-admin", { replace: true }); return; }
+      const isSuperAdmin = await isCurrentUserSuperAdmin(userId);
+      if (isSuperAdmin) { navigate("/saas-admin", { replace: true }); return; }
 
       // Check patient
       const { data: patientRole } = await supabase
