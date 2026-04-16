@@ -150,6 +150,10 @@ const SaasAdmin = () => {
   const [editPlan, setEditPlan] = useState("");
   const [editIsActive, setEditIsActive] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [showActivateModal, setShowActivateModal] = useState(false);
+  const [businessToActivate, setBusinessToActivate] = useState<BusinessWithDetails | null>(null);
+  const [activatePlan, setActivatePlan] = useState<string>("esencial");
+  const [activating, setActivating] = useState(false);
 
   useEffect(() => { checkAccessAndLoad(); }, []);
 
@@ -318,6 +322,81 @@ const SaasAdmin = () => {
       if (error) throw error;
       toast({ title: "Consultorio actualizado" }); setShowEditModal(false); setBusinessToEdit(null); await loadData();
     } catch (error: any) { toast({ title: "Error", description: error.message || "No se pudo actualizar", variant: "destructive" }); } finally { setSaving(false); }
+  };
+
+  const openActivateModal = (b: BusinessWithDetails) => {
+    setBusinessToActivate(b);
+    const normalized = normalizePlanCode(b.planCode);
+    const valid = ["emprendedor", "esencial", "profesional", "consultorio"].includes(normalized) ? normalized : "esencial";
+    setActivatePlan(valid);
+    setShowActivateModal(true);
+  };
+
+  const handleActivateSubscription = async () => {
+    if (!businessToActivate) return;
+    try {
+      setActivating(true);
+      const trialEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+      const periodEnd = trialEnd;
+
+      // Buscar suscripción más reciente
+      const { data: existingSub } = await supabase
+        .from("subscriptions")
+        .select("id")
+        .eq("business_id", businessToActivate.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (existingSub?.id) {
+        const { error: subErr } = await supabase
+          .from("subscriptions")
+          .update({
+            status: "active",
+            plan_code: activatePlan,
+            trial_ends_at: trialEnd,
+            current_period_start: new Date().toISOString(),
+            current_period_end: periodEnd,
+            cancelled_at: null,
+          })
+          .eq("id", existingSub.id);
+        if (subErr) throw subErr;
+      } else {
+        // Crear suscripción si no existe (super_admin tiene permiso)
+        const { error: insErr } = await supabase.from("subscriptions").insert({
+          business_id: businessToActivate.id,
+          plan_code: activatePlan,
+          status: "active",
+          trial_ends_at: trialEnd,
+          current_period_start: new Date().toISOString(),
+          current_period_end: periodEnd,
+          billing_period: "monthly",
+          amount: 0,
+          currency: "UYU",
+        });
+        if (insErr) throw insErr;
+      }
+
+      // Activar el business y actualizar plan_code
+      const { error: bizErr } = await supabase
+        .from("businesses")
+        .update({ is_active: true, plan_code: activatePlan })
+        .eq("id", businessToActivate.id);
+      if (bizErr) throw bizErr;
+
+      toast({ title: "Suscripción activada correctamente" });
+      setShowActivateModal(false);
+      setBusinessToActivate(null);
+      await loadData();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "No se pudo activar la suscripción",
+        variant: "destructive",
+      });
+    } finally {
+      setActivating(false);
+    }
   };
 
   const demoBusinessExists = businesses.some(b => b.isDemo);
@@ -574,6 +653,7 @@ const SaasAdmin = () => {
                             {[
                               { icon: Eye, action: () => enterBusiness(business.id), tip: "Ver" },
                               { icon: Pencil, action: () => openEditModal(business), tip: "Editar" },
+                              { icon: Zap, action: () => openActivateModal(business), tip: "Activar" },
                               { icon: UserCog, action: () => loadProfessionals(business), tip: "Equipo" },
                               { icon: Globe, action: () => openPrivateClinicModal(business), tip: "Dominio" },
                             ].map(({ icon: I, action, tip }) => (
@@ -677,6 +757,7 @@ const SaasAdmin = () => {
                                 <DropdownMenuItem onClick={() => enterBusiness(business.id)}><LogIn className="h-4 w-4 mr-2" />Entrar</DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem onClick={() => openEditModal(business)}><Pencil className="h-4 w-4 mr-2" />Editar</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => openActivateModal(business)}><Zap className="h-4 w-4 mr-2" />Activar suscripción</DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => openPrivateClinicModal(business)}><Globe className="h-4 w-4 mr-2" />Dominio</DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem onClick={() => openDeleteModal(business)} className="text-destructive focus:text-destructive focus:bg-destructive/10"><Trash2 className="h-4 w-4 mr-2" />Eliminar</DropdownMenuItem>
@@ -859,6 +940,44 @@ const SaasAdmin = () => {
             </div>
           </div>
           <div className="flex gap-3"><Button variant="outline" className="flex-1" onClick={() => { setShowEditModal(false); setBusinessToEdit(null); }}>Cancelar</Button><Button className="flex-1" onClick={handleEditBusiness} disabled={saving}>{saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Guardar</Button></div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Activate Subscription */}
+      <Dialog open={showActivateModal} onOpenChange={(open) => { if (!open) setBusinessToActivate(null); setShowActivateModal(open); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Zap className="h-5 w-5 text-primary" />Activar suscripción</DialogTitle>
+            <DialogDescription>
+              Activación manual sin MercadoPago para <strong>{businessToActivate?.name}</strong>. Se marcará como activa por 30 días.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Plan a asignar</Label>
+              <Select value={activatePlan} onValueChange={setActivatePlan}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="emprendedor">Emprendedor</SelectItem>
+                  <SelectItem value="esencial">Esencial</SelectItem>
+                  <SelectItem value="profesional">Profesional</SelectItem>
+                  <SelectItem value="consultorio">Consultorio</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Alert>
+              <AlertDescription className="text-xs">
+                Esta acción establece <code>status = active</code>, actualiza el plan y extiende el período por 30 días. No genera cargos en MercadoPago.
+              </AlertDescription>
+            </Alert>
+          </div>
+          <div className="flex gap-3">
+            <Button variant="outline" className="flex-1" onClick={() => { setShowActivateModal(false); setBusinessToActivate(null); }}>Cancelar</Button>
+            <Button className="flex-1 gap-2" onClick={handleActivateSubscription} disabled={activating}>
+              {activating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
+              Activar
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

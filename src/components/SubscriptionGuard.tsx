@@ -69,11 +69,30 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
 
   const { status, loading, trialDaysLeft, isSuperAdmin } = useSubscriptionStatus(businessId);
 
+  // Safety timeout: si después de 5 segundos no resolvió, hard reset
+  useEffect(() => {
+    if (sessionInvalid) return;
+    const timer = setTimeout(() => {
+      if (authLoading || (businessId && (loading || checkingActivation || !activationChecked))) {
+        console.warn("SubscriptionGuard: timeout de 5s alcanzado, forzando hard reset");
+        hardResetBrowserSession({ redirectTo: "/auth?session=expired" });
+      }
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [authLoading, loading, checkingActivation, activationChecked, businessId, sessionInvalid]);
+
   // Check if trial user has activated with MP (has preapproval ID)
   useEffect(() => {
-    if (loading || authLoading || !businessId) {
+    if (authLoading) return;
+
+    // Sin businessId: dejar pasar inmediatamente (onboarding)
+    if (!businessId) {
       setCheckingActivation(false);
       setActivationChecked(true);
+      return;
+    }
+
+    if (loading) {
       return;
     }
 
@@ -135,7 +154,9 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
   }, [businessId, status, loading, authLoading, isSuperAdmin, navigate, hasSuccessfulSubscriptionRedirect]);
 
   if (sessionInvalid) return <LoadingPage />;
-  if (authLoading || loading || checkingActivation || !activationChecked) return <LoadingPage />;
+  if (authLoading) return <LoadingPage />;
+  // Si hay businessId, esperar también al status de suscripción y la verificación de activación
+  if (businessId && (loading || checkingActivation || !activationChecked)) return <LoadingPage />;
 
   // No business yet — let them through to setup
   if (!businessId) return <>{children}</>;
