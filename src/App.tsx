@@ -54,6 +54,13 @@ const Protected = ({ children }: { children: React.ReactNode }) => (
   </SubscriptionGuard>
 );
 
+// Super admin pages should not depend on a clinic subscription/business billing state
+const AdminProtected = ({ children }: { children: React.ReactNode }) => (
+  <SuperAdminGuard>
+    <DashboardLayout>{children}</DashboardLayout>
+  </SuperAdminGuard>
+);
+
 const App = () => {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
@@ -109,7 +116,7 @@ const App = () => {
               <Route path="/personalizar-portal" element={<Protected><PortalCustomization /></Protected>} />
               <Route path="/billing" element={<Protected><Billing /></Protected>} />
               <Route path="/estadisticas" element={<Protected><Statistics /></Protected>} />
-              <Route path="/saas-admin" element={<SuperAdminGuard><Protected><SaasAdmin /></Protected></SuperAdminGuard>} />
+              <Route path="/saas-admin" element={<AdminProtected><SaasAdmin /></AdminProtected>} />
 
               {/* Catch-all */}
               <Route path="*" element={<NotFound />} />

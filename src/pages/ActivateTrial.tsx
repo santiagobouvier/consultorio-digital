@@ -56,7 +56,7 @@ const ActivateTrial = () => {
       if (!business) { navigate("/configurar-negocio", { replace: true }); return; }
       if (!business.onboarding_completed) { navigate("/onboarding-consultorio", { replace: true }); return; }
 
-      // Check if already has an active/trial subscription with MP
+      // Check if already has an activated subscription/trial
       const { data: sub } = await supabase
         .from("subscriptions")
         .select("status, mercadopago_preapproval_id")
@@ -66,7 +66,7 @@ const ActivateTrial = () => {
         .maybeSingle();
 
       if (cancelled) return;
-      if (sub?.mercadopago_preapproval_id) {
+      if (sub?.status === "active" || sub?.mercadopago_preapproval_id) {
         navigate("/dashboard", { replace: true });
         return;
       }

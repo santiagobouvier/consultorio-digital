@@ -67,7 +67,7 @@ const Activating = () => {
           .limit(1)
           .maybeSingle();
 
-        if (sub?.mercadopago_preapproval_id) {
+        if (sub?.status === "active" || sub?.mercadopago_preapproval_id) {
           setActivated(true);
           setTimeout(() => {
             if (!cancelled) navigate("/dashboard?subscription=success", { replace: true });
