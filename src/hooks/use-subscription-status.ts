@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { isCurrentUserSuperAdmin } from "@/lib/admin-access";
 
 export type SubscriptionStatus = "trial" | "active" | "past_due" | "cancelled" | "expired" | "none";
 
@@ -27,12 +28,7 @@ export const useSubscriptionStatus = (businessId: string | null): UseSubscriptio
 
         // Super admins bypass subscription checks — check FIRST,
         // even if businessId is null (super admin may not own a business)
-        const { data: adminRole } = await supabase
-          .from("user_roles")
-          .select("id")
-          .eq("user_id", user.id)
-          .eq("role", "super_admin")
-          .maybeSingle();
+        const adminRole = await isCurrentUserSuperAdmin(user.id);
         if (cancelled) return;
 
         if (adminRole) {
