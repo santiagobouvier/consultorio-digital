@@ -15,6 +15,7 @@ import {
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { NavLink } from "@/components/NavLink";
+import { isCurrentUserSuperAdmin } from "@/lib/admin-access";
 import {
   Sidebar,
   SidebarContent,
@@ -71,14 +72,7 @@ export function AppSidebar() {
         setAvatarUrl(profile.avatar_url);
       }
 
-      const { data: adminRole } = await supabase
-        .from("user_roles")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("role", "super_admin")
-        .maybeSingle();
-
-      setIsSuperAdmin(!!adminRole);
+      setIsSuperAdmin(await isCurrentUserSuperAdmin(user.id));
     };
     loadProfile();
   }, []);

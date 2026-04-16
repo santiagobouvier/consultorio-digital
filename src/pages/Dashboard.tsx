@@ -22,6 +22,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import { isCurrentUserSuperAdmin } from "@/lib/admin-access";
 
 // Lazy load desktop dashboard (executive view)
 const DesktopDashboard = lazy(() => 
@@ -123,14 +124,7 @@ const Dashboard = () => {
       }
 
       // Check if user is super_admin
-      const { data: superAdminRole } = await supabase
-        .from("user_roles")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("role", "super_admin")
-        .maybeSingle();
-
-      const isAdmin = !!superAdminRole;
+      const isAdmin = await isCurrentUserSuperAdmin(user.id);
       setIsSuperAdmin(isAdmin);
 
       let currentBusinessId = overrideBusinessId || null;
