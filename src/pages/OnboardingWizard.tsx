@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { isCurrentUserSuperAdmin } from "@/lib/admin-access";
 import * as z from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -122,14 +123,14 @@ const OnboardingWizard = () => {
           form.setValue("contact_email", user.email || "", { shouldDirty: false });
         }
 
-        const [{ data: superAdminRole }, { data: patientRole }] = await Promise.all([
-          supabase.from("user_roles").select("role").eq("user_id", user.id).eq("role", "super_admin").maybeSingle(),
+        const [{ data: patientRole }, isSuperAdmin] = await Promise.all([
           supabase.from("user_roles").select("role").eq("user_id", user.id).eq("role", "patient").maybeSingle(),
+          isCurrentUserSuperAdmin(user.id),
         ]);
 
         if (cancelled) return;
 
-        if (superAdminRole) {
+        if (isSuperAdmin) {
           if (!wizardHasControlRef.current) {
             navigate("/saas-admin", { replace: true });
           }

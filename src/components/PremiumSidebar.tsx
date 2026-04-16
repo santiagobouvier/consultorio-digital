@@ -25,6 +25,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useDashboardBranding } from "@/contexts/DashboardBrandingContext";
+import { isCurrentUserSuperAdmin } from "@/lib/admin-access";
 
 const mainItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
@@ -79,14 +80,7 @@ export function PremiumSidebar() {
         setAvatarUrl(profile.avatar_url);
       }
 
-      const { data: adminRole } = await supabase
-        .from("user_roles")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("role", "super_admin")
-        .maybeSingle();
-
-      setIsSuperAdmin(!!adminRole);
+      setIsSuperAdmin(await isCurrentUserSuperAdmin(user.id));
     };
     loadProfile();
   }, []);

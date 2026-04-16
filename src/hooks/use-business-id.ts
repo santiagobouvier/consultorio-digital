@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { hardResetBrowserSession } from "@/lib/session-recovery";
+import { isCurrentUserSuperAdmin } from "@/lib/admin-access";
 
 const SAAS_SELECTED_BUSINESS_KEY = "saas_selected_business";
 
@@ -55,14 +56,7 @@ export const useBusinessId = (redirectIfNoBusiness = true): UseBusinessIdResult 
       }
 
       // Check if user is super_admin
-      const { data: superAdminRole } = await supabase
-        .from("user_roles")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("role", "super_admin")
-        .maybeSingle();
-
-      const isAdmin = !!superAdminRole;
+      const isAdmin = await isCurrentUserSuperAdmin(user.id);
       setIsSuperAdmin(isAdmin);
 
       // Check for SaaS selected business in sessionStorage
