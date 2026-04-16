@@ -398,6 +398,8 @@ const SaasAdmin = () => {
       setActivating(false);
     }
   };
+
+  const demoBusinessExists = businesses.some(b => b.isDemo);
   const demoBusiness = businesses.find(b => b.isDemo);
 
   const handleCreateDemo = async () => {
