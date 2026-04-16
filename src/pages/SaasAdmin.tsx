@@ -41,6 +41,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { PlanSelector } from "@/components/PlanSelector";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { isCurrentUserSuperAdmin } from "@/lib/admin-access";
 
 // ── Types ──────────────────────────────────────────────
 interface BusinessWithDetails {
@@ -161,8 +162,8 @@ const SaasAdmin = () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { navigate("/auth"); return; }
-      const { data: superAdminRole } = await supabase.from("user_roles").select("id").eq("user_id", user.id).eq("role", "super_admin").maybeSingle();
-      if (!superAdminRole) { toast({ title: "Acceso denegado", description: "No tienes permisos para acceder a esta sección", variant: "destructive" }); navigate("/dashboard"); return; }
+      const isSuperAdmin = await isCurrentUserSuperAdmin(user.id);
+      if (!isSuperAdmin) { toast({ title: "Acceso denegado", description: "No tienes permisos para acceder a esta sección", variant: "destructive" }); navigate("/dashboard"); return; }
       await loadData();
     } catch { navigate("/dashboard"); }
   };
