@@ -17,27 +17,34 @@ export const useSubscriptionStatus = (businessId: string | null): UseSubscriptio
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
   useEffect(() => {
-    if (!businessId) {
-      setLoading(false);
-      return;
-    }
+    let cancelled = false;
 
     const check = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
+        if (cancelled) return;
         if (!user) { setLoading(false); return; }
 
-        // Super admins bypass subscription checks
+        // Super admins bypass subscription checks — check FIRST,
+        // even if businessId is null (super admin may not own a business)
         const { data: adminRole } = await supabase
           .from("user_roles")
           .select("id")
           .eq("user_id", user.id)
           .eq("role", "super_admin")
           .maybeSingle();
+        if (cancelled) return;
 
         if (adminRole) {
           setIsSuperAdmin(true);
           setStatus("active");
+          setLoading(false);
+          return;
+        }
+
+        // No super admin AND no business → nothing to check (onboarding)
+        if (!businessId) {
+          setStatus("none");
           setLoading(false);
           return;
         }
