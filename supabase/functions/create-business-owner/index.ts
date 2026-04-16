@@ -54,6 +54,25 @@ Deno.serve(async (req) => {
 
     const email = ownerEmail.trim().toLowerCase();
 
+    // Helper: find auth user by email by paginating through all pages
+    const findAuthUserByEmail = async (targetEmail: string): Promise<string | null> => {
+      let page = 1;
+      const perPage = 1000;
+      while (page <= 20) { // safety cap: 20k users
+        const { data: authList, error: listErr } = await supabase.auth.admin.listUsers({ page, perPage });
+        if (listErr) {
+          console.error("listUsers error on page", page, listErr);
+          return null;
+        }
+        const users = authList?.users || [];
+        const found = users.find((u: any) => u.email?.toLowerCase() === targetEmail);
+        if (found) return found.id;
+        if (users.length < perPage) return null; // last page reached
+        page++;
+      }
+      return null;
+    };
+
     // Check if user exists in profiles
     const { data: existingProfile } = await supabase
       .from("profiles")
@@ -64,9 +83,7 @@ Deno.serve(async (req) => {
     // Also check auth.users (profile may be missing even if auth user exists)
     let existingAuthUserId: string | null = null;
     if (!existingProfile) {
-      const { data: authList } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 });
-      const found = authList?.users?.find((u: any) => u.email?.toLowerCase() === email);
-      if (found) existingAuthUserId = found.id;
+      existingAuthUserId = await findAuthUserByEmail(email);
     }
 
     let ownerId: string;
@@ -98,19 +115,26 @@ Deno.serve(async (req) => {
       });
 
       if (createError) {
-        console.error("Error creating user:", createError);
-        return new Response(JSON.stringify({ error: createError.message || "Error creating user" }), {
-          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        const msg = (createError.message || "").toLowerCase();
+        if (msg.includes("already") && msg.includes("registered")) {
+          const recoveredId = await findAuthUserByEmail(email);
+          if (!recoveredId) {
+            return new Response(JSON.stringify({ error: "El email ya está registrado pero no se pudo recuperar el usuario" }), {
+              status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+          ownerId = recoveredId;
+          await supabase.from("profiles").upsert({ id: ownerId, name: businessName, email });
+        } else {
+          console.error("Error creating user:", createError);
+          return new Response(JSON.stringify({ error: createError.message || "Error creating user" }), {
+            status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      } else {
+        ownerId = newUser.user.id;
+        await supabase.from("profiles").insert({ id: ownerId, name: businessName, email });
       }
-
-      ownerId = newUser.user.id;
-
-      await supabase.from("profiles").insert({
-        id: ownerId,
-        name: businessName,
-        email,
-      });
     } else {
       // INVITATION MODE: Create user with temp password, generate invite token
       const tempPassword = crypto.randomUUID() + crypto.randomUUID();
@@ -122,19 +146,26 @@ Deno.serve(async (req) => {
       });
 
       if (createError) {
-        console.error("Error creating user:", createError);
-        return new Response(JSON.stringify({ error: createError.message || "Error creating user" }), {
-          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        const msg = (createError.message || "").toLowerCase();
+        if (msg.includes("already") && msg.includes("registered")) {
+          const recoveredId = await findAuthUserByEmail(email);
+          if (!recoveredId) {
+            return new Response(JSON.stringify({ error: "El email ya está registrado pero no se pudo recuperar el usuario" }), {
+              status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+          ownerId = recoveredId;
+          await supabase.from("profiles").upsert({ id: ownerId, name: businessName, email });
+        } else {
+          console.error("Error creating user:", createError);
+          return new Response(JSON.stringify({ error: createError.message || "Error creating user" }), {
+            status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      } else {
+        ownerId = newUser.user.id;
+        await supabase.from("profiles").insert({ id: ownerId, name: businessName, email });
       }
-
-      ownerId = newUser.user.id;
-
-      await supabase.from("profiles").insert({
-        id: ownerId,
-        name: businessName,
-        email,
-      });
     }
 
     // Create the business
