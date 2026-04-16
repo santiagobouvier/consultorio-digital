@@ -942,6 +942,44 @@ const SaasAdmin = () => {
           <div className="flex gap-3"><Button variant="outline" className="flex-1" onClick={() => { setShowEditModal(false); setBusinessToEdit(null); }}>Cancelar</Button><Button className="flex-1" onClick={handleEditBusiness} disabled={saving}>{saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Guardar</Button></div>
         </DialogContent>
       </Dialog>
+
+      {/* Activate Subscription */}
+      <Dialog open={showActivateModal} onOpenChange={(open) => { if (!open) setBusinessToActivate(null); setShowActivateModal(open); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Zap className="h-5 w-5 text-primary" />Activar suscripción</DialogTitle>
+            <DialogDescription>
+              Activación manual sin MercadoPago para <strong>{businessToActivate?.name}</strong>. Se marcará como activa por 30 días.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Plan a asignar</Label>
+              <Select value={activatePlan} onValueChange={setActivatePlan}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="emprendedor">Emprendedor</SelectItem>
+                  <SelectItem value="esencial">Esencial</SelectItem>
+                  <SelectItem value="profesional">Profesional</SelectItem>
+                  <SelectItem value="consultorio">Consultorio</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Alert>
+              <AlertDescription className="text-xs">
+                Esta acción establece <code>status = active</code>, actualiza el plan y extiende el período por 30 días. No genera cargos en MercadoPago.
+              </AlertDescription>
+            </Alert>
+          </div>
+          <div className="flex gap-3">
+            <Button variant="outline" className="flex-1" onClick={() => { setShowActivateModal(false); setBusinessToActivate(null); }}>Cancelar</Button>
+            <Button className="flex-1 gap-2" onClick={handleActivateSubscription} disabled={activating}>
+              {activating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
+              Activar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
