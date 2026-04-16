@@ -43,6 +43,7 @@ const ClinicPortal = lazy(() => import("./pages/ClinicPortal"));
 const ActivateTrial = lazy(() => import("./pages/ActivateTrial"));
 const Activating = lazy(() => import("./pages/Activating"));
 const SubscriptionGuard = lazy(() => import("./components/SubscriptionGuard"));
+const SuperAdminGuard = lazy(() => import("./components/SuperAdminGuard"));
 
 const queryClient = new QueryClient();
 
@@ -108,7 +109,7 @@ const App = () => {
               <Route path="/personalizar-portal" element={<Protected><PortalCustomization /></Protected>} />
               <Route path="/billing" element={<Protected><Billing /></Protected>} />
               <Route path="/estadisticas" element={<Protected><Statistics /></Protected>} />
-              <Route path="/saas-admin" element={<Protected><SaasAdmin /></Protected>} />
+              <Route path="/saas-admin" element={<SuperAdminGuard><Protected><SaasAdmin /></Protected></SuperAdminGuard>} />
 
               {/* Catch-all */}
               <Route path="*" element={<NotFound />} />
