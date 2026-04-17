@@ -406,7 +406,7 @@ const Patients = () => {
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="text-primary hover:text-primary hover:bg-primary/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                            className="text-primary hover:text-primary hover:bg-primary/10 rounded-lg"
                             onClick={(e) => { e.stopPropagation(); navigate(`/patients/${patient.id}`); }}
                           >
                             Ver detalle

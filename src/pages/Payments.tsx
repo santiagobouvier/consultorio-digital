@@ -411,7 +411,7 @@ const Payments = () => {
                           e.stopPropagation();
                           setEditingPayment(payment);
                         }}
-                        className="rounded-lg h-8 px-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="rounded-lg h-8 px-2 text-foreground"
                         title="Editar pago"
                       >
                         <Pencil className="h-4 w-4" />
@@ -423,7 +423,7 @@ const Payments = () => {
                           e.stopPropagation();
                           setDeletingPaymentId(payment.id);
                         }}
-                        className="rounded-lg h-8 px-2 text-destructive hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="rounded-lg h-8 px-2 text-destructive hover:text-destructive"
                         title="Eliminar pago"
                       >
                         <Trash2 className="h-4 w-4" />

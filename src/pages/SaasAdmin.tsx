@@ -716,7 +716,7 @@ const SaasAdmin = () => {
                           <TableCell className={`pr-6 text-right ${compactMode ? 'py-2.5' : 'py-4'}`}>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 opacity-50 group-hover:opacity-100 transition-opacity">
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-foreground hover:bg-muted">
                                   <MoreHorizontal className="h-4 w-4" />
                                 </Button>
                               </DropdownMenuTrigger>
