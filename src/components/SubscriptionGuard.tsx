@@ -179,12 +179,14 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
         .limit(1)
         .maybeSingle();
 
-      // Allow access if subscription is active (manually activated) OR has MP preapproval
-      if (sub?.status !== "active" && !sub?.mercadopago_preapproval_id) {
-        // No activation — redirect to activate trial
-        navigate("/activar-prueba", { replace: true });
-        return;
-      }
+      // TESTING MODE — revert before production launch
+      // Original: bloquear si no hay suscripción activa ni preapproval de MercadoPago
+      // if (sub?.status !== "active" && !sub?.mercadopago_preapproval_id) {
+      //   navigate("/activar-prueba", { replace: true });
+      //   return;
+      // }
+      // Durante testing: dejar pasar a usuarios en trial sin preapproval de MP
+      void sub;
 
       setCheckingActivation(false);
       setActivationChecked(true);
