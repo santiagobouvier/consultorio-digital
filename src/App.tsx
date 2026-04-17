@@ -47,14 +47,14 @@ const SubscriptionGuard = lazy(() => import("./components/SubscriptionGuard"));
 const SuperAdminGuard = lazy(() => import("./components/SuperAdminGuard"));
 
 // Defaults globales: datos válidos por 30s, mantenidos en caché 5min.
-// Esto permite que al volver a una sección los datos se muestren al instante
-// desde la caché y se revaliden en background.
+// refetchOnWindowFocus: true permite revalidar datos al volver a la pestaña
+// (importante para detectar cambios tras inactividad o sesión refrescada).
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 30_000,
       gcTime: 300_000,
-      refetchOnWindowFocus: false,
+      refetchOnWindowFocus: true,
       retry: 1,
     },
   },
@@ -73,16 +73,76 @@ const AdminProtected = ({ children }: { children: React.ReactNode }) => (
   <SuperAdminGuard>{children}</SuperAdminGuard>
 );
 
+const PROTECTED_ROUTE_PREFIXES = [
+  "/dashboard",
+  "/patients",
+  "/appointments",
+  "/agenda",
+  "/centro-control",
+  "/recordatorios-pendientes",
+  "/mi-consultorio",
+  "/horarios-disponibles",
+  "/solicitudes",
+  "/pagos",
+  "/personalizar-portal",
+  "/billing",
+  "/estadisticas",
+  "/saas-admin",
+];
+
+const isOnProtectedRoute = () =>
+  PROTECTED_ROUTE_PREFIXES.some((prefix) => window.location.pathname.startsWith(prefix));
+
 const App = () => {
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    // 1) Reaccionar a cambios de auth: limpiar caches al cerrar sesión y
+    //    expulsar a /auth?session=expired si el token caducó en una ruta protegida.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_OUT") {
         void clearServiceWorkerCaches();
+        return;
+      }
+      // Si Supabase no pudo refrescar el token y emitió un evento sin sesión
+      // mientras el usuario está en una ruta protegida, forzar reseteo limpio.
+      if ((event === "TOKEN_REFRESHED" || event === "USER_UPDATED") && !session && isOnProtectedRoute()) {
+        void import("@/lib/session-recovery").then(({ hardResetBrowserSession }) =>
+          hardResetBrowserSession({ redirectTo: "/auth?session=expired" })
+        );
       }
     });
 
+    // 2) Heartbeat de sesión: cada 4 minutos pedimos getSession() para mantener
+    //    activo el refresh automático aunque el usuario no interactúe.
+    //    Si la sesión ya no existe estando en una ruta protegida, hard reset.
+    const heartbeat = window.setInterval(async () => {
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if ((error || !data.session) && isOnProtectedRoute()) {
+          const { hardResetBrowserSession } = await import("@/lib/session-recovery");
+          await hardResetBrowserSession({ redirectTo: "/auth?session=expired" });
+        }
+      } catch {
+        // silencioso: si falla el heartbeat no rompemos la app
+      }
+    }, 4 * 60 * 1000);
+
+    // 3) Al recuperar visibilidad de la pestaña, validar sesión inmediatamente.
+    const onVisibilityChange = () => {
+      if (document.visibilityState !== "visible") return;
+      void supabase.auth.getSession().then(({ data, error }) => {
+        if ((error || !data.session) && isOnProtectedRoute()) {
+          void import("@/lib/session-recovery").then(({ hardResetBrowserSession }) =>
+            hardResetBrowserSession({ redirectTo: "/auth?session=expired" })
+          );
+        }
+      });
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
     return () => {
       subscription.unsubscribe();
+      window.clearInterval(heartbeat);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, []);
 
