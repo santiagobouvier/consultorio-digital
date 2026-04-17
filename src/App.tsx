@@ -54,11 +54,10 @@ const Protected = ({ children }: { children: React.ReactNode }) => (
   </SubscriptionGuard>
 );
 
-// Super admin pages should not depend on a clinic subscription/business billing state
+// Super admin pages live in their own visual world (no clinic sidebar / no subscription guard).
+// The page itself renders SaasAdminLayout with its dedicated dark-blue sidebar.
 const AdminProtected = ({ children }: { children: React.ReactNode }) => (
-  <SuperAdminGuard>
-    <DashboardLayout>{children}</DashboardLayout>
-  </SuperAdminGuard>
+  <SuperAdminGuard>{children}</SuperAdminGuard>
 );
 
 const App = () => {
