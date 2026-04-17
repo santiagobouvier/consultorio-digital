@@ -7,6 +7,7 @@ import { lazy, Suspense, useEffect } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { clearServiceWorkerCaches } from "@/lib/session-recovery";
+import { RouteSkeleton } from "@/components/RouteSkeleton";
 
 // Lazy load all pages for optimal performance (code-split per route)
 const Landing = lazy(() => import("./pages/Landing"));
@@ -45,7 +46,19 @@ const Activating = lazy(() => import("./pages/Activating"));
 const SubscriptionGuard = lazy(() => import("./components/SubscriptionGuard"));
 const SuperAdminGuard = lazy(() => import("./components/SuperAdminGuard"));
 
-const queryClient = new QueryClient();
+// Defaults globales: datos válidos por 30s, mantenidos en caché 5min.
+// Esto permite que al volver a una sección los datos se muestren al instante
+// desde la caché y se revaliden en background.
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30_000,
+      gcTime: 300_000,
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
 
 // Helper to wrap a page with subscription guard + sidebar layout
 const Protected = ({ children }: { children: React.ReactNode }) => (
@@ -79,7 +92,7 @@ const App = () => {
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <Suspense fallback={null}>
+          <Suspense fallback={<RouteSkeleton />}>
             <Routes>
               {/* Public routes */}
               <Route path="/" element={<Landing />} />

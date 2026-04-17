@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import {
   LayoutDashboard,
   Users,
@@ -15,6 +15,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
@@ -26,6 +27,8 @@ import {
 } from "@/components/ui/tooltip";
 import { useDashboardBranding } from "@/contexts/DashboardBrandingContext";
 import { isCurrentUserSuperAdmin } from "@/lib/admin-access";
+import { useBusinessId } from "@/hooks/use-business-id";
+import { prefetchRoute } from "@/lib/query-prefetch";
 
 const mainItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
@@ -50,10 +53,9 @@ const EXPANDED_WIDTH = 240;
 export function PremiumSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { businessId } = useBusinessId();
   const [expanded, setExpanded] = useState(false);
-  const [userName, setUserName] = useState("");
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const hoverTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const { primaryColor, logoUrl, displayName } = useDashboardBranding();
@@ -62,28 +64,40 @@ export function PremiumSidebar() {
   const brandHsl = `hsl(${primaryColor})`;
   const brandHsla = (alpha: number) => `hsla(${primaryColor.replace(/%/g, '%')}, ${alpha})`;
 
-  useEffect(() => {
-    const loadProfile = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
+  // Perfil cacheado: una sola vez por sesión, persiste entre navegaciones.
+  const { data: profileData } = useQuery({
+    queryKey: ["sidebar-profile"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
 
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("name, avatar_url")
-        .eq("id", user.id)
-        .maybeSingle();
+      const [{ data: profile }, isAdmin] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("name, avatar_url")
+          .eq("id", user.id)
+          .maybeSingle(),
+        isCurrentUserSuperAdmin(user.id),
+      ]);
 
-      if (profile) {
-        setUserName(profile.name);
-        setAvatarUrl(profile.avatar_url);
-      }
+      return {
+        userName: profile?.name ?? "",
+        avatarUrl: profile?.avatar_url ?? null,
+        isSuperAdmin: isAdmin,
+      };
+    },
+    staleTime: 5 * 60_000, // 5 min: el perfil casi no cambia
+    gcTime: 30 * 60_000,
+  });
 
-      setIsSuperAdmin(await isCurrentUserSuperAdmin(user.id));
-    };
-    loadProfile();
-  }, []);
+  const userName = profileData?.userName ?? "";
+  const avatarUrl = profileData?.avatarUrl ?? null;
+  const isSuperAdmin = profileData?.isSuperAdmin ?? false;
+
+  // Prefetch de la ruta destino al pasar el mouse sobre el item.
+  const handlePrefetch = (url: string) => {
+    void prefetchRoute(queryClient, url, businessId);
+  };
 
   const handleMouseEnter = () => {
     if (hoverTimeout.current) clearTimeout(hoverTimeout.current);
@@ -121,6 +135,8 @@ export function PremiumSidebar() {
     const button = (
       <button
         onClick={() => navigate(item.url)}
+        onMouseEnter={() => handlePrefetch(item.url)}
+        onFocus={() => handlePrefetch(item.url)}
         className={cn(
           "group relative flex items-center gap-3 w-full rounded-xl transition-all duration-200",
           expanded ? "px-3 py-2.5" : "px-0 py-2.5 justify-center",
