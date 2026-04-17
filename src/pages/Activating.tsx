@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/Logo";
 import { Loader2, CheckCircle2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { isCurrentUserSuperAdmin } from "@/lib/admin-access";
 
 const MAX_POLL_MS = 30_000;
 const POLL_INTERVAL_MS = 2_000;
@@ -43,6 +44,14 @@ const Activating = () => {
     };
 
     const startPolling = async (userId: string) => {
+      const isSuperAdmin = await isCurrentUserSuperAdmin(userId);
+
+      if (cancelled) return;
+      if (isSuperAdmin) {
+        navigate("/saas-admin", { replace: true });
+        return;
+      }
+
       const startTime = Date.now();
 
       const { data: business } = await supabase

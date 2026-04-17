@@ -7,6 +7,7 @@ import { Shield, Check, CreditCard, Loader2, MessageCircle, ArrowLeft, Sparkles 
 import { Logo } from "@/components/Logo";
 import { getPlanDefinition, formatPrice } from "@/lib/plan-definitions";
 import LoadingPage from "@/components/LoadingPage";
+import { isCurrentUserSuperAdmin } from "@/lib/admin-access";
 
 const ActivateTrial = () => {
   const navigate = useNavigate();
@@ -45,6 +46,14 @@ const ActivateTrial = () => {
 
     const runCheck = async (userId: string) => {
       if (cancelled) return;
+
+      const isSuperAdmin = await isCurrentUserSuperAdmin(userId);
+
+      if (cancelled) return;
+      if (isSuperAdmin) {
+        navigate("/saas-admin", { replace: true });
+        return;
+      }
 
       const { data: business } = await supabase
         .from("businesses")

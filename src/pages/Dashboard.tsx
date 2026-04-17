@@ -195,6 +195,11 @@ const Dashboard = () => {
         setSelectedBusiness(business);
       }
 
+      if (!currentBusinessId && isAdmin) {
+        navigate("/saas-admin", { replace: true });
+        return;
+      }
+
       if (!currentBusinessId) {
         navigate("/configurar-negocio");
         return;
