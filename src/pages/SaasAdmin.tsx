@@ -742,8 +742,8 @@ const SaasAdmin = () => {
           </div>
         </TooltipProvider>
       </div>
+      )}
 
-      {/* ─── Modals ─── */}
       {/* Create Business */}
       <Dialog open={showCreateModal} onOpenChange={(open) => { if (!open) resetCreateForm(); setShowCreateModal(open); }}>
         <DialogContent className="sm:max-w-md">
