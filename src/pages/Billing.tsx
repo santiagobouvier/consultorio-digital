@@ -40,6 +40,7 @@ import {
 } from "@/lib/plan-definitions";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { isCurrentUserSuperAdmin } from "@/lib/admin-access";
 
 interface Subscription {
   id: string;
@@ -89,6 +90,12 @@ const Billing = () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { navigate("/auth"); return; }
+
+      const isSuperAdmin = await isCurrentUserSuperAdmin(user.id);
+      if (isSuperAdmin) {
+        navigate("/saas-admin", { replace: true });
+        return;
+      }
 
       const { data: business } = await supabase
         .from("businesses")

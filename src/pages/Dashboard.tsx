@@ -213,15 +213,22 @@ const Dashboard = () => {
       setIsDemo(bizInfo?.is_demo || false);
 
       // Check trial status for banner
-      const { data: subData } = await supabase
-        .from("subscriptions")
-        .select("status, trial_ends_at")
-        .eq("business_id", currentBusinessId)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (subData?.status === "trial" && subData.trial_ends_at) {
-        setTrialEndsAt(subData.trial_ends_at);
+      if (isAdmin) {
+        setTrialEndsAt(null);
+      } else {
+        const { data: subData } = await supabase
+          .from("subscriptions")
+          .select("status, trial_ends_at")
+          .eq("business_id", currentBusinessId)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (subData?.status === "trial" && subData.trial_ends_at) {
+          setTrialEndsAt(subData.trial_ends_at);
+        } else {
+          setTrialEndsAt(null);
+        }
       }
 
       const { count: patientsCount } = await supabase
@@ -530,7 +537,7 @@ const Dashboard = () => {
     <div className="min-h-screen bg-background">
       <div className="max-w-2xl mx-auto p-4 sm:p-6 space-y-6">
         {/* Trial Banner */}
-        {trialEndsAt && (
+        {!isSuperAdmin && trialEndsAt && (
           <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-3 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-blue-400 flex-shrink-0" />

@@ -111,6 +111,10 @@ export function PremiumSidebar() {
         .toUpperCase()
     : "U";
 
+  const visibleConfigItems = isSuperAdmin
+    ? configItems.filter((item) => item.url !== "/billing")
+    : configItems;
+
   const renderItem = (item: (typeof mainItems)[0]) => {
     const active = isActive(item.url);
 
@@ -262,7 +266,7 @@ export function PremiumSidebar() {
               Configuración
             </div>
 
-            {configItems.map((item) => (
+            {visibleConfigItems.map((item) => (
               <div key={item.url}>{renderItem(item)}</div>
             ))}
 
