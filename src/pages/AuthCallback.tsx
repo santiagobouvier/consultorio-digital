@@ -70,15 +70,16 @@ const AuthCallback = () => {
           navigate("/onboarding-consultorio", { replace: true });
           return;
         }
-        const { data: sub } = await supabase
+        const { data: subs } = await supabase
           .from("subscriptions")
           .select("status, mercadopago_preapproval_id")
-          .eq("business_id", business.id)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
+          .eq("business_id", business.id);
 
-        const hasActivatedAccess = business.is_demo || sub?.status === "active" || !!sub?.mercadopago_preapproval_id;
+        const hasActivatedAccess =
+          business.is_demo ||
+          (subs ?? []).some(
+            (s) => s.status === "active" || !!s.mercadopago_preapproval_id,
+          );
 
         if (hasActivatedAccess) {
           navigate("/dashboard", { replace: true });

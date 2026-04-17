@@ -7,7 +7,7 @@ import { lazy, Suspense, useEffect } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { clearServiceWorkerCaches } from "@/lib/session-recovery";
-import { RouteSkeleton } from "@/components/RouteSkeleton";
+
 
 // Lazy load all pages for optimal performance (code-split per route)
 const Landing = lazy(() => import("./pages/Landing"));
@@ -92,7 +92,7 @@ const App = () => {
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <Suspense fallback={<RouteSkeleton />}>
+          <Suspense fallback={null}>
             <Routes>
               {/* Public routes */}
               <Route path="/" element={<Landing />} />
