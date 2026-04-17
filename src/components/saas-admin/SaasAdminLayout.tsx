@@ -60,11 +60,11 @@ export const SaasAdminLayout = ({ activeSection, onSectionChange, metrics, child
       <aside className="w-20 lg:w-60 shrink-0 bg-[#08080d] border-r border-slate-800/80 flex flex-col fixed h-screen z-40">
         {/* Logo / brand */}
         <div className="h-20 border-b border-slate-800/80 flex items-center justify-center lg:justify-start lg:px-5 gap-3">
-          <div className="h-10 w-10 rounded-lg bg-blue-500/15 border border-blue-500/30 flex items-center justify-center shadow-[0_0_20px_-5px_rgba(59,130,246,0.5)]">
-            <Activity className="h-5 w-5 text-blue-400" />
+          <div className="h-10 w-10 rounded-lg bg-teal-500/15 border border-teal-500/30 flex items-center justify-center shadow-[0_0_20px_-5px_rgba(0,165,160,0.5)]">
+            <Activity className="h-5 w-5 text-teal-400" />
           </div>
           <div className="hidden lg:block">
-            <p className="text-xs font-mono uppercase tracking-[0.2em] text-blue-400/80">SaaS</p>
+            <p className="text-xs font-mono uppercase tracking-[0.2em] text-teal-400/80">SaaS</p>
             <p className="text-sm font-bold text-white -mt-0.5">Control</p>
           </div>
         </div>
