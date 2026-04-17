@@ -701,7 +701,7 @@ export const DesktopDashboard = () => {
             size="lg"
             variant="outline"
             className="h-16 gap-4 text-base font-semibold bg-card hover:bg-muted/50 transition-all"
-            onClick={() => navigate("/pacientes")}
+            onClick={() => navigate("/patients")}
           >
             <UserPlus className="h-5 w-5 text-primary" />
             Nuevo paciente
