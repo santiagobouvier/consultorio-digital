@@ -321,7 +321,9 @@ const OnboardingWizard = () => {
       }, { onConflict: "user_id" });
 
       toast.success("¡Consultorio configurado correctamente!");
-      navigate("/activar-prueba");
+      // TESTING MODE — revert before production launch
+      // Original: navigate("/activar-prueba");
+      navigate("/dashboard");
     } catch (error: any) {
       console.error("Error saving:", error);
       toast.error("Error al guardar los datos. Intentá de nuevo.");
