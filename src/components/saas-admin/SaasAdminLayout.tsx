@@ -120,7 +120,7 @@ export const SaasAdminLayout = ({ activeSection, onSectionChange, metrics, child
                 value={metrics.estimatedRevenue}
                 prefix="$"
                 icon={TrendingUp}
-                accent="emerald"
+                accent="teal"
               />
               <MetricCard
                 label="Consultorios"
