@@ -168,6 +168,31 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Clean up orphan user_roles (roles pointing to businesses that no longer exist)
+    const { data: existingRoles } = await supabase
+      .from("user_roles")
+      .select("id, business_id, role")
+      .eq("user_id", ownerId)
+      .in("role", ["owner", "professional"]);
+
+    if (existingRoles && existingRoles.length > 0) {
+      const businessIds = existingRoles.map((r: any) => r.business_id).filter(Boolean);
+      const { data: existingBusinesses } = await supabase
+        .from("businesses")
+        .select("id")
+        .in("id", businessIds);
+
+      const validIds = new Set((existingBusinesses || []).map((b: any) => b.id));
+      const orphanRoleIds = existingRoles
+        .filter((r: any) => r.business_id && !validIds.has(r.business_id))
+        .map((r: any) => r.id);
+
+      if (orphanRoleIds.length > 0) {
+        await supabase.from("user_roles").delete().in("id", orphanRoleIds);
+        console.log(`Cleaned ${orphanRoleIds.length} orphan user_roles for ${ownerId}`);
+      }
+    }
+
     // Create the business
     const slug = businessName.trim().toLowerCase()
       .replace(/\s+/g, "-")
@@ -192,7 +217,13 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Assign owner role
+    // Assign owner role (use upsert-style: delete duplicates first)
+    await supabase
+      .from("user_roles")
+      .delete()
+      .eq("user_id", ownerId)
+      .eq("business_id", business.id);
+
     await supabase.from("user_roles").insert({
       user_id: ownerId,
       role: "owner",
