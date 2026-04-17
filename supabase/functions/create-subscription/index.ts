@@ -121,6 +121,9 @@ serve(async (req) => {
     const trialEndDate = new Date();
     trialEndDate.setDate(trialEndDate.getDate() + 7);
 
+    // FIX: Para anual, MP cobra el precio mensual equivalente cada 12 meses.
+    // Para mensual, cobra el precio mensual cada 1 mes.
+    // `amount` ya es el precio correcto por período (priceAnnual o priceMonthly).
     const mpFrequency = period === "annual" ? 12 : 1;
     const mpFrequencyType = "months";
 
@@ -129,7 +132,7 @@ serve(async (req) => {
       auto_recurring: {
         frequency: mpFrequency,
         frequency_type: mpFrequencyType,
-        transaction_amount: period === "annual" ? amount * 12 : amount,
+        transaction_amount: amount,
         currency_id: "UYU",
         free_trial: {
           frequency: 7,
