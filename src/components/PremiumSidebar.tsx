@@ -135,6 +135,8 @@ export function PremiumSidebar() {
     const button = (
       <button
         onClick={() => navigate(item.url)}
+        onMouseEnter={() => handlePrefetch(item.url)}
+        onFocus={() => handlePrefetch(item.url)}
         className={cn(
           "group relative flex items-center gap-3 w-full rounded-xl transition-all duration-200",
           expanded ? "px-3 py-2.5" : "px-0 py-2.5 justify-center",
