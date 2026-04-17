@@ -582,7 +582,7 @@ const CalendarV2 = () => {
                       professionals={professionals}
                       dayPayments={dayPayments}
                       onPaymentClick={(payment) => {
-                        navigate(`/pacientes/${payment.patient_id}`);
+                        navigate(`/patients/${payment.patient_id}`);
                       }}
                     />
                   )}
