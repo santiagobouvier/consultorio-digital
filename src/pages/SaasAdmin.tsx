@@ -42,6 +42,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { PlanSelector } from "@/components/PlanSelector";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { isCurrentUserSuperAdmin } from "@/lib/admin-access";
+import { SaasAdminLayout, type SaasSection } from "@/components/saas-admin/SaasAdminLayout";
 
 // ── Types ──────────────────────────────────────────────
 interface BusinessWithDetails {
@@ -155,6 +156,7 @@ const SaasAdmin = () => {
   const [businessToActivate, setBusinessToActivate] = useState<BusinessWithDetails | null>(null);
   const [activatePlan, setActivatePlan] = useState<string>("esencial");
   const [activating, setActivating] = useState(false);
+  const [activeSection, setActiveSection] = useState<SaasSection>("consultorios");
 
   useEffect(() => { checkAccessAndLoad(); }, []);
 
@@ -479,66 +481,31 @@ const SaasAdmin = () => {
   if (loading) return <LoadingPage />;
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* ─── Tech Header ─── */}
-      <div className="relative overflow-hidden border-b border-border bg-gradient-to-br from-[hsl(180,15%,6%)] via-[hsl(176,40%,12%)] to-[hsl(180,15%,8%)]">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,hsl(176_80%_40%/0.15),transparent_60%)]" />
-        <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'40\' height=\'40\' viewBox=\'0 0 40 40\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'%23fff\' fill-opacity=\'1\'%3E%3Cpath d=\'M0 0h1v1H0zM20 0h1v1h-1zM0 20h1v1H0zM20 20h1v1h-1z\'/%3E%3C/g%3E%3C/svg%3E")' }} />
-        
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")} className="text-white/70 hover:text-white hover:bg-white/10">
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <div>
-                <div className="flex items-center gap-3">
-                  <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">Panel de Gestión</h1>
-                  <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/20">
-                    <Zap className="h-3 w-3 mr-1" />
-                    En vivo
-                  </Badge>
-                </div>
-                <p className="text-sm text-white/50 mt-1 flex items-center gap-2">
-                  <Building2 className="h-3.5 w-3.5" />
-                  Administración de consultorios
-                </p>
-              </div>
-            </div>
-            <Badge className="bg-white/10 text-white/90 border-white/20 hover:bg-white/15 hidden sm:flex">
-              <Shield className="h-3.5 w-3.5 mr-1.5" />
-              Super Admin
-            </Badge>
-          </div>
+    <SaasAdminLayout
+      activeSection={activeSection}
+      onSectionChange={setActiveSection}
+      metrics={{
+        estimatedRevenue: metrics.estimatedRevenue,
+        totalBusinesses: metrics.totalBusinesses,
+        totalProfessionals: metrics.totalProfessionals,
+        totalPatients: metrics.totalPatients,
+      }}
+    >
+      {activeSection !== "consultorios" && (
+        <ComingSoonSection section={activeSection} />
+      )}
 
-          {/* ─── Stat Cards ─── */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            {[
-              { label: "Consultorios", value: metrics.totalBusinesses, icon: Building2, color: "from-cyan-500/20 to-cyan-500/5", iconColor: "text-cyan-400", borderColor: "border-cyan-500/20" },
-              { label: "Profesionales", value: metrics.totalProfessionals, icon: UserCog, color: "from-violet-500/20 to-violet-500/5", iconColor: "text-violet-400", borderColor: "border-violet-500/20" },
-              { label: "Pacientes", value: metrics.totalPatients, icon: Users, color: "from-blue-500/20 to-blue-500/5", iconColor: "text-blue-400", borderColor: "border-blue-500/20" },
-              { label: "MRR Estimado", value: metrics.estimatedRevenue, icon: TrendingUp, color: "from-emerald-500/20 to-emerald-500/5", iconColor: "text-emerald-400", borderColor: "border-emerald-500/20", prefix: "$" },
-            ].map(({ label, value, icon: Icon, color, iconColor, borderColor, prefix }) => (
-              <div key={label} className={`relative rounded-xl border ${borderColor} bg-gradient-to-br ${color} backdrop-blur-sm p-4 sm:p-5 overflow-hidden group`}>
-                <div className="absolute top-0 right-0 w-20 h-20 bg-white/[0.02] rounded-bl-full" />
-                <div className="flex items-center justify-between mb-3">
-                  <div className={`h-9 w-9 rounded-lg bg-white/10 flex items-center justify-center`}>
-                    <Icon className={`h-4.5 w-4.5 ${iconColor}`} />
-                  </div>
-                  <Activity className="h-4 w-4 text-white/20 group-hover:text-white/40 transition-colors" />
-                </div>
-                <p className="text-2xl sm:text-3xl font-bold text-white tabular-nums">
-                  {prefix}<AnimatedNumber value={value} />
-                </p>
-                <p className="text-xs text-white/50 mt-1 font-medium uppercase tracking-wider">{label}</p>
-              </div>
-            ))}
+      {activeSection === "consultorios" && (
+      <div className="space-y-5">
+        {/* Section heading */}
+        <div className="flex items-center justify-between mb-2">
+          <div>
+            <h1 className="text-2xl font-bold text-white tracking-tight">Consultorios</h1>
+            <p className="text-sm text-slate-400 mt-0.5">Gestión de todos los consultorios en la plataforma</p>
           </div>
         </div>
-      </div>
 
-      {/* ─── Content ─── */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-5">
+
         {/* Alert bar for businesses at limit */}
         {atLimitCount > 0 && (
           <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-destructive/10 border border-destructive/20 text-sm">
@@ -775,8 +742,8 @@ const SaasAdmin = () => {
           </div>
         </TooltipProvider>
       </div>
+      )}
 
-      {/* ─── Modals ─── */}
       {/* Create Business */}
       <Dialog open={showCreateModal} onOpenChange={(open) => { if (!open) resetCreateForm(); setShowCreateModal(open); }}>
         <DialogContent className="sm:max-w-md">
@@ -981,6 +948,30 @@ const SaasAdmin = () => {
           </div>
         </DialogContent>
       </Dialog>
+    </SaasAdminLayout>
+  );
+};
+
+// ── Coming Soon placeholder for sections under construction ──
+const ComingSoonSection = ({ section }: { section: SaasSection }) => {
+  const labels: Record<SaasSection, { title: string; desc: string }> = {
+    consultorios: { title: "Consultorios", desc: "" },
+    finanzas: { title: "Finanzas", desc: "Gráficos de ingresos por mes, MRR por plan, total cobrado vs proyectado." },
+    usuarios: { title: "Usuarios", desc: "Lista de profesionales registrados en la plataforma con búsqueda y filtros." },
+    planes: { title: "Planes", desc: "Editor de nombre, precios y límites de cada plan." },
+    sistema: { title: "Sistema", desc: "Estado del webhook de MercadoPago, edge functions y variables de entorno." },
+  };
+  const info = labels[section];
+  return (
+    <div className="flex flex-col items-center justify-center py-20 text-center">
+      <div className="h-16 w-16 rounded-2xl bg-blue-500/10 ring-1 ring-blue-500/20 flex items-center justify-center mb-4 shadow-[0_0_30px_-10px_rgba(59,130,246,0.6)]">
+        <span className="text-2xl">🚧</span>
+      </div>
+      <h2 className="text-2xl font-bold text-white mb-2">{info.title}</h2>
+      <p className="text-sm text-slate-400 max-w-md mb-6">{info.desc}</p>
+      <div className="px-4 py-1.5 rounded-full bg-slate-800/60 border border-slate-700 text-xs font-mono uppercase tracking-wider text-slate-300">
+        Próximamente
+      </div>
     </div>
   );
 };
