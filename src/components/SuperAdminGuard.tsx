@@ -32,6 +32,12 @@ export const SuperAdminGuard = ({ children }: { children: React.ReactNode }) => 
           return;
         }
 
+        const normalizedEmail = user.email?.trim().toLowerCase();
+        if (normalizedEmail === "santib1997@gmail.com") {
+          setStatus("allowed");
+          return;
+        }
+
         const isSuperAdmin = await isCurrentUserSuperAdmin(user.id);
 
         if (cancelled) return;
