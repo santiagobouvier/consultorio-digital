@@ -42,6 +42,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { PlanSelector } from "@/components/PlanSelector";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { isCurrentUserSuperAdmin } from "@/lib/admin-access";
+import { SaasAdminLayout, type SaasSection } from "@/components/saas-admin/SaasAdminLayout";
 
 // ── Types ──────────────────────────────────────────────
 interface BusinessWithDetails {
