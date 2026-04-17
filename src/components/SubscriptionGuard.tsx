@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertTriangle, CreditCard } from "lucide-react";
 import { hardResetBrowserSession } from "@/lib/session-recovery";
+import { isCurrentUserSuperAdmin } from "@/lib/admin-access";
 
 interface SubscriptionGuardProps {
   children: ReactNode;
@@ -20,6 +21,7 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
   const [checkingActivation, setCheckingActivation] = useState(true);
   const [activationChecked, setActivationChecked] = useState(false);
   const [sessionInvalid, setSessionInvalid] = useState(false);
+  const [directIsSuperAdmin, setDirectIsSuperAdmin] = useState(false);
   const hasSuccessfulSubscriptionRedirect = searchParams.get("subscription") === "success";
 
   useEffect(() => {
@@ -36,6 +38,17 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
         if (!user) {
           // No session — just redirect to auth, no need to clear
           navigate("/auth", { replace: true });
+          return;
+        }
+
+        const isSuperAdmin = await isCurrentUserSuperAdmin(user.id);
+
+        if (isSuperAdmin) {
+          setDirectIsSuperAdmin(true);
+          setBusinessId(null);
+          setCheckingActivation(false);
+          setActivationChecked(true);
+          setAuthLoading(false);
           return;
         }
 
@@ -67,11 +80,11 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
     getBusinessId();
   }, [navigate]);
 
-  const { status, loading, trialDaysLeft, isSuperAdmin } = useSubscriptionStatus(businessId);
+  const { status, loading, isSuperAdmin } = useSubscriptionStatus(businessId);
 
   // Safety timeout: si después de 5 segundos no resolvió, hard reset
   useEffect(() => {
-    if (sessionInvalid) return;
+    if (sessionInvalid || directIsSuperAdmin) return;
     const timer = setTimeout(() => {
       if (authLoading || (businessId && (loading || checkingActivation || !activationChecked))) {
         console.warn("SubscriptionGuard: timeout de 5s alcanzado, forzando hard reset");
@@ -79,11 +92,17 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
       }
     }, 5000);
     return () => clearTimeout(timer);
-  }, [authLoading, loading, checkingActivation, activationChecked, businessId, sessionInvalid]);
+  }, [authLoading, loading, checkingActivation, activationChecked, businessId, sessionInvalid, directIsSuperAdmin]);
 
   // Check if trial user has activated with MP (has preapproval ID)
   useEffect(() => {
     if (authLoading) return;
+
+    if (directIsSuperAdmin) {
+      setCheckingActivation(false);
+      setActivationChecked(true);
+      return;
+    }
 
     // Sin businessId: dejar pasar inmediatamente (onboarding)
     if (!businessId) {
@@ -151,10 +170,11 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
     };
 
     checkActivation();
-  }, [businessId, status, loading, authLoading, isSuperAdmin, navigate, hasSuccessfulSubscriptionRedirect]);
+  }, [businessId, status, loading, authLoading, isSuperAdmin, navigate, hasSuccessfulSubscriptionRedirect, directIsSuperAdmin]);
 
   if (sessionInvalid) return <LoadingPage />;
   if (authLoading) return <LoadingPage />;
+  if (directIsSuperAdmin) return <>{children}</>;
   // Si hay businessId, esperar también al status de suscripción y la verificación de activación
   if (businessId && (loading || checkingActivation || !activationChecked)) return <LoadingPage />;
 
@@ -162,7 +182,7 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
   if (!businessId) return <>{children}</>;
 
   // Super admin, active, trial — allowed
-  if (isSuperAdmin || status === "active" || status === "trial") {
+  if (directIsSuperAdmin || isSuperAdmin || status === "active" || status === "trial") {
     return <>{children}</>;
   }
 

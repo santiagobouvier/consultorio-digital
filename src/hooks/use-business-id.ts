@@ -44,20 +44,22 @@ export const useBusinessId = (redirectIfNoBusiness = true): UseBusinessIdResult 
         return;
       }
 
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      if (!profile || profileError) {
-        await hardResetBrowserSession({ redirectTo: "/auth?session=expired" });
-        return;
-      }
-
       // Check if user is super_admin
       const isAdmin = await isCurrentUserSuperAdmin(user.id);
       setIsSuperAdmin(isAdmin);
+
+      if (!isAdmin) {
+        const { data: profile, error: profileError } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (!profile || profileError) {
+          await hardResetBrowserSession({ redirectTo: "/auth?session=expired" });
+          return;
+        }
+      }
 
       // Check for SaaS selected business in sessionStorage
       const saasSelectedBusiness = sessionStorage.getItem(SAAS_SELECTED_BUSINESS_KEY);
@@ -95,6 +97,10 @@ export const useBusinessId = (redirectIfNoBusiness = true): UseBusinessIdResult 
           setLoading(false);
           return;
         }
+
+        setBusinessId(null);
+        setLoading(false);
+        return;
       }
 
       // Try to find user's owned business
