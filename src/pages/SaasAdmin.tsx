@@ -156,6 +156,7 @@ const SaasAdmin = () => {
   const [businessToActivate, setBusinessToActivate] = useState<BusinessWithDetails | null>(null);
   const [activatePlan, setActivatePlan] = useState<string>("esencial");
   const [activating, setActivating] = useState(false);
+  const [activeSection, setActiveSection] = useState<SaasSection>("consultorios");
 
   useEffect(() => { checkAccessAndLoad(); }, []);
 
