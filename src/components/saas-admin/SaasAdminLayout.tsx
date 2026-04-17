@@ -154,6 +154,7 @@ export const SaasAdminLayout = ({ activeSection, onSectionChange, metrics, child
 };
 
 const ACCENTS: Record<string, { ring: string; icon: string; glow: string }> = {
+  teal:    { ring: "ring-teal-500/20",    icon: "text-teal-400",    glow: "shadow-[0_0_20px_-10px_rgba(0,165,160,0.7)]" },
   blue:    { ring: "ring-blue-500/20",    icon: "text-blue-400",    glow: "shadow-[0_0_20px_-10px_rgba(59,130,246,0.6)]" },
   emerald: { ring: "ring-emerald-500/20", icon: "text-emerald-400", glow: "shadow-[0_0_20px_-10px_rgba(16,185,129,0.6)]" },
   violet:  { ring: "ring-violet-500/20",  icon: "text-violet-400",  glow: "shadow-[0_0_20px_-10px_rgba(139,92,246,0.6)]" },
