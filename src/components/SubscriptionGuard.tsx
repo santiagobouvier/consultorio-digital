@@ -150,17 +150,18 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
         return;
       }
 
-      // Check if subscription has MP preapproval
+      // Check subscription status and MP preapproval
       const { data: sub } = await supabase
         .from("subscriptions")
-        .select("mercadopago_preapproval_id")
+        .select("status, mercadopago_preapproval_id")
         .eq("business_id", businessId)
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
 
-      if (!sub?.mercadopago_preapproval_id) {
-        // No MP activation — redirect to activate trial
+      // Allow access if subscription is active (manually activated) OR has MP preapproval
+      if (sub?.status !== "active" && !sub?.mercadopago_preapproval_id) {
+        // No activation — redirect to activate trial
         navigate("/activar-prueba", { replace: true });
         return;
       }

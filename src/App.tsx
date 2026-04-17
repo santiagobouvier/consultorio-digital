@@ -30,7 +30,7 @@ const PatientPortal = lazy(() => import("./pages/PatientPortal"));
 const PatientInvitation = lazy(() => import("./pages/PatientInvitation"));
 const ProfessionalInvitation = lazy(() => import("./pages/ProfessionalInvitation"));
 const ProfessionalRegister = lazy(() => import("./pages/ProfessionalRegister"));
-const ConsultorioOnboarding = lazy(() => import("./pages/OnboardingWizard"));
+
 const Statistics = lazy(() => import("./pages/Statistics"));
 const SaasAdmin = lazy(() => import("./pages/SaasAdmin"));
 const CommandCenter = lazy(() => import("./pages/CommandCenter"));
@@ -94,7 +94,7 @@ const App = () => {
               <Route path="/portal-paciente/invitacion" element={<PatientInvitation />} />
               <Route path="/invitar-profesional" element={<ProfessionalInvitation />} />
               <Route path="/registrarse-profesional" element={<ProfessionalRegister />} />
-              <Route path="/onboarding-consultorio" element={<ConsultorioOnboarding />} />
+              <Route path="/onboarding-consultorio" element={<BusinessSetup />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/activar-prueba" element={<ActivateTrial />} />
               <Route path="/activating" element={<Activating />} />
