@@ -66,18 +66,27 @@ const ActivateTrial = () => {
       if (!business.onboarding_completed) { navigate("/onboarding-consultorio", { replace: true }); return; }
 
       // Check if already has an activated subscription/trial
-      const { data: sub } = await supabase
-        .from("subscriptions")
-        .select("status, mercadopago_preapproval_id")
-        .eq("business_id", business.id)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      // Polling: re-verificar hasta 3 veces (cubre timing de activación manual)
+      let sub: { status: string | null; mercadopago_preapproval_id: string | null } | null = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const { data } = await supabase
+          .from("subscriptions")
+          .select("status, mercadopago_preapproval_id")
+          .eq("business_id", business.id)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
-      if (cancelled) return;
-      if (sub?.status === "active" || sub?.mercadopago_preapproval_id) {
-        navigate("/dashboard", { replace: true });
-        return;
+        if (cancelled) return;
+        sub = data;
+
+        if (sub?.status === "active" || sub?.mercadopago_preapproval_id) {
+          navigate("/dashboard", { replace: true });
+          return;
+        }
+
+        // Wait 1s antes de reintentar (excepto último)
+        if (attempt < 2) await new Promise((r) => setTimeout(r, 1000));
       }
 
       setBusinessId(business.id);
