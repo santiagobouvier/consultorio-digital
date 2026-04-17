@@ -948,6 +948,30 @@ const SaasAdmin = () => {
           </div>
         </DialogContent>
       </Dialog>
+    </SaasAdminLayout>
+  );
+};
+
+// ── Coming Soon placeholder for sections under construction ──
+const ComingSoonSection = ({ section }: { section: SaasSection }) => {
+  const labels: Record<SaasSection, { title: string; desc: string }> = {
+    consultorios: { title: "Consultorios", desc: "" },
+    finanzas: { title: "Finanzas", desc: "Gráficos de ingresos por mes, MRR por plan, total cobrado vs proyectado." },
+    usuarios: { title: "Usuarios", desc: "Lista de profesionales registrados en la plataforma con búsqueda y filtros." },
+    planes: { title: "Planes", desc: "Editor de nombre, precios y límites de cada plan." },
+    sistema: { title: "Sistema", desc: "Estado del webhook de MercadoPago, edge functions y variables de entorno." },
+  };
+  const info = labels[section];
+  return (
+    <div className="flex flex-col items-center justify-center py-20 text-center">
+      <div className="h-16 w-16 rounded-2xl bg-blue-500/10 ring-1 ring-blue-500/20 flex items-center justify-center mb-4 shadow-[0_0_30px_-10px_rgba(59,130,246,0.6)]">
+        <span className="text-2xl">🚧</span>
+      </div>
+      <h2 className="text-2xl font-bold text-white mb-2">{info.title}</h2>
+      <p className="text-sm text-slate-400 max-w-md mb-6">{info.desc}</p>
+      <div className="px-4 py-1.5 rounded-full bg-slate-800/60 border border-slate-700 text-xs font-mono uppercase tracking-wider text-slate-300">
+        Próximamente
+      </div>
     </div>
   );
 };
