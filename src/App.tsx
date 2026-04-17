@@ -148,6 +148,7 @@ const App = () => {
       <TooltipProvider>
         <Toaster />
         <Sonner />
+        <SessionExpiredDialog />
         <BrowserRouter>
           <Suspense fallback={null}>
             <Routes>
