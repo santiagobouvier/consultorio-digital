@@ -7,6 +7,7 @@ import { lazy, Suspense, useEffect } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { clearServiceWorkerCaches } from "@/lib/session-recovery";
+import { SessionExpiredDialog, triggerSessionExpired } from "@/components/SessionExpiredDialog";
 
 
 // Lazy load all pages for optimal performance (code-split per route)
@@ -103,23 +104,21 @@ const App = () => {
         return;
       }
       // Si Supabase no pudo refrescar el token y emitió un evento sin sesión
-      // mientras el usuario está en una ruta protegida, forzar reseteo limpio.
+      // mientras el usuario está en una ruta protegida, mostrar dialog amigable
+      // en vez de hacer hard reset (que se sentía como un bug).
       if ((event === "TOKEN_REFRESHED" || event === "USER_UPDATED") && !session && isOnProtectedRoute()) {
-        void import("@/lib/session-recovery").then(({ hardResetBrowserSession }) =>
-          hardResetBrowserSession({ redirectTo: "/auth?session=expired" })
-        );
+        triggerSessionExpired();
       }
     });
 
     // 2) Heartbeat de sesión: cada 4 minutos pedimos getSession() para mantener
     //    activo el refresh automático aunque el usuario no interactúe.
-    //    Si la sesión ya no existe estando en una ruta protegida, hard reset.
+    //    Si la sesión ya no existe estando en una ruta protegida, mostrar dialog.
     const heartbeat = window.setInterval(async () => {
       try {
         const { data, error } = await supabase.auth.getSession();
         if ((error || !data.session) && isOnProtectedRoute()) {
-          const { hardResetBrowserSession } = await import("@/lib/session-recovery");
-          await hardResetBrowserSession({ redirectTo: "/auth?session=expired" });
+          triggerSessionExpired();
         }
       } catch {
         // silencioso: si falla el heartbeat no rompemos la app
@@ -131,9 +130,7 @@ const App = () => {
       if (document.visibilityState !== "visible") return;
       void supabase.auth.getSession().then(({ data, error }) => {
         if ((error || !data.session) && isOnProtectedRoute()) {
-          void import("@/lib/session-recovery").then(({ hardResetBrowserSession }) =>
-            hardResetBrowserSession({ redirectTo: "/auth?session=expired" })
-          );
+          triggerSessionExpired();
         }
       });
     };
