@@ -72,15 +72,19 @@ const Auth = () => {
         if (!business.onboarding_completed) {
           navigate("/onboarding-consultorio", { replace: true });
         } else {
-          const { data: sub } = await supabase
+          // Buscar TODAS las suscripciones del negocio (no solo la más reciente)
+          // para detectar correctamente accesos activados manualmente desde el SaaS Admin,
+          // que pueden coexistir con una suscripción 'trial' anterior más reciente.
+          const { data: subs } = await supabase
             .from("subscriptions")
             .select("status, mercadopago_preapproval_id")
-            .eq("business_id", business.id)
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .maybeSingle();
+            .eq("business_id", business.id);
 
-          const hasActivatedAccess = business.is_demo || sub?.status === "active" || !!sub?.mercadopago_preapproval_id;
+          const hasActivatedAccess =
+            business.is_demo ||
+            (subs ?? []).some(
+              (s) => s.status === "active" || !!s.mercadopago_preapproval_id,
+            );
 
           if (hasActivatedAccess) {
             navigate("/dashboard", { replace: true });
