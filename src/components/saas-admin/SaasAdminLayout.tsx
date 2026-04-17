@@ -55,16 +55,16 @@ export const SaasAdminLayout = ({ activeSection, onSectionChange, metrics, child
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen flex bg-[#0a0a0f] text-slate-100">
+    <div className="dark min-h-screen flex bg-[#0a0a0f] text-slate-100">
       {/* ── Sidebar ── */}
       <aside className="w-20 lg:w-60 shrink-0 bg-[#08080d] border-r border-slate-800/80 flex flex-col fixed h-screen z-40">
         {/* Logo / brand */}
         <div className="h-20 border-b border-slate-800/80 flex items-center justify-center lg:justify-start lg:px-5 gap-3">
-          <div className="h-10 w-10 rounded-lg bg-blue-500/15 border border-blue-500/30 flex items-center justify-center shadow-[0_0_20px_-5px_rgba(59,130,246,0.5)]">
-            <Activity className="h-5 w-5 text-blue-400" />
+          <div className="h-10 w-10 rounded-lg bg-teal-500/15 border border-teal-500/30 flex items-center justify-center shadow-[0_0_20px_-5px_rgba(0,165,160,0.5)]">
+            <Activity className="h-5 w-5 text-teal-400" />
           </div>
           <div className="hidden lg:block">
-            <p className="text-xs font-mono uppercase tracking-[0.2em] text-blue-400/80">SaaS</p>
+            <p className="text-xs font-mono uppercase tracking-[0.2em] text-teal-400/80">SaaS</p>
             <p className="text-sm font-bold text-white -mt-0.5">Control</p>
           </div>
         </div>
@@ -81,15 +81,15 @@ export const SaasAdminLayout = ({ activeSection, onSectionChange, metrics, child
                 className={[
                   "w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all group relative",
                   active
-                    ? "bg-blue-500/10 text-blue-300 shadow-[inset_0_0_0_1px_rgba(59,130,246,0.3)]"
+                    ? "bg-teal-500/10 text-teal-300 shadow-[inset_0_0_0_1px_rgba(0,165,160,0.3)]"
                     : "text-slate-400 hover:text-slate-100 hover:bg-slate-800/50",
                 ].join(" ")}
                 title={item.label}
               >
                 {active && (
-                  <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-0.5 bg-blue-400 rounded-r-full shadow-[0_0_10px_rgba(59,130,246,0.8)]" />
+                  <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-0.5 bg-teal-400 rounded-r-full shadow-[0_0_10px_rgba(0,165,160,0.8)]" />
                 )}
-                <Icon className={`h-5 w-5 shrink-0 ${active ? "text-blue-400" : ""}`} />
+                <Icon className={`h-5 w-5 shrink-0 ${active ? "text-teal-400" : ""}`} />
                 <span className="hidden lg:inline text-sm font-medium">{item.label}</span>
               </button>
             );
@@ -120,7 +120,7 @@ export const SaasAdminLayout = ({ activeSection, onSectionChange, metrics, child
                 value={metrics.estimatedRevenue}
                 prefix="$"
                 icon={TrendingUp}
-                accent="emerald"
+                accent="teal"
               />
               <MetricCard
                 label="Consultorios"
@@ -154,6 +154,7 @@ export const SaasAdminLayout = ({ activeSection, onSectionChange, metrics, child
 };
 
 const ACCENTS: Record<string, { ring: string; icon: string; glow: string }> = {
+  teal:    { ring: "ring-teal-500/20",    icon: "text-teal-400",    glow: "shadow-[0_0_20px_-10px_rgba(0,165,160,0.7)]" },
   blue:    { ring: "ring-blue-500/20",    icon: "text-blue-400",    glow: "shadow-[0_0_20px_-10px_rgba(59,130,246,0.6)]" },
   emerald: { ring: "ring-emerald-500/20", icon: "text-emerald-400", glow: "shadow-[0_0_20px_-10px_rgba(16,185,129,0.6)]" },
   violet:  { ring: "ring-violet-500/20",  icon: "text-violet-400",  glow: "shadow-[0_0_20px_-10px_rgba(139,92,246,0.6)]" },
