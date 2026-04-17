@@ -109,7 +109,7 @@ export function PatientForm({
           title: "Configuración necesaria",
           description: "Primero configurá tu consultorio antes de crear pacientes.",
         });
-        window.location.href = "/configurar-negocio";
+        navigate("/configurar-negocio", { replace: true });
         return;
       }
 
