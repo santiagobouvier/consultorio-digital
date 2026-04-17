@@ -55,7 +55,7 @@ export const SaasAdminLayout = ({ activeSection, onSectionChange, metrics, child
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen flex bg-[#0a0a0f] text-slate-100">
+    <div className="dark min-h-screen flex bg-[#0a0a0f] text-slate-100">
       {/* ── Sidebar ── */}
       <aside className="w-20 lg:w-60 shrink-0 bg-[#08080d] border-r border-slate-800/80 flex flex-col fixed h-screen z-40">
         {/* Logo / brand */}
