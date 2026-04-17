@@ -81,15 +81,15 @@ export const SaasAdminLayout = ({ activeSection, onSectionChange, metrics, child
                 className={[
                   "w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all group relative",
                   active
-                    ? "bg-blue-500/10 text-blue-300 shadow-[inset_0_0_0_1px_rgba(59,130,246,0.3)]"
+                    ? "bg-teal-500/10 text-teal-300 shadow-[inset_0_0_0_1px_rgba(0,165,160,0.3)]"
                     : "text-slate-400 hover:text-slate-100 hover:bg-slate-800/50",
                 ].join(" ")}
                 title={item.label}
               >
                 {active && (
-                  <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-0.5 bg-blue-400 rounded-r-full shadow-[0_0_10px_rgba(59,130,246,0.8)]" />
+                  <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-0.5 bg-teal-400 rounded-r-full shadow-[0_0_10px_rgba(0,165,160,0.8)]" />
                 )}
-                <Icon className={`h-5 w-5 shrink-0 ${active ? "text-blue-400" : ""}`} />
+                <Icon className={`h-5 w-5 shrink-0 ${active ? "text-teal-400" : ""}`} />
                 <span className="hidden lg:inline text-sm font-medium">{item.label}</span>
               </button>
             );
