@@ -88,6 +88,9 @@ export function AppSidebar() {
   };
 
   const isActive = (path: string) => location.pathname === path;
+  const visibleConfigItems = isSuperAdmin
+    ? configItems.filter((item) => item.url !== "/billing")
+    : configItems;
 
   return (
     <Sidebar
@@ -135,7 +138,7 @@ export function AppSidebar() {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {configItems.map((item) => (
+              {visibleConfigItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     isActive={isActive(item.url)}

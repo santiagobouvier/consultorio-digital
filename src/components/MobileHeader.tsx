@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useDashboardBranding } from "@/contexts/DashboardBrandingContext";
+import { isCurrentUserSuperAdmin } from "@/lib/admin-access";
 
 const navItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
@@ -35,6 +36,7 @@ const navItems = [
 
 export function MobileHeader() {
   const [open, setOpen] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { primaryColor, logoUrl, displayName } = useDashboardBranding();
@@ -43,6 +45,23 @@ export function MobileHeader() {
   const brandHsla = (alpha: number) => `hsla(${primaryColor}, ${alpha})`;
 
   const isActive = (path: string) => location.pathname === path;
+  const visibleNavItems = isSuperAdmin
+    ? navItems.filter((item) => item.url !== "/billing")
+    : navItems;
+
+  useEffect(() => {
+    const loadRole = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) return;
+
+      setIsSuperAdmin(await isCurrentUserSuperAdmin(user.id));
+    };
+
+    loadRole();
+  }, []);
 
   const handleNav = (url: string) => {
     navigate(url);
@@ -160,7 +179,7 @@ export function MobileHeader() {
 
           {/* Nav items */}
           <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-            {navItems.map((item) => {
+            {visibleNavItems.map((item) => {
               const active = isActive(item.url);
               return (
                 <button
