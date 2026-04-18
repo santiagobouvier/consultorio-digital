@@ -1,11 +1,13 @@
 import { useMemo } from "react";
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, isToday } from "date-fns";
 import { es } from "date-fns/locale";
-import { CalendarAppointment } from "./types";
+import { CalendarAppointment, DayPayment } from "./types";
 import { AppointmentCard } from "./AppointmentCard";
 import { cn } from "@/lib/utils";
-import { Plus } from "lucide-react";
+import { Plus, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { calculatePaymentStatus, formatCurrency } from "@/lib/payments";
 import {
   Tooltip,
   TooltipContent,
@@ -20,6 +22,8 @@ interface WeekViewV2Props {
   onDayClick: (date: Date) => void;
   onAddAppointment: () => void;
   showProfessionalColors: boolean;
+  paymentsByDay?: Map<string, DayPayment[]>;
+  onPaymentClick?: (payment: DayPayment) => void;
 }
 
 const ProfessionalBadge = ({ appointment, showColor }: { appointment: CalendarAppointment; showColor: boolean }) => {
