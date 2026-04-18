@@ -418,7 +418,7 @@ const ClinicSettings = () => {
   };
 
   const copyPublicUrl = () => {
-    navigator.clipboard.writeText(`${window.location.origin}/consultorio/${publicSlug}`);
+    navigator.clipboard.writeText(`${window.location.origin}/portal/${publicSlug}`);
     toast({ title: "URL copiada", description: "La URL se copió al portapapeles" });
   };
 
@@ -474,7 +474,7 @@ const ClinicSettings = () => {
   const initials = (clinicName || "Mi Consultorio")
     .split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
   const displayLogo = dashboardLogoUrl || logoUrl;
-  const portalUrl = `${window.location.origin}/consultorio/${publicSlug}`;
+  const portalUrl = `${window.location.origin}/portal/${publicSlug}`;
   const registrationUrl = `${window.location.origin}/registrarse-profesional?business=${publicSlug}`;
 
   return (
