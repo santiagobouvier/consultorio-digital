@@ -16,6 +16,10 @@ import {
   Download,
   TrendingUp,
   Activity,
+  ArrowUpRight,
+  ArrowDownRight,
+  Minus,
+  MessageCircle,
 } from "lucide-react";
 import LoadingPage from "@/components/LoadingPage";
 import { useBusinessId } from "@/hooks/use-business-id";
@@ -101,7 +105,8 @@ const Statistics = () => {
   const [appointments, setAppointments] = useState<Array<{ start_at: string; status: string; professional_id: string | null }>>([]);
   const [payments, setPayments] = useState<Array<{ amount: number; status: string; due_date: string; paid_at: string | null; patient_id: string }>>([]);
   const [slots, setSlots] = useState<Array<{ date: string; status: string }>>([]);
-  const [allPatients, setAllPatients] = useState<Array<{ id: string; full_name: string; email: string | null; is_active: boolean }>>([]);
+  const [allPatients, setAllPatients] = useState<Array<{ id: string; full_name: string; email: string | null; is_active: boolean; whatsapp_phone: string | null }>>([]);
+  const [publicSlug, setPublicSlug] = useState<string | null>(null);
 
   useEffect(() => {
     if (businessId) loadAll();
@@ -111,7 +116,7 @@ const Statistics = () => {
   const loadAll = async () => {
     setLoading(true);
     try {
-      const [{ data: appts }, { data: pays }, { data: sl }, { data: pts }] = await Promise.all([
+      const [{ data: appts }, { data: pays }, { data: sl }, { data: pts }, { data: biz }] = await Promise.all([
         supabase
           .from("appointments")
           .select("start_at, status, professional_id")
@@ -126,13 +131,19 @@ const Statistics = () => {
           .eq("business_id", businessId!),
         supabase
           .from("patients")
-          .select("id, full_name, email, is_active")
+          .select("id, full_name, email, is_active, whatsapp_phone")
           .eq("business_id", businessId!),
+        supabase
+          .from("businesses")
+          .select("public_slug")
+          .eq("id", businessId!)
+          .maybeSingle(),
       ]);
       setAppointments(appts || []);
       setPayments((pays || []).map((p) => ({ ...p, amount: Number(p.amount) })));
       setSlots(sl || []);
       setAllPatients(pts || []);
+      setPublicSlug(biz?.public_slug || null);
     } catch (e) {
       console.error("Stats load error:", e);
     } finally {
@@ -216,6 +227,47 @@ const Statistics = () => {
   }, [apptsInPeriod]);
 
   const maxHourCount = Math.max(...hourData.map((h) => h.count), 1);
+
+  // === No-show trend (current month vs previous month) ===
+  const noShowTrend = useMemo(() => {
+    const now = new Date();
+    const curKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const prevKey = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, "0")}`;
+    const buckets = new Map<string, { total: number; noShow: number }>();
+    for (const a of appointments) {
+      if (a.status === "cancelled") continue;
+      const d = new Date(a.start_at);
+      const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      if (k !== curKey && k !== prevKey) continue;
+      if (!buckets.has(k)) buckets.set(k, { total: 0, noShow: 0 });
+      const m = buckets.get(k)!;
+      m.total++;
+      if (a.status === "no_show") m.noShow++;
+    }
+    const cur = buckets.get(curKey);
+    const prev = buckets.get(prevKey);
+    const curRate = cur && cur.total > 0 ? (cur.noShow / cur.total) * 100 : 0;
+    const prevRate = prev && prev.total > 0 ? (prev.noShow / prev.total) * 100 : 0;
+    const delta = curRate - prevRate;
+    return { curRate: Math.round(curRate), prevRate: Math.round(prevRate), delta: Math.round(delta * 10) / 10 };
+  }, [appointments]);
+
+  // Portal link for WhatsApp message
+  const portalUrl = useMemo(() => {
+    if (!publicSlug) return "";
+    return `${window.location.origin}/portal/${publicSlug}`;
+  }, [publicSlug]);
+
+  const sendWhatsAppToInactive = (patient: InactivePatient & { whatsapp_phone?: string | null }) => {
+    const phone = (patient.whatsapp_phone || "").replace(/\D/g, "");
+    if (!phone) return;
+    const firstName = patient.full_name.split(" ")[0];
+    const linkPart = portalUrl ? ` Podés reservar tu turno desde ${portalUrl}` : "";
+    const message = `Hola ${firstName}, hace un tiempo que no nos vemos. ¿Querés retomar las sesiones?${linkPart}`;
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, "_blank");
+  };
+
 
   // === No-show by month ===
   const noShowData: NoShowMonth[] = useMemo(() => {
@@ -404,14 +456,45 @@ const Statistics = () => {
           </div>
         </div>
 
-        {/* KPI row */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        {/* Cobros destacado */}
+        <Card className="border-2 border-primary/20">
+          <CardContent className="p-4 sm:p-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <DollarSign className="h-4 w-4 text-primary" />
+                  <p className="text-xs sm:text-sm text-muted-foreground">Cobrado en el período</p>
+                </div>
+                <p className="text-2xl sm:text-3xl font-bold text-primary">{formatCurrency(kpis.cobrado)}</p>
+              </div>
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <TrendingUp className="h-4 w-4 text-[hsl(var(--warning))]" />
+                  <p className="text-xs sm:text-sm text-muted-foreground">Pendiente de cobro</p>
+                </div>
+                <p className="text-2xl sm:text-3xl font-bold text-[hsl(var(--warning))]">{formatCurrency(kpis.pendiente)}</p>
+              </div>
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <Percent className="h-4 w-4 text-primary" />
+                  <p className="text-xs sm:text-sm text-muted-foreground">Tasa de cobranza</p>
+                </div>
+                {(() => {
+                  const total = kpis.cobrado + kpis.pendiente;
+                  const rate = total > 0 ? Math.round((kpis.cobrado / total) * 100) : 0;
+                  return <p className="text-2xl sm:text-3xl font-bold">{rate}%</p>;
+                })()}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* KPI row complementario */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <KpiCard icon={CalendarCheck} label="Citas" value={String(kpis.totalCitas)} color="text-primary" />
-          <KpiCard icon={DollarSign} label="Cobrado" value={formatCurrency(kpis.cobrado)} color="text-[hsl(var(--success,142_70%_45%))]" />
-          <KpiCard icon={TrendingUp} label="Pendiente" value={formatCurrency(kpis.pendiente)} color="text-[hsl(var(--warning))]" />
-          <KpiCard icon={Percent} label="Ocupación" value={`${kpis.occupancy}%`} color="text-primary" />
-          <KpiCard icon={TrendingDown} label="Ausencias" value={`${kpis.noShowRate}%`} color="text-destructive" />
           <KpiCard icon={Users} label="Pacientes activos" value={String(kpis.activePatients)} color="text-primary" />
+          <KpiCard icon={Activity} label="Ocupación" value={`${kpis.occupancy}%`} color="text-primary" />
+          <KpiCard icon={TrendingDown} label="Ausencias" value={`${kpis.noShowRate}%`} color="text-destructive" />
         </div>
 
         {/* Revenue */}
@@ -577,12 +660,28 @@ const Statistics = () => {
           </CardContent>
         </Card>
 
-        {/* No-show */}
+        {/* No-show trend */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              <TrendingDown className="h-5 w-5 text-destructive" />
-              Tasa de ausencias por mes
+            <CardTitle className="text-base flex items-center justify-between gap-2">
+              <span className="flex items-center gap-2">
+                <TrendingDown className="h-5 w-5 text-destructive" />
+                Tendencia de ausencias
+              </span>
+              {(() => {
+                const { delta, curRate, prevRate } = noShowTrend;
+                if (prevRate === 0 && curRate === 0) return null;
+                const isUp = delta > 0;
+                const isDown = delta < 0;
+                const Icon = isUp ? ArrowUpRight : isDown ? ArrowDownRight : Minus;
+                const colorClass = isUp ? "text-destructive" : isDown ? "text-[hsl(var(--success,142_70%_45%))]" : "text-muted-foreground";
+                return (
+                  <span className={`flex items-center gap-1 text-sm font-semibold ${colorClass}`}>
+                    <Icon className="h-4 w-4" />
+                    {delta > 0 ? "+" : ""}{delta}% vs mes anterior
+                  </span>
+                );
+              })()}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -591,9 +690,10 @@ const Statistics = () => {
             ) : (
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={noShowData}>
+                  <LineChart data={noShowData}>
+                    <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
                     <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                    <YAxis unit="%" allowDecimals={false} tick={{ fontSize: 12 }} />
+                    <YAxis unit="%" allowDecimals={false} tick={{ fontSize: 12 }} domain={[0, 'auto']} />
                     <Tooltip
                       formatter={(value: number, name: string) => {
                         if (name === "rate") return [`${value}%`, "Tasa ausencia"];
@@ -601,8 +701,8 @@ const Statistics = () => {
                       }}
                       contentStyle={{ borderRadius: 8, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))" }}
                     />
-                    <Bar dataKey="rate" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} />
-                  </BarChart>
+                    <Line type="monotone" dataKey="rate" stroke="hsl(var(--destructive))" strokeWidth={2} dot={{ r: 4 }} />
+                  </LineChart>
                 </ResponsiveContainer>
               </div>
             )}
@@ -627,26 +727,47 @@ const Statistics = () => {
               </p>
             ) : (
               <div className="space-y-2">
-                {pageInactive.map((p) => (
-                  <div
-                    key={p.id}
-                    className="flex items-center justify-between gap-3 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors"
-                    onClick={() => navigate(`/patients/${p.id}`)}
-                  >
-                    <div className="min-w-0">
-                      <p className="font-medium text-sm truncate">{p.full_name}</p>
-                      <p className="text-xs text-muted-foreground">{p.email || "Sin email"}</p>
+                {pageInactive.map((p) => {
+                  const phone = allPatients.find((x) => x.id === p.id)?.whatsapp_phone || null;
+                  return (
+                    <div
+                      key={p.id}
+                      className="flex items-center justify-between gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors"
+                    >
+                      <div
+                        className="min-w-0 flex-1 cursor-pointer"
+                        onClick={() => navigate(`/patients/${p.id}`)}
+                      >
+                        <p className="font-medium text-sm truncate">{p.full_name}</p>
+                        <p className="text-xs text-muted-foreground">{p.email || "Sin email"}</p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="text-sm font-semibold text-[hsl(var(--warning))]">{p.daysSinceLast} días</p>
+                        <p className="text-xs text-muted-foreground">
+                          {p.lastAppointment
+                            ? new Date(p.lastAppointment).toLocaleDateString("es-UY", { day: "2-digit", month: "2-digit", year: "2-digit" })
+                            : "Sin actividad"}
+                        </p>
+                      </div>
+                      {phone ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="shrink-0 gap-1.5 h-8"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            sendWhatsAppToInactive({ ...p, whatsapp_phone: phone });
+                          }}
+                        >
+                          <MessageCircle className="h-3.5 w-3.5" />
+                          <span className="hidden sm:inline">WhatsApp</span>
+                        </Button>
+                      ) : (
+                        <span className="text-xs text-muted-foreground shrink-0 hidden sm:inline">Sin teléfono</span>
+                      )}
                     </div>
-                    <div className="text-right shrink-0">
-                      <p className="text-sm font-semibold text-[hsl(var(--warning))]">{p.daysSinceLast} días</p>
-                      <p className="text-xs text-muted-foreground">
-                        {p.lastAppointment
-                          ? new Date(p.lastAppointment).toLocaleDateString("es-UY", { day: "2-digit", month: "2-digit", year: "2-digit" })
-                          : "Sin actividad"}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
                 <ListPagination
                   currentPage={inactivePage}
                   totalPages={inactiveTotalPages}
