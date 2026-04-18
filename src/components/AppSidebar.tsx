@@ -30,15 +30,14 @@ import {
 } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useEffect, useState } from "react";
-import { usePendingRequestsCount } from "@/hooks/use-pending-requests-count";
 
 const mainItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "Solicitudes", url: "/solicitudes", icon: FileText, highlight: true },
   { title: "Pacientes", url: "/patients", icon: Users },
   { title: "Agenda", url: "/agenda", icon: CalendarDays },
   { title: "Pagos", url: "/pagos", icon: Receipt },
   { title: "Recordatorios", url: "/recordatorios-pendientes", icon: Clock },
+  { title: "Solicitudes", url: "/solicitudes", icon: FileText },
   { title: "Estadísticas", url: "/estadisticas", icon: BarChart3 },
 ];
 
