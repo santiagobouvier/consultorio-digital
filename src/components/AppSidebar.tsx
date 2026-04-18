@@ -55,7 +55,6 @@ export function AppSidebar() {
   const [userName, setUserName] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
-  const pendingRequests = usePendingRequestsCount();
 
   useEffect(() => {
     const loadProfile = async () => {
