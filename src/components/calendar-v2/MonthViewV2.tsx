@@ -11,12 +11,35 @@ import {
   isToday,
 } from "date-fns";
 import { es } from "date-fns/locale";
-import { CalendarAppointment } from "./types";
+import { CalendarAppointment, DayPayment } from "./types";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MonthDayDrawer } from "./MonthDayDrawer";
-import { Plus, AlertCircle, Clock } from "lucide-react";
+import { Plus, AlertCircle, Clock, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { calculatePaymentStatus } from "@/lib/payments";
+
+interface DayIndicator {
+  count: number;
+  hasOverdue: boolean;
+  hasPending: boolean;
+}
+
+interface MonthViewV2Props {
+  currentDate: Date;
+  appointments: CalendarAppointment[];
+  onAppointmentClick: (appointment: CalendarAppointment) => void;
+  onDayClick: (date: Date) => void;
+  onAddAppointment: () => void;
+  showProfessionalColors: boolean;
+  // Desktop specific props
+  isDesktop?: boolean;
+  selectedDay?: Date | null;
+  dayIndicators?: Map<string, DayIndicator>;
+  // Payments overlay
+  paymentsByDay?: Map<string, DayPayment[]>;
+  onPaymentClick?: (payment: DayPayment) => void;
+}
 
 interface DayIndicator {
   count: number;
