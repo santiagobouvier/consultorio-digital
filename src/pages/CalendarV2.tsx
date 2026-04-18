@@ -677,7 +677,7 @@ const CalendarV2 = () => {
           onSuccess={handleRefresh}
         />
 
-        {/* Quick payment drawer */}
+        {/* Quick payment drawer (create new) */}
         {businessId && (
           <QuickPaymentDrawer
             open={showPaymentDrawer}
@@ -685,6 +685,20 @@ const CalendarV2 = () => {
             selectedDate={selectedDateForAction}
             businessId={businessId}
             onSuccess={handleRefresh}
+          />
+        )}
+
+        {/* Payment detail drawer (existing payment) */}
+        {businessId && (
+          <PaymentDayDrawer
+            open={showPaymentDetailDrawer}
+            onClose={() => {
+              setShowPaymentDetailDrawer(false);
+              setSelectedPayment(null);
+            }}
+            payment={selectedPayment}
+            businessId={businessId}
+            onUpdated={handleRefresh}
           />
         )}
       </div>
