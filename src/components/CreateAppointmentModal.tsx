@@ -176,6 +176,40 @@ export function CreateAppointmentModal({
 
       if (error) throw error;
 
+      // Best-effort confirmation email (does not block flow)
+      try {
+        const { data: pat } = await supabase
+          .from("patients")
+          .select("full_name, email")
+          .eq("id", selectedPatientId)
+          .maybeSingle();
+
+        if (pat?.email) {
+          const fmtDate = startAt.toLocaleDateString("es-UY", {
+            weekday: "long", day: "2-digit", month: "long", year: "numeric",
+          });
+          const fmtTime = startAt.toLocaleTimeString("es-UY", {
+            hour: "2-digit", minute: "2-digit",
+          });
+          await supabase.functions.invoke("send-resend-email", {
+            body: {
+              to: pat.email,
+              template: "appointment_confirmation",
+              businessId,
+              data: {
+                patientName: pat.full_name,
+                date: fmtDate,
+                time: fmtTime,
+                modality,
+                location: location.trim() || null,
+              },
+            },
+          });
+        }
+      } catch (mailErr) {
+        console.warn("Confirmation email failed:", mailErr);
+      }
+
       toast({
         title: "Éxito",
         description: "Cita creada correctamente",

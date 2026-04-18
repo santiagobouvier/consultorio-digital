@@ -185,11 +185,46 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Best-effort: send invite email via Resend if patient has a real email
+    let emailSent = false;
+    const patientEmail = patient.email;
+    if (patientEmail && !patientEmail.endsWith("@portal.interno")) {
+      try {
+        // Build invite URL using the request's origin so it matches the user's domain
+        const origin = req.headers.get("origin") || "https://consultoriodigital.app";
+        const inviteUrl = `${origin}/portal-paciente/invitacion?token=${invite.token}`;
+
+        const emailResp = await fetch(`${supabaseUrl}/functions/v1/send-resend-email`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${supabaseServiceKey}`,
+          },
+          body: JSON.stringify({
+            to: patientEmail,
+            template: "patient_invite",
+            businessId: patient.business_id,
+            data: {
+              patientName: patient.full_name,
+              inviteUrl,
+            },
+          }),
+        });
+        emailSent = emailResp.ok;
+        if (!emailResp.ok) {
+          console.error("Invite email failed:", await emailResp.text());
+        }
+      } catch (e) {
+        console.error("Invite email exception:", e);
+      }
+    }
+
     return new Response(
       JSON.stringify({ 
         success: true, 
         token: invite.token,
         expiresAt: invite.expires_at,
+        emailSent,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
