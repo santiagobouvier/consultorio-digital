@@ -1,11 +1,14 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ChevronLeft, ChevronRight, Plus, Filter, Download } from "lucide-react";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ChevronLeft, ChevronRight, Plus, Filter, Download, CalendarPlus, CreditCard } from "lucide-react";
 import { ViewType } from "./types";
-import { cn } from "@/lib/utils";
 
 interface CalendarHeaderProps {
   currentDate: Date;
@@ -14,6 +17,7 @@ interface CalendarHeaderProps {
   onNavigate: (direction: "prev" | "next") => void;
   onToday: () => void;
   onAddAppointment: () => void;
+  onAddPayment?: () => void;
   onToggleFilters: () => void;
   hasActiveFilters: boolean;
   activeFiltersCount: number;
