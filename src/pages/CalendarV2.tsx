@@ -601,6 +601,8 @@ const CalendarV2 = () => {
                     setShowPaymentDrawer(true);
                   }}
                   showProfessionalColors={showProfessionalColors}
+                  paymentsByDay={paymentsByDay}
+                  onPaymentClick={handlePaymentClick}
                 />
               ) : (
                 <>
@@ -616,9 +618,7 @@ const CalendarV2 = () => {
                       showProfessionalColors={showProfessionalColors}
                       professionals={professionals}
                       dayPayments={dayPayments}
-                      onPaymentClick={(payment) => {
-                        navigate(`/patients/${payment.patient_id}`);
-                      }}
+                      onPaymentClick={handlePaymentClick}
                     />
                   )}
                   {viewType === "week" && (
@@ -632,6 +632,8 @@ const CalendarV2 = () => {
                       onDayClick={handleDayClick}
                       onAddAppointment={() => setShowCreateModal(true)}
                       showProfessionalColors={showProfessionalColors}
+                      paymentsByDay={paymentsByDay}
+                      onPaymentClick={handlePaymentClick}
                     />
                   )}
                   {viewType === "month" && isMobile && (
@@ -645,6 +647,8 @@ const CalendarV2 = () => {
                       onDayClick={handleDayClick}
                       onAddAppointment={() => setShowCreateModal(true)}
                       showProfessionalColors={showProfessionalColors}
+                      paymentsByDay={paymentsByDay}
+                      onPaymentClick={handlePaymentClick}
                     />
                   )}
                 </>
