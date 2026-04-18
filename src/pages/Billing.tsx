@@ -78,12 +78,19 @@ const Billing = () => {
   const [showPlanModal, setShowPlanModal] = useState(false);
   const [selectedBilling, setSelectedBilling] = useState<"monthly" | "annual">("annual");
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
+  const [, setNowTick] = useState(0);
 
   useEffect(() => {
     if (searchParams.get("subscription") === "success") {
       toast.success("¡Suscripción activada exitosamente!");
     }
     fetchBillingData();
+  }, []);
+
+  // Re-render every minute so the trial countdown stays accurate while viewing
+  useEffect(() => {
+    const interval = setInterval(() => setNowTick((t) => t + 1), 60_000);
+    return () => clearInterval(interval);
   }, []);
 
   const fetchBillingData = async () => {
@@ -210,11 +217,28 @@ const Billing = () => {
     return format(new Date(dateStr), "d 'de' MMMM, yyyy", { locale: es });
   };
 
-  const daysLeftInTrial = () => {
-    if (!subscription?.trial_ends_at) return 0;
-    const diff = new Date(subscription.trial_ends_at).getTime() - Date.now();
-    return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+  const trialTimeLeft = (): { label: string; expired: boolean } => {
+    if (!subscription?.trial_ends_at) return { label: "0 días", expired: true };
+    const diffMs = new Date(subscription.trial_ends_at).getTime() - Date.now();
+    if (diffMs <= 0) return { label: "Prueba finalizada", expired: true };
+
+    const totalMinutes = Math.floor(diffMs / (1000 * 60));
+    const days = Math.floor(totalMinutes / (60 * 24));
+    const hours = Math.floor((totalMinutes % (60 * 24)) / 60);
+    const minutes = totalMinutes % 60;
+
+    if (days >= 1) {
+      const dLabel = `${days} día${days === 1 ? "" : "s"}`;
+      const hLabel = hours > 0 ? ` y ${hours} h` : "";
+      return { label: `${dLabel}${hLabel}`, expired: false };
+    }
+    if (hours >= 1) {
+      return { label: `${hours} h ${minutes} min`, expired: false };
+    }
+    return { label: `${minutes} min`, expired: false };
   };
+
+  const trial = trialTimeLeft();
 
   return (
     <div className="min-h-screen bg-[hsl(180,15%,4%)] text-white">
@@ -280,7 +304,7 @@ const Billing = () => {
                       <Sparkles className="w-5 h-5 text-blue-400 flex-shrink-0" />
                       <div>
                         <p className="text-sm font-medium text-blue-400">
-                          Te quedan {daysLeftInTrial()} días de prueba gratuita
+                          {trial.expired ? "Tu prueba gratuita terminó" : `Te quedan ${trial.label} de prueba gratuita`}
                         </p>
                         <p className="text-xs text-white/50">
                           Tu prueba termina el {formatDate(subscription.trial_ends_at)}. Activá tu método de pago para continuar.
@@ -451,8 +475,7 @@ const Billing = () => {
               <CardContent className="p-6">
                 <div className="flex flex-col sm:flex-row gap-3">
                   <Button
-                    variant="outline"
-                    className="flex-1 border-white/10 text-white/70 hover:bg-white/5 hover:text-white"
+                    className="flex-1 bg-white text-black hover:bg-white/90"
                     onClick={() => setShowPlanModal(true)}
                   >
                     <ArrowUpRight className="w-4 h-4 mr-2" />
