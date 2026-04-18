@@ -1,8 +1,15 @@
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { format } from "date-fns";
 import { CalendarAppointment, APPOINTMENT_STATUS_MAP, getPaymentColorInfo } from "./types";
-import { User, Video, MapPin } from "lucide-react";
+import { Video, MapPin } from "lucide-react";
+
+const getInitials = (name?: string | null) => {
+  if (!name) return "?";
+  const parts = name.trim().split(/\s+/);
+  return ((parts[0]?.[0] || "") + (parts[1]?.[0] || "")).toUpperCase() || "?";
+};
 
 interface AppointmentCardProps {
   appointment: CalendarAppointment;
@@ -36,11 +43,17 @@ export const AppointmentCard = ({
           borderLeftColor: showProfessionalColor ? professionalColor : undefined,
         }}
       >
-        <div className="flex items-center justify-between gap-2 mb-1">
+        <div className="flex items-center gap-2 mb-1">
+          <Avatar className="h-7 w-7 shrink-0">
+            <AvatarImage src={appointment.patients?.avatar_url || undefined} alt={appointment.patients?.full_name || ""} />
+            <AvatarFallback className="text-[10px] font-semibold bg-primary/10 text-primary">
+              {getInitials(appointment.patients?.full_name)}
+            </AvatarFallback>
+          </Avatar>
           <span className="text-sm font-bold text-primary">
             {formatTime(appointment.start_at)}
           </span>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 ml-auto">
             {paymentInfo && (
               <span className={cn("w-2 h-2 rounded-full shrink-0", paymentInfo.className)} />
             )}
@@ -87,9 +100,12 @@ export const AppointmentCard = ({
 
           {/* Patient */}
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-              <User className="h-4 w-4 text-primary" />
-            </div>
+            <Avatar className="h-9 w-9 shrink-0">
+              <AvatarImage src={appointment.patients?.avatar_url || undefined} alt={appointment.patients?.full_name || ""} />
+              <AvatarFallback className="text-xs font-semibold bg-primary/10 text-primary">
+                {getInitials(appointment.patients?.full_name)}
+              </AvatarFallback>
+            </Avatar>
             <div className="min-w-0">
               <p className="font-semibold text-foreground truncate">
                 {appointment.patients?.full_name || "Sin paciente"}
