@@ -19,14 +19,22 @@ import {
 import { cn } from "@/lib/utils";
 import { useDashboardBranding } from "@/contexts/DashboardBrandingContext";
 import { isCurrentUserSuperAdmin } from "@/lib/admin-access";
+import { usePendingRequestsCount } from "@/hooks/use-pending-requests-count";
 
-const navItems = [
+type NavItem = {
+  title: string;
+  url: string;
+  icon: typeof LayoutDashboard;
+  highlight?: boolean;
+};
+
+const navItems: NavItem[] = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+  { title: "Solicitudes", url: "/solicitudes", icon: FileText, highlight: true },
   { title: "Pacientes", url: "/patients", icon: Users },
   { title: "Agenda", url: "/agenda", icon: CalendarDays },
   { title: "Pagos", url: "/pagos", icon: Receipt },
   { title: "Recordatorios", url: "/recordatorios-pendientes", icon: Clock },
-  { title: "Solicitudes", url: "/solicitudes", icon: FileText },
   { title: "Estadísticas", url: "/estadisticas", icon: BarChart3 },
   { title: "Facturación", url: "/billing", icon: CreditCard },
   { title: "Consultorio", url: "/mi-consultorio", icon: Settings },
@@ -46,6 +54,7 @@ export function MobileHeader() {
   const location = useLocation();
   const navigate = useNavigate();
   const { primaryColor, logoUrl, displayName } = useDashboardBranding();
+  const pendingRequests = usePendingRequestsCount();
 
   const brandHsl = `hsl(${primaryColor})`;
   const brandHsla = (alpha: number) => `hsla(${primaryColor}, ${alpha})`;
@@ -113,6 +122,14 @@ export function MobileHeader() {
             style={{ color: "rgba(255,255,255,0.9)" }}
             strokeWidth={2.4}
           />
+          {pendingRequests > 0 && (
+            <span
+              className="absolute -top-1 -right-1 inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[9px] font-bold animate-badge-pulse ring-2 ring-black"
+              aria-label={`${pendingRequests} solicitudes pendientes`}
+            >
+              {pendingRequests > 9 ? "9+" : pendingRequests}
+            </span>
+          )}
         </button>
 
         {/* Right: only the clinic logo */}
@@ -219,6 +236,7 @@ export function MobileHeader() {
           <style>{`nav::-webkit-scrollbar { display: none; }`}</style>
           {visibleNavItems.map((item, index) => {
             const active = isActive(item.url);
+            const showBadge = item.highlight && pendingRequests > 0;
             return (
               <button
                 key={item.url}
@@ -245,6 +263,14 @@ export function MobileHeader() {
                   style={{ color: active ? brandHsl : undefined }}
                 />
                 <span className="text-[13.5px] font-medium tracking-tight">{item.title}</span>
+                {showBadge && (
+                  <span
+                    className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-[10px] font-bold animate-badge-pulse"
+                    aria-label={`${pendingRequests} solicitudes pendientes`}
+                  >
+                    {pendingRequests > 99 ? "99+" : pendingRequests}
+                  </span>
+                )}
               </button>
             );
           })}
