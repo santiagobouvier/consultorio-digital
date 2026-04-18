@@ -7,6 +7,7 @@ import {
   Settings,
   Palette,
   Clock,
+  AlarmClock,
   FileText,
   LogOut,
   Shield,
@@ -37,6 +38,7 @@ const mainItems = [
   { title: "Agenda", url: "/agenda", icon: CalendarDays },
   { title: "Pagos", url: "/pagos", icon: Receipt },
   { title: "Recordatorios", url: "/recordatorios-pendientes", icon: Clock },
+  { title: "Horarios", url: "/horarios-disponibles", icon: AlarmClock },
   { title: "Solicitudes", url: "/solicitudes", icon: FileText },
   { title: "Estadísticas", url: "/estadisticas", icon: BarChart3 },
 ];
@@ -45,7 +47,6 @@ const configItems = [
   { title: "Facturación", url: "/billing", icon: CreditCard },
   { title: "Mi consultorio", url: "/mi-consultorio", icon: Settings },
   { title: "Portal pacientes", url: "/personalizar-portal", icon: Palette },
-  { title: "Horarios", url: "/horarios-disponibles", icon: Clock },
 ];
 
 export function AppSidebar() {

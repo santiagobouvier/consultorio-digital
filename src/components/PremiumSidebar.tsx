@@ -5,6 +5,7 @@ import {
   CalendarDays,
   Receipt,
   Clock,
+  AlarmClock,
   FileText,
   Settings,
   Palette,
@@ -45,6 +46,7 @@ const mainItems: NavItem[] = [
   { title: "Agenda", url: "/agenda", icon: CalendarDays },
   { title: "Pagos", url: "/pagos", icon: Receipt },
   { title: "Recordatorios", url: "/recordatorios-pendientes", icon: Clock },
+  { title: "Horarios", url: "/horarios-disponibles", icon: AlarmClock },
   { title: "Estadísticas", url: "/estadisticas", icon: BarChart3 },
 ];
 
@@ -52,7 +54,6 @@ const configItems = [
   { title: "Facturación", url: "/billing", icon: CreditCard },
   { title: "Mi consultorio", url: "/mi-consultorio", icon: Settings },
   { title: "Portal", url: "/personalizar-portal", icon: Palette },
-  { title: "Horarios", url: "/horarios-disponibles", icon: Clock },
 ];
 
 const MINI_WIDTH = 64;

@@ -7,6 +7,7 @@ import {
   CalendarDays,
   Receipt,
   Clock,
+  AlarmClock,
   FileText,
   Settings,
   Palette,
@@ -35,11 +36,11 @@ const navItems: NavItem[] = [
   { title: "Agenda", url: "/agenda", icon: CalendarDays },
   { title: "Pagos", url: "/pagos", icon: Receipt },
   { title: "Recordatorios", url: "/recordatorios-pendientes", icon: Clock },
+  { title: "Horarios", url: "/horarios-disponibles", icon: AlarmClock },
   { title: "Estadísticas", url: "/estadisticas", icon: BarChart3 },
   { title: "Facturación", url: "/billing", icon: CreditCard },
   { title: "Consultorio", url: "/mi-consultorio", icon: Settings },
   { title: "Portal", url: "/personalizar-portal", icon: Palette },
-  { title: "Horarios", url: "/horarios-disponibles", icon: Clock },
 ];
 
 /**
