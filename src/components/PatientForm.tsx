@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -22,6 +23,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Camera, Loader2, User as UserIcon, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const patientSchema = z.object({
@@ -46,9 +49,11 @@ interface PatientFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   patientId?: string;
-  initialData?: PatientFormData;
+  initialData?: PatientFormData & { avatar_url?: string | null };
   onSuccess: () => void;
 }
+
+const MAX_AVATAR_SIZE = 3 * 1024 * 1024; // 3 MB
 
 export function PatientForm({
   open,
@@ -58,6 +63,10 @@ export function PatientForm({
   onSuccess,
 }: PatientFormProps) {
   const navigate = useNavigate();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(initialData?.avatar_url ?? null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
   const form = useForm<PatientFormData>({
     resolver: zodResolver(patientSchema),
     defaultValues: initialData || {
@@ -70,9 +79,72 @@ export function PatientForm({
     },
   });
 
-  const onSubmit = async (data: PatientFormData) => {
+  // Resetear estado al abrir/cerrar
+  useEffect(() => {
+    if (open) {
+      setAvatarUrl(initialData?.avatar_url ?? null);
+      setIsSubmitting(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast({
+        title: "Archivo inválido",
+        description: "Subí una imagen (JPG, PNG, WEBP).",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (file.size > MAX_AVATAR_SIZE) {
+      toast({
+        title: "Imagen muy grande",
+        description: "La foto debe pesar menos de 3 MB.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
-      // Get current user's business
+      setUploadingAvatar(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Usuario no autenticado");
+
+      const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+      const path = `patient-avatars/${user.id}/${crypto.randomUUID()}.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(path, file, { cacheControl: "3600", upsert: false });
+
+      if (uploadError) throw uploadError;
+
+      const { data: pub } = supabase.storage.from("avatars").getPublicUrl(path);
+      setAvatarUrl(pub.publicUrl);
+      toast({ title: "Foto cargada", description: "Se guardará al confirmar." });
+    } catch (err: any) {
+      console.error("Error subiendo avatar:", err);
+      toast({
+        title: "No se pudo subir la foto",
+        description: err?.message || "Intentá de nuevo",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingAvatar(false);
+      e.target.value = "";
+    }
+  };
+
+  const removeAvatar = () => setAvatarUrl(null);
+
+  const onSubmit = async (data: PatientFormData) => {
+    if (isSubmitting) return; // doble guardia anti doble-click
+    setIsSubmitting(true);
+    try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         toast({
@@ -83,14 +155,13 @@ export function PatientForm({
         return;
       }
 
-      // Get current user's business - check both owner and member
+      // Resolver business
       let { data: business } = await supabase
         .from("businesses")
         .select("id")
         .eq("owner_user_id", user.id)
         .maybeSingle();
 
-      // If no business as owner, check if member via user_roles
       if (!business) {
         const { data: userRole } = await supabase
           .from("user_roles")
@@ -113,7 +184,7 @@ export function PatientForm({
         return;
       }
 
-      // Check patient limit for new patients only
+      // Límite de plan (solo para nuevos)
       if (!patientId) {
         const limitCheck = await checkPatientLimit(business.id);
         if (!limitCheck.canAdd) {
@@ -126,17 +197,64 @@ export function PatientForm({
         }
       }
 
-      // Clean empty strings to null
+      // Limpiar/normalizar campos
+      const cleanEmail = data.email?.trim().toLowerCase() || null;
+      const cleanPhoneRaw = data.whatsapp_phone?.trim() || null;
+      const cleanPhoneDigits = cleanPhoneRaw ? cleanPhoneRaw.replace(/\D/g, "") : null;
+
+      // Validación previa de duplicados (más amigable que esperar el error de DB)
+      if (cleanEmail || cleanPhoneDigits) {
+        const { data: existing } = await supabase
+          .from("patients")
+          .select("id, email, whatsapp_phone")
+          .eq("business_id", business.id);
+
+        const dupEmail = cleanEmail
+          ? existing?.find(
+              (p) =>
+                p.id !== patientId &&
+                p.email &&
+                p.email.toLowerCase() === cleanEmail
+            )
+          : null;
+        const dupPhone = cleanPhoneDigits
+          ? existing?.find(
+              (p) =>
+                p.id !== patientId &&
+                p.whatsapp_phone &&
+                p.whatsapp_phone.replace(/\D/g, "") === cleanPhoneDigits
+            )
+          : null;
+
+        if (dupEmail) {
+          toast({
+            title: "Email duplicado",
+            description: "Ya existe un paciente en este consultorio con ese email.",
+            variant: "destructive",
+          });
+          return;
+        }
+        if (dupPhone) {
+          toast({
+            title: "WhatsApp duplicado",
+            description: "Ya existe un paciente en este consultorio con ese número de WhatsApp.",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+
       const cleanData = {
-        ...data,
-        email: data.email?.trim() || null,
-        whatsapp_phone: data.whatsapp_phone?.trim() || null,
+        full_name: data.full_name.trim(),
+        email: cleanEmail,
+        whatsapp_phone: cleanPhoneRaw,
         reason_for_consultation: data.reason_for_consultation?.trim() || null,
         private_notes: data.private_notes?.trim() || null,
+        is_active: data.is_active,
+        avatar_url: avatarUrl,
       };
 
       if (patientId) {
-        // Update existing patient
         const { error } = await supabase
           .from("patients")
           .update(cleanData)
@@ -144,39 +262,23 @@ export function PatientForm({
 
         if (error) throw error;
 
-        toast({
-          title: "Éxito",
-          description: "Paciente actualizado correctamente",
-        });
+        toast({ title: "Éxito", description: "Paciente actualizado correctamente" });
         form.reset();
         onSuccess();
       } else {
-        // Create new patient
         const { data: newPatient, error } = await supabase
           .from("patients")
-          .insert([{
-            business_id: business.id,
-            full_name: cleanData.full_name,
-            email: cleanData.email,
-            whatsapp_phone: cleanData.whatsapp_phone,
-            reason_for_consultation: cleanData.reason_for_consultation,
-            private_notes: cleanData.private_notes,
-            is_active: cleanData.is_active,
-          }])
+          .insert([{ business_id: business.id, ...cleanData }])
           .select("id")
           .single();
 
         if (error) throw error;
 
-        toast({
-          title: "Éxito",
-          description: "Paciente creado correctamente",
-        });
-
+        toast({ title: "Éxito", description: "Paciente creado correctamente" });
         form.reset();
+        setAvatarUrl(null);
         onOpenChange(false);
-        
-        // Redirect to patient detail
+
         if (newPatient?.id) {
           navigate(`/patients/${newPatient.id}`);
         } else {
@@ -185,16 +287,36 @@ export function PatientForm({
       }
     } catch (error: any) {
       console.error("Error completo al guardar paciente:", error);
-      toast({
-        title: "Error",
-        description: `No se pudo guardar el paciente. ${error?.message || JSON.stringify(error)}`,
-        variant: "destructive",
-      });
+      // Detectar violación de unicidad desde DB (por si la validación previa falla por race condition)
+      const msg = String(error?.message || "");
+      if (msg.includes("patients_business_email_unique")) {
+        toast({
+          title: "Email duplicado",
+          description: "Ya existe un paciente en este consultorio con ese email.",
+          variant: "destructive",
+        });
+      } else if (msg.includes("patients_business_phone_unique")) {
+        toast({
+          title: "WhatsApp duplicado",
+          description: "Ya existe un paciente en este consultorio con ese número de WhatsApp.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: `No se pudo guardar el paciente. ${error?.message || JSON.stringify(error)}`,
+          variant: "destructive",
+        });
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
+  const initials = (form.watch("full_name") || "").trim().split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(v) => { if (!isSubmitting) onOpenChange(v); }}>
       <DialogContent className="max-h-[85vh] overflow-y-auto">
         <DialogHeader className="pb-2">
           <DialogTitle className="text-xl font-bold">
@@ -204,6 +326,61 @@ export function PatientForm({
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+            {/* Avatar uploader */}
+            <div className="flex items-center gap-4">
+              <Avatar className="h-20 w-20 border border-border/40">
+                {avatarUrl ? (
+                  <AvatarImage src={avatarUrl} alt="Foto de perfil" />
+                ) : null}
+                <AvatarFallback className="bg-muted text-muted-foreground">
+                  {initials || <UserIcon className="h-8 w-8" />}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex flex-col gap-2">
+                <label htmlFor="patient-avatar-input">
+                  <input
+                    id="patient-avatar-input"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleAvatarChange}
+                    disabled={uploadingAvatar || isSubmitting}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="rounded-xl gap-2 cursor-pointer"
+                    disabled={uploadingAvatar || isSubmitting}
+                    asChild
+                  >
+                    <span>
+                      {uploadingAvatar ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Camera className="h-4 w-4" />
+                      )}
+                      {avatarUrl ? "Cambiar foto" : "Subir foto"}
+                    </span>
+                  </Button>
+                </label>
+                {avatarUrl && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="rounded-xl gap-2 text-destructive hover:text-destructive"
+                    onClick={removeAvatar}
+                    disabled={uploadingAvatar || isSubmitting}
+                  >
+                    <X className="h-4 w-4" />
+                    Quitar foto
+                  </Button>
+                )}
+                <p className="text-[11px] text-muted-foreground">JPG, PNG o WEBP. Máx 3 MB.</p>
+              </div>
+            </div>
+
             <FormField
               control={form.control}
               name="full_name"
@@ -211,10 +388,11 @@ export function PatientForm({
                 <FormItem>
                   <FormLabel className="text-sm font-semibold">Nombre completo *</FormLabel>
                   <FormControl>
-                    <Input 
-                      {...field} 
-                      placeholder="Juan Pérez" 
+                    <Input
+                      {...field}
+                      placeholder="Juan Pérez"
                       className="h-12 text-base rounded-xl"
+                      disabled={isSubmitting}
                     />
                   </FormControl>
                   <FormMessage />
@@ -234,6 +412,7 @@ export function PatientForm({
                       type="email"
                       placeholder="juan@ejemplo.com"
                       className="h-12 text-base rounded-xl"
+                      disabled={isSubmitting}
                     />
                   </FormControl>
                   <FormMessage />
@@ -248,10 +427,11 @@ export function PatientForm({
                 <FormItem>
                   <FormLabel className="text-sm font-semibold">Teléfono WhatsApp</FormLabel>
                   <FormControl>
-                    <Input 
-                      {...field} 
-                      placeholder="+598 99 123 456" 
+                    <Input
+                      {...field}
+                      placeholder="+598 99 123 456"
                       className="h-12 text-base rounded-xl"
+                      disabled={isSubmitting}
                     />
                   </FormControl>
                   <FormMessage />
@@ -266,10 +446,11 @@ export function PatientForm({
                 <FormItem>
                   <FormLabel className="text-sm font-semibold">Motivo de consulta</FormLabel>
                   <FormControl>
-                    <Input 
-                      {...field} 
-                      placeholder="Breve descripción" 
+                    <Input
+                      {...field}
+                      placeholder="Breve descripción"
                       className="h-12 text-base rounded-xl"
+                      disabled={isSubmitting}
                     />
                   </FormControl>
                   <FormMessage />
@@ -289,6 +470,7 @@ export function PatientForm({
                       placeholder="Notas solo visibles para el profesional"
                       rows={3}
                       className="text-base rounded-xl resize-none"
+                      disabled={isSubmitting}
                     />
                   </FormControl>
                   <FormMessage />
@@ -306,6 +488,7 @@ export function PatientForm({
                       checked={field.value}
                       onCheckedChange={field.onChange}
                       className="h-5 w-5"
+                      disabled={isSubmitting}
                     />
                   </FormControl>
                   <FormLabel className="text-sm font-medium cursor-pointer">
@@ -321,14 +504,25 @@ export function PatientForm({
                 variant="outline"
                 onClick={() => onOpenChange(false)}
                 className="h-12 rounded-xl text-base font-semibold flex-1"
+                disabled={isSubmitting}
               >
                 Cancelar
               </Button>
-              <Button 
+              <Button
                 type="submit"
                 className="h-12 rounded-xl text-base font-semibold flex-1"
+                disabled={isSubmitting || uploadingAvatar}
               >
-                {patientId ? "Guardar cambios" : "Crear paciente"}
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Guardando...
+                  </>
+                ) : patientId ? (
+                  "Guardar cambios"
+                ) : (
+                  "Crear paciente"
+                )}
               </Button>
             </div>
           </form>
