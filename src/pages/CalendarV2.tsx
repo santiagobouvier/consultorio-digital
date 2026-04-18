@@ -33,6 +33,8 @@ import { DesktopCalendarLayout } from "@/components/calendar-v2/DesktopCalendarL
 import { AppointmentDetailModal } from "@/components/calendar/AppointmentDetailModal";
 import { CreateAppointmentModal } from "@/components/CreateAppointmentModal";
 import { QuickPaymentDrawer } from "@/components/calendar/QuickPaymentDrawer";
+import { PaymentDayDrawer } from "@/components/calendar-v2/PaymentDayDrawer";
+import type { DayPayment } from "@/components/calendar-v2/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { exportCSV, todayDateString } from "@/lib/csv-export";
@@ -49,6 +51,7 @@ import {
 interface Patient {
   id: string;
   full_name: string;
+  whatsapp_phone: string | null;
 }
 
 interface Payment {
@@ -58,6 +61,9 @@ interface Payment {
   paid_at: string | null;
   status: string;
   amount: number;
+  currency: string;
+  method: string | null;
+  notes: string | null;
 }
 
 const CalendarV2 = () => {
@@ -94,6 +100,8 @@ const CalendarV2 = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showPaymentDrawer, setShowPaymentDrawer] = useState(false);
   const [selectedDateForAction, setSelectedDateForAction] = useState<Date>(new Date());
+  const [selectedPayment, setSelectedPayment] = useState<DayPayment | null>(null);
+  const [showPaymentDetailDrawer, setShowPaymentDetailDrawer] = useState(false);
 
   // Fetch business settings
   useEffect(() => {
@@ -121,7 +129,7 @@ const CalendarV2 = () => {
 
       const { data } = await supabase
         .from("patients")
-        .select("id, full_name")
+        .select("id, full_name, whatsapp_phone")
         .eq("business_id", businessId)
         .eq("is_active", true)
         .order("full_name");
@@ -203,11 +211,11 @@ const CalendarV2 = () => {
 
     const { data } = await supabase
       .from("payments")
-      .select("id, patient_id, due_date, paid_at, status, amount")
+      .select("id, patient_id, due_date, paid_at, status, amount, currency, method, notes")
       .eq("business_id", businessId)
       .neq("status", "cancelled");
 
-    setAllPayments(data || []);
+    setAllPayments((data as Payment[]) || []);
   }, [businessId]);
 
   useEffect(() => {
