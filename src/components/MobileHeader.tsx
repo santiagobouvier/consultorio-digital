@@ -94,9 +94,7 @@ export function MobileHeader() {
       <header
         className="sticky top-0 z-40 flex items-center justify-between h-14 px-4 md:hidden"
         style={{
-          background: "rgba(0, 0, 0, 0.55)",
-          backdropFilter: "saturate(180%) blur(22px)",
-          WebkitBackdropFilter: "saturate(180%) blur(22px)",
+          background: "#000000",
           borderBottom: "1px solid rgba(255,255,255,0.06)",
         }}
       >
@@ -141,15 +139,13 @@ export function MobileHeader() {
       {/* ============================ Fullscreen Drawer ============================ */}
       <div
         className={cn(
-          "fixed inset-0 z-50 md:hidden flex flex-col transition-all duration-[400ms] ease-[cubic-bezier(0.32,0.72,0,1)]",
+          "fixed inset-0 z-[100] md:hidden flex flex-col transition-all duration-[400ms] ease-[cubic-bezier(0.32,0.72,0,1)]",
           open
             ? "opacity-100 pointer-events-auto scale-100"
             : "opacity-0 pointer-events-none scale-[1.02]"
         )}
         style={{
-          background: "rgba(0, 0, 0, 0.92)",
-          backdropFilter: "saturate(180%) blur(28px)",
-          WebkitBackdropFilter: "saturate(180%) blur(28px)",
+          background: "#000000",
         }}
       >
         {/* Brand glow accents */}
@@ -214,7 +210,7 @@ export function MobileHeader() {
 
         {/* Centered nav items */}
         <nav
-          className="flex-1 flex flex-col items-center justify-center gap-1.5 px-6 overflow-y-auto"
+          className="flex-1 flex flex-col items-center justify-center gap-2 px-6 py-10 overflow-y-auto"
           style={{
             scrollbarWidth: "none",
             msOverflowStyle: "none",
@@ -228,27 +224,27 @@ export function MobileHeader() {
                 key={item.url}
                 onClick={() => handleNav(item.url)}
                 className={cn(
-                  "relative flex items-center justify-center gap-3 w-full max-w-[280px] h-12 rounded-2xl transition-all duration-200",
-                  "active:scale-[0.97]",
+                  "relative flex items-center justify-center gap-2.5 w-full max-w-[220px] h-10 rounded-xl transition-all duration-200",
+                  "active:scale-[0.96]",
                   active
                     ? "text-white"
                     : "text-white/55 hover:text-white hover:bg-white/[0.04]",
-                  open && "animate-in fade-in slide-in-from-bottom-2"
+                  open && "animate-in fade-in slide-in-from-bottom-3"
                 )}
                 style={{
                   background: active ? brandHsla(0.16) : undefined,
                   border: active ? `1px solid ${brandHsla(0.32)}` : "1px solid transparent",
-                  animationDelay: open ? `${index * 30 + 120}ms` : "0ms",
-                  animationDuration: "400ms",
+                  animationDelay: open ? `${index * 45 + 150}ms` : "0ms",
+                  animationDuration: "500ms",
                   animationFillMode: "both",
-                  boxShadow: active ? `0 8px 24px -10px ${brandHsla(0.5)}` : undefined,
+                  boxShadow: active ? `0 6px 20px -8px ${brandHsla(0.5)}` : undefined,
                 }}
               >
                 <item.icon
-                  className="h-[18px] w-[18px] shrink-0 transition-colors"
+                  className="h-[16px] w-[16px] shrink-0 transition-colors"
                   style={{ color: active ? brandHsl : undefined }}
                 />
-                <span className="text-[15px] font-medium tracking-tight">{item.title}</span>
+                <span className="text-[13.5px] font-medium tracking-tight">{item.title}</span>
               </button>
             );
           })}
