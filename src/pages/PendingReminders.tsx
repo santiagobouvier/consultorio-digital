@@ -111,6 +111,9 @@ const PendingReminders = () => {
   const [editMessage, setEditMessage] = useState("");
   const [editSaving, setEditSaving] = useState(false);
 
+  // WhatsApp send confirmation
+  const [whatsappConfirm, setWhatsappConfirm] = useState<{ ids: string[]; patientName: string } | null>(null);
+
   // Create manual reminder state
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [patients, setPatients] = useState<{ id: string; full_name: string; whatsapp_phone: string | null; email: string | null }[]>([]);
@@ -225,9 +228,10 @@ const PendingReminders = () => {
     }
     const phone = reminder.patient.whatsapp_phone.replace(/\D/g, "");
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(reminder.message)}`, "_blank");
-    await supabase.from("scheduled_reminders").update({ status: "sent" }).eq("id", reminder.id);
-    setReminders(prev => prev.map(r => r.id === reminder.id ? { ...r, status: "sent" } : r));
-    toast({ title: "WhatsApp abierto y marcado como enviado" });
+    setWhatsappConfirm({
+      ids: [reminder.id],
+      patientName: reminder.patient?.full_name || "el paciente",
+    });
   };
 
   const markAsSent = async (reminderId: string) => {
@@ -290,9 +294,15 @@ const PendingReminders = () => {
 
   const sendAllWhatsApp = async () => {
     setShowSendAllConfirm(false);
+    const ids: string[] = [];
     for (const reminder of whatsappPendingForSendAll) {
-      await sendWhatsApp(reminder);
+      const phone = reminder.patient!.whatsapp_phone!.replace(/\D/g, "");
+      window.open(`https://wa.me/${phone}?text=${encodeURIComponent(reminder.message)}`, "_blank");
+      ids.push(reminder.id);
       await new Promise(resolve => setTimeout(resolve, 1500));
+    }
+    if (ids.length > 0) {
+      setWhatsappConfirm({ ids, patientName: `${ids.length} pacientes` });
     }
   };
 
@@ -300,13 +310,24 @@ const PendingReminders = () => {
     if (!group.phone) return;
     const phone = group.phone.replace(/\D/g, "");
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(group.combinedMessage)}`, "_blank");
-    for (const r of group.reminders) {
-      await supabase.from("scheduled_reminders").update({ status: "sent" }).eq("id", r.id);
-    }
-    setReminders(prev => prev.map(r =>
-      group.reminders.some(gr => gr.id === r.id) ? { ...r, status: "sent" } : r
-    ));
-    toast({ title: `✓ ${group.reminders.length} enviados a ${group.patientName}` });
+    setWhatsappConfirm({
+      ids: group.reminders.map(r => r.id),
+      patientName: group.patientName,
+    });
+  };
+
+  const confirmWhatsappSent = async () => {
+    if (!whatsappConfirm) return;
+    const ids = whatsappConfirm.ids;
+    await supabase.from("scheduled_reminders").update({ status: "sent" }).in("id", ids);
+    setReminders(prev => prev.map(r => ids.includes(r.id) ? { ...r, status: "sent" } : r));
+    setWhatsappConfirm(null);
+    toast({ title: `✓ ${ids.length === 1 ? "Marcado" : `${ids.length} marcados`} como enviado` });
+  };
+
+  const dismissWhatsappConfirm = () => {
+    setWhatsappConfirm(null);
+    toast({ title: "Sin cambios", description: "El recordatorio sigue pendiente" });
   };
 
   const createManualReminder = async () => {
@@ -726,6 +747,23 @@ const PendingReminders = () => {
             <AlertDialogAction onClick={sendAllWhatsApp}>
               Enviar {whatsappPendingForSendAll.length} mensajes
             </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ── WhatsApp Sent Confirmation ── */}
+      <AlertDialog open={!!whatsappConfirm} onOpenChange={open => !open && dismissWhatsappConfirm()}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Enviaste el WhatsApp?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Confirmá si efectivamente enviaste el mensaje a <strong>{whatsappConfirm?.patientName}</strong>.
+              Si lo enviaste, lo marco como enviado. Si no, queda pendiente para enviarlo más tarde.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={dismissWhatsappConfirm}>No, sigue pendiente</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmWhatsappSent}>Sí, marcar como enviado</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
