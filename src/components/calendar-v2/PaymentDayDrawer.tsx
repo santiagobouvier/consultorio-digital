@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -128,14 +129,18 @@ export const PaymentDayDrawer = ({
           <DrawerHeader className="border-b pb-4">
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0">
-                  <CreditCard className="w-6 h-6 text-emerald-600" />
-                </div>
+                <Avatar className="h-12 w-12 shrink-0 ring-2 ring-emerald-500/30">
+                  <AvatarImage src={payment.patient_avatar_url || undefined} alt={payment.patient_name} />
+                  <AvatarFallback className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-semibold">
+                    {(payment.patient_name?.trim().split(/\s+/).map((p) => p[0]).slice(0, 2).join("") || "?").toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
                 <div className="min-w-0">
                   <DrawerTitle className="text-left text-lg truncate">
                     {payment.patient_name}
                   </DrawerTitle>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+                    <CreditCard className="w-3.5 h-3.5" />
                     Detalle del pago
                   </p>
                 </div>

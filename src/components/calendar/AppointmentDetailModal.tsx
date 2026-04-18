@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { User, Calendar, MapPin, Video, Clock, CreditCard, MessageCircle, AlertCircle, BellRing } from "lucide-react";
@@ -25,7 +26,7 @@ interface Appointment {
   payment_status: string | null;
   patient_id: string | null;
   service_id: string | null;
-  patients: { full_name: string; whatsapp_phone?: string | null; email?: string | null } | null;
+  patients: { full_name: string; whatsapp_phone?: string | null; email?: string | null; avatar_url?: string | null } | null;
   services: { name: string } | null;
   paymentColor?: string;
   patientPaymentStatus?: PaymentStatus;
@@ -108,9 +109,12 @@ export const AppointmentDetailModal = ({
           <div className="space-y-4 py-4">
             {/* Patient Info */}
             <div className="flex items-start gap-3 p-3 bg-accent/50 rounded-xl">
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                <User className="h-5 w-5 text-primary" />
-              </div>
+              <Avatar className="h-10 w-10 shrink-0 ring-2 ring-primary/20">
+                <AvatarImage src={appointment.patients?.avatar_url || undefined} alt={appointment.patients?.full_name || ""} />
+                <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">
+                  {(appointment.patients?.full_name?.trim().split(/\s+/).map((p) => p[0]).slice(0, 2).join("") || "?").toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-foreground">
                   {appointment.patients?.full_name || "Sin paciente"}
