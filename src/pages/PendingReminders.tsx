@@ -111,6 +111,9 @@ const PendingReminders = () => {
   const [editMessage, setEditMessage] = useState("");
   const [editSaving, setEditSaving] = useState(false);
 
+  // WhatsApp send confirmation
+  const [whatsappConfirm, setWhatsappConfirm] = useState<{ ids: string[]; patientName: string } | null>(null);
+
   // Create manual reminder state
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [patients, setPatients] = useState<{ id: string; full_name: string; whatsapp_phone: string | null; email: string | null }[]>([]);
