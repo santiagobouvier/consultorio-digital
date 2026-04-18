@@ -6,10 +6,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, Lock, AlertCircle, CheckCircle } from "lucide-react";
+import { Loader2, Lock, AlertCircle, CheckCircle, Smartphone, Share, Plus, MoreVertical, ArrowRight } from "lucide-react";
 import LoadingPage from "@/components/LoadingPage";
 
-type InviteStatus = "loading" | "valid" | "invalid" | "expired" | "used" | "success";
+type InviteStatus = "loading" | "valid" | "invalid" | "expired" | "used" | "success" | "install";
 
 const PatientInvitation = () => {
   const [searchParams] = useSearchParams();
