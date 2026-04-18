@@ -695,6 +695,61 @@ const PatientDetail = () => {
           patientName={patient.full_name}
         />
       )}
+
+      {/* Edit Patient Modal */}
+      {patient && (
+        <PatientForm
+          open={showEditPatient}
+          onOpenChange={setShowEditPatient}
+          patientId={patient.id}
+          initialData={{
+            full_name: patient.full_name,
+            email: patient.email || "",
+            whatsapp_phone: patient.whatsapp_phone || "",
+            reason_for_consultation: patient.reason_for_consultation || "",
+            private_notes: patient.private_notes || "",
+            is_active: patient.is_active,
+            avatar_url: patient.avatar_url,
+          }}
+          onSuccess={() => {
+            setShowEditPatient(false);
+            fetchData();
+          }}
+        />
+      )}
+
+      {/* Delete Patient Confirmation */}
+      <AlertDialog
+        open={showDeletePatient}
+        onOpenChange={(open) => {
+          if (!deletingPatient) setShowDeletePatient(open);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar paciente?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. Se eliminarán los datos del paciente
+              de forma permanente. Las citas y pagos asociados podrían quedar huérfanos.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-xl" disabled={deletingPatient}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleDeletePatient();
+              }}
+              disabled={deletingPatient}
+              className="rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deletingPatient ? "Eliminando..." : "Eliminar paciente"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
