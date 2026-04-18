@@ -13,12 +13,13 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { PatientForm } from "@/components/PatientForm";
-import { Search, Plus, ChevronRight, Smartphone, Users, UserCheck, UserX, ShieldCheck, Download } from "lucide-react";
+import { Search, Plus, ChevronRight, Smartphone, Users, UserCheck, UserX, ShieldCheck, Download, User as UserIcon } from "lucide-react";
 import { exportCSV, todayDateString } from "@/lib/csv-export";
 import { useBusinessId } from "@/hooks/use-business-id";
 import LoadingPage from "@/components/LoadingPage";
 import { cn } from "@/lib/utils";
 import { ListPagination, usePagination, ITEMS_PER_PAGE } from "@/components/ListPagination";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface Patient {
   id: string;
@@ -27,6 +28,7 @@ interface Patient {
   whatsapp_phone: string | null;
   is_active: boolean;
   auth_user_id: string | null;
+  avatar_url: string | null;
   last_appointment?: string | null;
   next_appointment?: string | null;
 }
