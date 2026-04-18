@@ -221,46 +221,64 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Best-effort: send invite email via Resend if patient has a real email
-    let emailSent = false;
-    const patientEmail = patient.email;
-    if (patientEmail && !patientEmail.endsWith("@portal.interno")) {
-      try {
-        // Build invite URL using the request's origin so it matches the user's domain
-        const origin = req.headers.get("origin") || "https://consultoriodigital.app";
-        const inviteUrl = `${origin}/portal-paciente/invitacion?token=${invite.token}`;
+    // Send invite email via Resend (MANDATORY — if it fails, rollback the invite)
+    const patientEmail = patient.email!;
+    const origin = req.headers.get("origin") || "https://consultoriodigital.app";
+    const inviteUrl = `${origin}/portal-paciente/invitacion?token=${invite.token}`;
 
-        const emailResp = await fetch(`${supabaseUrl}/functions/v1/send-resend-email`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${supabaseServiceKey}`,
+    let emailSent = false;
+    let emailErrorDetails: string | null = null;
+    try {
+      const emailResp = await fetch(`${supabaseUrl}/functions/v1/send-resend-email`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${supabaseServiceKey}`,
+        },
+        body: JSON.stringify({
+          to: patientEmail,
+          template: "patient_invite",
+          businessId: patient.business_id,
+          data: {
+            patientName: patient.full_name,
+            inviteUrl,
           },
-          body: JSON.stringify({
-            to: patientEmail,
-            template: "patient_invite",
-            businessId: patient.business_id,
-            data: {
-              patientName: patient.full_name,
-              inviteUrl,
-            },
-          }),
-        });
-        emailSent = emailResp.ok;
-        if (!emailResp.ok) {
-          console.error("Invite email failed:", await emailResp.text());
-        }
-      } catch (e) {
-        console.error("Invite email exception:", e);
+        }),
+      });
+      emailSent = emailResp.ok;
+      if (!emailResp.ok) {
+        emailErrorDetails = await emailResp.text();
+        console.error("Invite email failed:", emailErrorDetails);
       }
+    } catch (e) {
+      emailErrorDetails = String(e);
+      console.error("Invite email exception:", e);
+    }
+
+    if (!emailSent) {
+      // Rollback: delete the invite record so the user can retry cleanly
+      await supabaseAdmin
+        .from("patient_portal_invites")
+        .delete()
+        .eq("id", invite.id);
+
+      return new Response(
+        JSON.stringify({
+          error: "email_send_failed",
+          message: "No se pudo enviar el correo de invitación. Verificá la dirección e intentá nuevamente.",
+          details: emailErrorDetails,
+        }),
+        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
+      JSON.stringify({
+        success: true,
         token: invite.token,
         expiresAt: invite.expires_at,
-        emailSent,
+        emailSent: true,
+        sentTo: patientEmail,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
