@@ -321,6 +321,19 @@ const PatientDetail = () => {
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
+          <Avatar className="h-14 w-14 sm:h-16 sm:w-16 rounded-full shrink-0 ring-2 ring-primary/15">
+            {patient.avatar_url && (
+              <AvatarImage src={patient.avatar_url} alt={patient.full_name} className="object-cover" />
+            )}
+            <AvatarFallback className="rounded-full bg-primary/10 text-primary font-bold text-base">
+              {patient.full_name
+                .split(" ")
+                .map((n) => n[0])
+                .join("")
+                .toUpperCase()
+                .slice(0, 2) || <UserIcon className="h-6 w-6" />}
+            </AvatarFallback>
+          </Avatar>
           <div className="min-w-0 flex-1">
             <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground truncate">
               {patient.full_name}
@@ -332,6 +345,48 @@ const PatientDetail = () => {
               {patient.is_active ? "Activo" : "Inactivo"}
             </Badge>
           </div>
+          <div className="hidden sm:flex items-center gap-2 shrink-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowEditPatient(true)}
+              className="rounded-xl gap-2"
+            >
+              <Pencil className="h-4 w-4" />
+              Editar
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowDeletePatient(true)}
+              className="rounded-xl gap-2 text-destructive hover:text-destructive hover:bg-destructive/5 border-destructive/30"
+            >
+              <Trash2 className="h-4 w-4" />
+              Eliminar
+            </Button>
+          </div>
+        </div>
+
+        {/* Mobile action buttons */}
+        <div className="flex sm:hidden gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowEditPatient(true)}
+            className="flex-1 rounded-xl gap-2"
+          >
+            <Pencil className="h-4 w-4" />
+            Editar
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowDeletePatient(true)}
+            className="flex-1 rounded-xl gap-2 text-destructive hover:text-destructive hover:bg-destructive/5 border-destructive/30"
+          >
+            <Trash2 className="h-4 w-4" />
+            Eliminar
+          </Button>
         </div>
 
         {/* Patient Info Card */}
