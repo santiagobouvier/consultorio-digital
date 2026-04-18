@@ -4,11 +4,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Mail, Phone, Calendar, FileText, CreditCard, Plus, Check, RefreshCw, Pencil, Trash2, UserPlus } from "lucide-react";
+import { ArrowLeft, Mail, Phone, Calendar, FileText, CreditCard, Plus, Check, RefreshCw, Pencil, Trash2, UserPlus, User as UserIcon } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { PaymentForm } from "@/components/PaymentForm";
+import { PatientForm } from "@/components/PatientForm";
 import { PatientInviteModal } from "@/components/PatientInviteModal";
 import {
   AlertDialog,
@@ -42,6 +44,7 @@ interface Patient {
   reason_for_consultation: string | null;
   private_notes: string | null;
   is_active: boolean;
+  avatar_url: string | null;
   created_at: string;
 }
 
@@ -88,6 +91,9 @@ const PatientDetail = () => {
   const [editingPayment, setEditingPayment] = useState<Payment | null>(null);
   const [deletingPaymentId, setDeletingPaymentId] = useState<string | null>(null);
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showEditPatient, setShowEditPatient] = useState(false);
+  const [showDeletePatient, setShowDeletePatient] = useState(false);
+  const [deletingPatient, setDeletingPatient] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -284,6 +290,34 @@ const PatientDetail = () => {
     setEditingPayment(payment);
   };
 
+  const handleDeletePatient = async () => {
+    if (!patient) return;
+    try {
+      setDeletingPatient(true);
+      const { error } = await supabase
+        .from("patients")
+        .delete()
+        .eq("id", patient.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Paciente eliminado",
+        description: "El paciente fue eliminado correctamente",
+      });
+      navigate("/patients", { replace: true });
+    } catch (error: any) {
+      console.error("Error eliminando paciente:", error);
+      toast({
+        title: "No se pudo eliminar",
+        description: error?.message || "Intentá de nuevo",
+        variant: "destructive",
+      });
+      setDeletingPatient(false);
+      setShowDeletePatient(false);
+    }
+  };
+
   if (loading) {
     return <LoadingPage />;
   }
@@ -315,6 +349,19 @@ const PatientDetail = () => {
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
+          <Avatar className="h-14 w-14 sm:h-16 sm:w-16 rounded-full shrink-0 ring-2 ring-primary/15">
+            {patient.avatar_url && (
+              <AvatarImage src={patient.avatar_url} alt={patient.full_name} className="object-cover" />
+            )}
+            <AvatarFallback className="rounded-full bg-primary/10 text-primary font-bold text-base">
+              {patient.full_name
+                .split(" ")
+                .map((n) => n[0])
+                .join("")
+                .toUpperCase()
+                .slice(0, 2) || <UserIcon className="h-6 w-6" />}
+            </AvatarFallback>
+          </Avatar>
           <div className="min-w-0 flex-1">
             <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground truncate">
               {patient.full_name}
@@ -326,6 +373,48 @@ const PatientDetail = () => {
               {patient.is_active ? "Activo" : "Inactivo"}
             </Badge>
           </div>
+          <div className="hidden sm:flex items-center gap-2 shrink-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowEditPatient(true)}
+              className="rounded-xl gap-2"
+            >
+              <Pencil className="h-4 w-4" />
+              Editar
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowDeletePatient(true)}
+              className="rounded-xl gap-2 text-destructive hover:text-destructive hover:bg-destructive/5 border-destructive/30"
+            >
+              <Trash2 className="h-4 w-4" />
+              Eliminar
+            </Button>
+          </div>
+        </div>
+
+        {/* Mobile action buttons */}
+        <div className="flex sm:hidden gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowEditPatient(true)}
+            className="flex-1 rounded-xl gap-2"
+          >
+            <Pencil className="h-4 w-4" />
+            Editar
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowDeletePatient(true)}
+            className="flex-1 rounded-xl gap-2 text-destructive hover:text-destructive hover:bg-destructive/5 border-destructive/30"
+          >
+            <Trash2 className="h-4 w-4" />
+            Eliminar
+          </Button>
         </div>
 
         {/* Patient Info Card */}
@@ -606,6 +695,61 @@ const PatientDetail = () => {
           patientName={patient.full_name}
         />
       )}
+
+      {/* Edit Patient Modal */}
+      {patient && (
+        <PatientForm
+          open={showEditPatient}
+          onOpenChange={setShowEditPatient}
+          patientId={patient.id}
+          initialData={{
+            full_name: patient.full_name,
+            email: patient.email || "",
+            whatsapp_phone: patient.whatsapp_phone || "",
+            reason_for_consultation: patient.reason_for_consultation || "",
+            private_notes: patient.private_notes || "",
+            is_active: patient.is_active,
+            avatar_url: patient.avatar_url,
+          }}
+          onSuccess={() => {
+            setShowEditPatient(false);
+            fetchData();
+          }}
+        />
+      )}
+
+      {/* Delete Patient Confirmation */}
+      <AlertDialog
+        open={showDeletePatient}
+        onOpenChange={(open) => {
+          if (!deletingPatient) setShowDeletePatient(open);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar paciente?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. Se eliminarán los datos del paciente
+              de forma permanente. Las citas y pagos asociados podrían quedar huérfanos.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-xl" disabled={deletingPatient}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleDeletePatient();
+              }}
+              disabled={deletingPatient}
+              className="rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deletingPatient ? "Eliminando..." : "Eliminar paciente"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
