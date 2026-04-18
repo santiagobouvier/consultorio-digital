@@ -311,12 +311,12 @@ const Patients = () => {
                   <CardContent className="p-4 flex items-center gap-3">
                     {/* Avatar */}
                     <Avatar className={cn(
-                      "shrink-0 h-11 w-11 rounded-xl",
+                      "shrink-0 h-11 w-11 rounded-full",
                       patient.is_active ? "ring-1 ring-primary/20" : "opacity-70"
                     )}>
                       {patient.avatar_url && <AvatarImage src={patient.avatar_url} alt={patient.full_name} className="object-cover" />}
                       <AvatarFallback className={cn(
-                        "rounded-xl text-sm font-bold",
+                        "rounded-full text-sm font-bold",
                         patient.is_active ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
                       )}>
                         {getInitials(patient.full_name) || <UserIcon className="h-5 w-5" />}
@@ -367,12 +367,12 @@ const Patients = () => {
                         <TableCell>
                           <div className="flex items-center gap-3">
                             <Avatar className={cn(
-                              "shrink-0 h-9 w-9 rounded-lg",
+                              "shrink-0 h-9 w-9 rounded-full",
                               !patient.is_active && "opacity-70"
                             )}>
                               {patient.avatar_url && <AvatarImage src={patient.avatar_url} alt={patient.full_name} className="object-cover" />}
                               <AvatarFallback className={cn(
-                                "rounded-lg text-xs font-bold",
+                                "rounded-full text-xs font-bold",
                                 patient.is_active ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
                               )}>
                                 {getInitials(patient.full_name) || <UserIcon className="h-4 w-4" />}
