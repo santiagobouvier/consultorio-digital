@@ -217,11 +217,28 @@ const Billing = () => {
     return format(new Date(dateStr), "d 'de' MMMM, yyyy", { locale: es });
   };
 
-  const daysLeftInTrial = () => {
-    if (!subscription?.trial_ends_at) return 0;
-    const diff = new Date(subscription.trial_ends_at).getTime() - Date.now();
-    return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+  const trialTimeLeft = (): { label: string; expired: boolean } => {
+    if (!subscription?.trial_ends_at) return { label: "0 días", expired: true };
+    const diffMs = new Date(subscription.trial_ends_at).getTime() - Date.now();
+    if (diffMs <= 0) return { label: "Prueba finalizada", expired: true };
+
+    const totalMinutes = Math.floor(diffMs / (1000 * 60));
+    const days = Math.floor(totalMinutes / (60 * 24));
+    const hours = Math.floor((totalMinutes % (60 * 24)) / 60);
+    const minutes = totalMinutes % 60;
+
+    if (days >= 1) {
+      const dLabel = `${days} día${days === 1 ? "" : "s"}`;
+      const hLabel = hours > 0 ? ` y ${hours} h` : "";
+      return { label: `${dLabel}${hLabel}`, expired: false };
+    }
+    if (hours >= 1) {
+      return { label: `${hours} h ${minutes} min`, expired: false };
+    }
+    return { label: `${minutes} min`, expired: false };
   };
+
+  const trial = trialTimeLeft();
 
   return (
     <div className="min-h-screen bg-[hsl(180,15%,4%)] text-white">
