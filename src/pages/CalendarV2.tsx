@@ -116,6 +116,7 @@ const CalendarV2 = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showPaymentDrawer, setShowPaymentDrawer] = useState(false);
   const [selectedDateForAction, setSelectedDateForAction] = useState<Date>(new Date());
+  const [lockDateForAction, setLockDateForAction] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<DayPayment | null>(null);
   const [showPaymentDetailDrawer, setShowPaymentDetailDrawer] = useState(false);
 
@@ -517,10 +518,12 @@ const CalendarV2 = () => {
           onToday={goToToday}
           onAddAppointment={() => {
             setSelectedDateForAction(currentDate);
+            setLockDateForAction(false);
             setShowCreateModal(true);
           }}
           onAddPayment={() => {
             setSelectedDateForAction(currentDate);
+            setLockDateForAction(false);
             setShowPaymentDrawer(true);
           }}
           onToggleFilters={() => setShowFilters(!showFilters)}
@@ -602,11 +605,21 @@ const CalendarV2 = () => {
                     setShowAppointmentModal(true);
                   }}
                   onCreateAppointment={(date) => {
-                    if (date) setSelectedDateForAction(date);
+                    if (date) {
+                      setSelectedDateForAction(date);
+                      setLockDateForAction(true);
+                    } else {
+                      setLockDateForAction(false);
+                    }
                     setShowCreateModal(true);
                   }}
                   onCreatePayment={(date) => {
-                    if (date) setSelectedDateForAction(date);
+                    if (date) {
+                      setSelectedDateForAction(date);
+                      setLockDateForAction(true);
+                    } else {
+                      setLockDateForAction(false);
+                    }
                     setShowPaymentDrawer(true);
                   }}
                   showProfessionalColors={showProfessionalColors}
@@ -623,7 +636,11 @@ const CalendarV2 = () => {
                         setSelectedAppointment(apt);
                         setShowAppointmentModal(true);
                       }}
-                      onAddAppointment={() => setShowCreateModal(true)}
+                      onAddAppointment={() => {
+                        setSelectedDateForAction(currentDate);
+                        setLockDateForAction(true);
+                        setShowCreateModal(true);
+                      }}
                       showProfessionalColors={showProfessionalColors}
                       professionals={professionals}
                       dayPayments={dayPayments}
@@ -639,7 +656,11 @@ const CalendarV2 = () => {
                         setShowAppointmentModal(true);
                       }}
                       onDayClick={handleDayClick}
-                      onAddAppointment={() => setShowCreateModal(true)}
+                      onAddAppointment={() => {
+                        setSelectedDateForAction(currentDate);
+                        setLockDateForAction(true);
+                        setShowCreateModal(true);
+                      }}
                       showProfessionalColors={showProfessionalColors}
                       paymentsByDay={paymentsByDay}
                       onPaymentClick={handlePaymentClick}
@@ -654,7 +675,11 @@ const CalendarV2 = () => {
                         setShowAppointmentModal(true);
                       }}
                       onDayClick={handleDayClick}
-                      onAddAppointment={() => setShowCreateModal(true)}
+                      onAddAppointment={() => {
+                        setSelectedDateForAction(currentDate);
+                        setLockDateForAction(true);
+                        setShowCreateModal(true);
+                      }}
                       showProfessionalColors={showProfessionalColors}
                       paymentsByDay={paymentsByDay}
                       onPaymentClick={handlePaymentClick}
@@ -684,6 +709,8 @@ const CalendarV2 = () => {
           onOpenChange={setShowCreateModal}
           patientId={null}
           onSuccess={handleRefresh}
+          prefilledDate={selectedDateForAction}
+          lockDate={lockDateForAction}
         />
 
         {/* Quick payment drawer (create new) */}
@@ -694,6 +721,7 @@ const CalendarV2 = () => {
             selectedDate={selectedDateForAction}
             businessId={businessId}
             onSuccess={handleRefresh}
+            lockDate={lockDateForAction}
           />
         )}
 

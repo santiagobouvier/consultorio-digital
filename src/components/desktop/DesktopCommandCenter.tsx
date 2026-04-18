@@ -513,6 +513,13 @@ export const DesktopCommandCenter = () => {
               <ClinicStatusPanel
                 professionals={professionals}
                 attendedToday={attendedToday}
+                activeProfessionalsTodayCount={
+                  new Set(
+                    appointments
+                      .filter((a) => isSameDay(new Date(a.start_at), new Date()) && a.professional_id)
+                      .map((a) => a.professional_id)
+                  ).size
+                }
                 pendingPaymentsAmount={pendingPaymentsAmount}
                 overdueCount={overdueCount}
                 dueSoonCount={dueSoonCount}
