@@ -337,9 +337,245 @@ const PatientDetail = () => {
     );
   }
 
+  // ===== Section: Patient Info =====
+  const infoSection = (
+    <Card className="rounded-2xl border-border/50">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg font-bold flex items-center gap-2">
+          <FileText className="h-5 w-5 text-primary" />
+          Información del paciente
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="flex items-start gap-3">
+            <Mail className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground uppercase tracking-wide">Email</p>
+              <p className="text-sm font-medium text-foreground break-all">
+                {patient.email || "No registrado"}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <Phone className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground uppercase tracking-wide">WhatsApp</p>
+              <p className="text-sm font-medium text-foreground break-all">
+                {patient.whatsapp_phone || "No registrado"}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {patient.reason_for_consultation && (
+          <div>
+            <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+              Motivo de consulta
+            </p>
+            <p className="text-sm text-foreground">{patient.reason_for_consultation}</p>
+          </div>
+        )}
+
+        <div className="pt-4 border-t border-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <p className="text-xs text-muted-foreground">
+            Registrado el {formatDate(patient.created_at)}
+          </p>
+          <Button
+            onClick={() => setShowInviteModal(true)}
+            variant="outline"
+            className="rounded-xl"
+          >
+            <UserPlus className="h-4 w-4 mr-2" />
+            Invitar al portal
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  // ===== Section: Appointments =====
+  const appointmentsSection = (
+    <Card className="rounded-2xl border-border/50">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between gap-2">
+          <CardTitle className="text-lg font-bold flex items-center gap-2">
+            <Calendar className="h-5 w-5 text-primary" />
+            Citas del paciente
+          </CardTitle>
+          {appointments.length > 0 && (
+            <Badge variant="secondary" className="rounded-full">
+              {appointments.length}
+            </Badge>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent>
+        {appointments.length === 0 ? (
+          <p className="text-muted-foreground text-sm text-center py-6">
+            Este paciente todavía no tiene citas registradas.
+          </p>
+        ) : (
+          <div className="space-y-3 max-h-[520px] overflow-y-auto pr-1">
+            {appointments.map((appointment) => (
+              <div
+                key={appointment.id}
+                className="flex items-center justify-between p-3 rounded-xl bg-muted/30 border border-border/50"
+              >
+                <div className="min-w-0">
+                  <p className="font-medium text-sm text-foreground">
+                    {formatDateTime(appointment.start_at)}
+                  </p>
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
+                    <span className="text-xs text-muted-foreground">
+                      {appointment.modality === "online" ? "Online" : "Presencial"}
+                    </span>
+                    {appointment.source && appointment.source !== "panel" && (
+                      <span className="text-xs text-muted-foreground">
+                        • Origen: {appointment.source}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <Badge
+                  variant={appointment.status === "attended" ? "default" : "secondary"}
+                  className="rounded-full text-xs shrink-0 ml-2"
+                >
+                  {statusLabels[appointment.status] || appointment.status}
+                </Badge>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+
+  // ===== Section: Payments =====
+  const paymentsSection = (
+    <Card className="rounded-2xl border-border/50">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between gap-2">
+          <CardTitle className="text-lg font-bold flex items-center gap-2">
+            <CreditCard className="h-5 w-5 text-primary" />
+            Pagos y vencimientos
+            {payments.length > 0 && (
+              <Badge variant="secondary" className="rounded-full ml-1">
+                {payments.length}
+              </Badge>
+            )}
+          </CardTitle>
+          {!paymentsError && (
+            <Button
+              onClick={() => setShowPaymentForm(true)}
+              className="rounded-xl h-10 px-4 font-semibold"
+            >
+              <Plus className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Registrar</span>
+            </Button>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent>
+        {paymentsError ? (
+          <p className="text-muted-foreground text-sm text-center py-6">
+            Pagos no disponibles en este momento.
+          </p>
+        ) : payments.length === 0 ? (
+          <p className="text-muted-foreground text-sm text-center py-6">
+            Sin pagos registrados.
+          </p>
+        ) : (
+          <div className="space-y-3 max-h-[520px] overflow-y-auto pr-1">
+            {payments.map((payment) => (
+              <div
+                key={payment.id}
+                className="flex flex-col gap-2 p-3 rounded-xl bg-muted/30 border border-border/50"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-bold text-foreground">
+                        {formatCurrencyLocal(payment.amount, payment.currency)}
+                      </p>
+                      <Badge className={`${getPaymentStatusColor(payment.status)} rounded-full text-xs`}>
+                        {getPaymentStatusLabel(payment.status)}
+                      </Badge>
+                      {payment.recurrence_type !== "one_time" && (
+                        <Badge variant="outline" className="rounded-full text-xs gap-1">
+                          <RefreshCw className="h-3 w-3" />
+                          {getRecurrenceTypeLabel(payment.recurrence_type)}
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Vence: {formatDate(payment.due_date)}
+                    </p>
+                    {payment.method && (
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Método: {payment.method}
+                      </p>
+                    )}
+                    {payment.notes && (
+                      <p className="text-xs text-muted-foreground mt-0.5 italic truncate">
+                        {payment.notes}
+                      </p>
+                    )}
+                    {payment.paid_at && (
+                      <p className="text-xs text-green-600 mt-1">
+                        Pagado el {formatDate(payment.paid_at)}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center justify-end gap-1 pt-1 border-t border-border/40">
+                  {payment.status !== "paid" && payment.status !== "cancelled" && (
+                    <>
+                      <PaymentWhatsAppMenu
+                        patientPhone={patient.whatsapp_phone}
+                        patientName={patient.full_name}
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleMarkAsPaid(payment)}
+                        className="rounded-lg h-8 px-2"
+                        title="Marcar como pagado"
+                      >
+                        <Check className="h-4 w-4" />
+                      </Button>
+                    </>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleEditPayment(payment)}
+                    className="rounded-lg h-8 px-2"
+                    title="Editar pago"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setDeletingPaymentId(payment.id)}
+                    className="rounded-lg h-8 px-2 text-destructive hover:text-destructive"
+                    title="Eliminar pago"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+      <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
         {/* Header */}
         <div className="flex items-center gap-3">
           <Button
@@ -418,221 +654,46 @@ const PatientDetail = () => {
           </Button>
         </div>
 
-        {/* Patient Info Card */}
-        <Card className="rounded-2xl border-border/50">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg font-bold flex items-center gap-2">
-              <FileText className="h-5 w-5 text-primary" />
-              Información del paciente
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="flex items-start gap-3">
-                <Mail className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wide">Email</p>
-                  <p className="text-sm font-medium text-foreground">
-                    {patient.email || "No registrado"}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <Phone className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wide">WhatsApp</p>
-                  <p className="text-sm font-medium text-foreground">
-                    {patient.whatsapp_phone || "No registrado"}
-                  </p>
-                </div>
-              </div>
-            </div>
+        {/* Desktop: 2 columns. Payments sticky on the right. */}
+        <div className="hidden lg:grid lg:grid-cols-3 lg:gap-6 lg:items-start">
+          <div className="lg:col-span-2 space-y-6">
+            {infoSection}
+            {appointmentsSection}
+          </div>
+          <div className="lg:col-span-1 lg:sticky lg:top-6">
+            {paymentsSection}
+          </div>
+        </div>
 
-            {patient.reason_for_consultation && (
-              <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
-                  Motivo de consulta
-                </p>
-                <p className="text-sm text-foreground">{patient.reason_for_consultation}</p>
-              </div>
-            )}
-
-            <div className="pt-4 border-t border-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <p className="text-xs text-muted-foreground">
-                Registrado el {formatDate(patient.created_at)}
-              </p>
-              <Button
-                onClick={() => setShowInviteModal(true)}
-                variant="outline"
-                className="rounded-xl"
-              >
-                <UserPlus className="h-4 w-4 mr-2" />
-                Invitar al portal
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Appointments Section */}
-        <Card className="rounded-2xl border-border/50">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg font-bold flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-primary" />
-              Citas del paciente
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {appointments.length === 0 ? (
-              <p className="text-muted-foreground text-sm text-center py-6">
-                Este paciente todavía no tiene citas registradas.
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {appointments.map((appointment) => (
-                  <div
-                    key={appointment.id}
-                    className="flex items-center justify-between p-3 rounded-xl bg-muted/30 border border-border/50"
-                  >
-                    <div>
-                      <p className="font-medium text-sm text-foreground">
-                        {formatDateTime(appointment.start_at)}
-                      </p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-xs text-muted-foreground">
-                          {appointment.modality === "online" ? "Online" : "Presencial"}
-                        </span>
-                        {appointment.source && appointment.source !== "panel" && (
-                          <span className="text-xs text-muted-foreground">
-                            • Origen: {appointment.source}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <Badge
-                      variant={appointment.status === "attended" ? "default" : "secondary"}
-                      className="rounded-full text-xs"
-                    >
-                      {statusLabels[appointment.status] || appointment.status}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Payments Section */}
-        <Card className="rounded-2xl border-border/50">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between gap-2">
-              <CardTitle className="text-lg font-bold flex items-center gap-2">
-                <CreditCard className="h-5 w-5 text-primary" />
-                Pagos y vencimientos
-              </CardTitle>
-              {!paymentsError && (
-                <Button
-                  onClick={() => setShowPaymentForm(true)}
-                  className="rounded-xl h-10 px-4 font-semibold"
-                >
-                  <Plus className="h-4 w-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Registrar pago</span>
-                </Button>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent>
-            {paymentsError ? (
-              <p className="text-muted-foreground text-sm text-center py-6">
-                Pagos no disponibles en este momento.
-              </p>
-            ) : payments.length === 0 ? (
-              <p className="text-muted-foreground text-sm text-center py-6">
-                Sin pagos registrados.
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {payments.map((payment) => (
-                  <div
-                    key={payment.id}
-                    className="flex items-center justify-between p-3 rounded-xl bg-muted/30 border border-border/50"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="font-bold text-foreground">
-                          {formatCurrencyLocal(payment.amount, payment.currency)}
-                        </p>
-                        <Badge className={`${getPaymentStatusColor(payment.status)} rounded-full text-xs`}>
-                          {getPaymentStatusLabel(payment.status)}
-                        </Badge>
-                        {payment.recurrence_type !== "one_time" && (
-                          <Badge variant="outline" className="rounded-full text-xs gap-1">
-                            <RefreshCw className="h-3 w-3" />
-                            {getRecurrenceTypeLabel(payment.recurrence_type)}
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Vence: {formatDate(payment.due_date)}
-                      </p>
-                      {payment.method && (
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          Método: {payment.method}
-                        </p>
-                      )}
-                      {payment.notes && (
-                        <p className="text-xs text-muted-foreground mt-0.5 italic truncate">
-                          {payment.notes}
-                        </p>
-                      )}
-                      {payment.paid_at && (
-                        <p className="text-xs text-green-600 mt-1">
-                          Pagado el {formatDate(payment.paid_at)}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                      {payment.status !== "paid" && payment.status !== "cancelled" && (
-                        <>
-                          <PaymentWhatsAppMenu
-                            patientPhone={patient.whatsapp_phone}
-                            patientName={patient.full_name}
-                          />
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleMarkAsPaid(payment)}
-                            className="rounded-lg h-8 px-2"
-                            title="Marcar como pagado"
-                          >
-                            <Check className="h-4 w-4" />
-                          </Button>
-                        </>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEditPayment(payment)}
-                        className="rounded-lg h-8 px-2"
-                        title="Editar pago"
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setDeletingPaymentId(payment.id)}
-                        className="rounded-lg h-8 px-2 text-destructive hover:text-destructive"
-                        title="Eliminar pago"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        {/* Mobile / tablet: tabs to keep payments accessible without scrolling past appointments */}
+        <div className="lg:hidden">
+          <Tabs defaultValue="info" className="w-full">
+            <TabsList className="grid grid-cols-3 w-full h-11 rounded-xl">
+              <TabsTrigger value="info" className="rounded-lg">Info</TabsTrigger>
+              <TabsTrigger value="appointments" className="rounded-lg gap-1">
+                Citas
+                {appointments.length > 0 && (
+                  <span className="text-xs font-semibold opacity-70">({appointments.length})</span>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="payments" className="rounded-lg gap-1">
+                Pagos
+                {payments.length > 0 && (
+                  <span className="text-xs font-semibold opacity-70">({payments.length})</span>
+                )}
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="info" className="mt-4">
+              {infoSection}
+            </TabsContent>
+            <TabsContent value="appointments" className="mt-4">
+              {appointmentsSection}
+            </TabsContent>
+            <TabsContent value="payments" className="mt-4">
+              {paymentsSection}
+            </TabsContent>
+          </Tabs>
+        </div>
       </div>
 
       {/* Payment Form Modal - Create */}
