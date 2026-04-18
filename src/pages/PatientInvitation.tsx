@@ -104,20 +104,20 @@ const PatientInvitation = () => {
 
       setStatus("success");
 
-      // If we got a session, set it
+      // If we got a session, set it but DON'T redirect yet — show install guide first
       if (data.session) {
         await supabase.auth.setSession(data.session);
         toast({
           title: "¡Cuenta activada!",
           description: "Bienvenido al portal del paciente",
         });
-        setTimeout(() => navigate("/portal-paciente"), 1500);
+        setTimeout(() => setStatus("install"), 1200);
       } else {
         toast({
           title: "Cuenta activada",
           description: "Ahora podés iniciar sesión con tu nueva contraseña",
         });
-        setTimeout(() => navigate("/auth"), 2000);
+        setTimeout(() => setStatus("install"), 1500);
       }
     } catch (error) {
       console.error("Error activating account:", error);
