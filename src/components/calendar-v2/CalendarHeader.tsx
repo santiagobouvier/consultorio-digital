@@ -109,8 +109,7 @@ export const CalendarHeader = ({
                 </span>
               )}
             </Button>
-            <AddMenu triggerClassName="h-10 w-10 rounded-xl" iconOnly />
-
+            {/* Mobile: '+' moved to floating FAB at the bottom of the page */}
           </div>
         </div>
 
