@@ -52,6 +52,7 @@ interface Patient {
   id: string;
   full_name: string;
   whatsapp_phone: string | null;
+  avatar_url: string | null;
 }
 
 const toDayPayment = (p: Payment, patient?: Patient): DayPayment => ({
@@ -59,6 +60,7 @@ const toDayPayment = (p: Payment, patient?: Patient): DayPayment => ({
   patient_id: p.patient_id,
   patient_name: patient?.full_name || "Sin paciente",
   patient_phone: patient?.whatsapp_phone ?? null,
+  patient_avatar_url: patient?.avatar_url ?? null,
   due_date: p.due_date,
   amount: p.amount,
   currency: p.currency,
@@ -143,7 +145,7 @@ const CalendarV2 = () => {
 
       const { data } = await supabase
         .from("patients")
-        .select("id, full_name, whatsapp_phone")
+        .select("id, full_name, whatsapp_phone, avatar_url")
         .eq("business_id", businessId)
         .eq("is_active", true)
         .order("full_name");
@@ -197,7 +199,7 @@ const CalendarV2 = () => {
           patient_id,
           service_id,
           professional_id,
-          patients (full_name, whatsapp_phone, email),
+          patients (full_name, whatsapp_phone, email, avatar_url),
           services (name)
         `)
         .eq("business_id", businessId)

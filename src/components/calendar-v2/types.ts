@@ -18,7 +18,7 @@ export interface CalendarAppointment {
   patient_id: string | null;
   service_id: string | null;
   professional_id: string | null;
-  patients: { full_name: string } | null;
+  patients: { full_name: string; avatar_url?: string | null } | null;
   services: { name: string } | null;
   professional?: Professional | null;
   paymentColor?: PaymentColor;
@@ -34,6 +34,7 @@ export interface DayPayment {
   patient_id: string;
   patient_name: string;
   patient_phone: string | null;
+  patient_avatar_url?: string | null;
   due_date: string;
   amount: number;
   currency: string;
