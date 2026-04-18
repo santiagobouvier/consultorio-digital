@@ -13,6 +13,7 @@ import {
   CreditCard,
   BarChart3,
   LogOut,
+  ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useDashboardBranding } from "@/contexts/DashboardBrandingContext";
@@ -90,82 +91,53 @@ export function MobileHeader() {
     <>
       {/* ============================ Header bar ============================ */}
       <header
-        className="sticky top-0 z-40 flex items-center h-16 px-4 md:hidden"
+        className="sticky top-0 z-40 flex items-center justify-between h-14 px-4 md:hidden"
         style={{
-          background: "rgba(10, 10, 10, 0.72)",
-          backdropFilter: "saturate(180%) blur(20px)",
-          WebkitBackdropFilter: "saturate(180%) blur(20px)",
-          borderBottom: `1px solid ${brandHsla(0.12)}`,
-          boxShadow: `0 1px 0 0 rgba(255,255,255,0.04), 0 8px 24px -12px ${brandHsla(0.25)}`,
+          background: "rgba(0, 0, 0, 0.55)",
+          backdropFilter: "saturate(180%) blur(22px)",
+          WebkitBackdropFilter: "saturate(180%) blur(22px)",
+          borderBottom: "1px solid rgba(255,255,255,0.06)",
         }}
       >
-        {/* Minimal animated hamburger */}
+        {/* Minimalist toggle — small pill with rotating chevron */}
         <button
           onClick={() => setOpen(!open)}
-          className="relative w-11 h-11 rounded-2xl flex items-center justify-center transition-all duration-300 active:scale-95"
+          className="relative h-9 w-9 rounded-xl flex items-center justify-center transition-all duration-300 active:scale-90"
           style={{
-            background: open ? brandHsla(0.15) : "rgba(255,255,255,0.06)",
-            border: `1px solid ${open ? brandHsla(0.35) : "rgba(255,255,255,0.10)"}`,
-            boxShadow: open ? `0 0 0 4px ${brandHsla(0.08)}` : "none",
+            background: "rgba(255,255,255,0.06)",
+            border: "1px solid rgba(255,255,255,0.08)",
           }}
           aria-label={open ? "Cerrar menú" : "Abrir menú"}
         >
-          <div className="relative w-5 h-5 flex flex-col justify-center items-center gap-[5px]">
-            <span
-              className={cn("block h-[1.5px] rounded-full transition-all duration-300 ease-out")}
-              style={{
-                width: "20px",
-                background: open ? brandHsl : "rgba(255,255,255,0.85)",
-                transform: open ? "translateY(6.5px) rotate(45deg)" : "translateY(0) rotate(0)",
-              }}
-            />
-            <span
-              className={cn("block h-[1.5px] rounded-full transition-all duration-300 ease-out")}
-              style={{
-                width: open ? "0px" : "14px",
-                background: "rgba(255,255,255,0.85)",
-                opacity: open ? 0 : 1,
-              }}
-            />
-            <span
-              className={cn("block h-[1.5px] rounded-full transition-all duration-300 ease-out")}
-              style={{
-                width: "20px",
-                background: open ? brandHsl : "rgba(255,255,255,0.85)",
-                transform: open ? "translateY(-6.5px) rotate(-45deg)" : "translateY(0) rotate(0)",
-              }}
-            />
-          </div>
+          <ChevronRight
+            className="h-4 w-4 transition-transform duration-300 ease-out"
+            style={{
+              color: "rgba(255,255,255,0.9)",
+              transform: open ? "rotate(180deg)" : "rotate(0deg)",
+            }}
+            strokeWidth={2.4}
+          />
         </button>
 
-        {/* Centered logo + name */}
-        <div className="flex-1 flex justify-center">
-          <div className="flex items-center gap-2.5">
-            {logoUrl ? (
-              <img
-                src={logoUrl}
-                alt="Logo"
-                className="w-7 h-7 rounded-lg object-cover"
-                style={{ boxShadow: `0 2px 10px ${brandHsla(0.3)}` }}
-              />
-            ) : (
-              <div
-                className="w-7 h-7 rounded-lg flex items-center justify-center"
-                style={{
-                  background: `linear-gradient(135deg, ${brandHsl}, hsl(${primaryColor.split(" ")[0]} 100% 25%))`,
-                  boxShadow: `0 2px 10px ${brandHsla(0.3)}`,
-                }}
-              >
-                <CalendarDays className="h-3.5 w-3.5 text-white" />
-              </div>
-            )}
-            <span className="text-sm font-semibold text-white tracking-tight">
-              {displayName || "Consultorio"}
-            </span>
+        {/* Right: only the clinic logo */}
+        {logoUrl ? (
+          <img
+            src={logoUrl}
+            alt="Logo"
+            className="w-8 h-8 rounded-lg object-cover"
+            style={{ boxShadow: `0 2px 10px ${brandHsla(0.3)}` }}
+          />
+        ) : (
+          <div
+            className="w-8 h-8 rounded-lg flex items-center justify-center"
+            style={{
+              background: `linear-gradient(135deg, ${brandHsl}, hsl(${primaryColor.split(" ")[0]} 100% 25%))`,
+              boxShadow: `0 2px 10px ${brandHsla(0.3)}`,
+            }}
+          >
+            <CalendarDays className="h-4 w-4 text-white" />
           </div>
-        </div>
-
-        <div className="w-11" />
+        )}
       </header>
 
       {/* ============================ Drawer ============================ */}
