@@ -47,6 +47,11 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Optional override: caller can provide a new email if the patient doesn't have one yet
+    const { patientId: _pid, overrideEmail } = await req.json().then((b) => ({ patientId: b.patientId, overrideEmail: b.overrideEmail })).catch(() => ({ patientId: null, overrideEmail: null }));
+    // Note: patientId already destructured above; this re-parse is harmless because Deno.serve buffers the body.
+    // (We keep the original `patientId` constant from line 41.)
+
     // Fetch patient data and verify ownership
     const { data: patient, error: patientError } = await supabaseAdmin
       .from("patients")
@@ -67,6 +72,40 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({ error: "You don't have permission to invite this patient" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // If an overrideEmail was provided and patient has no real email, persist it now
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (overrideEmail && (!patient.email || patient.email.endsWith("@portal.interno"))) {
+      if (!emailRegex.test(overrideEmail)) {
+        return new Response(
+          JSON.stringify({ error: "El correo electrónico ingresado no es válido" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      const { error: updEmailErr } = await supabaseAdmin
+        .from("patients")
+        .update({ email: overrideEmail.trim().toLowerCase() })
+        .eq("id", patientId);
+      if (updEmailErr) {
+        console.error("Error saving overrideEmail:", updEmailErr);
+        return new Response(
+          JSON.stringify({ error: "No se pudo guardar el correo del paciente" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      patient.email = overrideEmail.trim().toLowerCase();
+    }
+
+    // Email is mandatory to send the invitation
+    if (!patient.email || patient.email.endsWith("@portal.interno") || !emailRegex.test(patient.email)) {
+      return new Response(
+        JSON.stringify({
+          error: "missing_email",
+          message: "El paciente no tiene un correo electrónico válido. Agregalo antes de enviar la invitación.",
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
