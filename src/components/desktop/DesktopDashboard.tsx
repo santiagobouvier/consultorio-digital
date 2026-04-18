@@ -61,6 +61,15 @@ interface Payment {
   calculatedStatus?: string;
 }
 
+interface ActiveAgendaEntry {
+  id: string;
+  name: string;
+  color?: string;
+  appointmentCount: number;
+  attendedCount: number;
+  isUnassigned?: boolean;
+}
+
 export const DesktopDashboard = () => {
   const navigate = useNavigate();
   const { businessId, loading: businessLoading } = useBusinessId();
@@ -238,13 +247,30 @@ export const DesktopDashboard = () => {
   }, [businessId, fetchDashboardData]);
 
   // Active professionals today
-  const activeProfessionalsToday = useMemo(() => {
-    const professionalIds = new Set(
-      todayAppointments
-        .filter(a => a.professional_id)
-        .map(a => a.professional_id)
-    );
-    return professionals.filter(p => professionalIds.has(p.userId));
+  const activeProfessionalsToday = useMemo<ActiveAgendaEntry[]>(() => {
+    const grouped = new Map<string, ActiveAgendaEntry>();
+
+    todayAppointments.forEach((appointment) => {
+      const professional = professionals.find((p) => p.userId === appointment.professional_id);
+      const key = professional?.id ?? "unassigned";
+      const current = grouped.get(key) ?? {
+        id: key,
+        name: professional?.name ?? "Sin asignar",
+        color: professional?.color,
+        appointmentCount: 0,
+        attendedCount: 0,
+        isUnassigned: !professional,
+      };
+
+      current.appointmentCount += 1;
+      if (appointment.status === "attended") {
+        current.attendedCount += 1;
+      }
+
+      grouped.set(key, current);
+    });
+
+    return Array.from(grouped.values());
   }, [todayAppointments, professionals]);
 
   // Agenda occupation (% of day with appointments)
@@ -555,10 +581,6 @@ export const DesktopDashboard = () => {
                 ) : (
                   <div className="space-y-2">
                     {activeProfessionalsToday.map((prof) => {
-                      const profAppts = todayAppointments.filter(
-                        a => a.professional_id === prof.userId
-                      );
-                      const attended = profAppts.filter(a => a.status === "attended").length;
                       return (
                         <div
                           key={prof.id}
@@ -569,11 +591,11 @@ export const DesktopDashboard = () => {
                               <AvatarFallback 
                                 className="text-xs font-medium"
                                 style={{ 
-                                  backgroundColor: `${prof.color}20`,
-                                  color: prof.color || "#00b5b5"
+                                  backgroundColor: prof.isUnassigned ? "hsl(var(--warning) / 0.18)" : `${prof.color}20`,
+                                  color: prof.isUnassigned ? "hsl(var(--warning))" : prof.color || "#00b5b5"
                                 }}
                               >
-                                {getInitials(prof.name)}
+                                {prof.isUnassigned ? "SA" : getInitials(prof.name)}
                               </AvatarFallback>
                             </Avatar>
                             <span className="font-medium text-foreground">
@@ -581,7 +603,7 @@ export const DesktopDashboard = () => {
                             </span>
                           </div>
                           <Badge variant="secondary" className="text-xs">
-                            {attended}/{profAppts.length} atendidas
+                            {prof.attendedCount}/{prof.appointmentCount} atendidas
                           </Badge>
                         </div>
                       );

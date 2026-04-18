@@ -289,6 +289,23 @@ export const DesktopCommandCenter = () => {
       .sort((a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime());
   }, [filteredAppointments]);
 
+  const activeAgendaOwnersTodayCount = useMemo(() => {
+    const assignedProfessionalIds = new Set<string>();
+    let hasUnassignedAppointments = false;
+
+    appointments.forEach((appointment) => {
+      if (!isSameDay(new Date(appointment.start_at), new Date())) return;
+
+      if (appointment.professional_id) {
+        assignedProfessionalIds.add(appointment.professional_id);
+      } else {
+        hasUnassignedAppointments = true;
+      }
+    });
+
+    return assignedProfessionalIds.size + (hasUnassignedAppointments ? 1 : 0);
+  }, [appointments]);
+
   // Upcoming appointments (next 7 days, excluding today)
   const upcomingAppointments = useMemo(() => {
     const today = new Date();
@@ -513,13 +530,7 @@ export const DesktopCommandCenter = () => {
               <ClinicStatusPanel
                 professionals={professionals}
                 attendedToday={attendedToday}
-                activeProfessionalsTodayCount={
-                  new Set(
-                    appointments
-                      .filter((a) => isSameDay(new Date(a.start_at), new Date()) && a.professional_id)
-                      .map((a) => a.professional_id)
-                  ).size
-                }
+                activeProfessionalsTodayCount={activeAgendaOwnersTodayCount}
                 pendingPaymentsAmount={pendingPaymentsAmount}
                 overdueCount={overdueCount}
                 dueSoonCount={dueSoonCount}
