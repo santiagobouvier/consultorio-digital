@@ -1,11 +1,13 @@
 import { useMemo } from "react";
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, isToday } from "date-fns";
 import { es } from "date-fns/locale";
-import { CalendarAppointment } from "./types";
+import { CalendarAppointment, DayPayment } from "./types";
 import { AppointmentCard } from "./AppointmentCard";
 import { cn } from "@/lib/utils";
-import { Plus } from "lucide-react";
+import { Plus, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { calculatePaymentStatus, formatCurrency } from "@/lib/payments";
 import {
   Tooltip,
   TooltipContent,
@@ -20,6 +22,8 @@ interface WeekViewV2Props {
   onDayClick: (date: Date) => void;
   onAddAppointment: () => void;
   showProfessionalColors: boolean;
+  paymentsByDay?: Map<string, DayPayment[]>;
+  onPaymentClick?: (payment: DayPayment) => void;
 }
 
 const ProfessionalBadge = ({ appointment, showColor }: { appointment: CalendarAppointment; showColor: boolean }) => {
@@ -58,6 +62,8 @@ export const WeekViewV2 = ({
   onDayClick,
   onAddAppointment,
   showProfessionalColors,
+  paymentsByDay,
+  onPaymentClick,
 }: WeekViewV2Props) => {
   const days = useMemo(() => {
     const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
@@ -71,13 +77,43 @@ export const WeekViewV2 = ({
       .sort((a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime());
   };
 
+  const getPaymentsForDay = (date: Date): DayPayment[] => {
+    if (!paymentsByDay) return [];
+    return paymentsByDay.get(date.toDateString()) || [];
+  };
+
+  const PaymentChip = ({ p, compact = false }: { p: DayPayment; compact?: boolean }) => {
+    const st = calculatePaymentStatus(p);
+    return (
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onPaymentClick?.(p);
+        }}
+        className={cn(
+          "w-full text-left rounded-lg border-l-2 transition-all hover:shadow-sm hover:scale-[1.01] flex items-center gap-1.5",
+          compact ? "p-1.5 text-xs" : "p-2 text-xs",
+          st === "overdue" && "bg-rose-50 dark:bg-rose-500/10 border-l-rose-500",
+          st === "due_soon" && "bg-amber-50 dark:bg-amber-500/10 border-l-amber-500",
+          st !== "overdue" && st !== "due_soon" && "bg-emerald-50 dark:bg-emerald-500/10 border-l-emerald-500"
+        )}
+      >
+        <CreditCard className="h-3 w-3 shrink-0" />
+        <span className="font-medium">{formatCurrency(p.amount, p.currency)}</span>
+        <span className="text-muted-foreground truncate">{p.patient_name.split(" ")[0]}</span>
+      </button>
+    );
+  };
+
   return (
     <>
       {/* Mobile Week View - Vertical scroll */}
       <div className="md:hidden space-y-3">
         {days.map((day, dayIndex) => {
           const dayAppointments = getAppointmentsForDay(day);
+          const dayPayments = getPaymentsForDay(day);
           const isCurrentDay = isToday(day);
+          const totalCount = dayAppointments.length + dayPayments.length;
 
           return (
             <div
@@ -110,12 +146,13 @@ export const WeekViewV2 = ({
                     </p>
                     <p className="text-sm text-muted-foreground">
                       {dayAppointments.length} cita{dayAppointments.length !== 1 ? "s" : ""}
+                      {dayPayments.length > 0 && ` · ${dayPayments.length} pago${dayPayments.length !== 1 ? "s" : ""}`}
                     </p>
                   </div>
                 </div>
               </button>
 
-              {dayAppointments.length > 0 && (
+              {totalCount > 0 && (
                 <div className="p-3 space-y-2">
                   {dayAppointments.slice(0, 3).map((apt) => (
                     <AppointmentCard
@@ -126,12 +163,15 @@ export const WeekViewV2 = ({
                       compact
                     />
                   ))}
-                  {dayAppointments.length > 3 && (
+                  {dayPayments.slice(0, 2).map((p) => (
+                    <PaymentChip key={`pay-${p.id}`} p={p} />
+                  ))}
+                  {totalCount > 5 && (
                     <button
                       onClick={() => onDayClick(day)}
                       className="w-full py-2 text-sm text-primary font-medium hover:underline"
                     >
-                      +{dayAppointments.length - 3} más
+                      +{totalCount - 5} más
                     </button>
                   )}
                 </div>
@@ -141,9 +181,9 @@ export const WeekViewV2 = ({
         })}
 
         <div className="fixed bottom-6 right-6 z-40">
-          <Button 
-            onClick={onAddAppointment} 
-            size="lg" 
+          <Button
+            onClick={onAddAppointment}
+            size="lg"
             className="h-14 w-14 rounded-full shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:scale-105 active:scale-95 transition-all duration-200"
           >
             <Plus className="h-6 w-6" />
@@ -155,7 +195,9 @@ export const WeekViewV2 = ({
       <div className="hidden md:grid grid-cols-7 gap-3">
         {days.map((day) => {
           const dayAppointments = getAppointmentsForDay(day);
+          const dayPayments = getPaymentsForDay(day);
           const isCurrentDay = isToday(day);
+          const totalCount = dayAppointments.length + dayPayments.length;
 
           return (
             <div
@@ -177,30 +219,35 @@ export const WeekViewV2 = ({
                     {format(day, "d")}
                   </p>
                 </div>
-                {dayAppointments.length > 0 && (
-                  <span className="text-sm text-muted-foreground">{dayAppointments.length}</span>
+                {totalCount > 0 && (
+                  <span className="text-sm text-muted-foreground">{totalCount}</span>
                 )}
               </button>
 
               <div className="flex-1 space-y-2 overflow-y-auto">
-                {dayAppointments.length === 0 ? (
-                  <p className="text-xs text-muted-foreground text-center py-4">Sin citas</p>
+                {totalCount === 0 ? (
+                  <p className="text-xs text-muted-foreground text-center py-4">Sin actividad</p>
                 ) : (
-                  dayAppointments.map((apt) => (
-                    <div key={apt.id} className="relative">
-                      <div className="flex items-center gap-1">
-                        <ProfessionalBadge appointment={apt} showColor={showProfessionalColors} />
-                        <div className="flex-1 min-w-0">
-                          <AppointmentCard
-                            appointment={apt}
-                            onClick={() => onAppointmentClick(apt)}
-                            showProfessionalColor={showProfessionalColors}
-                            compact
-                          />
+                  <>
+                    {dayAppointments.map((apt) => (
+                      <div key={apt.id} className="relative">
+                        <div className="flex items-center gap-1">
+                          <ProfessionalBadge appointment={apt} showColor={showProfessionalColors} />
+                          <div className="flex-1 min-w-0">
+                            <AppointmentCard
+                              appointment={apt}
+                              onClick={() => onAppointmentClick(apt)}
+                              showProfessionalColor={showProfessionalColors}
+                              compact
+                            />
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))
+                    ))}
+                    {dayPayments.map((p) => (
+                      <PaymentChip key={`pay-${p.id}`} p={p} compact />
+                    ))}
+                  </>
                 )}
               </div>
             </div>

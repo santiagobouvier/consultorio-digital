@@ -29,6 +29,20 @@ export type AppointmentStatus = "pending" | "confirmed" | "attended" | "cancelle
 export type PaymentColor = "green" | "orange" | "red" | "gray";
 export type ViewType = "day" | "week" | "month";
 
+export interface DayPayment {
+  id: string;
+  patient_id: string;
+  patient_name: string;
+  patient_phone: string | null;
+  due_date: string;
+  amount: number;
+  currency: string;
+  status: string;
+  paid_at: string | null;
+  method: string | null;
+  notes: string | null;
+}
+
 export interface CalendarFilters {
   professionalId: string | null;
   patientId: string | null;
