@@ -78,12 +78,19 @@ const Billing = () => {
   const [showPlanModal, setShowPlanModal] = useState(false);
   const [selectedBilling, setSelectedBilling] = useState<"monthly" | "annual">("annual");
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
+  const [, setNowTick] = useState(0);
 
   useEffect(() => {
     if (searchParams.get("subscription") === "success") {
       toast.success("¡Suscripción activada exitosamente!");
     }
     fetchBillingData();
+  }, []);
+
+  // Re-render every minute so the trial countdown stays accurate while viewing
+  useEffect(() => {
+    const interval = setInterval(() => setNowTick((t) => t + 1), 60_000);
+    return () => clearInterval(interval);
   }, []);
 
   const fetchBillingData = async () => {
