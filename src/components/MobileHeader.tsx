@@ -14,6 +14,7 @@ import {
   BarChart3,
   LogOut,
   ChevronRight,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useDashboardBranding } from "@/contexts/DashboardBrandingContext";
@@ -99,22 +100,19 @@ export function MobileHeader() {
           borderBottom: "1px solid rgba(255,255,255,0.06)",
         }}
       >
-        {/* Minimalist toggle — small pill with rotating chevron */}
+        {/* Minimalist toggle — opens fullscreen drawer */}
         <button
-          onClick={() => setOpen(!open)}
+          onClick={() => setOpen(true)}
           className="relative h-9 w-9 rounded-xl flex items-center justify-center transition-all duration-300 active:scale-90"
           style={{
             background: "rgba(255,255,255,0.06)",
             border: "1px solid rgba(255,255,255,0.08)",
           }}
-          aria-label={open ? "Cerrar menú" : "Abrir menú"}
+          aria-label="Abrir menú"
         >
           <ChevronRight
-            className="h-4 w-4 transition-transform duration-300 ease-out"
-            style={{
-              color: "rgba(255,255,255,0.9)",
-              transform: open ? "rotate(180deg)" : "rotate(0deg)",
-            }}
+            className="h-4 w-4"
+            style={{ color: "rgba(255,255,255,0.9)" }}
             strokeWidth={2.4}
           />
         </button>
@@ -140,136 +138,135 @@ export function MobileHeader() {
         )}
       </header>
 
-      {/* ============================ Drawer ============================ */}
+      {/* ============================ Fullscreen Drawer ============================ */}
       <div
         className={cn(
-          "fixed inset-0 z-50 md:hidden",
-          open ? "pointer-events-auto" : "pointer-events-none"
+          "fixed inset-0 z-50 md:hidden flex flex-col transition-all duration-[400ms] ease-[cubic-bezier(0.32,0.72,0,1)]",
+          open
+            ? "opacity-100 pointer-events-auto scale-100"
+            : "opacity-0 pointer-events-none scale-[1.02]"
         )}
+        style={{
+          background: "rgba(0, 0, 0, 0.92)",
+          backdropFilter: "saturate(180%) blur(28px)",
+          WebkitBackdropFilter: "saturate(180%) blur(28px)",
+        }}
       >
-        {/* Backdrop */}
+        {/* Brand glow accents */}
         <div
-          className={cn(
-            "absolute inset-0 transition-opacity duration-300",
-            open ? "opacity-100" : "opacity-0"
-          )}
+          className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] pointer-events-none opacity-60"
           style={{
-            background: "rgba(0,0,0,0.55)",
-            backdropFilter: "blur(6px)",
-            WebkitBackdropFilter: "blur(6px)",
+            background: `radial-gradient(ellipse at center, ${brandHsla(0.22)}, transparent 70%)`,
           }}
-          onClick={() => setOpen(false)}
+        />
+        <div
+          className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[500px] h-[300px] pointer-events-none opacity-40"
+          style={{
+            background: `radial-gradient(ellipse at center, ${brandHsla(0.14)}, transparent 70%)`,
+          }}
         />
 
-        {/* Drawer panel */}
+        {/* Top bar with logo + close X */}
         <div
-          className={cn(
-            "absolute left-0 top-0 bottom-0 w-[300px] flex flex-col transition-transform duration-[350ms] ease-[cubic-bezier(0.32,0.72,0,1)]",
-            open ? "translate-x-0" : "-translate-x-full"
+          className="relative flex items-center justify-between h-14 px-4 shrink-0"
+          style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
+        >
+          {/* Logo placeholder (left, for symmetry with header) */}
+          <div className="w-9 h-9" />
+
+          {/* Centered logo */}
+          {logoUrl ? (
+            <img
+              src={logoUrl}
+              alt="Logo"
+              className="w-9 h-9 rounded-xl object-cover"
+              style={{ boxShadow: `0 4px 16px ${brandHsla(0.4)}` }}
+            />
+          ) : (
+            <div
+              className="w-9 h-9 rounded-xl flex items-center justify-center"
+              style={{
+                background: `linear-gradient(135deg, ${brandHsl}, hsl(${primaryColor.split(" ")[0]} 100% 25%))`,
+                boxShadow: `0 4px 16px ${brandHsla(0.4)}`,
+              }}
+            >
+              <CalendarDays className="h-4 w-4 text-white" />
+            </div>
           )}
+
+          {/* Close X */}
+          <button
+            onClick={() => setOpen(false)}
+            className="relative h-9 w-9 rounded-xl flex items-center justify-center transition-all duration-300 active:scale-90"
+            style={{
+              background: "rgba(255,255,255,0.06)",
+              border: "1px solid rgba(255,255,255,0.08)",
+            }}
+            aria-label="Cerrar menú"
+          >
+            <X
+              className="h-4 w-4"
+              style={{ color: "rgba(255,255,255,0.9)" }}
+              strokeWidth={2.4}
+            />
+          </button>
+        </div>
+
+        {/* Centered nav items */}
+        <nav
+          className="flex-1 flex flex-col items-center justify-center gap-1.5 px-6 overflow-y-auto"
           style={{
-            background: "rgba(10, 10, 10, 0.92)",
-            backdropFilter: "saturate(180%) blur(24px)",
-            WebkitBackdropFilter: "saturate(180%) blur(24px)",
-            borderRight: `1px solid ${brandHsla(0.18)}`,
-            boxShadow: `8px 0 40px -12px ${brandHsla(0.35)}, inset -1px 0 0 rgba(255,255,255,0.04)`,
+            scrollbarWidth: "none",
+            msOverflowStyle: "none",
           }}
         >
-          {/* Brand glow accent */}
-          <div
-            className="absolute top-0 left-0 right-0 h-32 pointer-events-none"
-            style={{
-              background: `radial-gradient(ellipse at top left, ${brandHsla(0.18)}, transparent 70%)`,
-            }}
-          />
-
-          {/* Drawer header */}
-          <div
-            className="relative flex items-center gap-3 h-16 px-5"
-            style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
-          >
-            {logoUrl ? (
-              <img
-                src={logoUrl}
-                alt="Logo"
-                className="w-10 h-10 rounded-xl object-cover"
-                style={{ boxShadow: `0 4px 16px ${brandHsla(0.35)}` }}
-              />
-            ) : (
-              <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center"
+          <style>{`nav::-webkit-scrollbar { display: none; }`}</style>
+          {visibleNavItems.map((item, index) => {
+            const active = isActive(item.url);
+            return (
+              <button
+                key={item.url}
+                onClick={() => handleNav(item.url)}
+                className={cn(
+                  "relative flex items-center justify-center gap-3 w-full max-w-[280px] h-12 rounded-2xl transition-all duration-200",
+                  "active:scale-[0.97]",
+                  active
+                    ? "text-white"
+                    : "text-white/55 hover:text-white hover:bg-white/[0.04]",
+                  open && "animate-in fade-in slide-in-from-bottom-2"
+                )}
                 style={{
-                  background: `linear-gradient(135deg, ${brandHsl}, hsl(${primaryColor.split(" ")[0]} 100% 25%))`,
-                  boxShadow: `0 4px 16px ${brandHsla(0.35)}`,
+                  background: active ? brandHsla(0.16) : undefined,
+                  border: active ? `1px solid ${brandHsla(0.32)}` : "1px solid transparent",
+                  animationDelay: open ? `${index * 30 + 120}ms` : "0ms",
+                  animationDuration: "400ms",
+                  animationFillMode: "both",
+                  boxShadow: active ? `0 8px 24px -10px ${brandHsla(0.5)}` : undefined,
                 }}
               >
-                <CalendarDays className="h-5 w-5 text-white" />
-              </div>
-            )}
-            <div className="flex flex-col">
-              <span className="text-[15px] font-semibold text-white leading-tight">
-                {displayName || "Consultorio"}
-              </span>
-              <span className="text-[11px] text-white/40 uppercase tracking-wider">Panel</span>
-            </div>
-          </div>
+                <item.icon
+                  className="h-[18px] w-[18px] shrink-0 transition-colors"
+                  style={{ color: active ? brandHsl : undefined }}
+                />
+                <span className="text-[15px] font-medium tracking-tight">{item.title}</span>
+              </button>
+            );
+          })}
+        </nav>
 
-          {/* Nav items with stagger animation */}
-          <nav className="flex-1 px-3 py-5 space-y-1 overflow-y-auto">
-            {visibleNavItems.map((item, index) => {
-              const active = isActive(item.url);
-              return (
-                <button
-                  key={item.url}
-                  onClick={() => handleNav(item.url)}
-                  className={cn(
-                    "relative flex items-center gap-3.5 w-full px-3.5 py-3 rounded-xl text-left transition-all duration-200 group",
-                    "active:scale-[0.98]",
-                    active
-                      ? "text-white"
-                      : "text-white/55 hover:text-white hover:bg-white/[0.04]",
-                    open && "animate-in fade-in slide-in-from-left-3"
-                  )}
-                  style={{
-                    background: active ? brandHsla(0.14) : undefined,
-                    border: active ? `1px solid ${brandHsla(0.28)}` : "1px solid transparent",
-                    animationDelay: open ? `${index * 35 + 100}ms` : "0ms",
-                    animationDuration: "350ms",
-                    animationFillMode: "both",
-                  }}
-                >
-                  {active && (
-                    <div
-                      className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-6 rounded-r-full"
-                      style={{
-                        background: brandHsl,
-                        boxShadow: `0 0 12px ${brandHsla(0.6)}`,
-                      }}
-                    />
-                  )}
-                  <item.icon
-                    className="h-[19px] w-[19px] shrink-0 transition-colors"
-                    style={{ color: active ? brandHsl : undefined }}
-                  />
-                  <span className="text-[14px] font-medium tracking-tight">{item.title}</span>
-                </button>
-              );
-            })}
-          </nav>
-
-          {/* Logout */}
-          <div
-            className="p-3"
-            style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
+        {/* Logout — centered footer */}
+        <div
+          className="relative flex justify-center pb-6 pt-3 shrink-0"
+          style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 1.5rem)" }}
+        >
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-2.5 px-5 h-11 rounded-full text-white/45 hover:text-rose-400 hover:bg-rose-500/10 transition-all duration-200 active:scale-[0.97]"
+            style={{ border: "1px solid rgba(255,255,255,0.08)" }}
           >
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-3.5 w-full px-3.5 py-3 rounded-xl text-white/40 hover:text-rose-400 hover:bg-rose-500/10 transition-all duration-200 active:scale-[0.98]"
-            >
-              <LogOut className="h-[19px] w-[19px]" />
-              <span className="text-[14px] font-medium tracking-tight">Cerrar sesión</span>
-            </button>
-          </div>
+            <LogOut className="h-4 w-4" />
+            <span className="text-[13px] font-medium tracking-tight">Cerrar sesión</span>
+          </button>
         </div>
       </div>
     </>
