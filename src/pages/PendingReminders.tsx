@@ -228,9 +228,10 @@ const PendingReminders = () => {
     }
     const phone = reminder.patient.whatsapp_phone.replace(/\D/g, "");
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(reminder.message)}`, "_blank");
-    await supabase.from("scheduled_reminders").update({ status: "sent" }).eq("id", reminder.id);
-    setReminders(prev => prev.map(r => r.id === reminder.id ? { ...r, status: "sent" } : r));
-    toast({ title: "WhatsApp abierto y marcado como enviado" });
+    setWhatsappConfirm({
+      ids: [reminder.id],
+      patientName: reminder.patient?.full_name || "el paciente",
+    });
   };
 
   const markAsSent = async (reminderId: string) => {
