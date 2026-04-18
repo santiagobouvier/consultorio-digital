@@ -19,14 +19,22 @@ import {
 import { cn } from "@/lib/utils";
 import { useDashboardBranding } from "@/contexts/DashboardBrandingContext";
 import { isCurrentUserSuperAdmin } from "@/lib/admin-access";
+import { usePendingRequestsCount } from "@/hooks/use-pending-requests-count";
 
-const navItems = [
+type NavItem = {
+  title: string;
+  url: string;
+  icon: typeof LayoutDashboard;
+  highlight?: boolean;
+};
+
+const navItems: NavItem[] = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+  { title: "Solicitudes", url: "/solicitudes", icon: FileText, highlight: true },
   { title: "Pacientes", url: "/patients", icon: Users },
   { title: "Agenda", url: "/agenda", icon: CalendarDays },
   { title: "Pagos", url: "/pagos", icon: Receipt },
   { title: "Recordatorios", url: "/recordatorios-pendientes", icon: Clock },
-  { title: "Solicitudes", url: "/solicitudes", icon: FileText },
   { title: "Estadísticas", url: "/estadisticas", icon: BarChart3 },
   { title: "Facturación", url: "/billing", icon: CreditCard },
   { title: "Consultorio", url: "/mi-consultorio", icon: Settings },
