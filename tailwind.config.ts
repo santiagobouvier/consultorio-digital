@@ -95,6 +95,14 @@ export default {
           from: { opacity: "0", transform: "scale(0.95)" },
           to: { opacity: "1", transform: "scale(1)" },
         },
+        "badge-pulse": {
+          "0%, 100%": {
+            boxShadow: "0 0 0 0 hsl(0 84% 60% / 0.7)",
+          },
+          "50%": {
+            boxShadow: "0 0 0 6px hsl(0 84% 60% / 0)",
+          },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -102,6 +110,7 @@ export default {
         "slide-in-right": "slide-in-right 0.3s ease-out",
         "fade-in": "fade-in 0.2s ease-out forwards",
         "scale-in": "scale-in 0.2s ease-out",
+        "badge-pulse": "badge-pulse 1.8s ease-in-out infinite",
       },
     },
   },
