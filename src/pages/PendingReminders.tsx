@@ -294,9 +294,15 @@ const PendingReminders = () => {
 
   const sendAllWhatsApp = async () => {
     setShowSendAllConfirm(false);
+    const ids: string[] = [];
     for (const reminder of whatsappPendingForSendAll) {
-      await sendWhatsApp(reminder);
+      const phone = reminder.patient!.whatsapp_phone!.replace(/\D/g, "");
+      window.open(`https://wa.me/${phone}?text=${encodeURIComponent(reminder.message)}`, "_blank");
+      ids.push(reminder.id);
       await new Promise(resolve => setTimeout(resolve, 1500));
+    }
+    if (ids.length > 0) {
+      setWhatsappConfirm({ ids, patientName: `${ids.length} pacientes` });
     }
   };
 
@@ -304,13 +310,24 @@ const PendingReminders = () => {
     if (!group.phone) return;
     const phone = group.phone.replace(/\D/g, "");
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(group.combinedMessage)}`, "_blank");
-    for (const r of group.reminders) {
-      await supabase.from("scheduled_reminders").update({ status: "sent" }).eq("id", r.id);
-    }
-    setReminders(prev => prev.map(r =>
-      group.reminders.some(gr => gr.id === r.id) ? { ...r, status: "sent" } : r
-    ));
-    toast({ title: `✓ ${group.reminders.length} enviados a ${group.patientName}` });
+    setWhatsappConfirm({
+      ids: group.reminders.map(r => r.id),
+      patientName: group.patientName,
+    });
+  };
+
+  const confirmWhatsappSent = async () => {
+    if (!whatsappConfirm) return;
+    const ids = whatsappConfirm.ids;
+    await supabase.from("scheduled_reminders").update({ status: "sent" }).in("id", ids);
+    setReminders(prev => prev.map(r => ids.includes(r.id) ? { ...r, status: "sent" } : r));
+    setWhatsappConfirm(null);
+    toast({ title: `✓ ${ids.length === 1 ? "Marcado" : `${ids.length} marcados`} como enviado` });
+  };
+
+  const dismissWhatsappConfirm = () => {
+    setWhatsappConfirm(null);
+    toast({ title: "Sin cambios", description: "El recordatorio sigue pendiente" });
   };
 
   const createManualReminder = async () => {
