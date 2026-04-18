@@ -310,14 +310,18 @@ const Patients = () => {
                 >
                   <CardContent className="p-4 flex items-center gap-3">
                     {/* Avatar */}
-                    <div className={cn(
-                      "shrink-0 w-11 h-11 rounded-xl flex items-center justify-center text-sm font-bold",
-                      patient.is_active
-                        ? "bg-primary/10 text-primary"
-                        : "bg-muted text-muted-foreground"
+                    <Avatar className={cn(
+                      "shrink-0 h-11 w-11 rounded-xl",
+                      patient.is_active ? "ring-1 ring-primary/20" : "opacity-70"
                     )}>
-                      {getInitials(patient.full_name)}
-                    </div>
+                      {patient.avatar_url && <AvatarImage src={patient.avatar_url} alt={patient.full_name} className="object-cover" />}
+                      <AvatarFallback className={cn(
+                        "rounded-xl text-sm font-bold",
+                        patient.is_active ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                      )}>
+                        {getInitials(patient.full_name) || <UserIcon className="h-5 w-5" />}
+                      </AvatarFallback>
+                    </Avatar>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 mb-0.5">
                         <p className="text-[15px] font-semibold text-foreground truncate">{patient.full_name}</p>
