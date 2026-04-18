@@ -446,12 +446,12 @@ const CalendarV2 = () => {
       .map((p) => toDayPayment(p, patients.find((pat) => pat.id === p.patient_id)));
   }, [allPayments, patients, currentDate, viewType]);
 
-  // Map of payments by day (YYYY-MM-DD) for month/week overlay
+  // Map of payments by day for month/week overlay (key: date.toDateString())
   const paymentsByDay = useMemo<Map<string, DayPayment[]>>(() => {
     const map = new Map<string, DayPayment[]>();
     for (const p of allPayments) {
       if (p.status === "cancelled" || p.paid_at) continue;
-      const key = format(new Date(p.due_date), "yyyy-MM-dd");
+      const key = new Date(p.due_date).toDateString();
       const dp = toDayPayment(p, patients.find((pat) => pat.id === p.patient_id));
       const arr = map.get(key);
       if (arr) arr.push(dp);
