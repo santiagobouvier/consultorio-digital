@@ -382,13 +382,19 @@ const ClinicSettings = () => {
       }
 
       if (businessId) {
+        const businessUpdate: Record<string, any> = {
+          dashboard_primary_color: dashboardColor || "176 100% 32%",
+          dashboard_logo_url: dashboardLogoUrl || null,
+          dashboard_display_name: dashboardDisplayName || null,
+          specialty: specialty || null,
+        };
+        // Only update name if user provided one (avoid overwriting with empty string)
+        if (clinicName && clinicName.trim()) {
+          businessUpdate.name = clinicName.trim();
+        }
         const { error: brandError } = await supabase
           .from("businesses")
-          .update({
-            dashboard_primary_color: dashboardColor || "176 100% 32%",
-            dashboard_logo_url: dashboardLogoUrl || null,
-            dashboard_display_name: dashboardDisplayName || null,
-          } as any)
+          .update(businessUpdate as any)
           .eq("id", businessId);
         if (brandError) console.error("Error saving branding:", brandError);
         await refetchBranding();
