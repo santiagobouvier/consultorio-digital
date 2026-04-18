@@ -128,6 +128,30 @@ export function CreateAppointmentModal({
       return;
     }
 
+    // Validación: si hay más de 1 profesional, es obligatorio elegir uno
+    if (professionals.length > 1 && !selectedProfessionalId) {
+      toast({
+        title: "Falta el profesional",
+        description: "Elegí qué profesional atenderá esta cita",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Si hay un solo profesional, asegurar que quede asignado
+    const finalProfessionalId =
+      selectedProfessionalId ||
+      (professionals.length === 1 ? professionals[0].userId : null);
+
+    if (!finalProfessionalId) {
+      toast({
+        title: "Sin profesional asignado",
+        description: "No se encontró un profesional disponible para asignar la cita",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       setLoading(true);
 
@@ -140,7 +164,7 @@ export function CreateAppointmentModal({
       const { error } = await supabase.from("appointments").insert({
         business_id: businessId,
         patient_id: selectedPatientId,
-        professional_id: selectedProfessionalId || null,
+        professional_id: finalProfessionalId,
         start_at: startAt.toISOString(),
         end_at: endAt.toISOString(),
         modality,
@@ -182,6 +206,7 @@ export function CreateAppointmentModal({
 
   const showProfessionalSelector = professionals.length > 1;
   const isProfessionalLocked = !isOwner;
+  const singleProfessional = professionals.length === 1 ? professionals[0] : null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -214,7 +239,7 @@ export function CreateAppointmentModal({
             {/* Profesional */}
             {showProfessionalSelector && (
               <div className="space-y-2">
-                <Label htmlFor="professional" className="text-sm font-semibold">Profesional</Label>
+                <Label htmlFor="professional" className="text-sm font-semibold">Profesional *</Label>
                 <Select
                   value={selectedProfessionalId}
                   onValueChange={setSelectedProfessionalId}
@@ -242,6 +267,22 @@ export function CreateAppointmentModal({
                     Solo puedes crear citas para tu agenda
                   </p>
                 )}
+              </div>
+            )}
+
+            {/* Asignación automática cuando hay un solo profesional */}
+            {!showProfessionalSelector && singleProfessional && (
+              <div className="flex items-center gap-3 rounded-xl border border-dashed border-border bg-muted/30 px-3 py-2.5">
+                <span
+                  className="w-3 h-3 rounded-full shrink-0"
+                  style={{ backgroundColor: singleProfessional.color }}
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-muted-foreground">Profesional asignado</p>
+                  <p className="text-sm font-medium text-foreground truncate">
+                    {singleProfessional.name}
+                  </p>
+                </div>
               </div>
             )}
 
