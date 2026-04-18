@@ -30,14 +30,15 @@ import {
 } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useEffect, useState } from "react";
+import { usePendingRequestsCount } from "@/hooks/use-pending-requests-count";
 
 const mainItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+  { title: "Solicitudes", url: "/solicitudes", icon: FileText, highlight: true },
   { title: "Pacientes", url: "/patients", icon: Users },
   { title: "Agenda", url: "/agenda", icon: CalendarDays },
   { title: "Pagos", url: "/pagos", icon: Receipt },
   { title: "Recordatorios", url: "/recordatorios-pendientes", icon: Clock },
-  { title: "Solicitudes", url: "/solicitudes", icon: FileText },
   { title: "Estadísticas", url: "/estadisticas", icon: BarChart3 },
 ];
 
@@ -55,6 +56,7 @@ export function AppSidebar() {
   const [userName, setUserName] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const pendingRequests = usePendingRequestsCount();
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -108,22 +110,36 @@ export function AppSidebar() {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {mainItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    isActive={isActive(item.url)}
-                    onClick={() => handleNavigate(item.url)}
-                    className={`mx-2 rounded-lg transition-all duration-200 ${
-                      isActive(item.url)
-                        ? "bg-[hsla(176,80%,40%,0.08)] text-[hsl(176,80%,40%)]"
-                        : "text-white/45 hover:text-white/80 hover:bg-white/[0.03]"
-                    }`}
-                  >
-                    <item.icon className="h-4 w-4" />
-                    <span className="text-sm">{item.title}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {mainItems.map((item) => {
+                const active = isActive(item.url);
+                const showBadge = item.highlight && pendingRequests > 0;
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      isActive={active}
+                      onClick={() => handleNavigate(item.url)}
+                      className={`mx-2 rounded-lg transition-all duration-200 ${
+                        active
+                          ? "bg-[hsla(176,80%,40%,0.08)] text-[hsl(176,80%,40%)]"
+                          : showBadge
+                          ? "text-white/90 hover:text-white hover:bg-white/[0.05]"
+                          : "text-white/45 hover:text-white/80 hover:bg-white/[0.03]"
+                      }`}
+                    >
+                      <item.icon className="h-4 w-4" />
+                      <span className="text-sm flex-1">{item.title}</span>
+                      {showBadge && (
+                        <span
+                          className="ml-auto inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-[10px] font-semibold animate-badge-pulse"
+                          aria-label={`${pendingRequests} solicitudes pendientes`}
+                        >
+                          {pendingRequests > 99 ? "99+" : pendingRequests}
+                        </span>
+                      )}
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
