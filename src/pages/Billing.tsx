@@ -475,8 +475,7 @@ const Billing = () => {
               <CardContent className="p-6">
                 <div className="flex flex-col sm:flex-row gap-3">
                   <Button
-                    variant="outline"
-                    className="flex-1 border-white/10 text-white/70 hover:bg-white/5 hover:text-white"
+                    className="flex-1 bg-white text-black hover:bg-white/90"
                     onClick={() => setShowPlanModal(true)}
                   >
                     <ArrowUpRight className="w-4 h-4 mr-2" />
