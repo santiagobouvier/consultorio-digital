@@ -175,12 +175,12 @@ const PatientInvitation = () => {
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="w-full max-w-md rounded-2xl">
           <CardHeader className="text-center">
-            <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-              <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
+            <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+              <CheckCircle className="h-6 w-6 text-primary" />
             </div>
             <CardTitle className="text-xl">¡Cuenta activada!</CardTitle>
             <CardDescription className="text-base">
-              Tu cuenta ha sido configurada correctamente. Redirigiendo al portal...
+              Preparando el siguiente paso...
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -193,11 +193,56 @@ const PatientInvitation = () => {
     );
   }
 
+  if (status === "install") {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const isAndroid = /Android/.test(navigator.userAgent);
+    const isMobile = isIOS || isAndroid;
+
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="w-full max-w-lg rounded-2xl">
+          <CardHeader className="text-center pb-4">
+            <Stepper current={2} />
+            <div className="mx-auto mb-4 mt-2 h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+              <Smartphone className="h-6 w-6 text-primary" />
+            </div>
+            <CardTitle className="text-xl">Instalá la app en tu dispositivo</CardTitle>
+            <CardDescription className="text-base">
+              Accedé al portal con un toque desde tu pantalla de inicio. Funciona offline y se siente como una app nativa.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {isIOS && <IOSInstructions />}
+            {isAndroid && <AndroidInstructions />}
+            {!isMobile && <DesktopInstructions />}
+
+            <Button
+              onClick={() => navigate("/portal-paciente")}
+              className="w-full rounded-xl"
+              size="lg"
+            >
+              Continuar al portal
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+            <button
+              type="button"
+              onClick={() => navigate("/portal-paciente")}
+              className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Lo hago más tarde
+            </button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <Card className="w-full max-w-md rounded-2xl">
-        <CardHeader className="text-center">
-          <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+        <CardHeader className="text-center pb-4">
+          <Stepper current={1} />
+          <div className="mx-auto mb-4 mt-2 h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
             <Lock className="h-6 w-6 text-primary" />
           </div>
           <CardTitle className="text-xl">Configurá tu acceso</CardTitle>
@@ -233,9 +278,9 @@ const PatientInvitation = () => {
                 className="rounded-xl"
               />
             </div>
-            <Button 
-              type="submit" 
-              className="w-full rounded-xl" 
+            <Button
+              type="submit"
+              className="w-full rounded-xl"
               disabled={isSubmitting}
             >
               {isSubmitting ? (
@@ -244,7 +289,10 @@ const PatientInvitation = () => {
                   Activando cuenta...
                 </>
               ) : (
-                "Activar cuenta"
+                <>
+                  Continuar
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </>
               )}
             </Button>
           </form>
@@ -253,5 +301,71 @@ const PatientInvitation = () => {
     </div>
   );
 };
+
+// ============= Subcomponentes =============
+
+const Stepper = ({ current }: { current: 1 | 2 }) => (
+  <div className="flex items-center justify-center gap-2 mb-2">
+    <StepDot n={1} active={current >= 1} done={current > 1} label="Crear cuenta" />
+    <div className={`h-0.5 w-12 ${current > 1 ? "bg-primary" : "bg-border"}`} />
+    <StepDot n={2} active={current >= 2} done={false} label="Instalar app" />
+  </div>
+);
+
+const StepDot = ({ n, active, done, label }: { n: number; active: boolean; done: boolean; label: string }) => (
+  <div className="flex flex-col items-center gap-1">
+    <div
+      className={`h-7 w-7 rounded-full flex items-center justify-center text-xs font-semibold transition-colors ${
+        done
+          ? "bg-primary text-primary-foreground"
+          : active
+          ? "bg-primary text-primary-foreground ring-4 ring-primary/20"
+          : "bg-muted text-muted-foreground"
+      }`}
+    >
+      {done ? <CheckCircle className="h-4 w-4" /> : n}
+    </div>
+    <span className={`text-[10px] ${active ? "text-foreground font-medium" : "text-muted-foreground"}`}>{label}</span>
+  </div>
+);
+
+const InstructionStep = ({ n, icon, text }: { n: number; icon?: React.ReactNode; text: React.ReactNode }) => (
+  <div className="flex items-start gap-3 rounded-xl border border-border bg-muted/30 p-3">
+    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-semibold">
+      {n}
+    </div>
+    <div className="flex-1 text-sm text-foreground flex items-center gap-2 flex-wrap">
+      {text}
+      {icon && <span className="inline-flex items-center text-primary">{icon}</span>}
+    </div>
+  </div>
+);
+
+const IOSInstructions = () => (
+  <div className="space-y-2">
+    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">En iPhone / iPad (Safari)</p>
+    <InstructionStep n={1} text={<>Tocá el botón de compartir</>} icon={<Share className="h-4 w-4" />} />
+    <InstructionStep n={2} text={<>Bajá y elegí <strong>"Agregar a pantalla de inicio"</strong></>} icon={<Plus className="h-4 w-4" />} />
+    <InstructionStep n={3} text={<>Tocá <strong>"Agregar"</strong> arriba a la derecha</>} />
+  </div>
+);
+
+const AndroidInstructions = () => (
+  <div className="space-y-2">
+    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">En Android (Chrome)</p>
+    <InstructionStep n={1} text={<>Tocá el menú</>} icon={<MoreVertical className="h-4 w-4" />} />
+    <InstructionStep n={2} text={<>Elegí <strong>"Instalar aplicación"</strong> o <strong>"Agregar a pantalla principal"</strong></>} />
+    <InstructionStep n={3} text={<>Confirmá tocando <strong>"Instalar"</strong></>} />
+  </div>
+);
+
+const DesktopInstructions = () => (
+  <div className="space-y-2">
+    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Estás en una computadora</p>
+    <div className="rounded-xl border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
+      Para instalar la app, abrí este mismo enlace desde tu celular. También podés usar el portal directamente desde el navegador.
+    </div>
+  </div>
+);
 
 export default PatientInvitation;
