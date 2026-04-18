@@ -38,19 +38,16 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { patientId } = await req.json();
-    
+    const reqBody = await req.json().catch(() => ({}));
+    const patientId: string | undefined = reqBody?.patientId;
+    const overrideEmail: string | undefined = reqBody?.overrideEmail;
+
     if (!patientId) {
       return new Response(
         JSON.stringify({ error: "Patient ID is required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
-    // Optional override: caller can provide a new email if the patient doesn't have one yet
-    const { patientId: _pid, overrideEmail } = await req.json().then((b) => ({ patientId: b.patientId, overrideEmail: b.overrideEmail })).catch(() => ({ patientId: null, overrideEmail: null }));
-    // Note: patientId already destructured above; this re-parse is harmless because Deno.serve buffers the body.
-    // (We keep the original `patientId` constant from line 41.)
 
     // Fetch patient data and verify ownership
     const { data: patient, error: patientError } = await supabaseAdmin
