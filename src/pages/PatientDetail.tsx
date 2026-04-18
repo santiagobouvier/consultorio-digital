@@ -755,6 +755,7 @@ const PatientDetail = () => {
           onOpenChange={setShowInviteModal}
           patientId={patient.id}
           patientName={patient.full_name}
+          patientEmail={patient.email}
         />
       )}
 
