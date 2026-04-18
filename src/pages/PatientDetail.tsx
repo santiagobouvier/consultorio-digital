@@ -4,11 +4,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Mail, Phone, Calendar, FileText, CreditCard, Plus, Check, RefreshCw, Pencil, Trash2, UserPlus } from "lucide-react";
+import { ArrowLeft, Mail, Phone, Calendar, FileText, CreditCard, Plus, Check, RefreshCw, Pencil, Trash2, UserPlus, User as UserIcon } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { PaymentForm } from "@/components/PaymentForm";
+import { PatientForm } from "@/components/PatientForm";
 import { PatientInviteModal } from "@/components/PatientInviteModal";
 import {
   AlertDialog,
@@ -42,6 +44,7 @@ interface Patient {
   reason_for_consultation: string | null;
   private_notes: string | null;
   is_active: boolean;
+  avatar_url: string | null;
   created_at: string;
 }
 
@@ -88,6 +91,9 @@ const PatientDetail = () => {
   const [editingPayment, setEditingPayment] = useState<Payment | null>(null);
   const [deletingPaymentId, setDeletingPaymentId] = useState<string | null>(null);
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showEditPatient, setShowEditPatient] = useState(false);
+  const [showDeletePatient, setShowDeletePatient] = useState(false);
+  const [deletingPatient, setDeletingPatient] = useState(false);
 
   useEffect(() => {
     if (id) {
