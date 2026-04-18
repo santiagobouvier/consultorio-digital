@@ -1,22 +1,26 @@
 import { useMemo } from "react";
 import { format, isSameDay } from "date-fns";
 import { es } from "date-fns/locale";
-import { CalendarAppointment, Professional } from "./types";
+import { CalendarAppointment, Professional, DayPayment } from "./types";
 import { AppointmentCard } from "./AppointmentCard";
 import { CalendarDays, Plus, Clock, AlertTriangle, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { calculatePaymentStatus } from "@/lib/payments";
+import { calculatePaymentStatus, formatCurrency } from "@/lib/payments";
 
-export interface DayPayment {
-  id: string;
-  patient_id: string;
-  patient_name: string;
-  due_date: string;
-  amount: number;
-  status: string;
-  paid_at: string | null;
+// Re-export for backwards compatibility
+export type { DayPayment };
+
+interface DayViewV2Props {
+  currentDate: Date;
+  appointments: CalendarAppointment[];
+  onAppointmentClick: (appointment: CalendarAppointment) => void;
+  onAddAppointment: () => void;
+  showProfessionalColors: boolean;
+  professionals?: Professional[];
+  dayPayments?: DayPayment[];
+  onPaymentClick?: (payment: DayPayment) => void;
 }
 
 interface DayViewV2Props {
