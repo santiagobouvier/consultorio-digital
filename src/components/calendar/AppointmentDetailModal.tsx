@@ -262,6 +262,7 @@ export const AppointmentDetailModal = ({
           patientEmail={appointment.patients?.email || null}
           appointmentDate={format(new Date(appointment.start_at), "d 'de' MMMM", { locale: es })}
           appointmentTime={format(new Date(appointment.start_at), "HH:mm")}
+          appointmentStartAt={appointment.start_at}
           modality={appointment.modality || "presencial"}
           location={appointment.location || null}
         />
