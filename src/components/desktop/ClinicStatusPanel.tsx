@@ -30,6 +30,7 @@ interface Payment {
 interface ClinicStatusPanelProps {
   professionals: Professional[];
   attendedToday: number;
+  activeProfessionalsTodayCount?: number;
   pendingPaymentsAmount: number;
   overdueCount: number;
   dueSoonCount: number;
@@ -41,6 +42,7 @@ interface ClinicStatusPanelProps {
 export const ClinicStatusPanel = ({
   professionals,
   attendedToday,
+  activeProfessionalsTodayCount = 0,
   pendingPaymentsAmount,
   overdueCount,
   dueSoonCount,
@@ -73,10 +75,10 @@ export const ClinicStatusPanel = ({
             <CardContent className="p-3 text-center">
               <TrendingUp className="h-5 w-5 mx-auto text-success mb-1" />
               <p className="text-2xl font-bold text-success">
-                {professionals.length}
+                {activeProfessionalsTodayCount}
               </p>
               <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
-                Profesionales
+                Con citas hoy
               </p>
             </CardContent>
           </Card>
