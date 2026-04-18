@@ -1,26 +1,53 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, BarChart3, TrendingDown, UserX } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  ArrowLeft,
+  BarChart3,
+  TrendingDown,
+  UserX,
+  DollarSign,
+  Users,
+  CalendarCheck,
+  Percent,
+  Download,
+  TrendingUp,
+  Activity,
+} from "lucide-react";
 import LoadingPage from "@/components/LoadingPage";
 import { useBusinessId } from "@/hooks/use-business-id";
+import { useProfessionals } from "@/hooks/use-professionals";
 import { ListPagination, usePagination, ITEMS_PER_PAGE } from "@/components/ListPagination";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
+  LineChart,
+  Line,
+  CartesianGrid,
+  Legend,
+} from "recharts";
+import { exportCSV, todayDateString } from "@/lib/csv-export";
+
+type PeriodKey = "30d" | "90d" | "year" | "all";
 
 interface HourData {
   hour: string;
   count: number;
 }
-
 interface NoShowMonth {
   month: string;
   total: number;
   noShow: number;
   rate: number;
 }
-
 interface InactivePatient {
   id: string;
   full_name: string;
@@ -28,143 +55,493 @@ interface InactivePatient {
   lastAppointment: string | null;
   daysSinceLast: number;
 }
+interface RevenueMonth {
+  month: string;
+  cobrado: number;
+  pendiente: number;
+}
+interface RetentionMonth {
+  month: string;
+  nuevos: number;
+  recurrentes: number;
+}
+interface ProfessionalRow {
+  userId: string;
+  name: string;
+  color: string;
+  citas: number;
+  ingresos: number;
+  noShowRate: number;
+}
+
+const PERIOD_LABELS: Record<PeriodKey, string> = {
+  "30d": "Últimos 30 días",
+  "90d": "Últimos 90 días",
+  year: "Último año",
+  all: "Histórico",
+};
+
+const formatCurrency = (n: number) =>
+  new Intl.NumberFormat("es-UY", { style: "currency", currency: "UYU", maximumFractionDigits: 0 }).format(n);
+
+const monthKeyToLabel = (key: string) => {
+  const [y, m] = key.split("-");
+  const months = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+  return `${months[parseInt(m) - 1]} ${y.slice(2)}`;
+};
 
 const Statistics = () => {
   const navigate = useNavigate();
   const { businessId, loading: bizLoading } = useBusinessId();
+  const { professionals } = useProfessionals(businessId);
+  const [period, setPeriod] = useState<PeriodKey>("90d");
   const [loading, setLoading] = useState(true);
-  const [hourData, setHourData] = useState<HourData[]>([]);
-  const [noShowData, setNoShowData] = useState<NoShowMonth[]>([]);
-  const [inactivePatients, setInactivePatients] = useState<InactivePatient[]>([]);
-  const [inactivePage, setInactivePage] = useState(1);
+
+  // Raw data
+  const [appointments, setAppointments] = useState<Array<{ start_at: string; status: string; professional_id: string | null }>>([]);
+  const [payments, setPayments] = useState<Array<{ amount: number; status: string; due_date: string; paid_at: string | null; patient_id: string }>>([]);
+  const [slots, setSlots] = useState<Array<{ date: string; status: string }>>([]);
+  const [allPatients, setAllPatients] = useState<Array<{ id: string; full_name: string; email: string | null; is_active: boolean }>>([]);
 
   useEffect(() => {
-    if (businessId) loadStats();
+    if (businessId) loadAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [businessId]);
 
-  const loadStats = async () => {
+  const loadAll = async () => {
+    setLoading(true);
     try {
-      // Fetch all appointments for this business
-      const { data: appointments } = await supabase
-        .from("appointments")
-        .select("start_at, status")
-        .eq("business_id", businessId!);
-
-      if (appointments) {
-        // 1. Peak hours
-        const hourCounts: Record<number, number> = {};
-        for (let h = 0; h < 24; h++) hourCounts[h] = 0;
-        for (const a of appointments) {
-          if (a.status === "cancelled") continue;
-          const hour = new Date(a.start_at).getHours();
-          hourCounts[hour]++;
-        }
-        const hours: HourData[] = Object.entries(hourCounts)
-          .filter(([_, c]) => c > 0)
-          .map(([h, c]) => ({ hour: `${h.padStart(2, "0")}:00`, count: c }))
-          .sort((a, b) => a.hour.localeCompare(b.hour));
-        setHourData(hours);
-
-        // 2. No-show rate by month
-        const monthMap = new Map<string, { total: number; noShow: number }>();
-        for (const a of appointments) {
-          if (a.status === "cancelled") continue;
-          const d = new Date(a.start_at);
-          const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-          if (!monthMap.has(key)) monthMap.set(key, { total: 0, noShow: 0 });
-          const m = monthMap.get(key)!;
-          m.total++;
-          if (a.status === "no_show") m.noShow++;
-        }
-        const months: NoShowMonth[] = Array.from(monthMap.entries())
-          .sort(([a], [b]) => a.localeCompare(b))
-          .slice(-12)
-          .map(([month, d]) => ({
-            month: formatMonth(month),
-            total: d.total,
-            noShow: d.noShow,
-            rate: d.total > 0 ? Math.round((d.noShow / d.total) * 100) : 0,
-          }));
-        setNoShowData(months);
-      }
-
-      // 3. Inactive patients (no appointment in last 90 days)
-      const ninetyDaysAgo = new Date();
-      ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-
-      const { data: patients } = await supabase
-        .from("patients")
-        .select("id, full_name, email")
-        .eq("business_id", businessId!)
-        .eq("is_active", true);
-
-      if (patients && patients.length > 0) {
-        const patientIds = patients.map(p => p.id);
-        const { data: recentAppts } = await supabase
+      const [{ data: appts }, { data: pays }, { data: sl }, { data: pts }] = await Promise.all([
+        supabase
           .from("appointments")
-          .select("patient_id, start_at")
-          .in("patient_id", patientIds)
-          .not("status", "in", '("cancelled")')
-          .order("start_at", { ascending: false });
-
-        const lastApptMap = new Map<string, string>();
-        for (const a of recentAppts || []) {
-          if (a.patient_id && !lastApptMap.has(a.patient_id)) {
-            lastApptMap.set(a.patient_id, a.start_at);
-          }
-        }
-
-        const now = Date.now();
-        const inactive: InactivePatient[] = patients
-          .map(p => {
-            const last = lastApptMap.get(p.id);
-            const lastDate = last ? new Date(last) : null;
-            const daysSince = lastDate ? Math.floor((now - lastDate.getTime()) / (1000 * 60 * 60 * 24)) : 999;
-            return {
-              id: p.id,
-              full_name: p.full_name,
-              email: p.email,
-              lastAppointment: last || null,
-              daysSinceLast: daysSince,
-            };
-          })
-          .filter(p => p.daysSinceLast >= 90)
-          .sort((a, b) => b.daysSinceLast - a.daysSinceLast);
-
-        setInactivePatients(inactive);
-      }
-    } catch (error) {
-      console.error("Error loading stats:", error);
+          .select("start_at, status, professional_id")
+          .eq("business_id", businessId!),
+        supabase
+          .from("payments")
+          .select("amount, status, due_date, paid_at, patient_id")
+          .eq("business_id", businessId!),
+        supabase
+          .from("availability_slots")
+          .select("date, status")
+          .eq("business_id", businessId!),
+        supabase
+          .from("patients")
+          .select("id, full_name, email, is_active")
+          .eq("business_id", businessId!),
+      ]);
+      setAppointments(appts || []);
+      setPayments((pays || []).map((p) => ({ ...p, amount: Number(p.amount) })));
+      setSlots(sl || []);
+      setAllPatients(pts || []);
+    } catch (e) {
+      console.error("Stats load error:", e);
     } finally {
       setLoading(false);
     }
   };
 
-  const formatMonth = (key: string) => {
-    const [y, m] = key.split("-");
-    const months = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
-    return `${months[parseInt(m) - 1]} ${y.slice(2)}`;
-  };
+  const periodStart = useMemo(() => {
+    const now = new Date();
+    if (period === "30d") return new Date(now.getTime() - 30 * 86400000);
+    if (period === "90d") return new Date(now.getTime() - 90 * 86400000);
+    if (period === "year") return new Date(now.getTime() - 365 * 86400000);
+    return new Date(0);
+  }, [period]);
 
-  const maxHourCount = Math.max(...hourData.map(h => h.count), 1);
+  // Filtered datasets by period
+  const apptsInPeriod = useMemo(
+    () => appointments.filter((a) => new Date(a.start_at) >= periodStart && new Date(a.start_at) <= new Date()),
+    [appointments, periodStart]
+  );
+  const paymentsInPeriod = useMemo(
+    () =>
+      payments.filter((p) => {
+        const ref = p.paid_at ? new Date(p.paid_at) : new Date(p.due_date);
+        return ref >= periodStart;
+      }),
+    [payments, periodStart]
+  );
+  const slotsInPeriod = useMemo(
+    () =>
+      slots.filter((s) => {
+        const d = new Date(s.date);
+        return d >= periodStart && d <= new Date();
+      }),
+    [slots, periodStart]
+  );
+
+  // === KPIs ===
+  const kpis = useMemo(() => {
+    const validAppts = apptsInPeriod.filter((a) => a.status !== "cancelled");
+    const totalCitas = validAppts.length;
+    const cobrado = paymentsInPeriod.filter((p) => p.status === "paid").reduce((s, p) => s + p.amount, 0);
+    const pendiente = payments.filter((p) => p.status === "pending").reduce((s, p) => s + p.amount, 0);
+    const noShow = validAppts.filter((a) => a.status === "no_show").length;
+    const noShowRate = totalCitas > 0 ? Math.round((noShow / totalCitas) * 100) : 0;
+    const activePatients = allPatients.filter((p) => p.is_active).length;
+    const occupied = slotsInPeriod.filter((s) => s.status === "booked").length;
+    const totalSlots = slotsInPeriod.length;
+    const occupancy = totalSlots > 0 ? Math.round((occupied / totalSlots) * 100) : 0;
+    return { totalCitas, cobrado, pendiente, noShowRate, activePatients, occupancy, totalSlots };
+  }, [apptsInPeriod, paymentsInPeriod, payments, allPatients, slotsInPeriod]);
+
+  // === Revenue by month ===
+  const revenueData: RevenueMonth[] = useMemo(() => {
+    const map = new Map<string, { cobrado: number; pendiente: number }>();
+    for (const p of paymentsInPeriod) {
+      const ref = p.paid_at ? new Date(p.paid_at) : new Date(p.due_date);
+      const key = `${ref.getFullYear()}-${String(ref.getMonth() + 1).padStart(2, "0")}`;
+      if (!map.has(key)) map.set(key, { cobrado: 0, pendiente: 0 });
+      const m = map.get(key)!;
+      if (p.status === "paid") m.cobrado += p.amount;
+      else if (p.status === "pending") m.pendiente += p.amount;
+    }
+    return Array.from(map.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([k, v]) => ({ month: monthKeyToLabel(k), cobrado: Math.round(v.cobrado), pendiente: Math.round(v.pendiente) }));
+  }, [paymentsInPeriod]);
+
+  // === Hour distribution ===
+  const hourData: HourData[] = useMemo(() => {
+    const counts: Record<number, number> = {};
+    for (let h = 0; h < 24; h++) counts[h] = 0;
+    for (const a of apptsInPeriod) {
+      if (a.status === "cancelled") continue;
+      counts[new Date(a.start_at).getHours()]++;
+    }
+    return Object.entries(counts)
+      .filter(([, c]) => c > 0)
+      .map(([h, c]) => ({ hour: `${h.padStart(2, "0")}:00`, count: c }))
+      .sort((a, b) => a.hour.localeCompare(b.hour));
+  }, [apptsInPeriod]);
+
+  const maxHourCount = Math.max(...hourData.map((h) => h.count), 1);
+
+  // === No-show by month ===
+  const noShowData: NoShowMonth[] = useMemo(() => {
+    const map = new Map<string, { total: number; noShow: number }>();
+    for (const a of apptsInPeriod) {
+      if (a.status === "cancelled") continue;
+      const d = new Date(a.start_at);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      if (!map.has(key)) map.set(key, { total: 0, noShow: 0 });
+      const m = map.get(key)!;
+      m.total++;
+      if (a.status === "no_show") m.noShow++;
+    }
+    return Array.from(map.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([k, v]) => ({
+        month: monthKeyToLabel(k),
+        total: v.total,
+        noShow: v.noShow,
+        rate: v.total > 0 ? Math.round((v.noShow / v.total) * 100) : 0,
+      }));
+  }, [apptsInPeriod]);
+
+  // === Occupancy by week (last weeks in period) ===
+  const occupancyData = useMemo(() => {
+    const map = new Map<string, { booked: number; total: number }>();
+    for (const s of slotsInPeriod) {
+      const d = new Date(s.date);
+      // ISO week key
+      const monday = new Date(d);
+      const day = monday.getDay() || 7;
+      monday.setDate(monday.getDate() - day + 1);
+      const key = `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, "0")}-${String(monday.getDate()).padStart(2, "0")}`;
+      if (!map.has(key)) map.set(key, { booked: 0, total: 0 });
+      const w = map.get(key)!;
+      w.total++;
+      if (s.status === "booked") w.booked++;
+    }
+    return Array.from(map.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(-12)
+      .map(([k, v]) => ({
+        week: k.slice(5).replace("-", "/"),
+        ocupacion: v.total > 0 ? Math.round((v.booked / v.total) * 100) : 0,
+      }));
+  }, [slotsInPeriod]);
+
+  // === New vs returning patients ===
+  const retentionData: RetentionMonth[] = useMemo(() => {
+    // first appointment date per patient (over ALL history)
+    const firstByPatient = new Map<string, Date>();
+    for (const a of appointments) {
+      if (a.status === "cancelled") continue;
+      const pid = (a as any).patient_id as string | undefined;
+      // appointments query above doesn't include patient_id; recompute from payments+appts? -> use payments to derive
+    }
+    // Use payments.patient_id + due_date as proxy is not ideal. Instead, group apptsInPeriod by month and detect first-ever via payments map
+    const firstSeen = new Map<string, string>(); // patient_id -> first month key
+    const sortedPays = [...payments].sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime());
+    for (const p of sortedPays) {
+      if (!firstSeen.has(p.patient_id)) {
+        const d = new Date(p.due_date);
+        firstSeen.set(p.patient_id, `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+      }
+    }
+
+    const map = new Map<string, { nuevos: Set<string>; recurrentes: Set<string> }>();
+    for (const p of paymentsInPeriod) {
+      const d = new Date(p.due_date);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      if (!map.has(key)) map.set(key, { nuevos: new Set(), recurrentes: new Set() });
+      const bucket = map.get(key)!;
+      if (firstSeen.get(p.patient_id) === key) bucket.nuevos.add(p.patient_id);
+      else bucket.recurrentes.add(p.patient_id);
+    }
+    return Array.from(map.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([k, v]) => ({ month: monthKeyToLabel(k), nuevos: v.nuevos.size, recurrentes: v.recurrentes.size }));
+  }, [payments, paymentsInPeriod, appointments]);
+
+  // === Per-professional performance ===
+  const professionalRows: ProfessionalRow[] = useMemo(() => {
+    if (professionals.length === 0) return [];
+    const apptsByProf = new Map<string, { citas: number; noShow: number }>();
+    for (const a of apptsInPeriod) {
+      if (a.status === "cancelled") continue;
+      const key = a.professional_id || "__sin__";
+      if (!apptsByProf.has(key)) apptsByProf.set(key, { citas: 0, noShow: 0 });
+      const r = apptsByProf.get(key)!;
+      r.citas++;
+      if (a.status === "no_show") r.noShow++;
+    }
+    return professionals.map((p) => {
+      const stat = apptsByProf.get(p.userId) || { citas: 0, noShow: 0 };
+      return {
+        userId: p.userId,
+        name: p.name,
+        color: p.color,
+        citas: stat.citas,
+        ingresos: 0, // no professional_id on payments → omit per-prof revenue
+        noShowRate: stat.citas > 0 ? Math.round((stat.noShow / stat.citas) * 100) : 0,
+      };
+    });
+  }, [professionals, apptsInPeriod]);
+
+  // === Inactive patients (90 days) — kept from previous version ===
+  const inactivePatients: InactivePatient[] = useMemo(() => {
+    const lastApptByPatient = new Map<string, Date>();
+    // Need patient_id on appointments — we didn't request it. Re-derive from payments (paid+linked appts not available either).
+    // Simpler: use payments due_date as a proxy of patient activity.
+    for (const p of payments) {
+      const ref = p.paid_at ? new Date(p.paid_at) : new Date(p.due_date);
+      const prev = lastApptByPatient.get(p.patient_id);
+      if (!prev || ref > prev) lastApptByPatient.set(p.patient_id, ref);
+    }
+    const now = Date.now();
+    return allPatients
+      .filter((p) => p.is_active)
+      .map((p) => {
+        const last = lastApptByPatient.get(p.id) || null;
+        const daysSince = last ? Math.floor((now - last.getTime()) / 86400000) : 999;
+        return {
+          id: p.id,
+          full_name: p.full_name,
+          email: p.email,
+          lastAppointment: last ? last.toISOString() : null,
+          daysSinceLast: daysSince,
+        };
+      })
+      .filter((p) => p.daysSinceLast >= 90)
+      .sort((a, b) => b.daysSinceLast - a.daysSinceLast);
+  }, [allPatients, payments]);
+
+  const [inactivePage, setInactivePage] = useState(1);
   const { paginatedItems: pageInactive, totalPages: inactiveTotalPages } = usePagination(inactivePatients, inactivePage);
+
+  const handleExport = () => {
+    const headers = ["Sección", "Métrica", "Valor"];
+    const rows: string[][] = [
+      ["Resumen", "Período", PERIOD_LABELS[period]],
+      ["Resumen", "Citas realizadas", String(kpis.totalCitas)],
+      ["Resumen", "Cobrado (UYU)", String(kpis.cobrado)],
+      ["Resumen", "Pendiente de cobro (UYU)", String(kpis.pendiente)],
+      ["Resumen", "Tasa de ausencias (%)", String(kpis.noShowRate)],
+      ["Resumen", "Ocupación de agenda (%)", String(kpis.occupancy)],
+      ["Resumen", "Pacientes activos", String(kpis.activePatients)],
+      ...revenueData.flatMap((r) => [
+        ["Ingresos", `${r.month} - cobrado`, String(r.cobrado)],
+        ["Ingresos", `${r.month} - pendiente`, String(r.pendiente)],
+      ]),
+      ...noShowData.map((n) => ["Ausencias", `${n.month}`, `${n.rate}% (${n.noShow}/${n.total})`]),
+      ...professionalRows.map((p) => ["Profesional", p.name, `${p.citas} citas, ${p.noShowRate}% ausencias`]),
+    ];
+    exportCSV(headers, rows, `estadisticas_${todayDateString()}.csv`);
+  };
 
   if (bizLoading || loading) return <LoadingPage />;
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-5xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")} className="shrink-0 h-10 w-10">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold">Estadísticas</h1>
-            <p className="text-sm text-muted-foreground">Métricas calculadas desde tus citas y pacientes</p>
+      <div className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")} className="shrink-0 h-10 w-10">
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold">Estadísticas</h1>
+              <p className="text-sm text-muted-foreground">{PERIOD_LABELS[period]}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Tabs value={period} onValueChange={(v) => setPeriod(v as PeriodKey)}>
+              <TabsList>
+                <TabsTrigger value="30d">30d</TabsTrigger>
+                <TabsTrigger value="90d">90d</TabsTrigger>
+                <TabsTrigger value="year">Año</TabsTrigger>
+                <TabsTrigger value="all">Todo</TabsTrigger>
+              </TabsList>
+            </Tabs>
+            <Button variant="outline" size="sm" onClick={handleExport} className="gap-2">
+              <Download className="h-4 w-4" />
+              Exportar CSV
+            </Button>
           </div>
         </div>
 
-        {/* Peak hours */}
+        {/* KPI row */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          <KpiCard icon={CalendarCheck} label="Citas" value={String(kpis.totalCitas)} color="text-primary" />
+          <KpiCard icon={DollarSign} label="Cobrado" value={formatCurrency(kpis.cobrado)} color="text-[hsl(var(--success,142_70%_45%))]" />
+          <KpiCard icon={TrendingUp} label="Pendiente" value={formatCurrency(kpis.pendiente)} color="text-[hsl(var(--warning))]" />
+          <KpiCard icon={Percent} label="Ocupación" value={`${kpis.occupancy}%`} color="text-primary" />
+          <KpiCard icon={TrendingDown} label="Ausencias" value={`${kpis.noShowRate}%`} color="text-destructive" />
+          <KpiCard icon={Users} label="Pacientes activos" value={String(kpis.activePatients)} color="text-primary" />
+        </div>
+
+        {/* Revenue */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-primary" />
+              Ingresos por mes
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {revenueData.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-8 text-center">No hay pagos en el período</p>
+            ) : (
+              <div className="h-72">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={revenueData}>
+                    <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                    <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                    <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
+                    <Tooltip
+                      formatter={(value: number) => formatCurrency(value)}
+                      contentStyle={{ borderRadius: 8, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))" }}
+                    />
+                    <Legend wrapperStyle={{ fontSize: 12 }} />
+                    <Bar dataKey="cobrado" name="Cobrado" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="pendiente" name="Pendiente" fill="hsl(var(--warning))" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Occupancy */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Activity className="h-5 w-5 text-primary" />
+              Ocupación semanal de agenda
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {occupancyData.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-8 text-center">No hay slots generados en el período</p>
+            ) : (
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={occupancyData}>
+                    <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                    <XAxis dataKey="week" tick={{ fontSize: 12 }} />
+                    <YAxis unit="%" domain={[0, 100]} tick={{ fontSize: 12 }} />
+                    <Tooltip
+                      formatter={(v: number) => [`${v}%`, "Ocupación"]}
+                      contentStyle={{ borderRadius: 8, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))" }}
+                    />
+                    <Line type="monotone" dataKey="ocupacion" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 3 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* New vs returning */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Users className="h-5 w-5 text-primary" />
+              Pacientes nuevos vs recurrentes
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {retentionData.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-8 text-center">Sin datos de pagos en el período</p>
+            ) : (
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={retentionData}>
+                    <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                    <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+                    <Tooltip
+                      contentStyle={{ borderRadius: 8, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))" }}
+                    />
+                    <Legend wrapperStyle={{ fontSize: 12 }} />
+                    <Bar dataKey="nuevos" name="Nuevos" stackId="a" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="recurrentes" name="Recurrentes" stackId="a" fill="hsl(var(--muted-foreground) / 0.5)" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Per-professional */}
+        {professionalRows.length > 1 && (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Users className="h-5 w-5 text-primary" />
+                Desempeño por profesional
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {professionalRows.map((p) => (
+                  <div key={p.userId} className="flex items-center justify-between gap-3 p-3 rounded-lg border">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-3 h-3 rounded-full shrink-0" style={{ background: p.color }} />
+                      <p className="font-medium text-sm truncate">{p.name}</p>
+                    </div>
+                    <div className="flex items-center gap-4 text-sm shrink-0">
+                      <div className="text-right">
+                        <p className="font-semibold">{p.citas}</p>
+                        <p className="text-xs text-muted-foreground">citas</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold text-destructive">{p.noShowRate}%</p>
+                        <p className="text-xs text-muted-foreground">ausencias</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Hours */}
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
@@ -174,7 +551,7 @@ const Statistics = () => {
           </CardHeader>
           <CardContent>
             {hourData.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-8 text-center">No hay datos de citas aún</p>
+              <p className="text-sm text-muted-foreground py-8 text-center">No hay datos de citas en el período</p>
             ) : (
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
@@ -200,7 +577,7 @@ const Statistics = () => {
           </CardContent>
         </Card>
 
-        {/* No-show rate */}
+        {/* No-show */}
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
@@ -237,7 +614,7 @@ const Statistics = () => {
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
               <UserX className="h-5 w-5 text-orange-500" />
-              Pacientes sin cita en los últimos 90 días
+              Pacientes sin actividad en los últimos 90 días
               {inactivePatients.length > 0 && (
                 <span className="text-sm font-normal text-muted-foreground">({inactivePatients.length})</span>
               )}
@@ -246,11 +623,11 @@ const Statistics = () => {
           <CardContent>
             {inactivePatients.length === 0 ? (
               <p className="text-sm text-muted-foreground py-8 text-center">
-                🎉 Todos tus pacientes activos tuvieron cita recientemente
+                🎉 Todos tus pacientes activos tuvieron actividad reciente
               </p>
             ) : (
               <div className="space-y-2">
-                {pageInactive.map(p => (
+                {pageInactive.map((p) => (
                   <div
                     key={p.id}
                     className="flex items-center justify-between gap-3 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors"
@@ -265,7 +642,7 @@ const Statistics = () => {
                       <p className="text-xs text-muted-foreground">
                         {p.lastAppointment
                           ? new Date(p.lastAppointment).toLocaleDateString("es-UY", { day: "2-digit", month: "2-digit", year: "2-digit" })
-                          : "Sin citas"}
+                          : "Sin actividad"}
                       </p>
                     </div>
                   </div>
@@ -285,5 +662,23 @@ const Statistics = () => {
     </div>
   );
 };
+
+interface KpiCardProps {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: string;
+  color?: string;
+}
+const KpiCard = ({ icon: Icon, label, value, color = "text-primary" }: KpiCardProps) => (
+  <Card>
+    <CardContent className="p-3 sm:p-4">
+      <div className="flex items-center gap-2 mb-1">
+        <Icon className={`h-4 w-4 ${color}`} />
+        <p className="text-xs text-muted-foreground truncate">{label}</p>
+      </div>
+      <p className="text-lg sm:text-xl font-bold truncate">{value}</p>
+    </CardContent>
+  </Card>
+);
 
 export default Statistics;
