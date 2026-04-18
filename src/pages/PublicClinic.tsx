@@ -32,19 +32,26 @@ const PublicClinic = () => {
   const loadClinicData = async () => {
     try {
       setLoading(true);
-      
-      // Get business data
+      console.log("[PublicClinic] Buscando consultorio con slug:", slug);
+
+      // Get business data — busca por public_slug O custom_subdomain
       const { data: business, error: businessError } = await supabase
         .from("businesses")
-        .select("id, owner_user_id, name, specialty")
-        .eq("public_slug", slug)
+        .select("id, owner_user_id, name, specialty, public_slug, custom_subdomain")
+        .or(`public_slug.eq.${slug},custom_subdomain.eq.${slug}`)
+        .limit(1)
         .maybeSingle();
 
-      if (businessError) throw businessError;
+      if (businessError) {
+        console.error("[PublicClinic] Error consultando businesses:", businessError);
+        throw businessError;
+      }
       if (!business) {
+        console.warn("[PublicClinic] No se encontró consultorio para el slug:", slug);
         setLoading(false);
         return;
       }
+      console.log("[PublicClinic] Consultorio encontrado:", { id: business.id, public_slug: business.public_slug, custom_subdomain: business.custom_subdomain });
 
       setBusinessId(business.id);
 
@@ -131,8 +138,9 @@ const PublicClinic = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <Card className="w-full max-w-md">
-          <CardContent className="pt-6 text-center">
-            <p className="text-muted-foreground">Consultorio no encontrado</p>
+          <CardContent className="pt-6 text-center space-y-2">
+            <p className="font-semibold text-foreground">Este portal no está disponible</p>
+            <p className="text-sm text-muted-foreground">Verificá el link que te envió tu profesional. Si el problema persiste, contactá directamente al consultorio.</p>
           </CardContent>
         </Card>
       </div>

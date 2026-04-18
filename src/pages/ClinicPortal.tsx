@@ -307,12 +307,22 @@ const ClinicPortal = () => {
   useEffect(() => {
     if (!slug) return;
     const load = async () => {
+      console.log("[ClinicPortal] Buscando portal con slug:", slug);
       const { data, error } = await supabase
         .from("businesses")
-        .select("id, name, specialty, contact_email, portal_logo_url, portal_clinic_display_name, portal_primary_color, portal_dark_primary_color, public_slug")
-        .eq("public_slug", slug)
+        .select("id, name, specialty, contact_email, portal_logo_url, portal_clinic_display_name, portal_primary_color, portal_dark_primary_color, public_slug, custom_subdomain")
+        .or(`public_slug.eq.${slug},custom_subdomain.eq.${slug}`)
         .limit(1)
         .maybeSingle();
+
+      if (error) {
+        console.error("[ClinicPortal] Error consultando businesses:", error);
+      }
+      if (!data) {
+        console.warn("[ClinicPortal] No se encontró ningún consultorio para el slug:", slug);
+      } else {
+        console.log("[ClinicPortal] Consultorio encontrado:", { id: data.id, public_slug: data.public_slug, custom_subdomain: (data as any).custom_subdomain });
+      }
 
       if (error || !data) {
         setNotFound(true);
@@ -471,8 +481,8 @@ const ClinicPortal = () => {
         <Card className="max-w-sm w-full">
           <CardContent className="pt-8 pb-6 text-center space-y-3">
             <Building2 className="h-12 w-12 text-muted-foreground mx-auto" />
-            <h2 className="text-xl font-bold">Consultorio no encontrado</h2>
-            <p className="text-sm text-muted-foreground">El link que seguiste no corresponde a ningún consultorio registrado.</p>
+            <h2 className="text-xl font-bold">Este portal no está disponible</h2>
+            <p className="text-sm text-muted-foreground">Verificá el link que te envió tu profesional. Si el problema persiste, contactá directamente al consultorio.</p>
             <Button variant="outline" onClick={() => navigate("/")}>Ir al inicio</Button>
           </CardContent>
         </Card>
