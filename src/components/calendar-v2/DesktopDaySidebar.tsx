@@ -2,24 +2,28 @@ import { useMemo } from "react";
 import { format, isSameDay, isToday, isTomorrow } from "date-fns";
 import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { CalendarAppointment } from "./types";
+import { CalendarAppointment, DayPayment } from "./types";
 import { AppointmentCard } from "./AppointmentCard";
-import { 
-  Calendar, 
-  Plus, 
-  CreditCard, 
-  Clock, 
+import {
+  Calendar,
+  Plus,
+  CreditCard,
+  Clock,
   Users,
   Sparkles,
   X
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { calculatePaymentStatus, formatCurrency } from "@/lib/payments";
 
 interface DesktopDaySidebarProps {
   selectedDate: Date | null;
   appointments: CalendarAppointment[];
+  dayPayments?: DayPayment[];
   onAppointmentClick: (appointment: CalendarAppointment) => void;
+  onPaymentClick?: (payment: DayPayment) => void;
   onCreateAppointment: () => void;
   onCreatePayment: () => void;
   onClose: () => void;
