@@ -109,13 +109,8 @@ export const CalendarHeader = ({
                 </span>
               )}
             </Button>
-            <Button
-              onClick={onAddAppointment}
-              size="icon"
-              className="h-10 w-10 rounded-xl"
-            >
-              <Plus className="h-5 w-5" />
-            </Button>
+            <AddMenu triggerClassName="h-10 w-10 rounded-xl" iconOnly />
+
           </div>
         </div>
 
@@ -230,10 +225,8 @@ export const CalendarHeader = ({
           )}
 
           {/* Add Button */}
-          <Button onClick={onAddAppointment} className="rounded-xl gap-2">
-            <Plus className="h-4 w-4" />
-            Nueva cita
-          </Button>
+          <AddMenu triggerClassName="rounded-xl gap-2" />
+
         </div>
       </div>
     </div>
