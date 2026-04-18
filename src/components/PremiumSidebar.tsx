@@ -138,8 +138,9 @@ export function PremiumSidebar() {
     ? configItems.filter((item) => item.url !== "/billing")
     : configItems;
 
-  const renderItem = (item: (typeof mainItems)[0]) => {
+  const renderItem = (item: NavItem) => {
     const active = isActive(item.url);
+    const showBadge = item.highlight && pendingRequests > 0;
 
     const button = (
       <button
@@ -151,6 +152,8 @@ export function PremiumSidebar() {
           expanded ? "px-3 py-2.5" : "px-0 py-2.5 justify-center",
           active
             ? "text-white"
+            : showBadge
+            ? "text-white/80 hover:text-white hover:bg-white/[0.05]"
             : "text-white/40 hover:text-white/80 hover:bg-white/[0.04]"
         )}
         style={active ? { background: brandHsla(0.12), color: brandHsl } : undefined}
@@ -163,17 +166,28 @@ export function PremiumSidebar() {
           />
         )}
 
-        <item.icon
-          className={cn(
-            "shrink-0 transition-all duration-200",
-            expanded ? "h-[18px] w-[18px]" : "h-5 w-5"
+        <div className="relative shrink-0">
+          <item.icon
+            className={cn(
+              "transition-all duration-200",
+              expanded ? "h-[18px] w-[18px]" : "h-5 w-5"
+            )}
+            style={active ? { filter: `drop-shadow(0 0 6px ${brandHsla(0.4)})` } : undefined}
+          />
+          {/* Mini badge dot when collapsed */}
+          {showBadge && !expanded && (
+            <span
+              className="absolute -top-1 -right-1 inline-flex items-center justify-center min-w-[14px] h-[14px] px-1 rounded-full bg-red-500 text-white text-[9px] font-bold animate-badge-pulse ring-2 ring-[#0a0a0a]"
+              aria-label={`${pendingRequests} solicitudes pendientes`}
+            >
+              {pendingRequests > 9 ? "9+" : pendingRequests}
+            </span>
           )}
-          style={active ? { filter: `drop-shadow(0 0 6px ${brandHsla(0.4)})` } : undefined}
-        />
+        </div>
 
         <span
           className={cn(
-            "text-sm font-medium whitespace-nowrap transition-all duration-200",
+            "text-sm font-medium whitespace-nowrap transition-all duration-200 flex-1 text-left",
             expanded
               ? "opacity-100 translate-x-0"
               : "opacity-0 -translate-x-2 absolute pointer-events-none"
@@ -181,6 +195,16 @@ export function PremiumSidebar() {
         >
           {item.title}
         </span>
+
+        {/* Full badge when expanded */}
+        {showBadge && expanded && (
+          <span
+            className="ml-auto inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-[10px] font-semibold animate-badge-pulse"
+            aria-label={`${pendingRequests} solicitudes pendientes`}
+          >
+            {pendingRequests > 99 ? "99+" : pendingRequests}
+          </span>
+        )}
       </button>
     );
 
@@ -195,6 +219,7 @@ export function PremiumSidebar() {
           className="bg-[#1a1a1a] text-white/90 border-white/10 text-xs font-medium"
         >
           {item.title}
+          {showBadge && ` · ${pendingRequests} pendiente${pendingRequests > 1 ? "s" : ""}`}
         </TooltipContent>
       </Tooltip>
     );
