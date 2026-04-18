@@ -164,10 +164,12 @@ export type Database = {
           created_at: string
           date: string
           end_time: string
+          generated_from_template: string | null
           id: string
           modality: string
           notes: string | null
           price: number | null
+          professional_user_id: string | null
           start_time: string
           status: string
           updated_at: string
@@ -177,10 +179,12 @@ export type Database = {
           created_at?: string
           date: string
           end_time: string
+          generated_from_template?: string | null
           id?: string
           modality: string
           notes?: string | null
           price?: number | null
+          professional_user_id?: string | null
           start_time: string
           status?: string
           updated_at?: string
@@ -190,10 +194,12 @@ export type Database = {
           created_at?: string
           date?: string
           end_time?: string
+          generated_from_template?: string | null
           id?: string
           modality?: string
           notes?: string | null
           price?: number | null
+          professional_user_id?: string | null
           start_time?: string
           status?: string
           updated_at?: string
@@ -208,6 +214,172 @@ export type Database = {
           },
           {
             foreignKeyName: "availability_slots_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public_branding"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "availability_slots_generated_from_template_fkey"
+            columns: ["generated_from_template"]
+            isOneToOne: false
+            referencedRelation: "availability_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      availability_templates: {
+        Row: {
+          business_id: string
+          created_at: string
+          default_price: number | null
+          friday_enabled: boolean
+          friday_end_1: string | null
+          friday_end_2: string | null
+          friday_start_1: string | null
+          friday_start_2: string | null
+          id: string
+          is_active: boolean
+          modality: string
+          monday_enabled: boolean
+          monday_end_1: string | null
+          monday_end_2: string | null
+          monday_start_1: string | null
+          monday_start_2: string | null
+          name: string
+          professional_user_id: string
+          saturday_enabled: boolean
+          saturday_end_1: string | null
+          saturday_end_2: string | null
+          saturday_start_1: string | null
+          saturday_start_2: string | null
+          slot_duration_minutes: number
+          sunday_enabled: boolean
+          sunday_end_1: string | null
+          sunday_end_2: string | null
+          sunday_start_1: string | null
+          sunday_start_2: string | null
+          thursday_enabled: boolean
+          thursday_end_1: string | null
+          thursday_end_2: string | null
+          thursday_start_1: string | null
+          thursday_start_2: string | null
+          tuesday_enabled: boolean
+          tuesday_end_1: string | null
+          tuesday_end_2: string | null
+          tuesday_start_1: string | null
+          tuesday_start_2: string | null
+          updated_at: string
+          wednesday_enabled: boolean
+          wednesday_end_1: string | null
+          wednesday_end_2: string | null
+          wednesday_start_1: string | null
+          wednesday_start_2: string | null
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          default_price?: number | null
+          friday_enabled?: boolean
+          friday_end_1?: string | null
+          friday_end_2?: string | null
+          friday_start_1?: string | null
+          friday_start_2?: string | null
+          id?: string
+          is_active?: boolean
+          modality?: string
+          monday_enabled?: boolean
+          monday_end_1?: string | null
+          monday_end_2?: string | null
+          monday_start_1?: string | null
+          monday_start_2?: string | null
+          name?: string
+          professional_user_id: string
+          saturday_enabled?: boolean
+          saturday_end_1?: string | null
+          saturday_end_2?: string | null
+          saturday_start_1?: string | null
+          saturday_start_2?: string | null
+          slot_duration_minutes?: number
+          sunday_enabled?: boolean
+          sunday_end_1?: string | null
+          sunday_end_2?: string | null
+          sunday_start_1?: string | null
+          sunday_start_2?: string | null
+          thursday_enabled?: boolean
+          thursday_end_1?: string | null
+          thursday_end_2?: string | null
+          thursday_start_1?: string | null
+          thursday_start_2?: string | null
+          tuesday_enabled?: boolean
+          tuesday_end_1?: string | null
+          tuesday_end_2?: string | null
+          tuesday_start_1?: string | null
+          tuesday_start_2?: string | null
+          updated_at?: string
+          wednesday_enabled?: boolean
+          wednesday_end_1?: string | null
+          wednesday_end_2?: string | null
+          wednesday_start_1?: string | null
+          wednesday_start_2?: string | null
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          default_price?: number | null
+          friday_enabled?: boolean
+          friday_end_1?: string | null
+          friday_end_2?: string | null
+          friday_start_1?: string | null
+          friday_start_2?: string | null
+          id?: string
+          is_active?: boolean
+          modality?: string
+          monday_enabled?: boolean
+          monday_end_1?: string | null
+          monday_end_2?: string | null
+          monday_start_1?: string | null
+          monday_start_2?: string | null
+          name?: string
+          professional_user_id?: string
+          saturday_enabled?: boolean
+          saturday_end_1?: string | null
+          saturday_end_2?: string | null
+          saturday_start_1?: string | null
+          saturday_start_2?: string | null
+          slot_duration_minutes?: number
+          sunday_enabled?: boolean
+          sunday_end_1?: string | null
+          sunday_end_2?: string | null
+          sunday_start_1?: string | null
+          sunday_start_2?: string | null
+          thursday_enabled?: boolean
+          thursday_end_1?: string | null
+          thursday_end_2?: string | null
+          thursday_start_1?: string | null
+          thursday_start_2?: string | null
+          tuesday_enabled?: boolean
+          tuesday_end_1?: string | null
+          tuesday_end_2?: string | null
+          tuesday_start_1?: string | null
+          tuesday_start_2?: string | null
+          updated_at?: string
+          wednesday_enabled?: boolean
+          wednesday_end_1?: string | null
+          wednesday_end_2?: string | null
+          wednesday_start_1?: string | null
+          wednesday_start_2?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "availability_templates_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "availability_templates_business_id_fkey"
             columns: ["business_id"]
             isOneToOne: false
             referencedRelation: "businesses_public_branding"
@@ -942,6 +1114,19 @@ export type Database = {
         Args: { p_business_id: string }
         Returns: number
       }
+      generate_slots_from_template: {
+        Args: {
+          p_conflict_strategy?: string
+          p_from_date: string
+          p_template_id: string
+          p_to_date: string
+        }
+        Returns: {
+          created: number
+          replaced: number
+          skipped: number
+        }[]
+      }
       get_plan_limits: {
         Args: { p_plan_code: string }
         Returns: {
@@ -949,9 +1134,24 @@ export type Database = {
           max_professionals: number
         }[]
       }
+      get_template_day_ranges: {
+        Args: { p_dow: number; p_template_id: string }
+        Returns: {
+          end_time: string
+          start_time: string
+        }[]
+      }
       get_user_business_id: { Args: { _user_id: string }; Returns: string }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
       normalize_phone: { Args: { p: string }; Returns: string }
+      preview_template_generation: {
+        Args: { p_from_date: string; p_template_id: string; p_to_date: string }
+        Returns: {
+          conflicts: number
+          days_with_slots: number
+          total_slots: number
+        }[]
+      }
       user_belongs_to_business: {
         Args: { _business_id: string; _user_id: string }
         Returns: boolean
