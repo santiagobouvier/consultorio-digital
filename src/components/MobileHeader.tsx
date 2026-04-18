@@ -236,6 +236,7 @@ export function MobileHeader() {
           <style>{`nav::-webkit-scrollbar { display: none; }`}</style>
           {visibleNavItems.map((item, index) => {
             const active = isActive(item.url);
+            const showBadge = item.highlight && pendingRequests > 0;
             return (
               <button
                 key={item.url}
@@ -262,6 +263,14 @@ export function MobileHeader() {
                   style={{ color: active ? brandHsl : undefined }}
                 />
                 <span className="text-[13.5px] font-medium tracking-tight">{item.title}</span>
+                {showBadge && (
+                  <span
+                    className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-[10px] font-bold animate-badge-pulse"
+                    aria-label={`${pendingRequests} solicitudes pendientes`}
+                  >
+                    {pendingRequests > 99 ? "99+" : pendingRequests}
+                  </span>
+                )}
               </button>
             );
           })}
