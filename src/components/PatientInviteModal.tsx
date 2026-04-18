@@ -187,14 +187,14 @@ export const PatientInviteModal = ({
           ) : (
             <>
               {/* Confirmación de envío */}
-              <div className="rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 p-4">
+              <div className="rounded-xl bg-primary/10 border border-primary/20 p-4">
                 <div className="flex items-start gap-3">
-                  <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                  <CheckCircle2 className="h-5 w-5 text-primary shrink-0 mt-0.5" />
                   <div className="space-y-1">
-                    <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-100">
+                    <p className="text-sm font-semibold text-foreground">
                       Correo enviado correctamente
                     </p>
-                    <p className="text-xs text-emerald-800 dark:text-emerald-200/80 break-all">
+                    <p className="text-xs text-muted-foreground break-all">
                       A: {sentToEmail}
                     </p>
                   </div>
