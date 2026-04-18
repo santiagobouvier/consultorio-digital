@@ -122,6 +122,14 @@ export function MobileHeader() {
             style={{ color: "rgba(255,255,255,0.9)" }}
             strokeWidth={2.4}
           />
+          {pendingRequests > 0 && (
+            <span
+              className="absolute -top-1 -right-1 inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[9px] font-bold animate-badge-pulse ring-2 ring-black"
+              aria-label={`${pendingRequests} solicitudes pendientes`}
+            >
+              {pendingRequests > 9 ? "9+" : pendingRequests}
+            </span>
+          )}
         </button>
 
         {/* Right: only the clinic logo */}
