@@ -70,10 +70,17 @@ export const MonthViewV2 = ({
   isDesktop = false,
   selectedDay = null,
   dayIndicators,
+  paymentsByDay,
+  onPaymentClick,
 }: MonthViewV2Props) => {
   const isMobile = useIsMobile();
   const [mobileSelectedDay, setMobileSelectedDay] = useState<Date | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  const getPaymentsForDay = (date: Date): DayPayment[] => {
+    if (!paymentsByDay) return [];
+    return paymentsByDay.get(date.toDateString()) || [];
+  };
 
   const days = useMemo(() => {
     const monthStart = startOfMonth(currentDate);
