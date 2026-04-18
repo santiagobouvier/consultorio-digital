@@ -632,11 +632,66 @@ const ClinicSettings = () => {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-sm font-semibold">URL del logo</Label>
+              <Label className="text-sm font-semibold">Logo del navegador</Label>
+              <p className="text-xs text-muted-foreground">
+                Aparece en el header del panel y reemplaza el ícono de calendario por defecto.
+              </p>
+
+              {/* Upload from device */}
+              <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+                <label className="inline-flex items-center justify-center gap-2 h-12 px-4 rounded-xl border border-border bg-muted/40 hover:bg-muted cursor-pointer text-sm font-medium transition-colors">
+                  <Upload className="h-4 w-4" />
+                  {uploadingDashLogo ? "Subiendo..." : "Subir imagen"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    disabled={uploadingDashLogo}
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file || !businessId) return;
+                      try {
+                        setUploadingDashLogo(true);
+                        const ext = file.name.split(".").pop() || "png";
+                        const path = `portal-logos/${businessId}-dashboard-${Date.now()}.${ext}`;
+                        const { error: upErr } = await supabase.storage
+                          .from("avatars")
+                          .upload(path, file, { upsert: true, contentType: file.type });
+                        if (upErr) throw upErr;
+                        const { data: pub } = supabase.storage.from("avatars").getPublicUrl(path);
+                        setDashboardLogoUrl(pub.publicUrl);
+                        toast({ title: "Logo subido", description: "Recordá guardar los cambios." });
+                      } catch (err: any) {
+                        console.error("Upload error:", err);
+                        toast({
+                          title: "Error",
+                          description: err?.message || "No se pudo subir la imagen",
+                          variant: "destructive",
+                        });
+                      } finally {
+                        setUploadingDashLogo(false);
+                        e.target.value = "";
+                      }
+                    }}
+                  />
+                </label>
+                {dashboardLogoUrl && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setDashboardLogoUrl("")}
+                    className="h-12 rounded-xl text-destructive hover:text-destructive"
+                  >
+                    Quitar logo
+                  </Button>
+                )}
+              </div>
+
+              {/* Or paste URL */}
               <Input
                 value={dashboardLogoUrl}
                 onChange={(e) => setDashboardLogoUrl(e.target.value)}
-                placeholder="https://ejemplo.com/logo.png"
+                placeholder="…o pegá una URL: https://ejemplo.com/logo.png"
                 className="h-12 text-base rounded-xl"
               />
               {dashboardLogoUrl && (

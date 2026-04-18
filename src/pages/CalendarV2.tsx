@@ -740,6 +740,20 @@ const CalendarV2 = () => {
           />
         )}
       </div>
+
+      {/* Mobile FAB — bottom-right, never overlaps the calendar */}
+      <MobileAgendaFab
+        onAddAppointment={() => {
+          setSelectedDateForAction(currentDate);
+          setLockDateForAction(false);
+          setShowCreateModal(true);
+        }}
+        onAddPayment={() => {
+          setSelectedDateForAction(currentDate);
+          setLockDateForAction(false);
+          setShowPaymentDrawer(true);
+        }}
+      />
     </div>
   );
 };
