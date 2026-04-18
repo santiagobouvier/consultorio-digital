@@ -30,6 +30,7 @@ import { DayViewV2 } from "@/components/calendar-v2/DayViewV2";
 import { WeekViewV2 } from "@/components/calendar-v2/WeekViewV2";
 import { MonthViewV2 } from "@/components/calendar-v2/MonthViewV2";
 import { DesktopCalendarLayout } from "@/components/calendar-v2/DesktopCalendarLayout";
+import { MobileAgendaFab } from "@/components/calendar-v2/MobileAgendaFab";
 import { AppointmentDetailModal } from "@/components/calendar/AppointmentDetailModal";
 import { CreateAppointmentModal } from "@/components/CreateAppointmentModal";
 import { QuickPaymentDrawer } from "@/components/calendar/QuickPaymentDrawer";
@@ -739,6 +740,20 @@ const CalendarV2 = () => {
           />
         )}
       </div>
+
+      {/* Mobile FAB — bottom-right, never overlaps the calendar */}
+      <MobileAgendaFab
+        onAddAppointment={() => {
+          setSelectedDateForAction(currentDate);
+          setLockDateForAction(false);
+          setShowCreateModal(true);
+        }}
+        onAddPayment={() => {
+          setSelectedDateForAction(currentDate);
+          setLockDateForAction(false);
+          setShowPaymentDrawer(true);
+        }}
+      />
     </div>
   );
 };
