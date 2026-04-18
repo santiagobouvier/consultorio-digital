@@ -14,3 +14,9 @@ verify_jwt = false
 
 [functions.mercadopago-webhook]
 verify_jwt = false
+
+[functions.send-resend-email]
+verify_jwt = false
+
+[functions.process-scheduled-reminders]
+verify_jwt = false
