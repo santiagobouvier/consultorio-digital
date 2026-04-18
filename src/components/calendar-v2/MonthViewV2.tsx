@@ -143,11 +143,14 @@ export const MonthViewV2 = ({
         <div className="grid grid-cols-7">
           {days.map((day, index) => {
             const dayAppointments = getAppointmentsForDay(day);
+            const dayPayments = getPaymentsForDay(day);
             const indicator = getDayIndicator(day);
             const isCurrentMonth = isSameMonth(day, currentDate);
             const isCurrentDay = isToday(day);
             const isSelected = selectedDay && isSameDay(day, selectedDay);
             const hasAppointments = dayAppointments.length > 0;
+            const hasPayments = dayPayments.length > 0;
+            const totalEvents = dayAppointments.length + dayPayments.length;
 
             return (
               <button
@@ -173,34 +176,36 @@ export const MonthViewV2 = ({
                   >
                     {format(day, "d")}
                   </span>
-                  
+
                   {/* Desktop: Payment indicators */}
-                  {!isMobile && indicator && (
+                  {!isMobile && (indicator || hasPayments) && (
                     <div className="flex items-center gap-1">
-                      {indicator.hasOverdue && (
+                      {indicator?.hasOverdue && (
                         <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
                       )}
-                      {indicator.hasPending && !indicator.hasOverdue && (
+                      {indicator?.hasPending && !indicator?.hasOverdue && (
                         <div className="w-2 h-2 rounded-full bg-amber-500" />
                       )}
-                      <span className="text-xs text-muted-foreground font-medium">
-                        {indicator.count}
-                      </span>
+                      {totalEvents > 0 && (
+                        <span className="text-xs text-muted-foreground font-medium">
+                          {totalEvents}
+                        </span>
+                      )}
                     </div>
                   )}
                 </div>
 
-                {/* Mobile: appointment dots */}
-                {isMobile && hasAppointments && (
+                {/* Mobile: appointment + payment dots */}
+                {isMobile && (hasAppointments || hasPayments) && (
                   <div className="flex gap-0.5 flex-wrap justify-center">
-                    {dayAppointments.slice(0, 4).map((apt) => (
+                    {dayAppointments.slice(0, 3).map((apt) => (
                       <span
                         key={apt.id}
                         className={cn(
                           "w-1.5 h-1.5 rounded-full",
                           showProfessionalColors && apt.professional
                             ? ""
-                            : apt.paymentColor === "red" 
+                            : apt.paymentColor === "red"
                               ? "bg-rose-500"
                               : apt.paymentColor === "orange"
                                 ? "bg-amber-500"
@@ -214,18 +219,34 @@ export const MonthViewV2 = ({
                         }}
                       />
                     ))}
-                    {dayAppointments.length > 4 && (
+                    {dayPayments.slice(0, 2).map((p) => {
+                      const st = calculatePaymentStatus(p);
+                      return (
+                        <span
+                          key={`pay-${p.id}`}
+                          className={cn(
+                            "w-1.5 h-1.5 rounded-sm",
+                            st === "overdue"
+                              ? "bg-rose-500"
+                              : st === "due_soon"
+                                ? "bg-amber-500"
+                                : "bg-emerald-500"
+                          )}
+                        />
+                      );
+                    })}
+                    {totalEvents > 5 && (
                       <span className="text-[8px] text-muted-foreground">
-                        +{dayAppointments.length - 4}
+                        +{totalEvents - 5}
                       </span>
                     )}
                   </div>
                 )}
 
-                {/* Desktop: appointment previews with payment status */}
-                {!isMobile && hasAppointments && (
+                {/* Desktop: appointment + payment previews */}
+                {!isMobile && (hasAppointments || hasPayments) && (
                   <div className="space-y-0.5 overflow-hidden">
-                    {dayAppointments.slice(0, 3).map((apt) => (
+                    {dayAppointments.slice(0, 2).map((apt) => (
                       <div
                         key={apt.id}
                         onClick={(e) => {
@@ -235,7 +256,7 @@ export const MonthViewV2 = ({
                         className={cn(
                           "text-xs p-1.5 rounded-lg truncate cursor-pointer transition-all",
                           "hover:scale-[1.02] hover:shadow-sm",
-                          apt.paymentColor === "red" 
+                          apt.paymentColor === "red"
                             ? "bg-rose-50 dark:bg-rose-500/10 border-l-2 border-l-rose-500"
                             : apt.paymentColor === "orange"
                               ? "bg-amber-50 dark:bg-amber-500/10 border-l-2 border-l-amber-500"
@@ -258,16 +279,47 @@ export const MonthViewV2 = ({
                         </div>
                       </div>
                     ))}
-                    {dayAppointments.length > 3 && (
+
+                    {dayPayments.slice(0, Math.max(0, 3 - Math.min(dayAppointments.length, 2))).map((p) => {
+                      const st = calculatePaymentStatus(p);
+                      return (
+                        <div
+                          key={`pay-${p.id}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onPaymentClick?.(p);
+                          }}
+                          className={cn(
+                            "text-xs p-1.5 rounded-lg truncate cursor-pointer transition-all",
+                            "hover:scale-[1.02] hover:shadow-sm flex items-center gap-1",
+                            st === "overdue"
+                              ? "bg-rose-50 dark:bg-rose-500/10 border-l-2 border-l-rose-500"
+                              : st === "due_soon"
+                                ? "bg-amber-50 dark:bg-amber-500/10 border-l-2 border-l-amber-500"
+                                : "bg-emerald-50 dark:bg-emerald-500/10 border-l-2 border-l-emerald-500"
+                          )}
+                        >
+                          <CreditCard className="h-3 w-3 shrink-0" />
+                          <span className="truncate font-medium">
+                            ${p.amount.toLocaleString()}
+                          </span>
+                          <span className="text-muted-foreground truncate">
+                            {p.patient_name.split(" ")[0]}
+                          </span>
+                        </div>
+                      );
+                    })}
+
+                    {totalEvents > 3 && (
                       <p className="text-[10px] text-muted-foreground text-center py-0.5">
-                        +{dayAppointments.length - 3} más
+                        +{totalEvents - 3} más
                       </p>
                     )}
                   </div>
                 )}
 
                 {/* Desktop: hover indicator for empty days */}
-                {!isMobile && !hasAppointments && isCurrentMonth && (
+                {!isMobile && !hasAppointments && !hasPayments && isCurrentMonth && (
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                     <Plus className="w-5 h-5 text-muted-foreground/40" />
                   </div>
@@ -285,9 +337,14 @@ export const MonthViewV2 = ({
           onClose={() => setDrawerOpen(false)}
           selectedDate={mobileSelectedDay || currentDate}
           appointments={appointments}
+          dayPayments={mobileSelectedDay ? getPaymentsForDay(mobileSelectedDay) : []}
           onAppointmentClick={(apt) => {
             setDrawerOpen(false);
             onAppointmentClick(apt);
+          }}
+          onPaymentClick={(p) => {
+            setDrawerOpen(false);
+            onPaymentClick?.(p);
           }}
           showProfessionalColors={showProfessionalColors}
         />
