@@ -513,7 +513,14 @@ const CalendarV2 = () => {
           onViewChange={setViewType}
           onNavigate={navigateDate}
           onToday={goToToday}
-          onAddAppointment={() => setShowCreateModal(true)}
+          onAddAppointment={() => {
+            setSelectedDateForAction(currentDate);
+            setShowCreateModal(true);
+          }}
+          onAddPayment={() => {
+            setSelectedDateForAction(currentDate);
+            setShowPaymentDrawer(true);
+          }}
           onToggleFilters={() => setShowFilters(!showFilters)}
           hasActiveFilters={hasActiveFilters}
           activeFiltersCount={activeFiltersCount}
