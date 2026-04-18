@@ -300,14 +300,21 @@ const Billing = () => {
 
                 {subscription.status === "trial" && (
                   <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-4">
-                    <div className="flex items-center gap-3">
-                      <Sparkles className="w-5 h-5 text-blue-400 flex-shrink-0" />
-                      <div>
+                    <div className="flex items-start gap-3">
+                      <Sparkles className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
+                      <div className="space-y-1.5">
                         <p className="text-sm font-medium text-blue-400">
-                          {trial.expired ? "Tu prueba gratuita terminó" : `Te quedan ${trial.label} de prueba gratuita`}
+                          {trial.expired
+                            ? "Tu prueba gratuita terminó"
+                            : `Te quedan ${trial.label} de prueba gratuita`}
                         </p>
-                        <p className="text-xs text-white/50">
-                          Tu prueba termina el {formatDate(subscription.trial_ends_at)}. Activá tu método de pago para continuar.
+                        {!trial.expired && (
+                          <p className="text-xs text-white/60 leading-relaxed">
+                            No tenés que hacer nada: cuando termine, tu plan se activa automáticamente con el método de pago que registraste. Si querés cancelar, podés hacerlo en cualquier momento desde acá.
+                          </p>
+                        )}
+                        <p className="text-xs text-white/40">
+                          Tu prueba termina el {formatDate(subscription.trial_ends_at)}.
                         </p>
                       </div>
                     </div>
