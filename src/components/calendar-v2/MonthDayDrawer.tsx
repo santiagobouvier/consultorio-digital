@@ -3,6 +3,7 @@ import { format, isSameDay } from "date-fns";
 import { es } from "date-fns/locale";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { CalendarAppointment, DayPayment } from "./types";
 import { AppointmentCard } from "./AppointmentCard";
@@ -99,6 +100,7 @@ export const MonthDayDrawer = ({
                   <div className="space-y-2">
                     {dayPayments.map((p) => {
                       const st = calculatePaymentStatus(p);
+                      const initials = (p.patient_name?.trim().split(/\s+/).map((x) => x[0]).slice(0, 2).join("") || "?").toUpperCase();
                       return (
                         <button
                           key={p.id}
@@ -110,8 +112,14 @@ export const MonthDayDrawer = ({
                             st !== "overdue" && st !== "due_soon" && "bg-emerald-50 dark:bg-emerald-950/30 border-l-emerald-500"
                           )}
                         >
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="min-w-0">
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-9 w-9 shrink-0">
+                              <AvatarImage src={p.patient_avatar_url || undefined} alt={p.patient_name} />
+                              <AvatarFallback className="text-xs font-semibold bg-background">
+                                {initials}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="min-w-0 flex-1">
                               <p className="font-semibold text-sm truncate">{p.patient_name}</p>
                               <p className="text-xs text-muted-foreground mt-0.5">
                                 {formatCurrency(p.amount, p.currency)}
