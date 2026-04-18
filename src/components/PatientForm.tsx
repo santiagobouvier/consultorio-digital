@@ -115,7 +115,7 @@ export function PatientForm({
       if (!user) throw new Error("Usuario no autenticado");
 
       const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-      const path = `patient-avatars/${user.id}/${crypto.randomUUID()}.${ext}`;
+      const path = `${user.id}/patient-avatars/${crypto.randomUUID()}.${ext}`;
 
       const { error: uploadError } = await supabase.storage
         .from("avatars")
