@@ -727,26 +727,47 @@ const Statistics = () => {
               </p>
             ) : (
               <div className="space-y-2">
-                {pageInactive.map((p) => (
-                  <div
-                    key={p.id}
-                    className="flex items-center justify-between gap-3 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors"
-                    onClick={() => navigate(`/patients/${p.id}`)}
-                  >
-                    <div className="min-w-0">
-                      <p className="font-medium text-sm truncate">{p.full_name}</p>
-                      <p className="text-xs text-muted-foreground">{p.email || "Sin email"}</p>
+                {pageInactive.map((p) => {
+                  const phone = allPatients.find((x) => x.id === p.id)?.whatsapp_phone || null;
+                  return (
+                    <div
+                      key={p.id}
+                      className="flex items-center justify-between gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors"
+                    >
+                      <div
+                        className="min-w-0 flex-1 cursor-pointer"
+                        onClick={() => navigate(`/patients/${p.id}`)}
+                      >
+                        <p className="font-medium text-sm truncate">{p.full_name}</p>
+                        <p className="text-xs text-muted-foreground">{p.email || "Sin email"}</p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="text-sm font-semibold text-[hsl(var(--warning))]">{p.daysSinceLast} días</p>
+                        <p className="text-xs text-muted-foreground">
+                          {p.lastAppointment
+                            ? new Date(p.lastAppointment).toLocaleDateString("es-UY", { day: "2-digit", month: "2-digit", year: "2-digit" })
+                            : "Sin actividad"}
+                        </p>
+                      </div>
+                      {phone ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="shrink-0 gap-1.5 h-8"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            sendWhatsAppToInactive({ ...p, whatsapp_phone: phone });
+                          }}
+                        >
+                          <MessageCircle className="h-3.5 w-3.5" />
+                          <span className="hidden sm:inline">WhatsApp</span>
+                        </Button>
+                      ) : (
+                        <span className="text-xs text-muted-foreground shrink-0 hidden sm:inline">Sin teléfono</span>
+                      )}
                     </div>
-                    <div className="text-right shrink-0">
-                      <p className="text-sm font-semibold text-[hsl(var(--warning))]">{p.daysSinceLast} días</p>
-                      <p className="text-xs text-muted-foreground">
-                        {p.lastAppointment
-                          ? new Date(p.lastAppointment).toLocaleDateString("es-UY", { day: "2-digit", month: "2-digit", year: "2-digit" })
-                          : "Sin actividad"}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
                 <ListPagination
                   currentPage={inactivePage}
                   totalPages={inactiveTotalPages}
