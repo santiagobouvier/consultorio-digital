@@ -32,6 +32,8 @@ interface CreateAppointmentModalProps {
   onOpenChange: (open: boolean) => void;
   patientId: string | null;
   onSuccess: () => void;
+  prefilledDate?: Date | null;
+  lockDate?: boolean;
 }
 
 export function CreateAppointmentModal({
@@ -39,6 +41,8 @@ export function CreateAppointmentModal({
   onOpenChange,
   patientId,
   onSuccess,
+  prefilledDate,
+  lockDate = false,
 }: CreateAppointmentModalProps) {
   const navigate = useNavigate();
   const { businessId } = useBusinessId();
@@ -54,6 +58,16 @@ export function CreateAppointmentModal({
   const [modality, setModality] = useState("presencial");
   const [location, setLocation] = useState("");
   const [notes, setNotes] = useState("");
+
+  // Prefill date when modal opens with a prefilledDate
+  useEffect(() => {
+    if (open && prefilledDate) {
+      const yyyy = prefilledDate.getFullYear();
+      const mm = String(prefilledDate.getMonth() + 1).padStart(2, "0");
+      const dd = String(prefilledDate.getDate()).padStart(2, "0");
+      setDate(`${yyyy}-${mm}-${dd}`);
+    }
+  }, [open, prefilledDate]);
 
   // Set default professional
   useEffect(() => {
@@ -240,8 +254,14 @@ export function CreateAppointmentModal({
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
                 required
-                className="h-12 text-base rounded-xl"
+                disabled={lockDate && !!prefilledDate}
+                className="h-12 text-base rounded-xl disabled:opacity-100 disabled:cursor-not-allowed"
               />
+              {lockDate && !!prefilledDate && (
+                <p className="text-xs text-muted-foreground">
+                  Fecha fijada desde la agenda. Para elegir otra, usá "+ Nuevo" en el encabezado.
+                </p>
+              )}
             </div>
 
             {/* Hora */}

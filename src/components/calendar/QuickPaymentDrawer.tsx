@@ -40,6 +40,7 @@ interface QuickPaymentDrawerProps {
   selectedDate: Date;
   businessId: string;
   onSuccess: () => void;
+  lockDate?: boolean;
 }
 
 export const QuickPaymentDrawer = ({
@@ -48,6 +49,7 @@ export const QuickPaymentDrawer = ({
   selectedDate,
   businessId,
   onSuccess,
+  lockDate = false,
 }: QuickPaymentDrawerProps) => {
   const [loading, setLoading] = useState(false);
   const [patients, setPatients] = useState<Patient[]>([]);
@@ -225,27 +227,44 @@ export const QuickPaymentDrawer = ({
               <CalendarIcon className="w-4 h-4" />
               Fecha
             </Label>
-            <Popover>
-              <PopoverTrigger asChild>
+            {lockDate ? (
+              <>
                 <Button
+                  type="button"
                   variant="outline"
-                  className="w-full h-12 rounded-xl text-base justify-start font-normal"
+                  disabled
+                  className="w-full h-12 rounded-xl text-base justify-start font-normal disabled:opacity-100 disabled:cursor-not-allowed"
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
                   {format(paymentDate, "EEEE d 'de' MMMM yyyy", { locale: es })}
                 </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <CalendarComponent
-                  mode="single"
-                  selected={paymentDate}
-                  onSelect={(date) => date && setPaymentDate(date)}
-                  initialFocus
-                  className="p-3 pointer-events-auto"
-                  locale={es}
-                />
-              </PopoverContent>
-            </Popover>
+                <p className="text-xs text-muted-foreground">
+                  Fecha fijada desde la agenda. Para elegir otra, usá "+ Nuevo" en el encabezado.
+                </p>
+              </>
+            ) : (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full h-12 rounded-xl text-base justify-start font-normal"
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {format(paymentDate, "EEEE d 'de' MMMM yyyy", { locale: es })}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarComponent
+                    mode="single"
+                    selected={paymentDate}
+                    onSelect={(date) => date && setPaymentDate(date)}
+                    initialFocus
+                    className="p-3 pointer-events-auto"
+                    locale={es}
+                  />
+                </PopoverContent>
+              </Popover>
+            )}
           </div>
 
           {/* Payment status toggle */}
