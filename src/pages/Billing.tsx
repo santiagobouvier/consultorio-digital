@@ -304,7 +304,7 @@ const Billing = () => {
                       <Sparkles className="w-5 h-5 text-blue-400 flex-shrink-0" />
                       <div>
                         <p className="text-sm font-medium text-blue-400">
-                          Te quedan {daysLeftInTrial()} días de prueba gratuita
+                          {trial.expired ? "Tu prueba gratuita terminó" : `Te quedan ${trial.label} de prueba gratuita`}
                         </p>
                         <p className="text-xs text-white/50">
                           Tu prueba termina el {formatDate(subscription.trial_ends_at)}. Activá tu método de pago para continuar.
