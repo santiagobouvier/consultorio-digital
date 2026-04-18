@@ -32,12 +32,44 @@ export const CalendarHeader = ({
   onNavigate,
   onToday,
   onAddAppointment,
+  onAddPayment,
   onToggleFilters,
   hasActiveFilters,
   activeFiltersCount,
   dateLabel,
   onExportCSV,
 }: CalendarHeaderProps) => {
+  const AddMenu = ({ triggerClassName, iconOnly = false }: { triggerClassName?: string; iconOnly?: boolean }) => {
+    if (!onAddPayment) {
+      return (
+        <Button onClick={onAddAppointment} className={triggerClassName} size={iconOnly ? "icon" : "default"}>
+          <Plus className={iconOnly ? "h-5 w-5" : "h-4 w-4"} />
+          {!iconOnly && <span className="ml-2">Nueva cita</span>}
+        </Button>
+      );
+    }
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button className={triggerClassName} size={iconOnly ? "icon" : "default"}>
+            <Plus className={iconOnly ? "h-5 w-5" : "h-4 w-4"} />
+            {!iconOnly && <span className="ml-2">Nuevo</span>}
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="rounded-xl">
+          <DropdownMenuItem onClick={onAddAppointment} className="gap-2 cursor-pointer">
+            <CalendarPlus className="h-4 w-4" />
+            Nueva cita
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={onAddPayment} className="gap-2 cursor-pointer">
+            <CreditCard className="h-4 w-4" />
+            Nuevo vencimiento
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  };
+
   return (
     <div className="space-y-4">
       {/* Mobile Header */}
