@@ -366,14 +366,18 @@ const Patients = () => {
                       >
                         <TableCell>
                           <div className="flex items-center gap-3">
-                            <div className={cn(
-                              "shrink-0 w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold",
-                              patient.is_active
-                                ? "bg-primary/10 text-primary"
-                                : "bg-muted text-muted-foreground"
+                            <Avatar className={cn(
+                              "shrink-0 h-9 w-9 rounded-lg",
+                              !patient.is_active && "opacity-70"
                             )}>
-                              {getInitials(patient.full_name)}
-                            </div>
+                              {patient.avatar_url && <AvatarImage src={patient.avatar_url} alt={patient.full_name} className="object-cover" />}
+                              <AvatarFallback className={cn(
+                                "rounded-lg text-xs font-bold",
+                                patient.is_active ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                              )}>
+                                {getInitials(patient.full_name) || <UserIcon className="h-4 w-4" />}
+                              </AvatarFallback>
+                            </Avatar>
                             <span className="font-medium">{patient.full_name}</span>
                           </div>
                         </TableCell>
