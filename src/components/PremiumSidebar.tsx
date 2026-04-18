@@ -29,14 +29,22 @@ import { useDashboardBranding } from "@/contexts/DashboardBrandingContext";
 import { isCurrentUserSuperAdmin } from "@/lib/admin-access";
 import { useBusinessId } from "@/hooks/use-business-id";
 import { prefetchRoute } from "@/lib/query-prefetch";
+import { usePendingRequestsCount } from "@/hooks/use-pending-requests-count";
 
-const mainItems = [
+type NavItem = {
+  title: string;
+  url: string;
+  icon: typeof LayoutDashboard;
+  highlight?: boolean;
+};
+
+const mainItems: NavItem[] = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+  { title: "Solicitudes", url: "/solicitudes", icon: FileText, highlight: true },
   { title: "Pacientes", url: "/patients", icon: Users },
   { title: "Agenda", url: "/agenda", icon: CalendarDays },
   { title: "Pagos", url: "/pagos", icon: Receipt },
   { title: "Recordatorios", url: "/recordatorios-pendientes", icon: Clock },
-  { title: "Solicitudes", url: "/solicitudes", icon: FileText },
   { title: "Estadísticas", url: "/estadisticas", icon: BarChart3 },
 ];
 
