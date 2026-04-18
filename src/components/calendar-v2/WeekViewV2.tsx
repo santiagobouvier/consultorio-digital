@@ -180,15 +180,6 @@ export const WeekViewV2 = ({
           );
         })}
 
-        <div className="fixed bottom-6 right-6 z-40">
-          <Button
-            onClick={onAddAppointment}
-            size="lg"
-            className="h-14 w-14 rounded-full shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:scale-105 active:scale-95 transition-all duration-200"
-          >
-            <Plus className="h-6 w-6" />
-          </Button>
-        </div>
       </div>
 
       {/* Desktop Week View - Grid */}
