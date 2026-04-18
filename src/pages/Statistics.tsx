@@ -16,6 +16,10 @@ import {
   Download,
   TrendingUp,
   Activity,
+  ArrowUpRight,
+  ArrowDownRight,
+  Minus,
+  MessageCircle,
 } from "lucide-react";
 import LoadingPage from "@/components/LoadingPage";
 import { useBusinessId } from "@/hooks/use-business-id";
@@ -101,7 +105,8 @@ const Statistics = () => {
   const [appointments, setAppointments] = useState<Array<{ start_at: string; status: string; professional_id: string | null }>>([]);
   const [payments, setPayments] = useState<Array<{ amount: number; status: string; due_date: string; paid_at: string | null; patient_id: string }>>([]);
   const [slots, setSlots] = useState<Array<{ date: string; status: string }>>([]);
-  const [allPatients, setAllPatients] = useState<Array<{ id: string; full_name: string; email: string | null; is_active: boolean }>>([]);
+  const [allPatients, setAllPatients] = useState<Array<{ id: string; full_name: string; email: string | null; is_active: boolean; whatsapp_phone: string | null }>>([]);
+  const [publicSlug, setPublicSlug] = useState<string | null>(null);
 
   useEffect(() => {
     if (businessId) loadAll();
@@ -111,7 +116,7 @@ const Statistics = () => {
   const loadAll = async () => {
     setLoading(true);
     try {
-      const [{ data: appts }, { data: pays }, { data: sl }, { data: pts }] = await Promise.all([
+      const [{ data: appts }, { data: pays }, { data: sl }, { data: pts }, { data: biz }] = await Promise.all([
         supabase
           .from("appointments")
           .select("start_at, status, professional_id")
@@ -126,13 +131,19 @@ const Statistics = () => {
           .eq("business_id", businessId!),
         supabase
           .from("patients")
-          .select("id, full_name, email, is_active")
+          .select("id, full_name, email, is_active, whatsapp_phone")
           .eq("business_id", businessId!),
+        supabase
+          .from("businesses")
+          .select("public_slug")
+          .eq("id", businessId!)
+          .maybeSingle(),
       ]);
       setAppointments(appts || []);
       setPayments((pays || []).map((p) => ({ ...p, amount: Number(p.amount) })));
       setSlots(sl || []);
       setAllPatients(pts || []);
+      setPublicSlug(biz?.public_slug || null);
     } catch (e) {
       console.error("Stats load error:", e);
     } finally {
