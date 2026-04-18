@@ -54,6 +54,20 @@ interface Patient {
   whatsapp_phone: string | null;
 }
 
+const toDayPayment = (p: Payment, patient?: Patient): DayPayment => ({
+  id: p.id,
+  patient_id: p.patient_id,
+  patient_name: patient?.full_name || "Sin paciente",
+  patient_phone: patient?.whatsapp_phone ?? null,
+  due_date: p.due_date,
+  amount: p.amount,
+  currency: p.currency,
+  status: p.status,
+  paid_at: p.paid_at,
+  method: p.method,
+  notes: p.notes,
+});
+
 interface Payment {
   id: string;
   patient_id: string;
@@ -418,7 +432,7 @@ const CalendarV2 = () => {
   const showProfessionalColors = sharedCalendar && professionals.length > 1;
 
   // Compute payments for the currently selected day (for day view)
-  const dayPayments = useMemo(() => {
+  const dayPayments = useMemo<DayPayment[]>(() => {
     if (viewType !== "day") return [];
     return allPayments
       .filter((p) => {
@@ -429,14 +443,27 @@ const CalendarV2 = () => {
           !p.paid_at
         );
       })
-      .map((p) => {
-        const patient = patients.find((pat) => pat.id === p.patient_id);
-        return {
-          ...p,
-          patient_name: patient?.full_name || "Sin paciente",
-        };
-      });
+      .map((p) => toDayPayment(p, patients.find((pat) => pat.id === p.patient_id)));
   }, [allPayments, patients, currentDate, viewType]);
+
+  // Map of payments by day (YYYY-MM-DD) for month/week overlay
+  const paymentsByDay = useMemo<Map<string, DayPayment[]>>(() => {
+    const map = new Map<string, DayPayment[]>();
+    for (const p of allPayments) {
+      if (p.status === "cancelled" || p.paid_at) continue;
+      const key = format(new Date(p.due_date), "yyyy-MM-dd");
+      const dp = toDayPayment(p, patients.find((pat) => pat.id === p.patient_id));
+      const arr = map.get(key);
+      if (arr) arr.push(dp);
+      else map.set(key, [dp]);
+    }
+    return map;
+  }, [allPayments, patients]);
+
+  const handlePaymentClick = useCallback((payment: DayPayment) => {
+    setSelectedPayment(payment);
+    setShowPaymentDetailDrawer(true);
+  }, []);
 
   const loading = businessLoading || professionalsLoading;
 
@@ -486,7 +513,14 @@ const CalendarV2 = () => {
           onViewChange={setViewType}
           onNavigate={navigateDate}
           onToday={goToToday}
-          onAddAppointment={() => setShowCreateModal(true)}
+          onAddAppointment={() => {
+            setSelectedDateForAction(currentDate);
+            setShowCreateModal(true);
+          }}
+          onAddPayment={() => {
+            setSelectedDateForAction(currentDate);
+            setShowPaymentDrawer(true);
+          }}
           onToggleFilters={() => setShowFilters(!showFilters)}
           hasActiveFilters={hasActiveFilters}
           activeFiltersCount={activeFiltersCount}
@@ -574,6 +608,8 @@ const CalendarV2 = () => {
                     setShowPaymentDrawer(true);
                   }}
                   showProfessionalColors={showProfessionalColors}
+                  paymentsByDay={paymentsByDay}
+                  onPaymentClick={handlePaymentClick}
                 />
               ) : (
                 <>
@@ -589,9 +625,7 @@ const CalendarV2 = () => {
                       showProfessionalColors={showProfessionalColors}
                       professionals={professionals}
                       dayPayments={dayPayments}
-                      onPaymentClick={(payment) => {
-                        navigate(`/patients/${payment.patient_id}`);
-                      }}
+                      onPaymentClick={handlePaymentClick}
                     />
                   )}
                   {viewType === "week" && (
@@ -605,6 +639,8 @@ const CalendarV2 = () => {
                       onDayClick={handleDayClick}
                       onAddAppointment={() => setShowCreateModal(true)}
                       showProfessionalColors={showProfessionalColors}
+                      paymentsByDay={paymentsByDay}
+                      onPaymentClick={handlePaymentClick}
                     />
                   )}
                   {viewType === "month" && isMobile && (
@@ -618,6 +654,8 @@ const CalendarV2 = () => {
                       onDayClick={handleDayClick}
                       onAddAppointment={() => setShowCreateModal(true)}
                       showProfessionalColors={showProfessionalColors}
+                      paymentsByDay={paymentsByDay}
+                      onPaymentClick={handlePaymentClick}
                     />
                   )}
                 </>
@@ -646,7 +684,7 @@ const CalendarV2 = () => {
           onSuccess={handleRefresh}
         />
 
-        {/* Quick payment drawer */}
+        {/* Quick payment drawer (create new) */}
         {businessId && (
           <QuickPaymentDrawer
             open={showPaymentDrawer}
@@ -654,6 +692,20 @@ const CalendarV2 = () => {
             selectedDate={selectedDateForAction}
             businessId={businessId}
             onSuccess={handleRefresh}
+          />
+        )}
+
+        {/* Payment detail drawer (existing payment) */}
+        {businessId && (
+          <PaymentDayDrawer
+            open={showPaymentDetailDrawer}
+            onClose={() => {
+              setShowPaymentDetailDrawer(false);
+              setSelectedPayment(null);
+            }}
+            payment={selectedPayment}
+            businessId={businessId}
+            onUpdated={handleRefresh}
           />
         )}
       </div>

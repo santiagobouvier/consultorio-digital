@@ -1,11 +1,14 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ChevronLeft, ChevronRight, Plus, Filter, Download } from "lucide-react";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ChevronLeft, ChevronRight, Plus, Filter, Download, CalendarPlus, CreditCard } from "lucide-react";
 import { ViewType } from "./types";
-import { cn } from "@/lib/utils";
 
 interface CalendarHeaderProps {
   currentDate: Date;
@@ -14,6 +17,7 @@ interface CalendarHeaderProps {
   onNavigate: (direction: "prev" | "next") => void;
   onToday: () => void;
   onAddAppointment: () => void;
+  onAddPayment?: () => void;
   onToggleFilters: () => void;
   hasActiveFilters: boolean;
   activeFiltersCount: number;
@@ -28,12 +32,44 @@ export const CalendarHeader = ({
   onNavigate,
   onToday,
   onAddAppointment,
+  onAddPayment,
   onToggleFilters,
   hasActiveFilters,
   activeFiltersCount,
   dateLabel,
   onExportCSV,
 }: CalendarHeaderProps) => {
+  const AddMenu = ({ triggerClassName, iconOnly = false }: { triggerClassName?: string; iconOnly?: boolean }) => {
+    if (!onAddPayment) {
+      return (
+        <Button onClick={onAddAppointment} className={triggerClassName} size={iconOnly ? "icon" : "default"}>
+          <Plus className={iconOnly ? "h-5 w-5" : "h-4 w-4"} />
+          {!iconOnly && <span className="ml-2">Nueva cita</span>}
+        </Button>
+      );
+    }
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button className={triggerClassName} size={iconOnly ? "icon" : "default"}>
+            <Plus className={iconOnly ? "h-5 w-5" : "h-4 w-4"} />
+            {!iconOnly && <span className="ml-2">Nuevo</span>}
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="rounded-xl">
+          <DropdownMenuItem onClick={onAddAppointment} className="gap-2 cursor-pointer">
+            <CalendarPlus className="h-4 w-4" />
+            Nueva cita
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={onAddPayment} className="gap-2 cursor-pointer">
+            <CreditCard className="h-4 w-4" />
+            Nuevo vencimiento
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  };
+
   return (
     <div className="space-y-4">
       {/* Mobile Header */}
@@ -73,13 +109,8 @@ export const CalendarHeader = ({
                 </span>
               )}
             </Button>
-            <Button
-              onClick={onAddAppointment}
-              size="icon"
-              className="h-10 w-10 rounded-xl"
-            >
-              <Plus className="h-5 w-5" />
-            </Button>
+            <AddMenu triggerClassName="h-10 w-10 rounded-xl" iconOnly />
+
           </div>
         </div>
 
@@ -194,10 +225,8 @@ export const CalendarHeader = ({
           )}
 
           {/* Add Button */}
-          <Button onClick={onAddAppointment} className="rounded-xl gap-2">
-            <Plus className="h-4 w-4" />
-            Nueva cita
-          </Button>
+          <AddMenu triggerClassName="rounded-xl gap-2" />
+
         </div>
       </div>
     </div>
