@@ -290,6 +290,34 @@ const PatientDetail = () => {
     setEditingPayment(payment);
   };
 
+  const handleDeletePatient = async () => {
+    if (!patient) return;
+    try {
+      setDeletingPatient(true);
+      const { error } = await supabase
+        .from("patients")
+        .delete()
+        .eq("id", patient.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Paciente eliminado",
+        description: "El paciente fue eliminado correctamente",
+      });
+      navigate("/patients", { replace: true });
+    } catch (error: any) {
+      console.error("Error eliminando paciente:", error);
+      toast({
+        title: "No se pudo eliminar",
+        description: error?.message || "Intentá de nuevo",
+        variant: "destructive",
+      });
+      setDeletingPatient(false);
+      setShowDeletePatient(false);
+    }
+  };
+
   if (loading) {
     return <LoadingPage />;
   }
