@@ -67,6 +67,7 @@ export function PremiumSidebar() {
   const hoverTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const { primaryColor, logoUrl, displayName } = useDashboardBranding();
+  const pendingRequests = usePendingRequestsCount();
 
   // Dynamic color styles
   const brandHsl = `hsl(${primaryColor})`;
