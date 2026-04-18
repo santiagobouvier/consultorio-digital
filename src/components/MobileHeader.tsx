@@ -54,6 +54,7 @@ export function MobileHeader() {
   const location = useLocation();
   const navigate = useNavigate();
   const { primaryColor, logoUrl, displayName } = useDashboardBranding();
+  const pendingRequests = usePendingRequestsCount();
 
   const brandHsl = `hsl(${primaryColor})`;
   const brandHsla = (alpha: number) => `hsla(${primaryColor}, ${alpha})`;
