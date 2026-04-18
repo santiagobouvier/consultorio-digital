@@ -71,7 +71,7 @@ export const DesktopCalendarLayout = ({
     <div className="flex gap-6 h-[calc(100vh-200px)] min-h-[600px]">
       {/* Calendar area */}
       <div className={cn(
-        "transition-all duration-300 ease-out",
+        "transition-all duration-300 ease-out min-w-0",
         sidebarOpen ? "flex-1" : "w-full"
       )}>
         <MonthViewV2
@@ -89,39 +89,49 @@ export const DesktopCalendarLayout = ({
         />
       </div>
 
-      {/* Side panel - always visible container */}
-      <div className={cn(
-        "shrink-0 overflow-hidden transition-all duration-300 ease-out rounded-2xl shadow-lg",
-        sidebarOpen
-          ? "w-[380px] opacity-100 border bg-card"
-          : "w-0 opacity-0"
-      )}>
-        {sidebarOpen && (
-          <DesktopDaySidebar
-            selectedDate={selectedDay}
-            appointments={appointments}
-            dayPayments={selectedDayPayments}
-            onAppointmentClick={(apt) => {
-              onAppointmentClick(apt);
-            }}
-            onPaymentClick={(p) => onPaymentClick?.(p)}
-            onCreateAppointment={() => onCreateAppointment(selectedDay || undefined)}
-            onCreatePayment={() => onCreatePayment(selectedDay || undefined)}
-            onClose={handleCloseSidebar}
-            showProfessionalColors={showProfessionalColors}
-          />
-        )}
-      </div>
-
-      {/* Toggle button when closed */}
-      {!sidebarOpen && (
+      {/* Side panel container with attached toggle */}
+      <div className="relative shrink-0 flex">
+        {/* Toggle tab — always visible, attached to sidebar edge */}
         <button
-          onClick={() => setSidebarOpen(true)}
-          className="fixed right-0 top-1/2 -translate-y-1/2 bg-card border border-r-0 rounded-l-xl p-2 shadow-lg hover:bg-muted transition-colors z-10"
+          onClick={() => setSidebarOpen((v) => !v)}
+          className={cn(
+            "self-center -mr-px h-16 w-6 rounded-l-lg border border-r-0 bg-card hover:bg-muted",
+            "flex items-center justify-center transition-colors shadow-sm z-10"
+          )}
+          aria-label={sidebarOpen ? "Ocultar panel del día" : "Mostrar panel del día"}
         >
-          <ChevronRight className="w-5 h-5 text-muted-foreground rotate-180" />
+          <ChevronRight
+            className={cn(
+              "w-4 h-4 text-muted-foreground transition-transform duration-300",
+              sidebarOpen ? "rotate-0" : "rotate-180"
+            )}
+          />
         </button>
-      )}
+
+        {/* Side panel */}
+        <div className={cn(
+          "overflow-hidden transition-all duration-300 ease-out rounded-r-2xl shadow-lg",
+          sidebarOpen
+            ? "w-[380px] opacity-100 border bg-card"
+            : "w-0 opacity-0"
+        )}>
+          {sidebarOpen && (
+            <DesktopDaySidebar
+              selectedDate={selectedDay}
+              appointments={appointments}
+              dayPayments={selectedDayPayments}
+              onAppointmentClick={(apt) => {
+                onAppointmentClick(apt);
+              }}
+              onPaymentClick={(p) => onPaymentClick?.(p)}
+              onCreateAppointment={() => onCreateAppointment(selectedDay || undefined)}
+              onCreatePayment={() => onCreatePayment(selectedDay || undefined)}
+              onClose={handleCloseSidebar}
+              showProfessionalColors={showProfessionalColors}
+            />
+          )}
+        </div>
+      </div>
     </div>
   );
 };
