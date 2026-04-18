@@ -751,6 +751,23 @@ const PendingReminders = () => {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* ── WhatsApp Sent Confirmation ── */}
+      <AlertDialog open={!!whatsappConfirm} onOpenChange={open => !open && dismissWhatsappConfirm()}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Enviaste el WhatsApp?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Confirmá si efectivamente enviaste el mensaje a <strong>{whatsappConfirm?.patientName}</strong>.
+              Si lo enviaste, lo marco como enviado. Si no, queda pendiente para enviarlo más tarde.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={dismissWhatsappConfirm}>No, sigue pendiente</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmWhatsappSent}>Sí, marcar como enviado</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* ── Create Manual Reminder ── */}
       <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
         <DialogContent className="max-w-md">
