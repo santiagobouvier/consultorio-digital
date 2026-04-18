@@ -33,7 +33,9 @@ interface DesktopDaySidebarProps {
 export const DesktopDaySidebar = ({
   selectedDate,
   appointments,
+  dayPayments = [],
   onAppointmentClick,
+  onPaymentClick,
   onCreateAppointment,
   onCreatePayment,
   onClose,
@@ -148,19 +150,19 @@ export const DesktopDaySidebar = ({
         </div>
       </div>
 
-      {/* Appointments list */}
+      {/* Appointments + Payments list */}
       <ScrollArea className="flex-1">
-        <div className="p-4">
-          {dayAppointments.length === 0 ? (
+        <div className="p-4 space-y-4">
+          {dayAppointments.length === 0 && dayPayments.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <div className="w-16 h-16 rounded-2xl bg-muted/30 flex items-center justify-center mb-4">
                 <Sparkles className="w-8 h-8 text-muted-foreground/50" />
               </div>
-              <p className="text-muted-foreground font-medium">Sin citas programadas</p>
+              <p className="text-muted-foreground font-medium">Sin actividad</p>
               <p className="text-sm text-muted-foreground/70 mt-1">
                 Este día está libre
               </p>
-              <Button 
+              <Button
                 onClick={onCreateAppointment}
                 variant="outline"
                 className="mt-4 rounded-xl"
@@ -170,21 +172,69 @@ export const DesktopDaySidebar = ({
               </Button>
             </div>
           ) : (
-            <div className="space-y-3">
-              {dayAppointments.map((apt, index) => (
-                <div
-                  key={apt.id}
-                  className="animate-fade-in"
-                  style={{ animationDelay: `${index * 50}ms` }}
-                >
-                  <AppointmentCard
-                    appointment={apt}
-                    onClick={() => onAppointmentClick(apt)}
-                    showProfessionalColor={showProfessionalColors}
-                  />
+            <>
+              {dayAppointments.length > 0 && (
+                <div className="space-y-3">
+                  <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Citas</h4>
+                  {dayAppointments.map((apt, index) => (
+                    <div
+                      key={apt.id}
+                      className="animate-fade-in"
+                      style={{ animationDelay: `${index * 50}ms` }}
+                    >
+                      <AppointmentCard
+                        appointment={apt}
+                        onClick={() => onAppointmentClick(apt)}
+                        showProfessionalColor={showProfessionalColors}
+                      />
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              )}
+
+              {dayPayments.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
+                    <CreditCard className="h-3.5 w-3.5" />
+                    Pagos
+                  </h4>
+                  {dayPayments.map((p) => {
+                    const st = calculatePaymentStatus(p);
+                    return (
+                      <button
+                        key={p.id}
+                        onClick={() => onPaymentClick?.(p)}
+                        className={cn(
+                          "w-full text-left p-3 rounded-xl border-l-4 transition-all hover:shadow-md",
+                          st === "overdue" && "bg-rose-50 dark:bg-rose-950/30 border-l-rose-500",
+                          st === "due_soon" && "bg-amber-50 dark:bg-amber-950/30 border-l-amber-500",
+                          st !== "overdue" && st !== "due_soon" && "bg-emerald-50 dark:bg-emerald-950/30 border-l-emerald-500"
+                        )}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="font-semibold text-sm truncate">{p.patient_name}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {formatCurrency(p.amount, p.currency)}
+                            </p>
+                          </div>
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "rounded-full text-xs shrink-0",
+                              st === "overdue" && "border-rose-300 text-rose-700 dark:text-rose-400",
+                              st === "due_soon" && "border-amber-300 text-amber-700 dark:text-amber-400"
+                            )}
+                          >
+                            {st === "overdue" ? "Vencido" : st === "due_soon" ? "Por vencer" : "Pendiente"}
+                          </Badge>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </>
           )}
         </div>
       </ScrollArea>
