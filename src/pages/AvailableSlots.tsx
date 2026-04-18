@@ -1,336 +1,198 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { toast } from "@/hooks/use-toast";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
-import { ArrowLeft, Plus, X } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { ArrowLeft, CalendarRange, Calendar, ListChecks, Users, Loader2 } from "lucide-react";
 import { useBusinessId } from "@/hooks/use-business-id";
-
-interface AvailabilitySlot {
-  id: string;
-  date: string;
-  start_time: string;
-  end_time: string;
-  modality: string;
-  price: number | null;
-  status: string;
-  notes: string | null;
-}
+import { useProfessionals } from "@/hooks/use-professionals";
+import { useAvailabilityTemplate } from "@/hooks/use-availability-template";
+import { WeeklyTemplateEditor } from "@/components/horarios/WeeklyTemplateEditor";
+import { GenerateSlotsDialog } from "@/components/horarios/GenerateSlotsDialog";
+import { PunctualBlockForm } from "@/components/horarios/PunctualBlockForm";
+import { SlotsList, SlotRow } from "@/components/horarios/SlotsList";
+import { toast } from "@/hooks/use-toast";
 
 const AvailableSlots = () => {
   const navigate = useNavigate();
-  const [dataLoading, setDataLoading] = useState(true);
-  const [slots, setSlots] = useState<AvailabilitySlot[]>([]);
-  const [showForm, setShowForm] = useState(false);
-  const [formData, setFormData] = useState({
-    date: "",
-    start_time: "",
-    duration: "60",
-    modality: "Online",
-    price: "",
-    notes: "",
-  });
-  
   const { businessId, loading: businessLoading } = useBusinessId();
+  const { professionals, currentUserId, isOwner, loading: profLoading } = useProfessionals(businessId);
 
+  // Profesional seleccionado para gestionar
+  const [selectedProUserId, setSelectedProUserId] = useState<string | null>(null);
+
+  // Cuando carguen los profesionales, default = el actual logueado
   useEffect(() => {
-    if (businessId) {
-      loadSlots();
+    if (!selectedProUserId && currentUserId) {
+      setSelectedProUserId(currentUserId);
     }
-  }, [businessId]);
+  }, [currentUserId, selectedProUserId]);
+
+  const { template, setTemplate, loading: templateLoading, save, reload } = useAvailabilityTemplate(
+    businessId,
+    selectedProUserId
+  );
+
+  const [saving, setSaving] = useState(false);
+  const [generatorOpen, setGeneratorOpen] = useState(false);
+  const [slots, setSlots] = useState<SlotRow[]>([]);
+  const [slotsLoading, setSlotsLoading] = useState(true);
 
   const loadSlots = async () => {
-    if (!businessId) return;
-    
-    setDataLoading(true);
+    if (!businessId || !selectedProUserId) return;
+    setSlotsLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("availability_slots")
-        .select("*")
+        .select("id, date, start_time, end_time, modality, price, status, notes, professional_user_id, generated_from_template")
         .eq("business_id", businessId)
-        .order("date", { ascending: true })
+        .or(`professional_user_id.eq.${selectedProUserId},professional_user_id.is.null`)
+        .order("date", { ascending: false })
         .order("start_time", { ascending: true });
-
       if (error) throw error;
-      setSlots(data || []);
-    } catch (error) {
-      console.error("Error loading slots:", error);
-      toast({
-        title: "Error",
-        description: "No se pudieron cargar los horarios",
-        variant: "destructive",
-      });
+      setSlots(data ?? []);
+    } catch (e: any) {
+      console.error(e);
+      toast({ title: "Error", description: "No se pudieron cargar los horarios", variant: "destructive" });
     } finally {
-      setDataLoading(false);
+      setSlotsLoading(false);
     }
   };
 
-  const loading = businessLoading || dataLoading;
-  const [saving, setSaving] = useState(false);
+  useEffect(() => {
+    if (businessId && selectedProUserId) loadSlots();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [businessId, selectedProUserId]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSaveTemplate = async () => {
+    if (!template) return;
     setSaving(true);
-
     try {
-      const duration = parseInt(formData.duration);
-      const [hours, minutes] = formData.start_time.split(":").map(Number);
-      const endHours = Math.floor((hours * 60 + minutes + duration) / 60);
-      const endMinutes = (minutes + duration) % 60;
-      const end_time = `${String(endHours).padStart(2, "0")}:${String(endMinutes).padStart(2, "0")}`;
-
-      const { error } = await supabase.from("availability_slots").insert({
-        business_id: businessId,
-        date: formData.date,
-        start_time: formData.start_time,
-        end_time,
-        modality: formData.modality,
-        price: formData.price ? parseFloat(formData.price) : null,
-        notes: formData.notes || null,
-        status: "available",
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: "Horario agregado",
-        description: "El horario está disponible para reservas",
-      });
-
-      setFormData({
-        date: "",
-        start_time: "",
-        duration: "60",
-        modality: "Online",
-        price: "",
-        notes: "",
-      });
-      setShowForm(false);
-      loadSlots();
-    } catch (error) {
-      console.error("Error creating slot:", error);
-      toast({
-        title: "Error",
-        description: "No se pudo agregar el horario",
-        variant: "destructive",
-      });
+      await save(template);
+      toast({ title: "Plantilla guardada", description: "Ahora podés generar los horarios del mes." });
+    } catch (e: any) {
+      console.error(e);
+      toast({ title: "Error", description: e?.message ?? "No se pudo guardar", variant: "destructive" });
     } finally {
       setSaving(false);
     }
   };
 
-  const handleBlock = async (slotId: string) => {
-    try {
-      const { error } = await supabase
-        .from("availability_slots")
-        .update({ status: "blocked" })
-        .eq("id", slotId);
-
-      if (error) throw error;
-
-      toast({
-        title: "Horario bloqueado",
-        description: "El horario ya no está disponible",
-      });
-      loadSlots();
-    } catch (error) {
-      console.error("Error blocking slot:", error);
-      toast({
-        title: "Error",
-        description: "No se pudo bloquear el horario",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleDelete = async (slotId: string) => {
-    try {
-      const { error } = await supabase
-        .from("availability_slots")
-        .delete()
-        .eq("id", slotId);
-
-      if (error) throw error;
-
-      toast({
-        title: "Horario eliminado",
-      });
-      loadSlots();
-    } catch (error) {
-      console.error("Error deleting slot:", error);
-      toast({
-        title: "Error",
-        description: "No se pudo eliminar el horario",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const getStatusBadge = (status: string) => {
-    const variants: Record<string, "default" | "secondary" | "destructive"> = {
-      available: "default",
-      reserved: "secondary",
-      blocked: "destructive",
-    };
-    const labels: Record<string, string> = {
-      available: "Disponible",
-      reserved: "Reservado",
-      blocked: "Bloqueado",
-    };
-    return <Badge variant={variants[status]}>{labels[status]}</Badge>;
-  };
+  const loading = businessLoading || profLoading || templateLoading;
+  const showProfessionalSelector = isOwner && professionals.length > 1;
+  const selectedPro = useMemo(
+    () => professionals.find((p) => p.userId === selectedProUserId),
+    [professionals, selectedProUserId]
+  );
 
   return (
-    <div className="min-h-screen bg-background p-4">
-      <div className="container mx-auto max-w-4xl">
-        <div className="mb-6 flex items-center justify-between">
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto max-w-5xl p-4 space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
           <Button variant="ghost" onClick={() => navigate("/dashboard")}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Volver
           </Button>
         </div>
 
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Horarios disponibles</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Button onClick={() => setShowForm(!showForm)} className="mb-4">
-              <Plus className="mr-2 h-4 w-4" />
-              {showForm ? "Cancelar" : "Agregar horario"}
-            </Button>
-
-            {showForm && (
-              <form onSubmit={handleSubmit} className="space-y-4 mb-6 p-4 border rounded-lg">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="date">Fecha *</Label>
-                    <Input
-                      id="date"
-                      type="date"
-                      required
-                      min={format(new Date(), "yyyy-MM-dd")}
-                      value={formData.date}
-                      onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="start_time">Hora de inicio *</Label>
-                    <Input
-                      id="start_time"
-                      type="time"
-                      required
-                      value={formData.start_time}
-                      onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="duration">Duración (minutos) *</Label>
-                    <Select value={formData.duration} onValueChange={(value) => setFormData({ ...formData, duration: value })}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="30">30 minutos</SelectItem>
-                        <SelectItem value="45">45 minutos</SelectItem>
-                        <SelectItem value="60">60 minutos</SelectItem>
-                        <SelectItem value="90">90 minutos</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="modality">Modalidad *</Label>
-                    <Select value={formData.modality} onValueChange={(value) => setFormData({ ...formData, modality: value })}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Online">Online</SelectItem>
-                        <SelectItem value="Presencial">Presencial</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="price">Precio (opcional)</Label>
-                    <Input
-                      id="price"
-                      type="number"
-                      step="0.01"
-                      placeholder="Ej: 1500"
-                      value={formData.price}
-                      onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="notes">Notas (opcional)</Label>
-                  <Textarea
-                    id="notes"
-                    placeholder="Notas internas sobre este horario"
-                    value={formData.notes}
-                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                    rows={2}
-                  />
-                </div>
-
-                <Button type="submit" disabled={loading}>
-                  {loading ? "Guardando..." : "Agregar horario"}
-                </Button>
-              </form>
-            )}
-
-            {loading && !showForm ? (
-              <p className="text-muted-foreground">Cargando horarios...</p>
-            ) : slots.length === 0 ? (
-              <p className="text-muted-foreground">No hay horarios configurados aún.</p>
-            ) : (
-              <div className="space-y-2">
-                {slots.map((slot) => (
-                  <div key={slot.id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-medium">
-                          {format(new Date(slot.date), "EEEE d 'de' MMMM", { locale: es })}
-                        </span>
-                        {getStatusBadge(slot.status)}
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        {slot.start_time.slice(0, 5)} - {slot.end_time.slice(0, 5)} • {slot.modality}
-                        {slot.price && ` • $${slot.price}`}
-                      </div>
-                      {slot.notes && (
-                        <div className="text-xs text-muted-foreground mt-1">{slot.notes}</div>
-                      )}
-                    </div>
-                    {slot.status === "available" && (
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="outline" onClick={() => handleBlock(slot.id)}>
-                          Bloquear
-                        </Button>
-                        <Button size="sm" variant="ghost" onClick={() => handleDelete(slot.id)}>
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                ))}
+        {/* Hero */}
+        <div className="rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border p-6">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Horarios del consultorio</h1>
+              <p className="text-muted-foreground mt-1 text-sm md:text-base">
+                Configurá tu semana tipo una vez y generá los horarios del mes en segundos.
+              </p>
+            </div>
+            {showProfessionalSelector && (
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4 text-muted-foreground" />
+                <Select value={selectedProUserId ?? ""} onValueChange={setSelectedProUserId}>
+                  <SelectTrigger className="w-56 bg-background">
+                    <SelectValue placeholder="Profesional" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {professionals.map((p) => (
+                      <SelectItem key={p.userId} value={p.userId}>
+                        {p.name}{p.userId === currentUserId ? " (vos)" : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+          {selectedPro && showProfessionalSelector && (
+            <div className="mt-3 text-xs text-muted-foreground">
+              Editando horarios de <strong>{selectedPro.name}</strong>
+            </div>
+          )}
+        </div>
+
+        {loading || !businessId || !selectedProUserId || !template ? (
+          <Card>
+            <CardContent className="py-16 flex items-center justify-center text-muted-foreground">
+              <Loader2 className="h-5 w-5 animate-spin mr-2" /> Cargando...
+            </CardContent>
+          </Card>
+        ) : (
+          <Tabs defaultValue="template" className="w-full">
+            <TabsList className="grid grid-cols-3 w-full max-w-md">
+              <TabsTrigger value="template" className="gap-2">
+                <CalendarRange className="h-4 w-4" /> Plantilla
+              </TabsTrigger>
+              <TabsTrigger value="punctual" className="gap-2">
+                <Calendar className="h-4 w-4" /> Bloque puntual
+              </TabsTrigger>
+              <TabsTrigger value="list" className="gap-2">
+                <ListChecks className="h-4 w-4" /> Lista
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="template" className="mt-6">
+              <WeeklyTemplateEditor
+                template={template}
+                onChange={setTemplate as any}
+                onSave={handleSaveTemplate}
+                saving={saving}
+                onOpenGenerator={() => setGeneratorOpen(true)}
+                canGenerate={!!template.id}
+              />
+            </TabsContent>
+
+            <TabsContent value="punctual" className="mt-6">
+              <PunctualBlockForm
+                businessId={businessId}
+                professionalUserId={selectedProUserId}
+                onCreated={loadSlots}
+              />
+            </TabsContent>
+
+            <TabsContent value="list" className="mt-6">
+              {slotsLoading ? (
+                <Card>
+                  <CardContent className="py-16 flex items-center justify-center text-muted-foreground">
+                    <Loader2 className="h-5 w-5 animate-spin mr-2" /> Cargando horarios...
+                  </CardContent>
+                </Card>
+              ) : (
+                <SlotsList slots={slots} onChange={loadSlots} />
+              )}
+            </TabsContent>
+          </Tabs>
+        )}
+
+        {template?.id && (
+          <GenerateSlotsDialog
+            open={generatorOpen}
+            onOpenChange={setGeneratorOpen}
+            templateId={template.id}
+            onGenerated={loadSlots}
+          />
+        )}
       </div>
     </div>
   );
