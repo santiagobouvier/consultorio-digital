@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { hardResetBrowserSession } from "@/lib/session-recovery";
-import { isCurrentUserSuperAdmin } from "@/lib/admin-access";
+import { triggerSessionExpired } from "@/components/SessionExpiredDialog";
+import { useAuth } from "@/contexts/AuthContext";
 
 const SAAS_SELECTED_BUSINESS_KEY = "saas_selected_business";
 
@@ -15,40 +15,30 @@ interface UseBusinessIdResult {
 
 /**
  * Hook to get the current active business ID, respecting multi-tenant scoping.
- * 
+ *
  * Priority order:
  * 1. SaaS selected business (stored in sessionStorage by super_admin)
  * 2. User's owned business (owner_user_id)
  * 3. User's associated business via user_roles
- * 
+ *
  * @param redirectIfNoBusiness - If true, redirects to /configurar-negocio if no business found
  */
 export const useBusinessId = (redirectIfNoBusiness = true): UseBusinessIdResult => {
   const navigate = useNavigate();
+  const { user, isSuperAdmin, isReady: authReady } = useAuth();
   const [businessId, setBusinessId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
   const fetchBusinessId = async () => {
     try {
       setLoading(true);
-
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError) {
-        await hardResetBrowserSession({ redirectTo: "/auth?session=expired" });
-        return;
-      }
 
       if (!user) {
         navigate("/auth");
         return;
       }
 
-      // Check if user is super_admin
-      const isAdmin = await isCurrentUserSuperAdmin(user.id);
-      setIsSuperAdmin(isAdmin);
-
-      if (!isAdmin) {
+      if (!isSuperAdmin) {
         const { data: profile, error: profileError } = await supabase
           .from("profiles")
           .select("id")
@@ -56,16 +46,15 @@ export const useBusinessId = (redirectIfNoBusiness = true): UseBusinessIdResult 
           .maybeSingle();
 
         if (!profile || profileError) {
-          await hardResetBrowserSession({ redirectTo: "/auth?session=expired" });
+          triggerSessionExpired();
           return;
         }
       }
 
-      // Check for SaaS selected business in sessionStorage
+      // SaaS selected business (super admin impersonating, o cualquier selección manual)
       const saasSelectedBusiness = sessionStorage.getItem(SAAS_SELECTED_BUSINESS_KEY);
-      
+
       if (saasSelectedBusiness) {
-        // Verify the business exists
         const { data: business } = await supabase
           .from("businesses")
           .select("id")
@@ -77,13 +66,12 @@ export const useBusinessId = (redirectIfNoBusiness = true): UseBusinessIdResult 
           setLoading(false);
           return;
         } else {
-          // Clear invalid business ID
           sessionStorage.removeItem(SAAS_SELECTED_BUSINESS_KEY);
         }
       }
 
-      // For super_admin without selection, get first business
-      if (isAdmin) {
+      // Super admin sin selección: tomar primer business disponible
+      if (isSuperAdmin) {
         const { data: businesses } = await supabase
           .from("businesses")
           .select("id")
@@ -103,7 +91,7 @@ export const useBusinessId = (redirectIfNoBusiness = true): UseBusinessIdResult 
         return;
       }
 
-      // Try to find user's owned business
+      // Usuario regular: buscar business propio
       const { data: ownedBusiness } = await supabase
         .from("businesses")
         .select("id")
@@ -116,7 +104,7 @@ export const useBusinessId = (redirectIfNoBusiness = true): UseBusinessIdResult 
         return;
       }
 
-      // Check if user is member via user_roles
+      // Member via user_roles
       const { data: userRole } = await supabase
         .from("user_roles")
         .select("business_id")
@@ -130,7 +118,6 @@ export const useBusinessId = (redirectIfNoBusiness = true): UseBusinessIdResult 
         return;
       }
 
-      // No business found
       if (redirectIfNoBusiness) {
         navigate("/configurar-negocio");
       }
@@ -144,8 +131,10 @@ export const useBusinessId = (redirectIfNoBusiness = true): UseBusinessIdResult 
   };
 
   useEffect(() => {
+    if (!authReady) return;
     fetchBusinessId();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authReady, user?.id, isSuperAdmin]);
 
   return {
     businessId,

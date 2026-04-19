@@ -1,74 +1,41 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import LoadingPage from "@/components/LoadingPage";
-import { isCurrentUserSuperAdmin } from "@/lib/admin-access";
+import { useAuth } from "@/contexts/AuthContext";
 
 /**
  * Guard que solo permite renderizar el contenido si el usuario actual
- * tiene rol `super_admin` en `user_roles`. Cualquier otro caso redirige
- * a /dashboard (o /auth si no hay sesión) sin renderizar children.
+ * es super_admin. Cualquier otro caso redirige a /dashboard (o /auth si no
+ * hay sesión) sin renderizar children.
  *
- * Defensa en profundidad: las RLS ya restringen los datos sensibles
- * (`businesses`, `subscriptions`, etc.) usando `is_super_admin(auth.uid())`.
- * Este guard previene que un usuario no autorizado siquiera monte el
- * componente del panel ni dispare sus queries.
+ * Usa el AuthContext singleton para evitar llamadas redundantes a getUser()
+ * (que en mobile tarda ~2s y, multiplicado por todos los componentes que
+ * lo llamaban, generaba un loop con el preloader).
  */
 export const SuperAdminGuard = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
-  const [status, setStatus] = useState<"checking" | "allowed" | "denied">("checking");
+  const { user, isSuperAdmin, isReady } = useAuth();
 
   useEffect(() => {
-    let cancelled = false;
+    if (!isReady) return;
 
-    const verify = async () => {
-      try {
-        const { data: { user }, error: userErr } = await supabase.auth.getUser();
-        if (cancelled) return;
+    if (!user) {
+      navigate("/auth", { replace: true });
+      return;
+    }
 
-        if (userErr || !user) {
-          navigate("/auth", { replace: true });
-          return;
-        }
+    if (!isSuperAdmin) {
+      toast({
+        title: "Acceso denegado",
+        description: "No tenés permisos para acceder a esta sección",
+        variant: "destructive",
+      });
+      navigate("/dashboard", { replace: true });
+    }
+  }, [isReady, user, isSuperAdmin, navigate]);
 
-        const normalizedEmail = user.email?.trim().toLowerCase();
-        if (normalizedEmail === "santib1997@gmail.com") {
-          setStatus("allowed");
-          return;
-        }
-
-        const isSuperAdmin = await isCurrentUserSuperAdmin(user.id);
-
-        if (cancelled) return;
-
-        if (!isSuperAdmin) {
-          toast({
-            title: "Acceso denegado",
-            description: "No tenés permisos para acceder a esta sección",
-            variant: "destructive",
-          });
-          setStatus("denied");
-          navigate("/dashboard", { replace: true });
-          return;
-        }
-
-        setStatus("allowed");
-      } catch {
-        if (!cancelled) {
-          setStatus("denied");
-          navigate("/dashboard", { replace: true });
-        }
-      }
-    };
-
-    verify();
-    return () => {
-      cancelled = true;
-    };
-  }, [navigate]);
-
-  if (status !== "allowed") return <LoadingPage />;
+  if (!isReady || !user || !isSuperAdmin) return <LoadingPage />;
   return <>{children}</>;
 };
 

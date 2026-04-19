@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   LayoutDashboard,
   Users,
@@ -19,7 +20,6 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useDashboardBranding } from "@/contexts/DashboardBrandingContext";
-import { isCurrentUserSuperAdmin } from "@/lib/admin-access";
 import { usePendingRequestsCount } from "@/hooks/use-pending-requests-count";
 
 type NavItem = {
@@ -51,7 +51,7 @@ const navItems: NavItem[] = [
  */
 export function MobileHeader() {
   const [open, setOpen] = useState(false);
-  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const { isSuperAdmin } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const { primaryColor, logoUrl, displayName } = useDashboardBranding();
@@ -64,17 +64,6 @@ export function MobileHeader() {
   const visibleNavItems = isSuperAdmin
     ? navItems.filter((item) => item.url !== "/billing")
     : navItems;
-
-  useEffect(() => {
-    const loadRole = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
-      setIsSuperAdmin(await isCurrentUserSuperAdmin(user.id));
-    };
-    loadRole();
-  }, []);
 
   // Lock body scroll when drawer is open
   useEffect(() => {

@@ -6,8 +6,9 @@ import LoadingPage from "@/components/LoadingPage";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertTriangle, CreditCard } from "lucide-react";
-import { hardResetBrowserSession } from "@/lib/session-recovery";
-import { isCurrentUserSuperAdmin } from "@/lib/admin-access";
+import { triggerSessionExpired } from "@/components/SessionExpiredDialog";
+import { useAuth } from "@/contexts/AuthContext";
+import { getActiveBusinessId } from "@/hooks/use-business-id";
 
 interface SubscriptionGuardProps {
   children: ReactNode;
@@ -16,200 +17,137 @@ interface SubscriptionGuardProps {
 const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { user, isSuperAdmin, isReady: authReady } = useAuth();
   const [businessId, setBusinessId] = useState<string | null>(null);
-  const [authLoading, setAuthLoading] = useState(true);
+  const [businessLoading, setBusinessLoading] = useState(true);
   const [checkingActivation, setCheckingActivation] = useState(true);
   const [activationChecked, setActivationChecked] = useState(false);
-  const [sessionInvalid, setSessionInvalid] = useState(false);
-  const [directIsSuperAdmin, setDirectIsSuperAdmin] = useState(false);
   const hasSuccessfulSubscriptionRedirect = searchParams.get("subscription") === "success";
 
+  // Resolver businessId una vez que la auth está lista.
+  // Super admin: si está impersonando un business (sessionStorage), lo usa;
+  // si no, redirige directo a /saas-admin sin tocar suscripciones.
   useEffect(() => {
-    const getBusinessId = async () => {
+    if (!authReady) return;
+
+    if (!user) {
+      navigate("/auth", { replace: true });
+      return;
+    }
+
+    if (isSuperAdmin) {
+      const impersonated = getActiveBusinessId();
+      if (impersonated) {
+        setBusinessId(impersonated);
+      } else {
+        navigate("/saas-admin", { replace: true });
+        return;
+      }
+      setBusinessLoading(false);
+      return;
+    }
+
+    // Usuario regular: obtener su business via RPC
+    let cancelled = false;
+    (async () => {
       try {
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-
-        if (userError) {
-          setSessionInvalid(true);
-          await hardResetBrowserSession({ redirectTo: "/auth?session=expired" });
+        const { data, error } = await supabase.rpc("get_user_business_id", { _user_id: user.id });
+        if (cancelled) return;
+        if (error) {
+          console.error("SubscriptionGuard: error obteniendo business", error);
+          triggerSessionExpired();
           return;
         }
-
-        if (!user) {
-          // No session — just redirect to auth, no need to clear
-          navigate("/auth", { replace: true });
-          return;
-        }
-
-        const normalizedEmail = user.email?.trim().toLowerCase();
-        if (normalizedEmail === "santib1997@gmail.com") {
-          setDirectIsSuperAdmin(true);
-          setBusinessId(null);
-          setCheckingActivation(false);
-          setActivationChecked(true);
-          setAuthLoading(false);
-          return;
-        }
-
-        const isSuperAdmin = await isCurrentUserSuperAdmin(user.id);
-
-        if (isSuperAdmin) {
-          setDirectIsSuperAdmin(true);
-          setBusinessId(null);
-          setCheckingActivation(false);
-          setActivationChecked(true);
-          setAuthLoading(false);
-          return;
-        }
-
-        // Verify user exists in profiles (DB state matches session)
-        const { data: profile, error: profileError } = await supabase
-          .from("profiles")
-          .select("id")
-          .eq("id", user.id)
-          .maybeSingle();
-
-        if (!profile || profileError) {
-          // Session exists but user not found in DB — inconsistent state
-          console.warn("SubscriptionGuard: session exists but profile not found in DB, clearing session");
-          setSessionInvalid(true);
-          await hardResetBrowserSession({ redirectTo: "/auth?session=expired" });
-          return;
-        }
-
-        // Get business via RPC
-        const { data } = await supabase.rpc("get_user_business_id", { _user_id: user.id });
-        setBusinessId(data || null);
-        setAuthLoading(false);
+        setBusinessId((data as string | null) || null);
       } catch (err) {
-        console.error("SubscriptionGuard: unexpected error", err);
-        setSessionInvalid(true);
-        await hardResetBrowserSession({ redirectTo: "/auth?session=expired" });
+        if (cancelled) return;
+        console.error("SubscriptionGuard: excepción obteniendo business", err);
+        triggerSessionExpired();
+      } finally {
+        if (!cancelled) setBusinessLoading(false);
       }
-    };
-    getBusinessId();
-  }, [navigate]);
+    })();
 
-  const { status, loading, isSuperAdmin } = useSubscriptionStatus(businessId);
+    return () => { cancelled = true; };
+  }, [authReady, user, isSuperAdmin, navigate]);
 
-  // Safety timeout: si después de 5s authLoading sigue trabado, forzar resolución
+  const { status, loading } = useSubscriptionStatus(businessId);
+
+  // Verificar si el usuario en trial activó MP
   useEffect(() => {
-    if (sessionInvalid || directIsSuperAdmin || !authLoading) return;
-    const timer = setTimeout(() => {
-      console.warn("SubscriptionGuard: authLoading timeout (5s), forzando resolución");
-      setAuthLoading(false);
-    }, 5000);
-    return () => clearTimeout(timer);
-  }, [authLoading, sessionInvalid, directIsSuperAdmin]);
+    if (businessLoading) return;
 
-  // Safety timeout: si después de 8s no resolvió la verificación de suscripción, hard reset
-  useEffect(() => {
-    if (sessionInvalid || directIsSuperAdmin) return;
-    const timer = setTimeout(() => {
-      if (businessId && (loading || checkingActivation || !activationChecked)) {
-        console.warn("SubscriptionGuard: timeout de 8s alcanzado, forzando hard reset");
-        hardResetBrowserSession({ redirectTo: "/auth?session=expired" });
-      }
-    }, 8000);
-    return () => clearTimeout(timer);
-  }, [loading, checkingActivation, activationChecked, businessId, sessionInvalid, directIsSuperAdmin]);
-
-  // Check if trial user has activated with MP (has preapproval ID)
-  useEffect(() => {
-    if (authLoading) return;
-
-    if (directIsSuperAdmin) {
-      setCheckingActivation(false);
-      setActivationChecked(true);
-      return;
-    }
-
-    // Sin businessId: dejar pasar inmediatamente (onboarding)
-    if (!businessId) {
-      setCheckingActivation(false);
-      setActivationChecked(true);
-      return;
-    }
-
-    if (loading) {
-      return;
-    }
-
-    // Super admins skip this check
     if (isSuperAdmin) {
       setCheckingActivation(false);
       setActivationChecked(true);
       return;
     }
 
-    // Only check for trial status
+    if (!businessId) {
+      setCheckingActivation(false);
+      setActivationChecked(true);
+      return;
+    }
+
+    if (loading) return;
+
     if (status !== "trial") {
       setCheckingActivation(false);
       setActivationChecked(true);
       return;
     }
 
-    // If user just came from MP payment, don't block — let them through
     if (hasSuccessfulSubscriptionRedirect) {
       setCheckingActivation(false);
       setActivationChecked(true);
       return;
     }
 
-    const checkActivation = async () => {
-      // Check if business is demo
-      const { data: business } = await supabase
-        .from("businesses")
-        .select("is_demo")
-        .eq("id", businessId)
-        .maybeSingle();
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data: business } = await supabase
+          .from("businesses")
+          .select("is_demo")
+          .eq("id", businessId)
+          .maybeSingle();
 
-      if (business?.is_demo) {
+        if (cancelled) return;
+
+        if (business?.is_demo) {
+          setCheckingActivation(false);
+          setActivationChecked(true);
+          return;
+        }
+
+        // TESTING MODE — durante testing dejamos pasar a usuarios en trial
+        // sin preapproval de MP. Revertir antes del lanzamiento.
         setCheckingActivation(false);
         setActivationChecked(true);
-        return;
+      } catch {
+        if (!cancelled) {
+          setCheckingActivation(false);
+          setActivationChecked(true);
+        }
       }
+    })();
 
-      // Check subscription status and MP preapproval
-      const { data: sub } = await supabase
-        .from("subscriptions")
-        .select("status, mercadopago_preapproval_id")
-        .eq("business_id", businessId)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+    return () => { cancelled = true; };
+  }, [businessId, status, loading, businessLoading, isSuperAdmin, hasSuccessfulSubscriptionRedirect]);
 
-      // TESTING MODE — revert before production launch
-      // Original: bloquear si no hay suscripción activa ni preapproval de MercadoPago
-      // if (sub?.status !== "active" && !sub?.mercadopago_preapproval_id) {
-      //   navigate("/activar-prueba", { replace: true });
-      //   return;
-      // }
-      // Durante testing: dejar pasar a usuarios en trial sin preapproval de MP
-      void sub;
-
-      setCheckingActivation(false);
-      setActivationChecked(true);
-    };
-
-    checkActivation();
-  }, [businessId, status, loading, authLoading, isSuperAdmin, navigate, hasSuccessfulSubscriptionRedirect, directIsSuperAdmin]);
-
-  if (sessionInvalid) return <LoadingPage />;
-  if (authLoading) return <LoadingPage />;
-  if (directIsSuperAdmin) return <>{children}</>;
-  // Si hay businessId, esperar también al status de suscripción y la verificación de activación
+  if (!authReady || businessLoading) return <LoadingPage />;
+  if (isSuperAdmin) return <>{children}</>;
   if (businessId && (loading || checkingActivation || !activationChecked)) return <LoadingPage />;
 
-  // No business yet — let them through to setup
+  // Sin business → onboarding
   if (!businessId) return <>{children}</>;
 
-  // Super admin, active, trial — allowed
-  if (directIsSuperAdmin || isSuperAdmin || status === "active" || status === "trial") {
+  // Activos / trial → permitido
+  if (status === "active" || status === "trial") {
     return <>{children}</>;
   }
 
-  // Blocked: expired, cancelled, past_due, none
+  // Bloqueado: expired, cancelled, past_due, none
   const messages: Record<string, { title: string; desc: string }> = {
     expired: {
       title: "Tu período de prueba ha terminado",
