@@ -53,30 +53,26 @@ export function AppSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { setOpen } = useSidebar();
+  const { user, isSuperAdmin } = useAuth();
   const [userName, setUserName] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
   useEffect(() => {
-    const loadProfile = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
       const { data: profile } = await supabase
         .from("profiles")
         .select("name, avatar_url")
         .eq("id", user.id)
         .maybeSingle();
 
-      if (profile) {
-        setUserName(profile.name);
-        setAvatarUrl(profile.avatar_url);
-      }
-
-      setIsSuperAdmin(await isCurrentUserSuperAdmin(user.id));
-    };
-    loadProfile();
-  }, []);
+      if (cancelled || !profile) return;
+      setUserName(profile.name);
+      setAvatarUrl(profile.avatar_url);
+    })();
+    return () => { cancelled = true; };
+  }, [user]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
