@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { isCurrentUserSuperAdmin } from "@/lib/admin-access";
+import { useAuth } from "@/contexts/AuthContext";
 
 export type SubscriptionStatus = "trial" | "active" | "past_due" | "cancelled" | "expired" | "none";
 
@@ -12,45 +12,41 @@ interface UseSubscriptionStatusResult {
 }
 
 export const useSubscriptionStatus = (businessId: string | null): UseSubscriptionStatusResult => {
+  const { user, isSuperAdmin, isReady: authReady } = useAuth();
   const [status, setStatus] = useState<SubscriptionStatus>("none");
   const [loading, setLoading] = useState(true);
   const [trialDaysLeft, setTrialDaysLeft] = useState<number | null>(null);
-  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
   useEffect(() => {
+    if (!authReady) return;
     let cancelled = false;
 
     const check = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (cancelled) return;
-        if (!user) { setLoading(false); return; }
+        if (!user) {
+          setLoading(false);
+          return;
+        }
 
-        // Super admins bypass subscription checks — check FIRST,
-        // even if businessId is null (super admin may not own a business)
-        const adminRole = await isCurrentUserSuperAdmin(user.id);
-        if (cancelled) return;
-
-        if (adminRole) {
-          setIsSuperAdmin(true);
+        if (isSuperAdmin) {
           setStatus("active");
           setLoading(false);
           return;
         }
 
-        // No super admin AND no business → nothing to check (onboarding)
         if (!businessId) {
           setStatus("none");
           setLoading(false);
           return;
         }
 
-        // Check if business is a demo
         const { data: business } = await supabase
           .from("businesses")
           .select("is_demo")
           .eq("id", businessId)
           .maybeSingle();
+
+        if (cancelled) return;
 
         if (business?.is_demo) {
           setStatus("active");
@@ -58,7 +54,6 @@ export const useSubscriptionStatus = (businessId: string | null): UseSubscriptio
           return;
         }
 
-        // Get latest subscription
         const { data: sub } = await supabase
           .from("subscriptions")
           .select("*")
@@ -66,6 +61,8 @@ export const useSubscriptionStatus = (businessId: string | null): UseSubscriptio
           .order("created_at", { ascending: false })
           .limit(1)
           .maybeSingle();
+
+        if (cancelled) return;
 
         if (!sub) {
           setStatus("none");
@@ -75,7 +72,6 @@ export const useSubscriptionStatus = (businessId: string | null): UseSubscriptio
 
         const now = new Date();
 
-        // Check trial
         if (sub.status === "trial" && sub.trial_ends_at) {
           const trialEnd = new Date(sub.trial_ends_at);
           if (now < trialEnd) {
@@ -98,7 +94,7 @@ export const useSubscriptionStatus = (businessId: string | null): UseSubscriptio
 
     check();
     return () => { cancelled = true; };
-  }, [businessId]);
+  }, [businessId, user, isSuperAdmin, authReady]);
 
   return { status, loading, trialDaysLeft, isSuperAdmin };
 };
