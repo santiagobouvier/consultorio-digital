@@ -56,6 +56,7 @@ type WizardFormData = z.infer<typeof businessSchema>;
 
 const OnboardingWizard = () => {
   const navigate = useNavigate();
+  const { user, isSuperAdmin, isReady: authReady } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -64,9 +65,9 @@ const OnboardingWizard = () => {
   const [checkingSubdomain, setCheckingSubdomain] = useState(false);
   const [checkingDomain, setCheckingDomain] = useState(false);
   const [existingBusinessId, setExistingBusinessId] = useState<string | null>(null);
-  const [userId, setUserId] = useState<string | null>(null);
   const initializationStartedRef = useRef(false);
-  const wizardHasControlRef = useRef(false);
+
+  const userId = user?.id ?? null;
 
   const form = useForm<WizardFormData>({
     resolver: zodResolver(businessSchema),
@@ -81,101 +82,67 @@ const OnboardingWizard = () => {
   const watchedSubdomain = form.watch("custom_subdomain");
   const watchedDomain = form.watch("custom_domain");
 
+  // Inicializar el wizard una vez que la auth está lista (sin HTTP redundante).
   useEffect(() => {
-    if (!loading) {
-      wizardHasControlRef.current = true;
-    }
-  }, [loading]);
-
-  useEffect(() => {
-    if (!loading) return;
-
-    const timeoutId = window.setTimeout(() => {
-      wizardHasControlRef.current = true;
-      setLoading(false);
-    }, MAX_PRELOADER_MS);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [loading]);
-
-  useEffect(() => {
+    if (!authReady) return;
     if (initializationStartedRef.current) return;
     initializationStartedRef.current = true;
 
     let cancelled = false;
 
-    const checkAuth = async () => {
+    const initialize = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (cancelled) return;
-
         if (!user) {
-          if (!wizardHasControlRef.current) {
-            navigate("/auth", { replace: true });
-          }
+          navigate("/auth", { replace: true });
           return;
         }
 
-        setUserId(user.id);
+        if (isSuperAdmin) {
+          navigate("/saas-admin", { replace: true });
+          return;
+        }
 
         if (!form.getValues("contact_email")) {
           form.setValue("contact_email", user.email || "", { shouldDirty: false });
         }
 
-        const [{ data: patientRole }, isSuperAdmin] = await Promise.all([
+        // Verificar rol de paciente y business propio en paralelo.
+        const [{ data: patientRole }, { data: business }] = await Promise.all([
           supabase.from("user_roles").select("role").eq("user_id", user.id).eq("role", "patient").maybeSingle(),
-          isCurrentUserSuperAdmin(user.id),
+          supabase
+            .from("businesses")
+            .select("id, name, specialty, timezone, public_slug, custom_subdomain, custom_domain, contact_email, onboarding_completed")
+            .eq("owner_user_id", user.id)
+            .maybeSingle(),
         ]);
 
         if (cancelled) return;
 
-        if (isSuperAdmin) {
-          if (!wizardHasControlRef.current) {
-            navigate("/saas-admin", { replace: true });
-          }
-          return;
-        }
-
         if (patientRole) {
-          if (!wizardHasControlRef.current) {
-            navigate("/portal-paciente", { replace: true });
-          }
+          navigate("/portal-paciente", { replace: true });
           return;
         }
-
-        const { data: business } = await supabase
-          .from("businesses")
-          .select("id, name, specialty, timezone, public_slug, custom_subdomain, custom_domain, contact_email, onboarding_completed")
-          .eq("owner_user_id", user.id)
-          .maybeSingle();
-
-        if (cancelled) return;
 
         if (business?.onboarding_completed) {
-          if (!wizardHasControlRef.current) {
-            navigate("/dashboard", { replace: true });
-          }
+          navigate("/dashboard", { replace: true });
           return;
         }
 
         if (business) {
           setExistingBusinessId(business.id);
-
-          if (!wizardHasControlRef.current) {
-            form.reset({
-              name: business.name || "",
-              specialty: business.specialty || "",
-              contact_email: business.contact_email || user.email || "",
-              public_slug: business.public_slug || "",
-              custom_subdomain: business.custom_subdomain || "",
-              custom_domain: business.custom_domain || "",
-              timezone: business.timezone || "America/Montevideo",
-              modality: "mixto",
-              city: "",
-              welcomeMessage: "",
-              contactPhone: "",
-            });
-          }
+          form.reset({
+            name: business.name || "",
+            specialty: business.specialty || "",
+            contact_email: business.contact_email || user.email || "",
+            public_slug: business.public_slug || "",
+            custom_subdomain: business.custom_subdomain || "",
+            custom_domain: business.custom_domain || "",
+            timezone: business.timezone || "America/Montevideo",
+            modality: "mixto",
+            city: "",
+            welcomeMessage: "",
+            contactPhone: "",
+          });
 
           const { data: cs } = await supabase
             .from("clinic_settings")
@@ -185,15 +152,13 @@ const OnboardingWizard = () => {
 
           if (cancelled) return;
 
-          if (cs?.welcome_message && !wizardHasControlRef.current) {
+          if (cs?.welcome_message) {
             form.setValue("welcomeMessage", cs.welcome_message, { shouldDirty: false });
           }
         }
       } catch (error) {
         console.error("Error loading onboarding:", error);
-        if (!wizardHasControlRef.current) {
-          toast.error("No pudimos cargar la configuración del consultorio.");
-        }
+        toast.error("No pudimos cargar la configuración del consultorio.");
       } finally {
         if (!cancelled) {
           setLoading(false);
@@ -201,12 +166,12 @@ const OnboardingWizard = () => {
       }
     };
 
-    void checkAuth();
+    void initialize();
 
     return () => {
       cancelled = true;
     };
-  }, [form, navigate]);
+  }, [authReady, user, isSuperAdmin, form, navigate]);
 
   useEffect(() => {
     if (currentStep !== 2 || !watchedSubdomain || watchedSubdomain.length < 3) {
