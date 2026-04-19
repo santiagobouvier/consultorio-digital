@@ -151,48 +151,50 @@ const App = () => {
         <Sonner />
         <SessionExpiredDialog />
         <BrowserRouter>
-          <Suspense fallback={null}>
-            <Routes>
-              {/* Public routes */}
-              <Route path="/" element={<Landing />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/auth/callback" element={<AuthCallback />} />
-              <Route path="/configurar-negocio" element={<BusinessSetup />} />
-              <Route path="/consultorio/:slug" element={<PublicClinic />} />
-              <Route path="/consultorio/:slug/reservar" element={<PublicBooking />} />
-              <Route path="/pago-plan/:planId" element={<PlanPayment />} />
-              <Route path="/portal-paciente" element={<PatientPortal />} />
-              <Route path="/portal-paciente/invitacion" element={<PatientInvitation />} />
-              <Route path="/invitar-profesional" element={<ProfessionalInvitation />} />
-              <Route path="/registrarse-profesional" element={<ProfessionalRegister />} />
-              <Route path="/onboarding-consultorio" element={<BusinessSetup />} />
-              <Route path="/reset-password" element={<ResetPassword />} />
-              <Route path="/activar-prueba" element={<ActivateTrial />} />
-              <Route path="/activating" element={<Activating />} />
-              <Route path="/portal-paciente/demo" element={<PatientPortalDemo />} />
-              <Route path="/portal/:slug" element={<ClinicPortal />} />
+          <AuthProvider>
+            <Suspense fallback={null}>
+              <Routes>
+                {/* Public routes */}
+                <Route path="/" element={<Landing />} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/auth/callback" element={<AuthCallback />} />
+                <Route path="/configurar-negocio" element={<BusinessSetup />} />
+                <Route path="/consultorio/:slug" element={<PublicClinic />} />
+                <Route path="/consultorio/:slug/reservar" element={<PublicBooking />} />
+                <Route path="/pago-plan/:planId" element={<PlanPayment />} />
+                <Route path="/portal-paciente" element={<PatientPortal />} />
+                <Route path="/portal-paciente/invitacion" element={<PatientInvitation />} />
+                <Route path="/invitar-profesional" element={<ProfessionalInvitation />} />
+                <Route path="/registrarse-profesional" element={<ProfessionalRegister />} />
+                <Route path="/onboarding-consultorio" element={<BusinessSetup />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
+                <Route path="/activar-prueba" element={<ActivateTrial />} />
+                <Route path="/activating" element={<Activating />} />
+                <Route path="/portal-paciente/demo" element={<PatientPortalDemo />} />
+                <Route path="/portal/:slug" element={<ClinicPortal />} />
 
-              {/* Protected routes - require active subscription + sidebar */}
-              <Route path="/dashboard" element={<Protected><Dashboard /></Protected>} />
-              <Route path="/patients" element={<Protected><Patients /></Protected>} />
-              <Route path="/patients/:id" element={<Protected><PatientDetail /></Protected>} />
-              <Route path="/appointments" element={<Protected><Appointments /></Protected>} />
-              <Route path="/agenda" element={<Protected><Agenda /></Protected>} />
-              <Route path="/centro-control" element={<Protected><CommandCenter /></Protected>} />
-              <Route path="/recordatorios-pendientes" element={<Protected><PendingReminders /></Protected>} />
-              <Route path="/mi-consultorio" element={<Protected><ClinicSettings /></Protected>} />
-              <Route path="/horarios-disponibles" element={<Protected><AvailableSlots /></Protected>} />
-              <Route path="/solicitudes" element={<Protected><AppointmentRequests /></Protected>} />
-              <Route path="/pagos" element={<Protected><Payments /></Protected>} />
-              <Route path="/personalizar-portal" element={<Protected><PortalCustomization /></Protected>} />
-              <Route path="/billing" element={<Protected><Billing /></Protected>} />
-              <Route path="/estadisticas" element={<Protected><Statistics /></Protected>} />
-              <Route path="/saas-admin" element={<AdminProtected><SaasAdmin /></AdminProtected>} />
+                {/* Protected routes - require active subscription + sidebar */}
+                <Route path="/dashboard" element={<Protected><Dashboard /></Protected>} />
+                <Route path="/patients" element={<Protected><Patients /></Protected>} />
+                <Route path="/patients/:id" element={<Protected><PatientDetail /></Protected>} />
+                <Route path="/appointments" element={<Protected><Appointments /></Protected>} />
+                <Route path="/agenda" element={<Protected><Agenda /></Protected>} />
+                <Route path="/centro-control" element={<Protected><CommandCenter /></Protected>} />
+                <Route path="/recordatorios-pendientes" element={<Protected><PendingReminders /></Protected>} />
+                <Route path="/mi-consultorio" element={<Protected><ClinicSettings /></Protected>} />
+                <Route path="/horarios-disponibles" element={<Protected><AvailableSlots /></Protected>} />
+                <Route path="/solicitudes" element={<Protected><AppointmentRequests /></Protected>} />
+                <Route path="/pagos" element={<Protected><Payments /></Protected>} />
+                <Route path="/personalizar-portal" element={<Protected><PortalCustomization /></Protected>} />
+                <Route path="/billing" element={<Protected><Billing /></Protected>} />
+                <Route path="/estadisticas" element={<Protected><Statistics /></Protected>} />
+                <Route path="/saas-admin" element={<AdminProtected><SaasAdmin /></AdminProtected>} />
 
-              {/* Catch-all */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
+                {/* Catch-all */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Suspense>
+          </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>
