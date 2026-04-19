@@ -20,7 +20,6 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useDashboardBranding } from "@/contexts/DashboardBrandingContext";
-import { isCurrentUserSuperAdmin } from "@/lib/admin-access";
 import { usePendingRequestsCount } from "@/hooks/use-pending-requests-count";
 
 type NavItem = {
