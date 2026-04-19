@@ -37,7 +37,6 @@ const MODALITIES = [
 ];
 
 const TOTAL_STEPS = 4;
-const MAX_PRELOADER_MS = 3000;
 
 const businessSchema = z.object({
   name: z.string().min(1, "El nombre es obligatorio").max(100),
