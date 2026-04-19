@@ -296,7 +296,7 @@ const OnboardingWizard = () => {
     }
   };
 
-  if (loading) return <LoadingPage />;
+  if (!authReady || loading) return <LoadingPage />;
 
   const stepLabels = ["Datos básicos", "Dirección web", "Info pacientes", "Preferencias"];
 
