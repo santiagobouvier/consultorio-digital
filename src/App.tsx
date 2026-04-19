@@ -8,6 +8,7 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { clearServiceWorkerCaches } from "@/lib/session-recovery";
 import { SessionExpiredDialog, triggerSessionExpired } from "@/components/SessionExpiredDialog";
+import { AuthProvider } from "@/contexts/AuthContext";
 
 
 // Lazy load all pages for optimal performance (code-split per route)
