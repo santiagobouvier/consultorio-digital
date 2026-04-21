@@ -5,6 +5,7 @@ import { lovable } from "@/integrations/lovable/index";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { ArrowLeft, Building2, Mail, Eye, EyeOff, Sparkles, CheckCircle2 } from "lucide-react";
 import { useHostnameBusiness } from "@/hooks/use-hostname-business";
@@ -12,13 +13,22 @@ import { Logo } from "@/components/Logo";
 import { getPlanDefinition, formatPrice } from "@/lib/plan-definitions";
 import { isCurrentUserSuperAdmin } from "@/lib/admin-access";
 
+const REMEMBER_EMAIL_KEY = "auth_remembered_email";
+
 const Auth = () => {
   const [searchParams] = useSearchParams();
   const selectedPlan = searchParams.get("plan");
   const billingPeriod = searchParams.get("billing") || "annual";
   const sessionStatus = searchParams.get("session");
 
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(() => {
+    if (typeof window === "undefined") return "";
+    return localStorage.getItem(REMEMBER_EMAIL_KEY) || "";
+  });
+  const [rememberEmail, setRememberEmail] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return !!localStorage.getItem(REMEMBER_EMAIL_KEY);
+  });
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
