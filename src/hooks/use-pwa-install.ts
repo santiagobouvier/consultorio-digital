@@ -17,12 +17,22 @@ const isStandalone = () => {
   );
 };
 
+const detectIOS = () => {
+  const ua = window.navigator.userAgent;
+  const iosNavigator = window.navigator as Navigator & { standalone?: boolean };
+  // iPad on iOS 13+ reports as Mac, detect via touch points
+  const iPadOS =
+    ua.includes("Macintosh") && (window.navigator.maxTouchPoints || 0) > 1;
+  return /iPhone|iPad|iPod/.test(ua) || iPadOS || iosNavigator.standalone !== undefined;
+};
+
 let deferredPrompt: BeforeInstallPromptEvent | null = null;
 
 export const usePWAInstall = () => {
   const [canInstall, setCanInstall] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
   const [isPreview, setIsPreview] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(display-mode: standalone)");
@@ -45,6 +55,7 @@ export const usePWAInstall = () => {
 
     setIsPreview(isPreviewHost(window.location.hostname));
     setIsInstalled(isStandalone());
+    setIsIOS(detectIOS());
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
     window.addEventListener("appinstalled", handleAppInstalled);
@@ -79,5 +90,5 @@ export const usePWAInstall = () => {
     return false;
   }, []);
 
-  return { canInstall, install, isInstalled, isPreview };
+  return { canInstall, install, isInstalled, isPreview, isIOS };
 };
