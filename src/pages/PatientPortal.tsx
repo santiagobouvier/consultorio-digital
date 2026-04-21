@@ -1027,6 +1027,15 @@ const PatientPortal = () => {
           </div>
         </header>
 
+        {/* Prominent install banner — visible on entry (all tabs) */}
+        <div className="px-4 lg:px-8 pt-3">
+          <PWAInstallBanner
+            variant="inline"
+            storageKey="pwa_install_banner_dismissed_patient"
+            autoOpenIOS
+          />
+        </div>
+
         <div className="lg:flex lg:gap-0 min-h-[calc(100vh-6rem)]">
           {/* Desktop Sidebar */}
           <aside className="hidden lg:flex lg:flex-col w-72 shrink-0 border-r border-border bg-card/80 backdrop-blur-sm sticky top-16 self-start h-[calc(100vh-4rem)]">
@@ -1113,8 +1122,6 @@ const PatientPortal = () => {
                 <p className="text-xs text-muted-foreground truncate">{branding.name}</p>
               </div>
             </div>
-
-            <PWAInstallBanner />
 
             {tabContent[tab]}
           </main>
