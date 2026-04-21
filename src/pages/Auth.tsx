@@ -140,17 +140,9 @@ const Auth = () => {
 
   // If user already has a session, redirect immediately (don't show the form)
   // Single listener — no duplicate onAuthStateChange
-  useEffect(() => {
-    let cancelled = false;
-    const checkExistingSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user && !cancelled) {
-        redirectByRole();
-      }
-    };
-    checkExistingSession();
-    return () => { cancelled = true; };
-  }, [redirectByRole]);
+  // NOTA: NO auto-redirigimos al detectar sesión activa. El usuario siempre
+  // debe iniciar sesión manualmente apretando el botón. Esto evita el comportamiento
+  // confuso de la PWA que entraba directo al dashboard sin pedir credenciales.
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -171,6 +163,12 @@ const Auth = () => {
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
+        // Persistir solo el email si tildaron "Recordar mi email" — nunca la sesión.
+        if (rememberEmail) {
+          localStorage.setItem(REMEMBER_EMAIL_KEY, email);
+        } else {
+          localStorage.removeItem(REMEMBER_EMAIL_KEY);
+        }
         toast.success("¡Bienvenido de nuevo!");
         await redirectByRole();
       }
