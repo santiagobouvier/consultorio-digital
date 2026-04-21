@@ -85,7 +85,7 @@ const LoadingPage = () => {
       
       <div className="flex flex-col items-center gap-8">
         {/* Logo con glow pulsante */}
-        <div className="logo-entrance glow-pulse rounded-full p-4 overflow-hidden flex items-center justify-center" style={{ backgroundColor: "hsl(180 12% 8%)" }}>
+        <div className="logo-entrance rounded-full p-4 overflow-hidden flex items-center justify-center" style={{ backgroundColor: "hsl(180 12% 8%)" }}>
           <img 
             src={logoLoading} 
             alt="Cargando..." 
