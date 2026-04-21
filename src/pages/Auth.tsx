@@ -5,6 +5,7 @@ import { lovable } from "@/integrations/lovable/index";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { ArrowLeft, Building2, Mail, Eye, EyeOff, Sparkles, CheckCircle2 } from "lucide-react";
 import { useHostnameBusiness } from "@/hooks/use-hostname-business";
@@ -12,13 +13,22 @@ import { Logo } from "@/components/Logo";
 import { getPlanDefinition, formatPrice } from "@/lib/plan-definitions";
 import { isCurrentUserSuperAdmin } from "@/lib/admin-access";
 
+const REMEMBER_EMAIL_KEY = "auth_remembered_email";
+
 const Auth = () => {
   const [searchParams] = useSearchParams();
   const selectedPlan = searchParams.get("plan");
   const billingPeriod = searchParams.get("billing") || "annual";
   const sessionStatus = searchParams.get("session");
 
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(() => {
+    if (typeof window === "undefined") return "";
+    return localStorage.getItem(REMEMBER_EMAIL_KEY) || "";
+  });
+  const [rememberEmail, setRememberEmail] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return !!localStorage.getItem(REMEMBER_EMAIL_KEY);
+  });
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
@@ -130,17 +140,9 @@ const Auth = () => {
 
   // If user already has a session, redirect immediately (don't show the form)
   // Single listener — no duplicate onAuthStateChange
-  useEffect(() => {
-    let cancelled = false;
-    const checkExistingSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user && !cancelled) {
-        redirectByRole();
-      }
-    };
-    checkExistingSession();
-    return () => { cancelled = true; };
-  }, [redirectByRole]);
+  // NOTA: NO auto-redirigimos al detectar sesión activa. El usuario siempre
+  // debe iniciar sesión manualmente apretando el botón. Esto evita el comportamiento
+  // confuso de la PWA que entraba directo al dashboard sin pedir credenciales.
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -161,6 +163,12 @@ const Auth = () => {
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
+        // Persistir solo el email si tildaron "Recordar mi email" — nunca la sesión.
+        if (rememberEmail) {
+          localStorage.setItem(REMEMBER_EMAIL_KEY, email);
+        } else {
+          localStorage.removeItem(REMEMBER_EMAIL_KEY);
+        }
         toast.success("¡Bienvenido de nuevo!");
         await redirectByRole();
       }
@@ -484,6 +492,22 @@ const Auth = () => {
                       </button>
                     </div>
                   </div>
+                  {!isSignUp && (
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="remember-email"
+                        checked={rememberEmail}
+                        onCheckedChange={(checked) => setRememberEmail(checked === true)}
+                        className="border-white/20 data-[state=checked]:bg-[hsl(176,80%,40%)] data-[state=checked]:border-[hsl(176,80%,40%)]"
+                      />
+                      <Label
+                        htmlFor="remember-email"
+                        className="text-xs text-white/60 cursor-pointer select-none"
+                      >
+                        Recordar mi email en este dispositivo
+                      </Label>
+                    </div>
+                  )}
                   <Button
                     type="submit"
                     className="w-full h-11 font-semibold text-white"
