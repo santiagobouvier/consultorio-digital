@@ -119,15 +119,25 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
       return;
     }
 
+    // Si ya verificamos activación para este business en una navegación previa,
+    // no repetimos el query.
+    if (activationCache.get(businessId) === true) {
+      setCheckingActivation(false);
+      setActivationChecked(true);
+      return;
+    }
+
     if (loading) return;
 
     if (status !== "trial") {
+      activationCache.set(businessId, true);
       setCheckingActivation(false);
       setActivationChecked(true);
       return;
     }
 
     if (hasSuccessfulSubscriptionRedirect) {
+      activationCache.set(businessId, true);
       setCheckingActivation(false);
       setActivationChecked(true);
       return;
@@ -145,6 +155,7 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
         if (cancelled) return;
 
         if (business?.is_demo) {
+          activationCache.set(businessId, true);
           setCheckingActivation(false);
           setActivationChecked(true);
           return;
@@ -152,6 +163,7 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
 
         // TESTING MODE — durante testing dejamos pasar a usuarios en trial
         // sin preapproval de MP. Revertir antes del lanzamiento.
+        activationCache.set(businessId, true);
         setCheckingActivation(false);
         setActivationChecked(true);
       } catch {
