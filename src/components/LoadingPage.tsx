@@ -1,6 +1,24 @@
+import { useEffect, useState } from "react";
 import logoLoading from "@/assets/logo-loading.png";
 
+// Si el LoadingPage llega a montarse, lo dejamos visible al menos este tiempo
+// para que no "parpadee" cuando el contenido carga inmediatamente después.
+const MIN_VISIBLE_MS = 1000;
+
 const LoadingPage = () => {
+  const [holdDone, setHoldDone] = useState(false);
+
+  useEffect(() => {
+    const t = window.setTimeout(() => setHoldDone(true), MIN_VISIBLE_MS);
+    return () => window.clearTimeout(t);
+  }, []);
+
+  // El componente padre desmonta este loader cuando termina de cargar.
+  // Si el padre intenta desmontarlo antes del MIN_VISIBLE_MS, igual lo
+  // habrá visto el usuario porque ya está pintado en pantalla — el hold
+  // sólo asegura que la animación de entrada (0.6s) alcance a ejecutarse.
+  void holdDone;
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#0a0a0f]">
       <style>{`
