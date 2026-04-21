@@ -27,9 +27,10 @@ const bootstrap = async () => {
       registrations.forEach((registration) => registration.unregister());
     });
   } else {
-    registerSW({
-      immediate: true,
-    });
+    // No usamos immediate:true ni callbacks que recarguen automáticamente.
+    // El nuevo SW se activará cuando el usuario cierre y vuelva a abrir la
+    // app — así evitamos recargas en medio del scroll o de una sesión activa.
+    registerSW();
 
     // Register push notification service worker
     if ("serviceWorker" in navigator) {

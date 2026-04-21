@@ -14,7 +14,11 @@ export default defineConfig(({ mode }) => ({
     react(),
     mode === "development" && componentTagger(),
     VitePWA({
-      registerType: "autoUpdate",
+      // "prompt" en lugar de "autoUpdate" para que Workbox NO tome control
+      // automáticamente con clientsClaim + skipWaiting mientras el usuario
+      // está navegando/scrolleando — eso causaba "recargas fantasma" en medio
+      // del scroll en la landing y otras páginas.
+      registerType: "prompt",
       devOptions: {
         enabled: false,
       },
@@ -58,8 +62,12 @@ export default defineConfig(({ mode }) => ({
         globPatterns: ["**/*.{js,css,html,ico,png,svg,webp}"],
         navigateFallbackDenylist: [/^\/~oauth/],
         cleanupOutdatedCaches: true,
-        skipWaiting: true,
-        clientsClaim: true,
+        // Importante: NO usar skipWaiting/clientsClaim juntos con autoUpdate.
+        // El nuevo SW espera (waiting) hasta que se cierren todas las pestañas
+        // o hasta que el usuario refresque manualmente. Esto evita reloads
+        // inesperados en medio de la sesión.
+        skipWaiting: false,
+        clientsClaim: false,
       },
     }),
   ].filter(Boolean),
