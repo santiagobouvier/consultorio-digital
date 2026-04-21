@@ -11,19 +11,35 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle2 } from "lucide-react";
 
 const STORAGE_KEY = "pwa_install_celebrated";
+const EVENT_NAME = "pwa:show-install-celebration";
+
+/**
+ * Triggers the celebration modal manually. Used as a fallback when the native
+ * `appinstalled` event does not fire (some browsers / PWA contexts).
+ * Respects the same once-per-device localStorage flag.
+ */
+export const triggerPWAInstalledCelebration = () => {
+  if (typeof window === "undefined") return;
+  if (localStorage.getItem(STORAGE_KEY) === "true") return;
+  window.dispatchEvent(new CustomEvent(EVENT_NAME));
+};
 
 export const PWAInstalledCelebrationModal = () => {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    const handleAppInstalled = () => {
+    const showOnce = () => {
       if (localStorage.getItem(STORAGE_KEY) === "true") return;
       localStorage.setItem(STORAGE_KEY, "true");
       setOpen(true);
     };
 
-    window.addEventListener("appinstalled", handleAppInstalled);
-    return () => window.removeEventListener("appinstalled", handleAppInstalled);
+    window.addEventListener("appinstalled", showOnce);
+    window.addEventListener(EVENT_NAME, showOnce);
+    return () => {
+      window.removeEventListener("appinstalled", showOnce);
+      window.removeEventListener(EVENT_NAME, showOnce);
+    };
   }, []);
 
   return (

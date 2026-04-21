@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { triggerPWAInstalledCelebration } from "@/components/PWAInstalledCelebrationModal";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -84,6 +85,12 @@ export const usePWAInstall = () => {
       deferredPrompt = null;
       setCanInstall(false);
       setIsInstalled(true);
+      // Fallback: some browsers (notably Android Chrome in certain configs)
+      // don't reliably fire `appinstalled`. Trigger the celebration modal
+      // after a short delay so the user always sees confirmation.
+      window.setTimeout(() => {
+        triggerPWAInstalledCelebration();
+      }, 3000);
       return true;
     }
 
