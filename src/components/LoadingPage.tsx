@@ -89,7 +89,7 @@ const LoadingPage = () => {
           <img 
             src={logoLoading} 
             alt="Cargando..." 
-            className="w-full h-full object-cover"
+            className="w-[140%] h-[140%] object-cover"
           />
         </div>
         
