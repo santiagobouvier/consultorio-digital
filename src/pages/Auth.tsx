@@ -492,6 +492,22 @@ const Auth = () => {
                       </button>
                     </div>
                   </div>
+                  {!isSignUp && (
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="remember-email"
+                        checked={rememberEmail}
+                        onCheckedChange={(checked) => setRememberEmail(checked === true)}
+                        className="border-white/20 data-[state=checked]:bg-[hsl(176,80%,40%)] data-[state=checked]:border-[hsl(176,80%,40%)]"
+                      />
+                      <Label
+                        htmlFor="remember-email"
+                        className="text-xs text-white/60 cursor-pointer select-none"
+                      >
+                        Recordar mi email en este dispositivo
+                      </Label>
+                    </div>
+                  )}
                   <Button
                     type="submit"
                     className="w-full h-11 font-semibold text-white"
