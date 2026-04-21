@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { clearServiceWorkerCaches } from "@/lib/session-recovery";
 import { SessionExpiredDialog, triggerSessionExpired } from "@/components/SessionExpiredDialog";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { PWAInstalledCelebrationModal } from "@/components/PWAInstalledCelebrationModal";
 
 
 // Lazy load all pages for optimal performance (code-split per route)
@@ -150,6 +151,7 @@ const App = () => {
         <Toaster />
         <Sonner />
         <SessionExpiredDialog />
+        <PWAInstalledCelebrationModal />
         <BrowserRouter>
           <AuthProvider>
             <Suspense fallback={null}>
