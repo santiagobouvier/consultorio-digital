@@ -85,11 +85,11 @@ const LoadingPage = () => {
       
       <div className="flex flex-col items-center gap-8">
         {/* Logo con glow pulsante */}
-        <div className="logo-entrance glow-pulse rounded-full p-4">
+        <div className="logo-entrance glow-pulse rounded-full p-4 bg-[#0a0a0f] overflow-hidden flex items-center justify-center">
           <img 
             src={logoLoading} 
             alt="Cargando..." 
-            className="w-20 h-20 object-contain"
+            className="w-20 h-20 object-contain rounded-full"
           />
         </div>
         
