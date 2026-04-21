@@ -35,10 +35,10 @@ const LoadingPage = () => {
 
         @keyframes glowPulse {
           0%, 100% { 
-            box-shadow: 0 0 20px rgba(0, 165, 160, 0.2); 
+            box-shadow: 0 0 0 0 hsl(180 12% 8% / 0); 
           }
           50% { 
-            box-shadow: 0 0 40px rgba(0, 165, 160, 0.5); 
+            box-shadow: 0 0 0 0 hsl(180 12% 8% / 0); 
           }
         }
 
