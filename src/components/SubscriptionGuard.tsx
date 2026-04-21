@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useSubscriptionStatus } from "@/hooks/use-subscription-status";
@@ -14,14 +14,32 @@ interface SubscriptionGuardProps {
   children: ReactNode;
 }
 
+// Caché a nivel módulo: businessId resuelto por userId.
+// Persiste entre navegaciones a rutas protegidas (cada <Protected> remonta su
+// SubscriptionGuard, pero no queremos re-ejecutar el RPC cada vez).
+// Se invalida al cambiar de userId o al hacer signOut (handler abajo).
+const businessIdCache = new Map<string, string | null>();
+const activationCache = new Map<string, boolean>(); // businessId → ya verificado
+
+// Limpiar cachés al cerrar sesión (un único listener a nivel módulo).
+supabase.auth.onAuthStateChange((event) => {
+  if (event === "SIGNED_OUT") {
+    businessIdCache.clear();
+    activationCache.clear();
+  }
+});
+
 const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user, isSuperAdmin, isReady: authReady } = useAuth();
-  const [businessId, setBusinessId] = useState<string | null>(null);
-  const [businessLoading, setBusinessLoading] = useState(true);
-  const [checkingActivation, setCheckingActivation] = useState(true);
-  const [activationChecked, setActivationChecked] = useState(false);
+  const cachedBusinessId = user ? businessIdCache.get(user.id) : undefined;
+  const cachedActivation = cachedBusinessId ? activationCache.get(cachedBusinessId) : undefined;
+  const [businessId, setBusinessId] = useState<string | null>(cachedBusinessId ?? null);
+  const [businessLoading, setBusinessLoading] = useState(cachedBusinessId === undefined);
+  const [checkingActivation, setCheckingActivation] = useState(cachedActivation !== true);
+  const [activationChecked, setActivationChecked] = useState(cachedActivation === true);
+  const lastResolvedUserId = useRef<string | null>(cachedBusinessId !== undefined && user ? user.id : null);
   const hasSuccessfulSubscriptionRedirect = searchParams.get("subscription") === "success";
 
   // Resolver businessId una vez que la auth está lista.
@@ -47,6 +65,15 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
       return;
     }
 
+    // Si ya resolvimos el businessId para este usuario en una navegación previa,
+    // no volvemos a pegarle al RPC — solo restauramos el estado desde el caché.
+    if (lastResolvedUserId.current === user.id && businessIdCache.has(user.id)) {
+      const cached = businessIdCache.get(user.id) ?? null;
+      setBusinessId(cached);
+      setBusinessLoading(false);
+      return;
+    }
+
     // Usuario regular: obtener su business via RPC
     let cancelled = false;
     (async () => {
@@ -58,7 +85,10 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
           triggerSessionExpired();
           return;
         }
-        setBusinessId((data as string | null) || null);
+        const resolved = (data as string | null) || null;
+        businessIdCache.set(user.id, resolved);
+        lastResolvedUserId.current = user.id;
+        setBusinessId(resolved);
       } catch (err) {
         if (cancelled) return;
         console.error("SubscriptionGuard: excepción obteniendo business", err);
