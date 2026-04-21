@@ -88,8 +88,10 @@ export const usePWAInstall = () => {
       // Fallback: some browsers (notably Android Chrome in certain configs)
       // don't reliably fire `appinstalled`. Trigger the celebration modal
       // after a short delay so the user always sees confirmation.
+      // Use force=true so reinstalls (where the localStorage flag persists)
+      // also show the modal — the user explicitly asked to install.
       window.setTimeout(() => {
-        triggerPWAInstalledCelebration();
+        triggerPWAInstalledCelebration(true);
       }, 3000);
       return true;
     }
