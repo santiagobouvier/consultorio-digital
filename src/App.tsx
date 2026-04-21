@@ -98,50 +98,28 @@ const isOnProtectedRoute = () =>
 
 const App = () => {
   useEffect(() => {
-    // 1) Reaccionar a cambios de auth: limpiar caches al cerrar sesión y
-    //    expulsar a /auth?session=expired si el token caducó en una ruta protegida.
+    // Único responsable de reaccionar a cambios de sesión a nivel app:
+    // - SIGNED_OUT: limpiar caches del SW.
+    // - El refresh automático del token lo maneja supabase-js internamente.
+    //   No usamos heartbeat ni revalidación en visibilitychange porque eso
+    //   provocaba "recargas fantasma" tras inactividad o al cambiar de pestaña.
+    // - No actuamos en TOKEN_REFRESHED ni USER_UPDATED — son eventos normales
+    //   y dispararlos con redirects rompía la navegación entre rutas protegidas.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_OUT") {
         void clearServiceWorkerCaches();
         return;
       }
-      // Si Supabase no pudo refrescar el token y emitió un evento sin sesión
-      // mientras el usuario está en una ruta protegida, mostrar dialog amigable
-      // en vez de hacer hard reset (que se sentía como un bug).
-      if ((event === "TOKEN_REFRESHED" || event === "USER_UPDATED") && !session && isOnProtectedRoute()) {
+      // Caso borde: el token vence y Supabase no pudo refrescarlo.
+      // Solo actuamos si el usuario realmente está en una ruta protegida
+      // y no hay sesión disponible. Mostramos dialog amigable, sin hard reset.
+      if (event === "TOKEN_REFRESHED" && !session && isOnProtectedRoute()) {
         triggerSessionExpired();
       }
     });
 
-    // 2) Heartbeat de sesión: cada 4 minutos pedimos getSession() para mantener
-    //    activo el refresh automático aunque el usuario no interactúe.
-    //    Si la sesión ya no existe estando en una ruta protegida, mostrar dialog.
-    const heartbeat = window.setInterval(async () => {
-      try {
-        const { data, error } = await supabase.auth.getSession();
-        if ((error || !data.session) && isOnProtectedRoute()) {
-          triggerSessionExpired();
-        }
-      } catch {
-        // silencioso: si falla el heartbeat no rompemos la app
-      }
-    }, 4 * 60 * 1000);
-
-    // 3) Al recuperar visibilidad de la pestaña, validar sesión inmediatamente.
-    const onVisibilityChange = () => {
-      if (document.visibilityState !== "visible") return;
-      void supabase.auth.getSession().then(({ data, error }) => {
-        if ((error || !data.session) && isOnProtectedRoute()) {
-          triggerSessionExpired();
-        }
-      });
-    };
-    document.addEventListener("visibilitychange", onVisibilityChange);
-
     return () => {
       subscription.unsubscribe();
-      window.clearInterval(heartbeat);
-      document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, []);
 
