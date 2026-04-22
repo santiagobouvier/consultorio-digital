@@ -125,6 +125,28 @@ export const SaasAdminLayout = ({ activeSection, onSectionChange, children }: Sa
           </div>
         )}
       </main>
+
+      {/* ── Footer minimalista ── */}
+      <footer className="border-t border-slate-800/60 bg-[#0e1417]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex items-center justify-center gap-2.5">
+          <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-slate-600">
+            Powered by
+          </span>
+          <a
+            href="https://digitalbuilders.uy"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="opacity-60 hover:opacity-100 transition-opacity"
+            title="Digital Builders"
+          >
+            <img
+              src={digitalBuildersLogo}
+              alt="Digital Builders"
+              className="h-5 w-auto object-contain"
+            />
+          </a>
+        </div>
+      </footer>
     </div>
   );
 };
