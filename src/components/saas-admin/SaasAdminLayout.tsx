@@ -125,7 +125,7 @@ export const SaasAdminLayout = ({ activeSection, onSectionChange, children }: Sa
 };
 
 // ── Home dashboard with floating module blocks ──
-const HomeDashboard = ({ onSectionChange, metrics }: { onSectionChange: (s: SaasSection) => void; metrics: SaasMetrics }) => {
+const HomeDashboard = ({ onSectionChange }: { onSectionChange: (s: SaasSection) => void }) => {
   return (
     <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 lg:py-16">
       {/* Subtle ambient glow */}
@@ -143,14 +143,6 @@ const HomeDashboard = ({ onSectionChange, metrics }: { onSectionChange: (s: Saas
           <p className="mt-3 text-sm text-slate-400">
             Elegí un módulo para gestionar la plataforma de consultorios.
           </p>
-        </div>
-
-        {/* Quick metrics strip */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-10">
-          <QuickStat label="MRR Estimado" value={metrics.estimatedRevenue} prefix="$" icon={TrendingUp} accent="teal" />
-          <QuickStat label="Consultorios" value={metrics.totalBusinesses} icon={Building2} accent="blue" />
-          <QuickStat label="Profesionales" value={metrics.totalProfessionals} icon={UserCog} accent="violet" />
-          <QuickStat label="Pacientes" value={metrics.totalPatients} icon={Users} accent="cyan" />
         </div>
 
         {/* Module blocks */}
