@@ -1,15 +1,7 @@
 import { useNavigate } from "react-router-dom";
-import { Building2, DollarSign, Users, Settings2, Server, ArrowLeft, Stethoscope, TrendingUp, UserCog, ChevronRight, type LucideIcon } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Building2, DollarSign, Users, Settings2, Server, ArrowLeft, Stethoscope, BarChart3, ChevronRight, type LucideIcon } from "lucide-react";
 
-export type SaasSection = "home" | "consultorios" | "finanzas" | "usuarios" | "planes" | "sistema";
-
-interface SaasMetrics {
-  estimatedRevenue: number;
-  totalBusinesses: number;
-  totalProfessionals: number;
-  totalPatients: number;
-}
+export type SaasSection = "home" | "consultorios" | "finanzas" | "usuarios" | "planes" | "sistema" | "estadisticas";
 
 interface ModuleItem {
   id: SaasSection;
@@ -22,6 +14,7 @@ interface ModuleItem {
 const MODULES: ModuleItem[] = [
   { id: "consultorios", label: "Consultorios", description: "Gestión de clínicas, profesionales y pacientes.", icon: Building2, accent: "teal" },
   { id: "finanzas",     label: "Finanzas",     description: "Ingresos, MRR y suscripciones activas.",         icon: DollarSign, accent: "emerald" },
+  { id: "estadisticas", label: "Estadísticas", description: "Métricas, crecimiento y distribución de planes.", icon: BarChart3, accent: "blue" },
   { id: "usuarios",     label: "Usuarios",     description: "Cuentas, roles y permisos globales.",            icon: Users, accent: "blue" },
   { id: "planes",       label: "Planes",       description: "Configuración de planes y límites.",             icon: Settings2, accent: "violet" },
   { id: "sistema",      label: "Sistema",      description: "Salud técnica, logs y configuración global.",    icon: Server, accent: "cyan" },
@@ -30,38 +23,19 @@ const MODULES: ModuleItem[] = [
 const SECTION_LABELS: Record<Exclude<SaasSection, "home">, string> = {
   consultorios: "Consultorios",
   finanzas: "Finanzas",
+  estadisticas: "Estadísticas",
   usuarios: "Usuarios",
   planes: "Planes",
   sistema: "Sistema",
 };
 
-// Animated counter for metric values
-const AnimatedNumber = ({ value }: { value: number }) => {
-  const [display, setDisplay] = useState(0);
-  useEffect(() => {
-    const duration = 600;
-    const start = performance.now();
-    const from = display;
-    const step = (now: number) => {
-      const t = Math.min((now - start) / duration, 1);
-      const eased = 1 - Math.pow(1 - t, 3);
-      setDisplay(Math.round(from + (value - from) * eased));
-      if (t < 1) requestAnimationFrame(step);
-    };
-    requestAnimationFrame(step);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value]);
-  return <>{display.toLocaleString("es-UY")}</>;
-};
-
 interface SaasAdminLayoutProps {
   activeSection: SaasSection;
   onSectionChange: (s: SaasSection) => void;
-  metrics: SaasMetrics;
   children: React.ReactNode;
 }
 
-export const SaasAdminLayout = ({ activeSection, onSectionChange, metrics, children }: SaasAdminLayoutProps) => {
+export const SaasAdminLayout = ({ activeSection, onSectionChange, children }: SaasAdminLayoutProps) => {
   const navigate = useNavigate();
   const isHome = activeSection === "home";
   const currentModule = !isHome ? MODULES.find(m => m.id === activeSection) : undefined;
