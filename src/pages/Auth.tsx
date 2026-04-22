@@ -13,6 +13,7 @@ import { getPlanDefinition, formatPrice } from "@/lib/plan-definitions";
 import { isCurrentUserSuperAdmin } from "@/lib/admin-access";
 import logoWhite from "@/assets/logo-consultorio-digital-white.png";
 import authBgConsultorio from "@/assets/auth-bg-consultorio.jpg";
+import authBgConsultorioMobile from "@/assets/auth-bg-consultorio-mobile.jpg";
 
 const REMEMBER_EMAIL_KEY = "auth_remembered_email";
 
@@ -298,12 +299,20 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen lg:flex lg:items-center lg:justify-center bg-[hsl(180,15%,4%)]">
-      {/* Imagen de fondo de consultorio (opacada) */}
+      {/* Imagen de fondo de consultorio (opacada) — vertical en mobile, horizontal en desktop */}
       <div
-        className="fixed inset-0 pointer-events-none bg-cover bg-center"
+        className="fixed inset-0 pointer-events-none bg-cover bg-center lg:hidden"
+        style={{
+          backgroundImage: `url(${authBgConsultorioMobile})`,
+          opacity: 0.12,
+        }}
+        aria-hidden
+      />
+      <div
+        className="fixed inset-0 pointer-events-none bg-cover bg-center hidden lg:block"
         style={{
           backgroundImage: `url(${authBgConsultorio})`,
-          opacity: 0.18,
+          opacity: 0.12,
         }}
         aria-hidden
       />
