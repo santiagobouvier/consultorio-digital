@@ -627,7 +627,7 @@ const Auth = () => {
 
       {/* Footer "Powered by" — transparente, minimalista, igual al panel SaaS Admin pero más chico */}
       <footer className="relative z-10 w-full">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-center gap-2">
+        <div className="max-w-7xl mx-auto px-4 pt-3 pb-10 flex items-center justify-center gap-2">
           <span className="text-[9px] font-medium uppercase tracking-[0.2em] text-white/30">
             Powered by
           </span>
