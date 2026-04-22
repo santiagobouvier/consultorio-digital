@@ -865,6 +865,7 @@ const Statistics = () => {
             )}
           </CardContent>
         </Card>
+        </div>
       </div>
     </div>
   );
