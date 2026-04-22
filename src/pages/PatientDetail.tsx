@@ -668,6 +668,12 @@ const PatientDetail = () => {
                 appointments={appointments.map((a) => ({ id: a.id, start_at: a.start_at }))}
               />
             )}
+            {patient && (
+              <PatientDocuments
+                patientId={patient.id}
+                businessId={patient.business_id}
+              />
+            )}
           </div>
           <div className="lg:col-span-1 lg:sticky lg:top-6">
             {paymentsSection}
@@ -677,16 +683,17 @@ const PatientDetail = () => {
         {/* Mobile / tablet: tabs to keep payments accessible without scrolling past appointments */}
         <div className="lg:hidden">
           <Tabs defaultValue="info" className="w-full">
-            <TabsList className="grid grid-cols-4 w-full h-11 rounded-xl">
-              <TabsTrigger value="info" className="rounded-lg">Info</TabsTrigger>
-              <TabsTrigger value="appointments" className="rounded-lg gap-1">
+            <TabsList className="grid grid-cols-5 w-full h-11 rounded-xl">
+              <TabsTrigger value="info" className="rounded-lg text-xs sm:text-sm">Info</TabsTrigger>
+              <TabsTrigger value="appointments" className="rounded-lg gap-1 text-xs sm:text-sm">
                 Citas
                 {appointments.length > 0 && (
                   <span className="text-xs font-semibold opacity-70">({appointments.length})</span>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="notes" className="rounded-lg">Notas</TabsTrigger>
-              <TabsTrigger value="payments" className="rounded-lg gap-1">
+              <TabsTrigger value="notes" className="rounded-lg text-xs sm:text-sm">Notas</TabsTrigger>
+              <TabsTrigger value="docs" className="rounded-lg text-xs sm:text-sm">Docs</TabsTrigger>
+              <TabsTrigger value="payments" className="rounded-lg gap-1 text-xs sm:text-sm">
                 Pagos
                 {payments.length > 0 && (
                   <span className="text-xs font-semibold opacity-70">({payments.length})</span>
@@ -705,6 +712,14 @@ const PatientDetail = () => {
                   patientId={patient.id}
                   businessId={patient.business_id}
                   appointments={appointments.map((a) => ({ id: a.id, start_at: a.start_at }))}
+                />
+              )}
+            </TabsContent>
+            <TabsContent value="docs" className="mt-4">
+              {patient && (
+                <PatientDocuments
+                  patientId={patient.id}
+                  businessId={patient.business_id}
                 />
               )}
             </TabsContent>
