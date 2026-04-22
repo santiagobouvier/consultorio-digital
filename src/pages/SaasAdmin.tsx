@@ -582,58 +582,73 @@ const SaasAdmin = () => {
 
             {/* Mobile cards / Desktop table */}
             {isMobile ? (
-              <div className="space-y-3 p-4">
+              <div className="divide-y divide-border/50">
                 {filteredBusinesses.map(business => {
                   const cl = business.planCode === "custom" ? { maxProfessionals: business.customMaxProfessionals ?? null, maxPatients: business.customMaxPatients ?? null } : undefined;
                   const config = getPlanConfig(business.planCode, cl);
                   const profStatus = getUsageStatus(business.professionalsCount, config.maxProfessionals);
                   const patientStatus = getUsageStatus(business.patientsCount, config.maxPatients);
+                  const worstStatus =
+                    profStatus.status === "danger" || patientStatus.status === "danger"
+                      ? "danger"
+                      : profStatus.status === "warning" || patientStatus.status === "warning"
+                        ? "warning"
+                        : "ok";
+                  const statusDot =
+                    !business.isActive
+                      ? "bg-muted-foreground/40"
+                      : worstStatus === "danger"
+                        ? "bg-destructive"
+                        : worstStatus === "warning"
+                          ? "bg-amber-500"
+                          : "bg-emerald-500";
                   return (
-                    <Card key={business.id} className="overflow-hidden border-border/60">
-                      <CardContent className="p-4 space-y-3">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="font-semibold text-base leading-tight">{business.name}</h3>
-                          {business.isDemo && <Badge variant="outline" className="text-[10px] border-amber-500 text-amber-600">Demo</Badge>}
+                    <div key={business.id} className="px-4 py-3.5 flex items-center gap-3 active:bg-muted/40 transition-colors">
+                      {/* Status dot + name */}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${statusDot}`} />
+                          <h3 className="font-medium text-sm text-foreground truncate">{business.name}</h3>
+                          {business.isDemo && (
+                            <span className="text-[9px] uppercase tracking-wider text-amber-600 font-semibold shrink-0">Demo</span>
+                          )}
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="secondary" className="text-xs">{getPlanName(business.planCode)}</Badge>
-                          <span className="text-xs text-muted-foreground truncate">{business.ownerEmail}</span>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground tabular-nums">
+                          <span className="truncate">{getPlanName(business.planCode)}</span>
+                          <span className="text-muted-foreground/40">·</span>
+                          <span className="shrink-0">
+                            {business.professionalsCount}/{config.maxProfessionals ?? "∞"} prof
+                          </span>
+                          <span className="text-muted-foreground/40">·</span>
+                          <span className="shrink-0">
+                            {business.patientsCount}/{config.maxPatients ?? "∞"} pac
+                          </span>
                         </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          {[
-                            { label: "Profs", count: business.professionalsCount, max: config.maxProfessionals, status: profStatus },
-                            { label: "Pac", count: business.patientsCount, max: config.maxPatients, status: patientStatus },
-                          ].map(({ label, count, max, status }) => (
-                            <div key={label} className={`p-2.5 rounded-lg text-center ${status.status === "danger" ? "bg-destructive/10" : status.status === "warning" ? "bg-amber-500/10" : "bg-muted/60"}`}>
-                              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">{label}</p>
-                              <p className={`font-bold text-lg tabular-nums ${status.status === "danger" ? "text-destructive" : status.status === "warning" ? "text-amber-600" : "text-foreground"}`}>
-                                {count}<span className="text-sm font-normal text-muted-foreground">/{max ?? "∞"}</span>
-                              </p>
-                            </div>
-                          ))}
-                        </div>
-                        <div className="flex items-center justify-between pt-2 border-t border-border/50">
-                          <div className="flex gap-1">
-                            {[
-                              { icon: Eye, action: () => enterBusiness(business.id), tip: "Ver" },
-                              { icon: Pencil, action: () => openEditModal(business), tip: "Editar" },
-                              { icon: Zap, action: () => openActivateModal(business), tip: "Activar" },
-                              { icon: UserCog, action: () => loadProfessionals(business), tip: "Equipo" },
-                              { icon: Globe, action: () => openPrivateClinicModal(business), tip: "Dominio" },
-                            ].map(({ icon: I, action, tip }) => (
-                              <Button key={tip} variant="ghost" size="icon" className="h-9 w-9" onClick={action} title={tip}><I className="h-4 w-4" /></Button>
-                            ))}
-                          </div>
-                          <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive hover:bg-destructive/10" onClick={() => openDeleteModal(business)}>
-                            <Trash2 className="h-4 w-4" />
+                      </div>
+
+                      {/* Single action menu */}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 text-muted-foreground">
+                            <MoreHorizontal className="h-5 w-5" />
                           </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-52">
+                          <DropdownMenuItem onClick={() => enterBusiness(business.id)}><LogIn className="h-4 w-4 mr-2" />Entrar</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => loadProfessionals(business)}><UserCog className="h-4 w-4 mr-2" />Ver equipo</DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => openEditModal(business)}><Pencil className="h-4 w-4 mr-2" />Editar</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => openActivateModal(business)}><Zap className="h-4 w-4 mr-2" />Activar suscripción</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => openPrivateClinicModal(business)}><Globe className="h-4 w-4 mr-2" />Dominio</DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => openDeleteModal(business)} className="text-destructive focus:text-destructive focus:bg-destructive/10"><Trash2 className="h-4 w-4 mr-2" />Eliminar</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   );
                 })}
                 {filteredBusinesses.length === 0 && (
-                  <div className="text-center py-12">
+                  <div className="text-center py-16 px-4">
                     <Building2 className="h-10 w-10 mx-auto text-muted-foreground/40 mb-3" />
                     <p className="font-medium text-muted-foreground">{hasActiveFilters ? "Sin resultados" : "Sin consultorios"}</p>
                   </div>
