@@ -390,6 +390,28 @@ const Auth = () => {
           </div>
         )}
 
+        {/* Logo Consultorio Digital — SOLO mobile y tablet, justo arriba del card */}
+        <div className="lg:hidden flex justify-center mb-2" aria-hidden>
+          <div className="relative animate-float-soft" style={{ willChange: "transform" }}>
+            <div
+              className="absolute inset-0 -z-10 blur-2xl opacity-30"
+              style={{
+                background:
+                  "radial-gradient(ellipse at center, hsla(176,80%,40%,0.4), transparent 75%)",
+              }}
+            />
+            <img
+              src={logoWhite}
+              alt=""
+              className="h-40 sm:h-48 w-auto object-contain select-none"
+              draggable={false}
+              decoding="async"
+              loading="eager"
+              style={{ filter: "drop-shadow(0 12px 28px rgba(0,165,160,0.2))" }}
+            />
+          </div>
+        </div>
+
         <div
           className="w-full rounded-2xl border border-white/10 shadow-2xl"
           style={{
