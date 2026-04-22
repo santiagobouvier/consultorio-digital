@@ -1,8 +1,8 @@
 import { useNavigate } from "react-router-dom";
-import { Building2, DollarSign, Users, Settings2, Server, ArrowLeft, Activity, TrendingUp, UserCog, type LucideIcon } from "lucide-react";
+import { Building2, DollarSign, Users, Settings2, Server, ArrowLeft, Stethoscope, TrendingUp, UserCog, ChevronRight, type LucideIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 
-export type SaasSection = "consultorios" | "finanzas" | "usuarios" | "planes" | "sistema";
+export type SaasSection = "home" | "consultorios" | "finanzas" | "usuarios" | "planes" | "sistema";
 
 interface SaasMetrics {
   estimatedRevenue: number;
@@ -11,19 +11,29 @@ interface SaasMetrics {
   totalPatients: number;
 }
 
-interface NavItem {
+interface ModuleItem {
   id: SaasSection;
   label: string;
+  description: string;
   icon: LucideIcon;
+  accent: keyof typeof ACCENTS;
 }
 
-const NAV_ITEMS: NavItem[] = [
-  { id: "consultorios", label: "Consultorios", icon: Building2 },
-  { id: "finanzas", label: "Finanzas", icon: DollarSign },
-  { id: "usuarios", label: "Usuarios", icon: Users },
-  { id: "planes", label: "Planes", icon: Settings2 },
-  { id: "sistema", label: "Sistema", icon: Server },
+const MODULES: ModuleItem[] = [
+  { id: "consultorios", label: "Consultorios", description: "Gestión de clínicas, profesionales y pacientes.", icon: Building2, accent: "teal" },
+  { id: "finanzas",     label: "Finanzas",     description: "Ingresos, MRR y suscripciones activas.",         icon: DollarSign, accent: "emerald" },
+  { id: "usuarios",     label: "Usuarios",     description: "Cuentas, roles y permisos globales.",            icon: Users, accent: "blue" },
+  { id: "planes",       label: "Planes",       description: "Configuración de planes y límites.",             icon: Settings2, accent: "violet" },
+  { id: "sistema",      label: "Sistema",      description: "Salud técnica, logs y configuración global.",    icon: Server, accent: "cyan" },
 ];
+
+const SECTION_LABELS: Record<Exclude<SaasSection, "home">, string> = {
+  consultorios: "Consultorios",
+  finanzas: "Finanzas",
+  usuarios: "Usuarios",
+  planes: "Planes",
+  sistema: "Sistema",
+};
 
 // Animated counter for metric values
 const AnimatedNumber = ({ value }: { value: number }) => {
@@ -53,101 +63,152 @@ interface SaasAdminLayoutProps {
 
 export const SaasAdminLayout = ({ activeSection, onSectionChange, metrics, children }: SaasAdminLayoutProps) => {
   const navigate = useNavigate();
+  const isHome = activeSection === "home";
+  const currentModule = !isHome ? MODULES.find(m => m.id === activeSection) : undefined;
 
   return (
-    <div className="dark min-h-screen flex bg-[#0a0a0f] text-slate-100">
-      {/* ── Sidebar ── */}
-      <aside className="w-20 lg:w-60 shrink-0 bg-[#08080d] border-r border-slate-800/80 flex flex-col fixed h-screen z-40">
-        {/* Logo / brand */}
-        <div className="h-20 border-b border-slate-800/80 flex items-center justify-center lg:justify-start lg:px-5 gap-3">
-          <div className="h-10 w-10 rounded-lg bg-teal-500/15 border border-teal-500/30 flex items-center justify-center shadow-[0_0_20px_-5px_rgba(0,165,160,0.5)]">
-            <Activity className="h-5 w-5 text-teal-400" />
-          </div>
-          <div className="hidden lg:block">
-            <p className="text-xs font-mono uppercase tracking-[0.2em] text-teal-400/80">SaaS</p>
-            <p className="text-sm font-bold text-white -mt-0.5">Control</p>
+    <div className="dark min-h-screen flex flex-col bg-[#0e1417] text-slate-100">
+      {/* ── Top header (always visible) ── */}
+      <header className="sticky top-0 z-30 bg-[#0e1417]/90 backdrop-blur-md border-b border-slate-800/60">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+          {/* Brand — clickable home */}
+          <button
+            onClick={() => onSectionChange("home")}
+            className="flex items-center gap-3 group rounded-lg -ml-1 px-1 py-1 hover:bg-slate-800/40 transition-colors"
+            title="Ir al panel principal"
+          >
+            <div className="h-9 w-9 rounded-lg bg-teal-500/10 border border-teal-500/25 flex items-center justify-center">
+              <Stethoscope className="h-4 w-4 text-teal-400" />
+            </div>
+            <div className="text-left leading-tight">
+              <p className="text-[10px] font-medium uppercase tracking-[0.18em] text-slate-500">Consultorio Digital</p>
+              <p className="text-sm font-semibold text-slate-100 -mt-0.5">Panel de administración</p>
+            </div>
+          </button>
+
+          {/* Breadcrumb + back */}
+          <div className="flex items-center gap-2">
+            {!isHome && currentModule && (
+              <>
+                <div className="hidden sm:flex items-center gap-1.5 text-xs text-slate-400 mr-2">
+                  <button
+                    onClick={() => onSectionChange("home")}
+                    className="hover:text-slate-100 transition-colors"
+                  >
+                    Panel
+                  </button>
+                  <ChevronRight className="h-3.5 w-3.5 text-slate-600" />
+                  <span className="text-slate-200 font-medium">{currentModule.label}</span>
+                </div>
+                <button
+                  onClick={() => onSectionChange("home")}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-slate-300 bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60 hover:text-white transition-colors"
+                >
+                  <ArrowLeft className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Volver al panel</span>
+                  <span className="sm:hidden">Volver</span>
+                </button>
+              </>
+            )}
+            {isHome && (
+              <button
+                onClick={() => navigate("/")}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-slate-400 hover:text-slate-100 hover:bg-slate-800/60 transition-colors"
+                title="Salir del panel"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Salir</span>
+              </button>
+            )}
           </div>
         </div>
+      </header>
 
-        {/* Nav */}
-        <nav className="flex-1 py-4 px-2 lg:px-3 space-y-1 overflow-y-auto">
-          {NAV_ITEMS.map(item => {
-            const Icon = item.icon;
-            const active = activeSection === item.id;
+      {/* ── Main area ── */}
+      <main className="flex-1 w-full">
+        {isHome ? (
+          <HomeDashboard onSectionChange={onSectionChange} metrics={metrics} />
+        ) : (
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+            {/* Module title */}
+            {currentModule && (
+              <div className="mb-6 flex items-center gap-3">
+                <div className={`h-10 w-10 rounded-lg flex items-center justify-center bg-slate-900/60 border border-slate-800 ${ACCENTS[currentModule.accent].icon}`}>
+                  <currentModule.icon className="h-5 w-5" />
+                </div>
+                <div>
+                  <h1 className="text-xl font-semibold text-slate-100 leading-tight">{currentModule.label}</h1>
+                  <p className="text-xs text-slate-500">{currentModule.description}</p>
+                </div>
+              </div>
+            )}
+            {children}
+          </div>
+        )}
+      </main>
+    </div>
+  );
+};
+
+// ── Home dashboard with floating module blocks ──
+const HomeDashboard = ({ onSectionChange, metrics }: { onSectionChange: (s: SaasSection) => void; metrics: SaasMetrics }) => {
+  return (
+    <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 lg:py-16">
+      {/* Subtle ambient glow */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 h-72 w-[42rem] bg-teal-500/5 blur-3xl rounded-full" />
+      </div>
+
+      <div className="relative">
+        {/* Hero */}
+        <div className="text-center max-w-2xl mx-auto mb-10 lg:mb-14">
+          <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-teal-400/80 mb-3">Panel principal</p>
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-semibold text-slate-100 tracking-tight">
+            Bienvenido al centro de control
+          </h1>
+          <p className="mt-3 text-sm text-slate-400">
+            Elegí un módulo para gestionar la plataforma de consultorios.
+          </p>
+        </div>
+
+        {/* Quick metrics strip */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-10">
+          <QuickStat label="MRR Estimado" value={metrics.estimatedRevenue} prefix="$" icon={TrendingUp} accent="teal" />
+          <QuickStat label="Consultorios" value={metrics.totalBusinesses} icon={Building2} accent="blue" />
+          <QuickStat label="Profesionales" value={metrics.totalProfessionals} icon={UserCog} accent="violet" />
+          <QuickStat label="Pacientes" value={metrics.totalPatients} icon={Users} accent="cyan" />
+        </div>
+
+        {/* Module blocks */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-5">
+          {MODULES.map((mod, i) => {
+            const Icon = mod.icon;
+            const a = ACCENTS[mod.accent];
             return (
               <button
-                key={item.id}
-                onClick={() => onSectionChange(item.id)}
-                className={[
-                  "w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-all group relative",
-                  active
-                    ? "bg-teal-500/10 text-teal-300 shadow-[inset_0_0_0_1px_rgba(0,165,160,0.3)]"
-                    : "text-slate-400 hover:text-slate-100 hover:bg-slate-800/50",
-                ].join(" ")}
-                title={item.label}
+                key={mod.id}
+                onClick={() => onSectionChange(mod.id)}
+                style={{ animationDelay: `${i * 60}ms` }}
+                className="group relative text-left rounded-2xl bg-slate-900/40 border border-slate-800/80 hover:border-slate-700 hover:bg-slate-900/70 transition-all duration-300 p-5 lg:p-6 overflow-hidden animate-fade-in hover:-translate-y-0.5"
               >
-                {active && (
-                  <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-0.5 bg-teal-400 rounded-r-full shadow-[0_0_10px_rgba(0,165,160,0.8)]" />
-                )}
-                <Icon className={`h-5 w-5 shrink-0 ${active ? "text-teal-400" : ""}`} />
-                <span className="hidden lg:inline text-sm font-medium">{item.label}</span>
+                {/* Accent corner glow */}
+                <div className={`absolute -top-12 -right-12 h-32 w-32 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-2xl ${a.glowBg}`} />
+
+                <div className="relative flex items-start justify-between mb-5">
+                  <div className={`h-12 w-12 rounded-xl flex items-center justify-center bg-slate-950/60 border border-slate-800 group-hover:border-slate-700 transition-colors`}>
+                    <Icon className={`h-6 w-6 ${a.icon}`} />
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-slate-600 group-hover:text-slate-300 group-hover:translate-x-0.5 transition-all" />
+                </div>
+
+                <div className="relative">
+                  <h3 className="text-base font-semibold text-slate-100 mb-1">{mod.label}</h3>
+                  <p className="text-xs text-slate-400 leading-relaxed">{mod.description}</p>
+                </div>
               </button>
             );
           })}
-        </nav>
-
-        {/* Back to home */}
-        <div className="p-2 lg:p-3 border-t border-slate-800/80">
-          <button
-            onClick={() => navigate("/")}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-500 hover:text-slate-200 hover:bg-slate-800/50 transition-colors"
-            title="Volver al inicio"
-          >
-            <ArrowLeft className="h-4 w-4 shrink-0" />
-            <span className="hidden lg:inline text-xs font-medium">Volver al inicio</span>
-          </button>
         </div>
-      </aside>
-
-      {/* ── Main area ── */}
-      <div className="flex-1 ml-20 lg:ml-60 flex flex-col min-w-0">
-        {/* Top metrics header — sticky */}
-        <header className="sticky top-0 z-30 bg-[#0a0a0f]/95 backdrop-blur-md border-b border-slate-800/80">
-          <div className="px-4 lg:px-8 py-4">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              <MetricCard
-                label="MRR Estimado"
-                value={metrics.estimatedRevenue}
-                prefix="$"
-                icon={TrendingUp}
-                accent="teal"
-              />
-              <MetricCard
-                label="Consultorios"
-                value={metrics.totalBusinesses}
-                icon={Building2}
-                accent="blue"
-              />
-              <MetricCard
-                label="Profesionales"
-                value={metrics.totalProfessionals}
-                icon={UserCog}
-                accent="violet"
-              />
-              <MetricCard
-                label="Pacientes"
-                value={metrics.totalPatients}
-                icon={Users}
-                accent="cyan"
-              />
-            </div>
-          </div>
-        </header>
-
-        {/* Section content */}
-        <main className="flex-1 px-4 lg:px-8 py-6">
-          {children}
-        </main>
       </div>
     </div>
   );
@@ -161,15 +222,27 @@ const ACCENTS: Record<string, { ring: string; icon: string; glow: string }> = {
   cyan:    { ring: "ring-cyan-500/20",    icon: "text-cyan-400",    glow: "shadow-[0_0_20px_-10px_rgba(6,182,212,0.6)]" },
 };
 
-const MetricCard = ({ label, value, icon: Icon, prefix, accent }: { label: string; value: number; icon: LucideIcon; prefix?: string; accent: keyof typeof ACCENTS }) => {
+const ACCENT_GLOW_BG: Record<string, string> = {
+  teal:    "bg-teal-500/15",
+  blue:    "bg-blue-500/15",
+  emerald: "bg-emerald-500/15",
+  violet:  "bg-violet-500/15",
+  cyan:    "bg-cyan-500/15",
+};
+// Attach glowBg to ACCENTS map (read-only access via spread)
+Object.keys(ACCENTS).forEach(k => {
+  (ACCENTS as any)[k].glowBg = ACCENT_GLOW_BG[k];
+});
+
+const QuickStat = ({ label, value, icon: Icon, prefix, accent }: { label: string; value: number; icon: LucideIcon; prefix?: string; accent: keyof typeof ACCENTS }) => {
   const a = ACCENTS[accent];
   return (
-    <div className={`relative rounded-xl bg-slate-900/40 ring-1 ${a.ring} ${a.glow} px-4 py-3 overflow-hidden`}>
-      <div className="flex items-center justify-between mb-1.5">
-        <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-slate-500">{label}</span>
-        <Icon className={`h-3.5 w-3.5 ${a.icon}`} />
+    <div className="relative rounded-xl bg-slate-900/40 border border-slate-800/80 px-4 py-3 overflow-hidden">
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-[10px] font-medium uppercase tracking-[0.15em] text-slate-500">{label}</span>
+        <Icon className={`h-3.5 w-3.5 ${a.icon} opacity-80`} />
       </div>
-      <p className="text-xl lg:text-2xl font-mono font-bold text-white tabular-nums">
+      <p className="text-xl lg:text-2xl font-semibold text-slate-100 tabular-nums">
         {prefix}<AnimatedNumber value={value} />
       </p>
     </div>
