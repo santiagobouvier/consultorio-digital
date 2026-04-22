@@ -53,13 +53,11 @@ export const SaasAdminLayout = ({ activeSection, onSectionChange, children }: Sa
             className="flex items-center gap-3 group rounded-lg -ml-1 px-1 py-1 hover:bg-slate-800/40 transition-colors"
             title="Ir al panel principal"
           >
-            <div className="h-10 w-10 rounded-lg bg-teal-500/10 border border-teal-500/25 flex items-center justify-center overflow-hidden p-1">
-              <img 
-                src={consultorioDigitalLogo} 
-                alt="Consultorio Digital" 
-                className="h-full w-full object-contain"
-              />
-            </div>
+            <img 
+              src={consultorioDigitalLogo} 
+              alt="Consultorio Digital" 
+              className="h-12 w-12 object-contain"
+            />
             <div className="text-left leading-tight">
               <p className="text-[10px] font-medium uppercase tracking-[0.18em] text-slate-500">Consultorio Digital</p>
               <p className="text-sm font-semibold text-slate-100 -mt-0.5">Panel de administración</p>
