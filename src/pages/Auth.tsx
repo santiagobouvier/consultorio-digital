@@ -336,7 +336,7 @@ const Auth = () => {
 
         {/* Plan badge */}
         {selectedPlan && planDef && (
-          <div className="mb-4 rounded-xl border border-[hsla(160,80%,50%,0.3)] bg-[hsla(160,80%,50%,0.05)] p-4">
+          <div className="w-full mb-4 rounded-xl border border-[hsla(160,80%,50%,0.3)] bg-[hsla(160,80%,50%,0.05)] p-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-[hsla(160,80%,50%,0.1)] flex items-center justify-center">
                 <Sparkles className="w-5 h-5 text-[hsl(160,80%,50%)]" />
@@ -354,7 +354,7 @@ const Auth = () => {
 
         {/* Contextual business header */}
         {showContextualLogin && (
-          <div className="mb-4 rounded-xl border border-[hsla(176,80%,40%,0.2)] bg-[hsla(176,80%,40%,0.05)] p-4 flex items-center gap-3">
+          <div className="w-full mb-4 rounded-xl border border-[hsla(176,80%,40%,0.2)] bg-[hsla(176,80%,40%,0.05)] p-4 flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-[hsla(176,80%,40%,0.1)] flex items-center justify-center">
               <Building2 className="w-5 h-5 text-[hsl(176,80%,40%)]" />
             </div>
@@ -366,7 +366,7 @@ const Auth = () => {
         )}
 
         <div
-          className="rounded-2xl border border-white/10 shadow-2xl"
+          className="w-full rounded-2xl border border-white/10 shadow-2xl"
           style={{
             backgroundColor: '#111111',
             boxShadow: '0 8px 60px rgba(0, 165, 160, 0.08), 0 0 120px rgba(0, 165, 160, 0.04)',
