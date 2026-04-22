@@ -287,11 +287,6 @@ const Auth = () => {
       />
 
       <div className="relative z-10 w-full max-w-md">
-        {/* Logo */}
-        <div className="flex justify-center mb-2">
-          <Logo variant="full" size="4xl" showTagline={false} />
-        </div>
-
         <Link
           to="/"
           className="inline-flex items-center gap-2 text-sm text-white/40 hover:text-white/70 mb-4 transition-colors"
@@ -338,9 +333,18 @@ const Auth = () => {
             boxShadow: '0 8px 60px rgba(0, 165, 160, 0.08), 0 0 120px rgba(0, 165, 160, 0.04)',
           }}
         >
-          <div className="p-6 pb-2 text-center space-y-1">
+          <div className="p-6 pb-2 text-center space-y-3">
+            {/* Logo blanco centrado arriba del título */}
+            <div className="flex justify-center">
+              <img
+                src={logoWhite}
+                alt="Consultorio Digital"
+                className="h-12 w-auto object-contain"
+                style={{ filter: "drop-shadow(0 4px 16px rgba(0,165,160,0.25))" }}
+              />
+            </div>
             <h2 className="text-2xl font-bold text-white">
-              {showForgotPassword ? "Recuperar acceso" : isSignUp ? "Crear cuenta" : "Bienvenido"}
+              {showForgotPassword ? "Recuperar acceso" : isSignUp ? "Crear cuenta" : "Bienvenido/a"}
             </h2>
             <p className="text-sm text-white/50">
               {showForgotPassword
@@ -534,7 +538,7 @@ const Auth = () => {
                     <>
                       <span className="text-white/40">¿No tenés cuenta? </span>
                       <button
-                        onClick={() => setIsSignUp(true)}
+                        onClick={() => navigate("/#pricing")}
                         className="text-[hsl(176,80%,40%)] hover:underline font-medium"
                       >
                         Registrate gratis
