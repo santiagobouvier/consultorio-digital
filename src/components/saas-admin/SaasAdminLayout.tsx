@@ -51,7 +51,7 @@ export const SaasAdminLayout = ({ activeSection, onSectionChange, children }: Sa
           <div className="flex items-center gap-3">
             <button
               onClick={() => onSectionChange("home")}
-              className="flex items-center rounded-lg -ml-1 p-1 hover:bg-slate-800/40 transition-colors"
+              className="flex items-center -ml-1 p-1"
               title="Ir al panel principal"
             >
               <img 
