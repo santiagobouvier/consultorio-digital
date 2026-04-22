@@ -185,7 +185,9 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
   if (!businessId) return <>{children}</>;
 
   // Activos / trial → permitido
-  if (status === "active" || status === "trial") {
+  // TESTING MODE — también dejamos pasar "none" (negocios recién creados desde
+  // el wizard que aún no tienen fila en subscriptions). Revertir antes del lanzamiento.
+  if (status === "active" || status === "trial" || status === "none") {
     return <>{children}</>;
   }
 
