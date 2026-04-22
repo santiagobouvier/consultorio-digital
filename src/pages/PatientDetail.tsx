@@ -26,6 +26,7 @@ import {
 import { PaymentWhatsAppMenu } from "@/components/PaymentWhatsAppMenu";
 import LoadingPage from "@/components/LoadingPage";
 import { SessionNotes } from "@/components/SessionNotes";
+import { PatientDocuments } from "@/components/PatientDocuments";
 import {
   calculatePaymentStatus,
   getPaymentStatusColor,
