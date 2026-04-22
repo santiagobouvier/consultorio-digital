@@ -201,13 +201,25 @@ const SaasAdmin = () => {
 
   // ── Business CRUD ──
   const handleCreateBusiness = async () => {
-    if (!newBusinessName.trim() || !newBusinessEmail.trim()) { toast({ title: "Error", description: "Nombre y email son requeridos", variant: "destructive" }); return; }
-    if (createMode === "test" && (!newBusinessPassword || newBusinessPassword.length < 6)) { toast({ title: "Error", description: "La contraseña debe tener al menos 6 caracteres", variant: "destructive" }); return; }
+    // En modo "invite" sólo necesitamos email; el nombre del consultorio
+    // lo define el dueño en el wizard de onboarding.
+    if (createMode === "invite") {
+      if (!newBusinessEmail.trim()) { toast({ title: "Error", description: "El email del dueño es requerido", variant: "destructive" }); return; }
+    } else {
+      if (!newBusinessName.trim() || !newBusinessEmail.trim()) { toast({ title: "Error", description: "Nombre y email son requeridos", variant: "destructive" }); return; }
+      if (!newBusinessPassword || newBusinessPassword.length < 6) { toast({ title: "Error", description: "La contraseña debe tener al menos 6 caracteres", variant: "destructive" }); return; }
+    }
     try {
       setCreating(true);
+      // Para modo invite usamos un placeholder en businessName porque el
+      // backend lo requiere por compatibilidad; el dueño lo va a sobreescribir.
+      const businessNameForRequest =
+        createMode === "invite"
+          ? `Consultorio (pendiente de configurar)`
+          : newBusinessName.trim();
       const { data, error } = await supabase.functions.invoke("create-business-owner", {
         body: {
-          businessName: newBusinessName.trim(),
+          businessName: businessNameForRequest,
           ownerEmail: newBusinessEmail.trim(),
           planCode: newBusinessPlan,
           mode: createMode,
@@ -217,9 +229,12 @@ const SaasAdmin = () => {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      if (data?.mode === "invite" && data?.activationUrl) {
-        setOwnerInviteLink(data.activationUrl);
-        toast({ title: "Mail de activación enviado", description: `Le enviamos un correo a ${data.sentTo} para que active el consultorio y defina su contraseña.` });
+      if (data?.mode === "invite") {
+        toast({
+          title: "Invitación enviada por email",
+          description: `Le enviamos un correo a ${data.sentTo || newBusinessEmail.trim()}. Cuando active la cuenta va a configurar su consultorio desde cero.`,
+        });
+        setShowCreateModal(false); resetCreateForm();
       } else if (data?.mode === "existing") {
         toast({ title: "Consultorio creado", description: `Asignado a usuario existente. Ya puede acceder.` });
         setShowCreateModal(false); resetCreateForm();
