@@ -156,7 +156,7 @@ const SaasAdmin = () => {
   const [businessToActivate, setBusinessToActivate] = useState<BusinessWithDetails | null>(null);
   const [activatePlan, setActivatePlan] = useState<string>("esencial");
   const [activating, setActivating] = useState(false);
-  const [activeSection, setActiveSection] = useState<SaasSection>("consultorios");
+  const [activeSection, setActiveSection] = useState<SaasSection>("home");
 
   useEffect(() => { checkAccessAndLoad(); }, []);
 
@@ -955,11 +955,12 @@ const SaasAdmin = () => {
 // ── Coming Soon placeholder for sections under construction ──
 const ComingSoonSection = ({ section }: { section: SaasSection }) => {
   const labels: Record<SaasSection, { title: string; desc: string }> = {
+    home: { title: "Panel", desc: "" },
     consultorios: { title: "Consultorios", desc: "" },
     finanzas: { title: "Finanzas", desc: "Gráficos de ingresos por mes, MRR por plan, total cobrado vs proyectado." },
     usuarios: { title: "Usuarios", desc: "Lista de profesionales registrados en la plataforma con búsqueda y filtros." },
     planes: { title: "Planes", desc: "Editor de nombre, precios y límites de cada plan." },
-    sistema: { title: "Sistema", desc: "Estado del webhook de MercadoPago, edge functions y variables de entorno." },
+    sistema: { title: "Sistema", desc: "Salud técnica (webhooks de MercadoPago, edge functions, push) y configuración global del SaaS." },
   };
   const info = labels[section];
   return (
