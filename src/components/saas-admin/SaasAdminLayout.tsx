@@ -214,25 +214,13 @@ const HomeDashboard = ({ onSectionChange, metrics }: { onSectionChange: (s: Saas
   );
 };
 
-const ACCENTS: Record<string, { ring: string; icon: string; glow: string }> = {
-  teal:    { ring: "ring-teal-500/20",    icon: "text-teal-400",    glow: "shadow-[0_0_20px_-10px_rgba(0,165,160,0.7)]" },
-  blue:    { ring: "ring-blue-500/20",    icon: "text-blue-400",    glow: "shadow-[0_0_20px_-10px_rgba(59,130,246,0.6)]" },
-  emerald: { ring: "ring-emerald-500/20", icon: "text-emerald-400", glow: "shadow-[0_0_20px_-10px_rgba(16,185,129,0.6)]" },
-  violet:  { ring: "ring-violet-500/20",  icon: "text-violet-400",  glow: "shadow-[0_0_20px_-10px_rgba(139,92,246,0.6)]" },
-  cyan:    { ring: "ring-cyan-500/20",    icon: "text-cyan-400",    glow: "shadow-[0_0_20px_-10px_rgba(6,182,212,0.6)]" },
+const ACCENTS: Record<string, { ring: string; icon: string; glow: string; glowBg: string }> = {
+  teal:    { ring: "ring-teal-500/20",    icon: "text-teal-400",    glow: "shadow-[0_0_20px_-10px_rgba(0,165,160,0.7)]",  glowBg: "bg-teal-500/15" },
+  blue:    { ring: "ring-blue-500/20",    icon: "text-blue-400",    glow: "shadow-[0_0_20px_-10px_rgba(59,130,246,0.6)]", glowBg: "bg-blue-500/15" },
+  emerald: { ring: "ring-emerald-500/20", icon: "text-emerald-400", glow: "shadow-[0_0_20px_-10px_rgba(16,185,129,0.6)]", glowBg: "bg-emerald-500/15" },
+  violet:  { ring: "ring-violet-500/20",  icon: "text-violet-400",  glow: "shadow-[0_0_20px_-10px_rgba(139,92,246,0.6)]", glowBg: "bg-violet-500/15" },
+  cyan:    { ring: "ring-cyan-500/20",    icon: "text-cyan-400",    glow: "shadow-[0_0_20px_-10px_rgba(6,182,212,0.6)]",  glowBg: "bg-cyan-500/15" },
 };
-
-const ACCENT_GLOW_BG: Record<string, string> = {
-  teal:    "bg-teal-500/15",
-  blue:    "bg-blue-500/15",
-  emerald: "bg-emerald-500/15",
-  violet:  "bg-violet-500/15",
-  cyan:    "bg-cyan-500/15",
-};
-// Attach glowBg to ACCENTS map (read-only access via spread)
-Object.keys(ACCENTS).forEach(k => {
-  (ACCENTS as any)[k].glowBg = ACCENT_GLOW_BG[k];
-});
 
 const QuickStat = ({ label, value, icon: Icon, prefix, accent }: { label: string; value: number; icon: LucideIcon; prefix?: string; accent: keyof typeof ACCENTS }) => {
   const a = ACCENTS[accent];
