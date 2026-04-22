@@ -43,6 +43,7 @@ import { PlanSelector } from "@/components/PlanSelector";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { isCurrentUserSuperAdmin } from "@/lib/admin-access";
 import { SaasAdminLayout, type SaasSection } from "@/components/saas-admin/SaasAdminLayout";
+import { EstadisticasSection } from "@/components/saas-admin/EstadisticasSection";
 
 // ── Types ──────────────────────────────────────────────
 interface BusinessWithDetails {
@@ -484,14 +485,10 @@ const SaasAdmin = () => {
     <SaasAdminLayout
       activeSection={activeSection}
       onSectionChange={setActiveSection}
-      metrics={{
-        estimatedRevenue: metrics.estimatedRevenue,
-        totalBusinesses: metrics.totalBusinesses,
-        totalProfessionals: metrics.totalProfessionals,
-        totalPatients: metrics.totalPatients,
-      }}
     >
-      {activeSection !== "consultorios" && (
+      {activeSection === "estadisticas" && <EstadisticasSection />}
+
+      {activeSection !== "consultorios" && activeSection !== "estadisticas" && (
         <ComingSoonSection section={activeSection} />
       )}
 
@@ -958,6 +955,7 @@ const ComingSoonSection = ({ section }: { section: SaasSection }) => {
     home: { title: "Panel", desc: "" },
     consultorios: { title: "Consultorios", desc: "" },
     finanzas: { title: "Finanzas", desc: "Gráficos de ingresos por mes, MRR por plan, total cobrado vs proyectado." },
+    estadisticas: { title: "Estadísticas", desc: "" },
     usuarios: { title: "Usuarios", desc: "Lista de profesionales registrados en la plataforma con búsqueda y filtros." },
     planes: { title: "Planes", desc: "Editor de nombre, precios y límites de cada plan." },
     sistema: { title: "Sistema", desc: "Salud técnica (webhooks de MercadoPago, edge functions, push) y configuración global del SaaS." },

@@ -1,15 +1,7 @@
 import { useNavigate } from "react-router-dom";
-import { Building2, DollarSign, Users, Settings2, Server, ArrowLeft, Stethoscope, TrendingUp, UserCog, ChevronRight, type LucideIcon } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Building2, DollarSign, Users, Settings2, Server, ArrowLeft, Stethoscope, BarChart3, ChevronRight, type LucideIcon } from "lucide-react";
 
-export type SaasSection = "home" | "consultorios" | "finanzas" | "usuarios" | "planes" | "sistema";
-
-interface SaasMetrics {
-  estimatedRevenue: number;
-  totalBusinesses: number;
-  totalProfessionals: number;
-  totalPatients: number;
-}
+export type SaasSection = "home" | "consultorios" | "finanzas" | "usuarios" | "planes" | "sistema" | "estadisticas";
 
 interface ModuleItem {
   id: SaasSection;
@@ -22,6 +14,7 @@ interface ModuleItem {
 const MODULES: ModuleItem[] = [
   { id: "consultorios", label: "Consultorios", description: "Gestión de clínicas, profesionales y pacientes.", icon: Building2, accent: "teal" },
   { id: "finanzas",     label: "Finanzas",     description: "Ingresos, MRR y suscripciones activas.",         icon: DollarSign, accent: "emerald" },
+  { id: "estadisticas", label: "Estadísticas", description: "Métricas, crecimiento y distribución de planes.", icon: BarChart3, accent: "blue" },
   { id: "usuarios",     label: "Usuarios",     description: "Cuentas, roles y permisos globales.",            icon: Users, accent: "blue" },
   { id: "planes",       label: "Planes",       description: "Configuración de planes y límites.",             icon: Settings2, accent: "violet" },
   { id: "sistema",      label: "Sistema",      description: "Salud técnica, logs y configuración global.",    icon: Server, accent: "cyan" },
@@ -30,38 +23,19 @@ const MODULES: ModuleItem[] = [
 const SECTION_LABELS: Record<Exclude<SaasSection, "home">, string> = {
   consultorios: "Consultorios",
   finanzas: "Finanzas",
+  estadisticas: "Estadísticas",
   usuarios: "Usuarios",
   planes: "Planes",
   sistema: "Sistema",
 };
 
-// Animated counter for metric values
-const AnimatedNumber = ({ value }: { value: number }) => {
-  const [display, setDisplay] = useState(0);
-  useEffect(() => {
-    const duration = 600;
-    const start = performance.now();
-    const from = display;
-    const step = (now: number) => {
-      const t = Math.min((now - start) / duration, 1);
-      const eased = 1 - Math.pow(1 - t, 3);
-      setDisplay(Math.round(from + (value - from) * eased));
-      if (t < 1) requestAnimationFrame(step);
-    };
-    requestAnimationFrame(step);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value]);
-  return <>{display.toLocaleString("es-UY")}</>;
-};
-
 interface SaasAdminLayoutProps {
   activeSection: SaasSection;
   onSectionChange: (s: SaasSection) => void;
-  metrics: SaasMetrics;
   children: React.ReactNode;
 }
 
-export const SaasAdminLayout = ({ activeSection, onSectionChange, metrics, children }: SaasAdminLayoutProps) => {
+export const SaasAdminLayout = ({ activeSection, onSectionChange, children }: SaasAdminLayoutProps) => {
   const navigate = useNavigate();
   const isHome = activeSection === "home";
   const currentModule = !isHome ? MODULES.find(m => m.id === activeSection) : undefined;
@@ -127,7 +101,7 @@ export const SaasAdminLayout = ({ activeSection, onSectionChange, metrics, child
       {/* ── Main area ── */}
       <main className="flex-1 w-full">
         {isHome ? (
-          <HomeDashboard onSectionChange={onSectionChange} metrics={metrics} />
+          <HomeDashboard onSectionChange={onSectionChange} />
         ) : (
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
             {/* Module title */}
@@ -151,7 +125,7 @@ export const SaasAdminLayout = ({ activeSection, onSectionChange, metrics, child
 };
 
 // ── Home dashboard with floating module blocks ──
-const HomeDashboard = ({ onSectionChange, metrics }: { onSectionChange: (s: SaasSection) => void; metrics: SaasMetrics }) => {
+const HomeDashboard = ({ onSectionChange }: { onSectionChange: (s: SaasSection) => void }) => {
   return (
     <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 lg:py-16">
       {/* Subtle ambient glow */}
@@ -169,14 +143,6 @@ const HomeDashboard = ({ onSectionChange, metrics }: { onSectionChange: (s: Saas
           <p className="mt-3 text-sm text-slate-400">
             Elegí un módulo para gestionar la plataforma de consultorios.
           </p>
-        </div>
-
-        {/* Quick metrics strip */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-10">
-          <QuickStat label="MRR Estimado" value={metrics.estimatedRevenue} prefix="$" icon={TrendingUp} accent="teal" />
-          <QuickStat label="Consultorios" value={metrics.totalBusinesses} icon={Building2} accent="blue" />
-          <QuickStat label="Profesionales" value={metrics.totalProfessionals} icon={UserCog} accent="violet" />
-          <QuickStat label="Pacientes" value={metrics.totalPatients} icon={Users} accent="cyan" />
         </div>
 
         {/* Module blocks */}
@@ -220,21 +186,6 @@ const ACCENTS: Record<string, { ring: string; icon: string; glow: string; glowBg
   emerald: { ring: "ring-emerald-500/20", icon: "text-emerald-400", glow: "shadow-[0_0_20px_-10px_rgba(16,185,129,0.6)]", glowBg: "bg-emerald-500/15" },
   violet:  { ring: "ring-violet-500/20",  icon: "text-violet-400",  glow: "shadow-[0_0_20px_-10px_rgba(139,92,246,0.6)]", glowBg: "bg-violet-500/15" },
   cyan:    { ring: "ring-cyan-500/20",    icon: "text-cyan-400",    glow: "shadow-[0_0_20px_-10px_rgba(6,182,212,0.6)]",  glowBg: "bg-cyan-500/15" },
-};
-
-const QuickStat = ({ label, value, icon: Icon, prefix, accent }: { label: string; value: number; icon: LucideIcon; prefix?: string; accent: keyof typeof ACCENTS }) => {
-  const a = ACCENTS[accent];
-  return (
-    <div className="relative rounded-xl bg-slate-900/40 border border-slate-800/80 px-4 py-3 overflow-hidden">
-      <div className="flex items-center justify-between mb-1">
-        <span className="text-[10px] font-medium uppercase tracking-[0.15em] text-slate-500">{label}</span>
-        <Icon className={`h-3.5 w-3.5 ${a.icon} opacity-80`} />
-      </div>
-      <p className="text-xl lg:text-2xl font-semibold text-slate-100 tabular-nums">
-        {prefix}<AnimatedNumber value={value} />
-      </p>
-    </div>
-  );
 };
 
 export default SaasAdminLayout;
