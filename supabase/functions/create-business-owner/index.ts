@@ -53,6 +53,131 @@ Deno.serve(async (req) => {
     }
 
     const email = ownerEmail.trim().toLowerCase();
+    const trimmedName = businessName.trim();
+
+    // ──────────────────────────────────────────────────────────────────
+    // INVITATION MODE: Create a pending activation + send activation email
+    // The business is NOT created until the owner confirms and sets a password
+    // ──────────────────────────────────────────────────────────────────
+    if (mode === "invite") {
+      // Warn if there's already an active business with this email
+      const { data: existingProfileForCheck } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("email", email)
+        .maybeSingle();
+
+      if (existingProfileForCheck) {
+        const { data: existingBusiness } = await supabase
+          .from("businesses")
+          .select("id, name")
+          .eq("owner_user_id", existingProfileForCheck.id)
+          .maybeSingle();
+        if (existingBusiness) {
+          return new Response(JSON.stringify({
+            error: "El email ya tiene un consultorio asignado: " + existingBusiness.name,
+          }), {
+            status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      }
+
+      // Clean up any previous unused pending activations for this email
+      await supabase
+        .from("pending_business_activations")
+        .delete()
+        .eq("owner_email", email)
+        .is("used_at", null);
+
+      // Generate secure activation token
+      const activationToken = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+
+      const { data: pending, error: pendingError } = await supabase
+        .from("pending_business_activations")
+        .insert({
+          business_name: trimmedName,
+          owner_email: email,
+          plan_code: planCode || "inicial",
+          token: activationToken,
+          expires_at: expiresAt,
+          created_by: user.id,
+        })
+        .select()
+        .single();
+
+      if (pendingError) {
+        console.error("Error creating pending activation:", pendingError);
+        return new Response(JSON.stringify({ error: pendingError.message || "Error creando la activación pendiente" }), {
+          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const origin = req.headers.get("origin") || "https://consultoriodigital.app";
+      const activationUrl = `${origin}/activar-consultorio?token=${activationToken}`;
+
+      // Send activation email via Resend
+      let emailSent = false;
+      let emailErrorDetails: string | null = null;
+      try {
+        const emailResp = await fetch(`${supabaseUrl}/functions/v1/send-resend-email`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${supabaseServiceKey}`,
+          },
+          body: JSON.stringify({
+            to: email,
+            template: "raw",
+            data: {
+              subject: `Activá tu consultorio en Consultorio Digital`,
+              message:
+                `¡Hola!\n\n` +
+                `Te damos la bienvenida a Consultorio Digital. Para activar el consultorio "${trimmedName}" ` +
+                `y empezar a usarlo, hacé clic en el siguiente enlace y definí tu contraseña de acceso:\n\n` +
+                `${activationUrl}\n\n` +
+                `Este enlace es personal y vence en 7 días.\n\n` +
+                `Si no esperabas este correo, podés ignorarlo.\n\n` +
+                `— El equipo de Consultorio Digital`,
+            },
+          }),
+        });
+        emailSent = emailResp.ok;
+        if (!emailResp.ok) {
+          emailErrorDetails = await emailResp.text();
+          console.error("Activation email failed:", emailErrorDetails);
+        }
+      } catch (e) {
+        emailErrorDetails = String(e);
+        console.error("Activation email exception:", e);
+      }
+
+      if (!emailSent) {
+        await supabase
+          .from("pending_business_activations")
+          .delete()
+          .eq("id", pending.id);
+
+        return new Response(JSON.stringify({
+          error: "email_send_failed",
+          message: "No se pudo enviar el correo de activación. Verificá la dirección e intentá nuevamente.",
+          details: emailErrorDetails,
+        }), {
+          status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      return new Response(JSON.stringify({
+        success: true,
+        mode: "invite",
+        pendingActivationId: pending.id,
+        activationUrl,
+        expiresAt,
+        sentTo: email,
+      }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Helper: find auth user by email by paginating through all pages
     const findAuthUserByEmail = async (targetEmail: string): Promise<string | null> => {
