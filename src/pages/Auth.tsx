@@ -12,6 +12,7 @@ import { useHostnameBusiness } from "@/hooks/use-hostname-business";
 import { getPlanDefinition, formatPrice } from "@/lib/plan-definitions";
 import { isCurrentUserSuperAdmin } from "@/lib/admin-access";
 import logoWhite from "@/assets/logo-consultorio-digital-white.png";
+import authBgConsultorio from "@/assets/auth-bg-consultorio.jpg";
 
 const REMEMBER_EMAIL_KEY = "auth_remembered_email";
 
@@ -239,10 +240,10 @@ const Auth = () => {
           <div className="flex justify-center mb-6">
             <div className="relative animate-float-soft" style={{ willChange: "transform" }}>
               <div
-                className="absolute inset-0 -z-10 blur-3xl opacity-60"
+                className="absolute inset-0 -z-10 blur-2xl opacity-25"
                 style={{
                   background:
-                    "radial-gradient(ellipse at center, hsla(176,80%,40%,0.45), transparent 70%)",
+                    "radial-gradient(ellipse at center, hsla(176,80%,40%,0.35), transparent 75%)",
                 }}
                 aria-hidden
               />
@@ -253,7 +254,7 @@ const Auth = () => {
                 draggable={false}
                 decoding="async"
                 loading="eager"
-                style={{ filter: "drop-shadow(0 20px 40px rgba(0,165,160,0.35))" }}
+                style={{ filter: "drop-shadow(0 16px 32px rgba(0,165,160,0.18))" }}
               />
             </div>
           </div>
@@ -297,10 +298,29 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen lg:flex lg:items-center lg:justify-center bg-[hsl(180,15%,4%)]">
-      {/* Background glow */}
+      {/* Imagen de fondo de consultorio (opacada) */}
+      <div
+        className="fixed inset-0 pointer-events-none bg-cover bg-center"
+        style={{
+          backgroundImage: `url(${authBgConsultorio})`,
+          opacity: 0.18,
+        }}
+        aria-hidden
+      />
+      {/* Oscurecedor + viñeta para legibilidad */}
       <div
         className="fixed inset-0 pointer-events-none"
-        style={{ background: "radial-gradient(ellipse 60% 40% at 50% 0%, hsla(176,80%,40%,0.1), transparent)" }}
+        style={{
+          background:
+            "radial-gradient(ellipse 80% 60% at 50% 50%, hsla(180,15%,4%,0.55), hsla(180,15%,4%,0.92))",
+        }}
+        aria-hidden
+      />
+      {/* Glow sutil teal arriba */}
+      <div
+        className="fixed inset-0 pointer-events-none"
+        style={{ background: "radial-gradient(ellipse 60% 40% at 50% 0%, hsla(176,80%,40%,0.06), transparent)" }}
+        aria-hidden
       />
 
       {/* Desktop: fila (logo + card centrados). Mobile: solo card centrado en primera pantalla. */}
@@ -309,10 +329,10 @@ const Auth = () => {
         <div className="hidden lg:flex shrink-0 justify-center" aria-hidden>
           <div className="relative animate-float-soft" style={{ willChange: "transform" }}>
             <div
-              className="absolute inset-0 -z-10 blur-3xl opacity-70"
+              className="absolute inset-0 -z-10 blur-2xl opacity-25"
               style={{
                 background:
-                  "radial-gradient(ellipse at center, hsla(176,80%,40%,0.5), transparent 70%)",
+                  "radial-gradient(ellipse at center, hsla(176,80%,40%,0.35), transparent 75%)",
               }}
             />
             <img
@@ -322,7 +342,7 @@ const Auth = () => {
               draggable={false}
               decoding="async"
               loading="eager"
-              style={{ filter: "drop-shadow(0 24px 48px rgba(0,165,160,0.4))" }}
+              style={{ filter: "drop-shadow(0 16px 32px rgba(0,165,160,0.18))" }}
             />
           </div>
         </div>
