@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { Building2, DollarSign, Users, Settings2, Server, ArrowLeft, Stethoscope, BarChart3, ChevronRight, type LucideIcon } from "lucide-react";
+import digitalBuildersLogo from "@/assets/logo-digitalbuilders.webp";
 
 export type SaasSection = "home" | "consultorios" | "finanzas" | "usuarios" | "planes" | "sistema" | "estadisticas";
 
