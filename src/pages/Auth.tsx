@@ -237,12 +237,25 @@ const Auth = () => {
         />
         <div className="relative z-10 w-full max-w-md">
           <div className="flex justify-center mb-6">
-            <img
-              src={logoWhite}
-              alt="Consultorio Digital"
-              className="h-12 w-auto object-contain"
-              style={{ filter: "drop-shadow(0 4px 16px rgba(0,165,160,0.25))" }}
-            />
+            <div className="relative animate-float-soft" style={{ willChange: "transform" }}>
+              <div
+                className="absolute inset-0 -z-10 blur-3xl opacity-60"
+                style={{
+                  background:
+                    "radial-gradient(ellipse at center, hsla(176,80%,40%,0.45), transparent 70%)",
+                }}
+                aria-hidden
+              />
+              <img
+                src={logoWhite}
+                alt="Consultorio Digital"
+                className="h-40 sm:h-48 w-auto object-contain select-none"
+                draggable={false}
+                decoding="async"
+                loading="eager"
+                style={{ filter: "drop-shadow(0 20px 40px rgba(0,165,160,0.35))" }}
+              />
+            </div>
           </div>
           <div
             className="rounded-2xl border border-white/10 shadow-2xl p-8 text-center"
