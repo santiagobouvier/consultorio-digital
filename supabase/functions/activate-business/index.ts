@@ -52,10 +52,10 @@ Deno.serve(async (req) => {
     }
 
     const email = pending.owner_email;
-    const businessName = pending.business_name;
-    const planCode = pending.plan_code || "inicial";
 
-    // Step 2: find or create the auth user
+    // Step 2: find or create the auth user.
+    // IMPORTANT: We do NOT create a business here. The owner will define
+    // all the clinic data through the OnboardingWizard after logging in.
     const findAuthUserByEmail = async (targetEmail: string): Promise<string | null> => {
       let page = 1;
       const perPage = 1000;
@@ -89,7 +89,7 @@ Deno.serve(async (req) => {
       }
       await supabase.from("profiles").upsert({
         id: ownerId,
-        name: businessName,
+        name: email.split("@")[0],
         email,
       });
     } else {
@@ -97,7 +97,7 @@ Deno.serve(async (req) => {
         email,
         password,
         email_confirm: true,
-        user_metadata: { name: businessName },
+        user_metadata: { name: email.split("@")[0] },
       });
       if (createError || !newUser?.user) {
         console.error("Error creating user:", createError);
@@ -106,80 +106,12 @@ Deno.serve(async (req) => {
       ownerId = newUser.user.id;
       await supabase.from("profiles").insert({
         id: ownerId,
-        name: businessName,
+        name: email.split("@")[0],
         email,
       });
     }
 
-    // Step 3: clean up orphan user_roles
-    const { data: existingRoles } = await supabase
-      .from("user_roles")
-      .select("id, business_id, role")
-      .eq("user_id", ownerId)
-      .in("role", ["owner", "professional"]);
-
-    if (existingRoles && existingRoles.length > 0) {
-      const businessIds = existingRoles.map((r: any) => r.business_id).filter(Boolean);
-      const { data: existingBusinesses } = await supabase
-        .from("businesses")
-        .select("id")
-        .in("id", businessIds);
-      const validIds = new Set((existingBusinesses || []).map((b: any) => b.id));
-      const orphanRoleIds = existingRoles
-        .filter((r: any) => r.business_id && !validIds.has(r.business_id))
-        .map((r: any) => r.id);
-      if (orphanRoleIds.length > 0) {
-        await supabase.from("user_roles").delete().in("id", orphanRoleIds);
-      }
-    }
-
-    // Step 4: create the business
-    const slug = businessName.trim().toLowerCase()
-      .replace(/\s+/g, "-")
-      .replace(/[^a-z0-9-]/g, "") + "-" + Date.now().toString(36);
-
-    const insertPayload: Record<string, unknown> = {
-      name: businessName,
-      owner_user_id: ownerId,
-      public_slug: slug,
-      contact_email: email,
-      plan_code: planCode,
-    };
-    if (pending.custom_max_patients !== null && pending.custom_max_patients !== undefined) {
-      insertPayload.custom_max_patients = pending.custom_max_patients;
-    }
-    if (pending.custom_max_professionals !== null && pending.custom_max_professionals !== undefined) {
-      insertPayload.custom_max_professionals = pending.custom_max_professionals;
-    }
-
-    const { data: business, error: bizError } = await supabase
-      .from("businesses")
-      .insert(insertPayload)
-      .select()
-      .single();
-
-    if (bizError) {
-      console.error("Error creating business:", bizError);
-      return json(500, { error: "No se pudo crear el consultorio: " + bizError.message });
-    }
-
-    // Step 5: assign owner role
-    await supabase
-      .from("user_roles")
-      .delete()
-      .eq("user_id", ownerId)
-      .eq("business_id", business.id);
-
-    const { error: roleError } = await supabase.from("user_roles").insert({
-      user_id: ownerId,
-      role: "owner",
-      business_id: business.id,
-    });
-    if (roleError) {
-      console.error("Error creating owner role:", roleError);
-    }
-
-    // Step 6: mark the pending activation as used
+    // Step 3: mark the pending activation as used
     await supabase
       .from("pending_business_activations")
       .update({ used_at: new Date().toISOString() })
@@ -187,8 +119,9 @@ Deno.serve(async (req) => {
 
     return json(200, {
       success: true,
-      businessId: business.id,
       ownerEmail: email,
+      // Carry the planCode so the wizard can apply it when creating the business.
+      planCode: pending.plan_code || "inicial",
     });
   } catch (e) {
     console.error("activate-business error:", e);
