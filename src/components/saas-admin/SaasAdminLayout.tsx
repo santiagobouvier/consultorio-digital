@@ -101,7 +101,7 @@ export const SaasAdminLayout = ({ activeSection, onSectionChange, children }: Sa
       {/* ── Main area ── */}
       <main className="flex-1 w-full">
         {isHome ? (
-          <HomeDashboard onSectionChange={onSectionChange} metrics={metrics} />
+          <HomeDashboard onSectionChange={onSectionChange} />
         ) : (
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
             {/* Module title */}
@@ -186,21 +186,6 @@ const ACCENTS: Record<string, { ring: string; icon: string; glow: string; glowBg
   emerald: { ring: "ring-emerald-500/20", icon: "text-emerald-400", glow: "shadow-[0_0_20px_-10px_rgba(16,185,129,0.6)]", glowBg: "bg-emerald-500/15" },
   violet:  { ring: "ring-violet-500/20",  icon: "text-violet-400",  glow: "shadow-[0_0_20px_-10px_rgba(139,92,246,0.6)]", glowBg: "bg-violet-500/15" },
   cyan:    { ring: "ring-cyan-500/20",    icon: "text-cyan-400",    glow: "shadow-[0_0_20px_-10px_rgba(6,182,212,0.6)]",  glowBg: "bg-cyan-500/15" },
-};
-
-const QuickStat = ({ label, value, icon: Icon, prefix, accent }: { label: string; value: number; icon: LucideIcon; prefix?: string; accent: keyof typeof ACCENTS }) => {
-  const a = ACCENTS[accent];
-  return (
-    <div className="relative rounded-xl bg-slate-900/40 border border-slate-800/80 px-4 py-3 overflow-hidden">
-      <div className="flex items-center justify-between mb-1">
-        <span className="text-[10px] font-medium uppercase tracking-[0.15em] text-slate-500">{label}</span>
-        <Icon className={`h-3.5 w-3.5 ${a.icon} opacity-80`} />
-      </div>
-      <p className="text-xl lg:text-2xl font-semibold text-slate-100 tabular-nums">
-        {prefix}<AnimatedNumber value={value} />
-      </p>
-    </div>
-  );
 };
 
 export default SaasAdminLayout;
