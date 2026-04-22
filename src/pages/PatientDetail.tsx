@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { PaymentWhatsAppMenu } from "@/components/PaymentWhatsAppMenu";
 import LoadingPage from "@/components/LoadingPage";
+import { SessionNotes } from "@/components/SessionNotes";
 import {
   calculatePaymentStatus,
   getPaymentStatusColor,
