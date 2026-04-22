@@ -16,6 +16,20 @@ const isPreviewHost =
   window.location.hostname.includes("id-preview--") ||
   window.location.hostname.includes("lovableproject.com");
 
+const SPLASH_MIN_DURATION_MS = 1200;
+const splashStartedAt = performance.now();
+
+const hideAppSplash = () => {
+  const el = document.getElementById("app-splash");
+  if (!el) return;
+  const elapsed = performance.now() - splashStartedAt;
+  const remaining = Math.max(0, SPLASH_MIN_DURATION_MS - elapsed);
+  window.setTimeout(() => {
+    el.classList.add("fade-out");
+    window.setTimeout(() => el.remove(), 450);
+  }, remaining);
+};
+
 const bootstrap = async () => {
   if (!isPreviewHost && !isInIframe) {
     const recoveredFromLoop = await detectReloadLoopAndRecover();
@@ -41,6 +55,7 @@ const bootstrap = async () => {
   }
 
   createRoot(document.getElementById("root")!).render(<App />);
+  hideAppSplash();
 };
 
 void bootstrap();
