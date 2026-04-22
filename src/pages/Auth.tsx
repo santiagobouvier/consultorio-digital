@@ -303,18 +303,10 @@ const Auth = () => {
         style={{ background: "radial-gradient(ellipse 60% 40% at 50% 0%, hsla(176,80%,40%,0.1), transparent)" }}
       />
 
-      {/* Mobile: card ocupa toda la primera pantalla centrado. Desktop: layout normal. */}
-      <div className="relative z-10 w-full max-w-md lg:max-w-sm mx-auto flex flex-col items-center min-h-screen lg:min-h-0 px-4 py-4 lg:py-0 justify-center lg:justify-start">
-        <Link
-          to="/"
-          className="self-start inline-flex items-center gap-2 text-sm text-white/40 hover:text-white/70 mb-4 transition-colors absolute top-4 left-4 lg:static"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Volver al inicio
-        </Link>
-
-        {/* Logo grande flotante arriba del card — solo desktop */}
-        <div className="hidden lg:flex justify-center mb-6" aria-hidden>
+      {/* Desktop: fila (logo + card centrados). Mobile: solo card centrado en primera pantalla. */}
+      <div className="relative z-10 w-full mx-auto flex flex-col lg:flex-row lg:items-center lg:justify-center lg:gap-10 xl:gap-16 min-h-screen lg:min-h-0 px-4 py-4 lg:py-0">
+        {/* Logo grande flotante a la izquierda — solo desktop */}
+        <div className="hidden lg:flex shrink-0 justify-center" aria-hidden>
           <div className="relative animate-float-soft" style={{ willChange: "transform" }}>
             <div
               className="absolute inset-0 -z-10 blur-3xl opacity-70"
@@ -326,7 +318,7 @@ const Auth = () => {
             <img
               src={logoWhite}
               alt=""
-              className="h-72 xl:h-80 w-auto object-contain select-none"
+              className="h-80 xl:h-96 w-auto object-contain select-none"
               draggable={false}
               decoding="async"
               loading="eager"
@@ -334,6 +326,16 @@ const Auth = () => {
             />
           </div>
         </div>
+
+        {/* Columna del card (incluye Volver, badges y card) */}
+        <div className="w-full max-w-md lg:max-w-sm mx-auto lg:mx-0 flex flex-col items-center justify-center lg:justify-start">
+        <Link
+          to="/"
+          className="self-start inline-flex items-center gap-2 text-sm text-white/40 hover:text-white/70 mb-4 transition-colors absolute top-4 left-4 lg:static"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Volver al inicio
+        </Link>
 
         {/* Plan badge */}
         {selectedPlan && planDef && (
