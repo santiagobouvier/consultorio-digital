@@ -153,9 +153,9 @@ export default function ActivateBusinessAccount() {
           <div className="mx-auto mb-3 h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
             <Building2 className="h-6 w-6 text-primary" />
           </div>
-          <CardTitle className="text-2xl">Activá tu consultorio</CardTitle>
+          <CardTitle className="text-2xl">Activá tu cuenta</CardTitle>
           <CardDescription>
-            Definí tu contraseña de acceso para empezar a usar Consultorio Digital
+            Definí tu contraseña de acceso. Después vas a configurar los datos de tu consultorio.
           </CardDescription>
         </CardHeader>
 
@@ -183,11 +183,6 @@ export default function ActivateBusinessAccount() {
           ) : pending ? (
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="rounded-lg border bg-muted/40 p-4 space-y-2">
-                <div className="flex items-center gap-2 text-sm">
-                  <Building2 className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">Consultorio:</span>
-                  <span className="font-medium">{pending.business_name}</span>
-                </div>
                 <div className="flex items-center gap-2 text-sm">
                   <Mail className="h-4 w-4 text-muted-foreground" />
                   <span className="text-muted-foreground">Email:</span>
@@ -225,7 +220,7 @@ export default function ActivateBusinessAccount() {
 
               <Button type="submit" className="w-full" disabled={submitting}>
                 {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                Activar consultorio
+                Activar cuenta y continuar
               </Button>
 
               <p className="text-xs text-muted-foreground text-center">
