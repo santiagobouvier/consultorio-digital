@@ -43,6 +43,7 @@ import { PlanSelector } from "@/components/PlanSelector";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { isCurrentUserSuperAdmin } from "@/lib/admin-access";
 import { SaasAdminLayout, type SaasSection } from "@/components/saas-admin/SaasAdminLayout";
+import { EstadisticasSection } from "@/components/saas-admin/EstadisticasSection";
 
 // ── Types ──────────────────────────────────────────────
 interface BusinessWithDetails {
@@ -484,14 +485,10 @@ const SaasAdmin = () => {
     <SaasAdminLayout
       activeSection={activeSection}
       onSectionChange={setActiveSection}
-      metrics={{
-        estimatedRevenue: metrics.estimatedRevenue,
-        totalBusinesses: metrics.totalBusinesses,
-        totalProfessionals: metrics.totalProfessionals,
-        totalPatients: metrics.totalPatients,
-      }}
     >
-      {activeSection !== "consultorios" && (
+      {activeSection === "estadisticas" && <EstadisticasSection />}
+
+      {activeSection !== "consultorios" && activeSection !== "estadisticas" && (
         <ComingSoonSection section={activeSection} />
       )}
 
