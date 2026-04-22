@@ -247,6 +247,19 @@ const OnboardingWizard = () => {
     setSaving(true);
 
     try {
+      // Read plan info captured during business activation (manual invite flow).
+      let invitationPlan: {
+        planCode?: string;
+        customMaxProfessionals?: number | null;
+        customMaxPatients?: number | null;
+      } = {};
+      try {
+        const raw = sessionStorage.getItem("pending_activation_plan");
+        if (raw) invitationPlan = JSON.parse(raw);
+      } catch (e) {
+        console.warn("Could not parse pending_activation_plan:", e);
+      }
+
       if (existingBusinessId) {
         // Update existing business
         const { error } = await supabase.from("businesses").update({
@@ -258,6 +271,13 @@ const OnboardingWizard = () => {
           custom_domain: data.custom_domain || null,
           timezone: data.timezone,
           onboarding_completed: true,
+          ...(invitationPlan.planCode ? { plan_code: invitationPlan.planCode } : {}),
+          ...(invitationPlan.planCode === "personalizado"
+            ? {
+                custom_max_professionals: invitationPlan.customMaxProfessionals ?? null,
+                custom_max_patients: invitationPlan.customMaxPatients ?? null,
+              }
+            : {}),
         }).eq("id", existingBusinessId);
         if (error) throw error;
       } else {
@@ -272,6 +292,13 @@ const OnboardingWizard = () => {
           custom_domain: data.custom_domain || null,
           timezone: data.timezone,
           onboarding_completed: true,
+          ...(invitationPlan.planCode ? { plan_code: invitationPlan.planCode } : {}),
+          ...(invitationPlan.planCode === "personalizado"
+            ? {
+                custom_max_professionals: invitationPlan.customMaxProfessionals ?? null,
+                custom_max_patients: invitationPlan.customMaxPatients ?? null,
+              }
+            : {}),
         }]);
         if (error) throw error;
       }
@@ -283,6 +310,11 @@ const OnboardingWizard = () => {
         specialty: data.specialty || null,
         welcome_message: data.welcomeMessage || null,
       }, { onConflict: "user_id" });
+
+      // Cleanup the persisted plan info.
+      try {
+        sessionStorage.removeItem("pending_activation_plan");
+      } catch {}
 
       toast.success("¡Consultorio configurado correctamente!");
       // TESTING MODE — revert before production launch

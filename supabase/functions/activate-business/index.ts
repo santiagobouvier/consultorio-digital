@@ -122,6 +122,8 @@ Deno.serve(async (req) => {
       ownerEmail: email,
       // Carry the planCode so the wizard can apply it when creating the business.
       planCode: pending.plan_code || "inicial",
+      customMaxProfessionals: pending.custom_max_professionals ?? null,
+      customMaxPatients: pending.custom_max_patients ?? null,
     });
   } catch (e) {
     console.error("activate-business error:", e);
