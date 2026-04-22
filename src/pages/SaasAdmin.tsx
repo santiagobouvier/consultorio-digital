@@ -201,13 +201,25 @@ const SaasAdmin = () => {
 
   // ── Business CRUD ──
   const handleCreateBusiness = async () => {
-    if (!newBusinessName.trim() || !newBusinessEmail.trim()) { toast({ title: "Error", description: "Nombre y email son requeridos", variant: "destructive" }); return; }
-    if (createMode === "test" && (!newBusinessPassword || newBusinessPassword.length < 6)) { toast({ title: "Error", description: "La contraseña debe tener al menos 6 caracteres", variant: "destructive" }); return; }
+    // En modo "invite" sólo necesitamos email; el nombre del consultorio
+    // lo define el dueño en el wizard de onboarding.
+    if (createMode === "invite") {
+      if (!newBusinessEmail.trim()) { toast({ title: "Error", description: "El email del dueño es requerido", variant: "destructive" }); return; }
+    } else {
+      if (!newBusinessName.trim() || !newBusinessEmail.trim()) { toast({ title: "Error", description: "Nombre y email son requeridos", variant: "destructive" }); return; }
+      if (!newBusinessPassword || newBusinessPassword.length < 6) { toast({ title: "Error", description: "La contraseña debe tener al menos 6 caracteres", variant: "destructive" }); return; }
+    }
     try {
       setCreating(true);
+      // Para modo invite usamos un placeholder en businessName porque el
+      // backend lo requiere por compatibilidad; el dueño lo va a sobreescribir.
+      const businessNameForRequest =
+        createMode === "invite"
+          ? `Consultorio (pendiente de configurar)`
+          : newBusinessName.trim();
       const { data, error } = await supabase.functions.invoke("create-business-owner", {
         body: {
-          businessName: newBusinessName.trim(),
+          businessName: businessNameForRequest,
           ownerEmail: newBusinessEmail.trim(),
           planCode: newBusinessPlan,
           mode: createMode,
@@ -217,9 +229,12 @@ const SaasAdmin = () => {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      if (data?.mode === "invite" && data?.activationUrl) {
-        setOwnerInviteLink(data.activationUrl);
-        toast({ title: "Mail de activación enviado", description: `Le enviamos un correo a ${data.sentTo} para que active el consultorio y defina su contraseña.` });
+      if (data?.mode === "invite") {
+        toast({
+          title: "Invitación enviada por email",
+          description: `Le enviamos un correo a ${data.sentTo || newBusinessEmail.trim()}. Cuando active la cuenta va a configurar su consultorio desde cero.`,
+        });
+        setShowCreateModal(false); resetCreateForm();
       } else if (data?.mode === "existing") {
         toast({ title: "Consultorio creado", description: `Asignado a usuario existente. Ya puede acceder.` });
         setShowCreateModal(false); resetCreateForm();
@@ -760,28 +775,7 @@ const SaasAdmin = () => {
         <DialogContent className="sm:max-w-md">
           <DialogHeader><DialogTitle>Crear nuevo consultorio</DialogTitle><DialogDescription>Ingresa los datos del nuevo consultorio y su dueño</DialogDescription></DialogHeader>
           
-          {ownerInviteLink ? (
-            <div className="space-y-4 py-4">
-              <Alert>
-                <AlertDescription>
-                  Consultorio creado. Enviá este enlace al dueño para que active su cuenta y establezca su contraseña.
-                </AlertDescription>
-              </Alert>
-              <div className="space-y-2">
-                <Label>Enlace de invitación</Label>
-                <div className="p-3 bg-muted rounded-md text-sm break-all font-mono">{ownerInviteLink}</div>
-              </div>
-              <div className="flex gap-3">
-                <Button variant="outline" className="flex-1" onClick={() => { resetCreateForm(); setShowCreateModal(false); }}>Cerrar</Button>
-                <Button className="flex-1 gap-2" onClick={async () => {
-                  try { await navigator.clipboard.writeText(ownerInviteLink); setCopied(true); toast({ title: "Enlace copiado" }); setTimeout(() => setCopied(false), 2000); } catch { toast({ title: "Error", description: "No se pudo copiar", variant: "destructive" }); }
-                }}>
-                  {copied ? <><Check className="h-4 w-4" />Copiado</> : <><Copy className="h-4 w-4" />Copiar enlace</>}
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-4 py-4">
+          <div className="space-y-4 py-4">
               {/* Mode selector */}
               <div className="space-y-2">
                 <Label>Modo de creación</Label>
@@ -798,13 +792,15 @@ const SaasAdmin = () => {
                 <p className="text-xs text-muted-foreground">
                   {createMode === "test" 
                     ? "Crea el usuario con email y contraseña directa. Ideal para pruebas internas."
-                    : "Genera un enlace de invitación. El dueño activa su cuenta y establece su contraseña."
+                    : "Le enviamos un correo al dueño. Activa su cuenta, define su contraseña y configura su consultorio desde cero."
                   }
                 </p>
               </div>
 
-              <div className="space-y-2"><Label>Nombre del consultorio</Label><Input value={newBusinessName} onChange={e => setNewBusinessName(e.target.value)} placeholder="Ej: Consultorio Dr. García" /></div>
-              <div className="space-y-2"><Label>Email del dueño</Label><Input type="email" value={newBusinessEmail} onChange={e => setNewBusinessEmail(e.target.value)} placeholder="email@ejemplo.com" /><p className="text-xs text-muted-foreground">Si el email ya existe, se asignará ese usuario.</p></div>
+              {createMode === "test" && (
+                <div className="space-y-2"><Label>Nombre del consultorio</Label><Input value={newBusinessName} onChange={e => setNewBusinessName(e.target.value)} placeholder="Ej: Consultorio Dr. García" /></div>
+              )}
+              <div className="space-y-2"><Label>Email del dueño</Label><Input type="email" value={newBusinessEmail} onChange={e => setNewBusinessEmail(e.target.value)} placeholder="email@ejemplo.com" /><p className="text-xs text-muted-foreground">{createMode === "invite" ? "Le va a llegar un correo de activación a esta dirección." : "Si el email ya existe, se asignará ese usuario."}</p></div>
               
               {createMode === "test" && (
                 <div className="space-y-2"><Label>Contraseña</Label><Input type="password" value={newBusinessPassword} onChange={e => setNewBusinessPassword(e.target.value)} placeholder="Mínimo 6 caracteres" /><p className="text-xs text-muted-foreground">Contraseña para acceso directo de prueba.</p></div>
@@ -815,9 +811,8 @@ const SaasAdmin = () => {
                   <SelectContent>{PLAN_ORDER.map(c => { const p = PLAN_DEFINITIONS[c]; return <SelectItem key={c} value={c}>{p.name} ({p.maxProfessionals === null ? "a medida" : `${p.maxProfessionals} prof, ${p.maxPatients} pac`})</SelectItem>; })}</SelectContent>
                 </Select>
               </div>
-              <div className="flex gap-3"><Button variant="outline" className="flex-1" onClick={() => { resetCreateForm(); setShowCreateModal(false); }}>Cancelar</Button><Button className="flex-1" onClick={handleCreateBusiness} disabled={creating}>{creating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}{createMode === "test" ? "Crear" : "Crear e invitar"}</Button></div>
-            </div>
-          )}
+              <div className="flex gap-3"><Button variant="outline" className="flex-1" onClick={() => { resetCreateForm(); setShowCreateModal(false); }}>Cancelar</Button><Button className="flex-1" onClick={handleCreateBusiness} disabled={creating}>{creating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}{createMode === "test" ? "Crear" : "Enviar invitación por email"}</Button></div>
+          </div>
         </DialogContent>
       </Dialog>
 
