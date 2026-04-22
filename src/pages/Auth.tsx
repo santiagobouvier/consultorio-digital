@@ -583,6 +583,7 @@ const Auth = () => {
             )}
           </div>
         </div>
+        </div>
       </div>
 
       {/* Logo grande flotante abajo del fold — SOLO mobile, aparece al scrollear */}
