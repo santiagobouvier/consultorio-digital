@@ -46,23 +46,25 @@ export const SaasAdminLayout = ({ activeSection, onSectionChange, children }: Sa
     <div className="dark min-h-screen flex flex-col bg-[#0e1417] text-slate-100">
       {/* ── Top header (always visible) ── */}
       <header className="sticky top-0 z-30 bg-[#0e1417]/90 backdrop-blur-md border-b border-slate-800/60">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-24 flex items-center justify-between gap-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
           {/* Brand — clickable home */}
-          <button
-            onClick={() => onSectionChange("home")}
-            className="flex items-center gap-3 group rounded-lg -ml-1 px-1 py-1 hover:bg-slate-800/40 transition-colors"
-            title="Ir al panel principal"
-          >
-            <img 
-              src={consultorioDigitalLogo} 
-              alt="Consultorio Digital" 
-              className="h-20 w-20 object-contain"
-            />
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => onSectionChange("home")}
+              className="flex items-center rounded-lg -ml-1 p-1 hover:bg-slate-800/40 transition-colors"
+              title="Ir al panel principal"
+            >
+              <img 
+                src={consultorioDigitalLogo} 
+                alt="Consultorio Digital" 
+                className="h-24 w-24 object-contain"
+              />
+            </button>
             <div className="text-left leading-tight">
-              <p className="text-[10px] font-medium uppercase tracking-[0.18em] text-slate-500">Consultorio Digital</p>
-              <p className="text-sm font-semibold text-slate-100 -mt-0.5">Panel de administración</p>
+              <p className="text-[9px] font-medium uppercase tracking-[0.18em] text-slate-500">Consultorio Digital</p>
+              <p className="text-xs font-semibold text-slate-100 -mt-0.5">Panel de administración</p>
             </div>
-          </button>
+          </div>
 
           {/* Breadcrumb + back */}
           <div className="flex items-center gap-2">
