@@ -361,7 +361,7 @@ const Auth = () => {
 
         {/* Logo Consultorio Digital — SOLO mobile y tablet, arriba del card.
             En desktop ya hay un logo grande a la izquierda (fila). */}
-        <div className="lg:hidden flex justify-center mb-6" aria-hidden>
+        <div className="lg:hidden flex justify-center mb-3" aria-hidden>
           <div className="relative animate-float-soft" style={{ willChange: "transform" }}>
             <div
               className="absolute inset-0 -z-10 blur-2xl opacity-30"
