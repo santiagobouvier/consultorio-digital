@@ -397,28 +397,6 @@ const Auth = () => {
             boxShadow: '0 8px 60px rgba(0, 165, 160, 0.08), 0 0 120px rgba(0, 165, 160, 0.04)',
           }}
         >
-          {/* Logo Consultorio Digital DENTRO del card — SOLO mobile y tablet */}
-          <div className="lg:hidden flex justify-center pt-6" aria-hidden>
-            <div className="relative animate-float-soft" style={{ willChange: "transform" }}>
-              <div
-                className="absolute inset-0 -z-10 blur-2xl opacity-30"
-                style={{
-                  background:
-                    "radial-gradient(ellipse at center, hsla(176,80%,40%,0.4), transparent 75%)",
-                }}
-              />
-              <img
-                src={logoWhite}
-                alt=""
-                className="h-24 sm:h-28 w-auto object-contain select-none"
-                draggable={false}
-                decoding="async"
-                loading="eager"
-                style={{ filter: "drop-shadow(0 8px 20px rgba(0,165,160,0.25))" }}
-              />
-            </div>
-          </div>
-
           <div className="p-6 pb-2 text-center space-y-3">
             <h2 className="text-2xl font-bold text-white">
               {showForgotPassword ? "Recuperar acceso" : isSignUp ? "Crear cuenta" : "Bienvenido/a"}
