@@ -521,11 +521,27 @@ const Statistics = () => {
             </Tabs>
             <Button variant="outline" size="sm" onClick={handleExport} className="gap-2">
               <Download className="h-4 w-4" />
-              Exportar CSV
+              <span className="hidden sm:inline">Exportar CSV</span>
+              <span className="sm:hidden">CSV</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportPDF}
+              disabled={exportingPDF}
+              className="gap-2"
+            >
+              <FileDown className="h-4 w-4" />
+              <span className="hidden sm:inline">
+                {exportingPDF ? "Generando..." : "Exportar PDF"}
+              </span>
+              <span className="sm:hidden">{exportingPDF ? "..." : "PDF"}</span>
             </Button>
           </div>
         </div>
 
+        {/* Reportable content (captured for PDF) */}
+        <div ref={reportRef} className="space-y-6 bg-background">
         {/* Cobros destacado */}
         <Card className="border-2 border-primary/20">
           <CardContent className="p-4 sm:p-6">
