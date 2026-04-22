@@ -366,15 +366,6 @@ const Auth = () => {
           }}
         >
           <div className="p-6 pb-2 text-center space-y-3">
-            {/* Logo blanco centrado arriba del título */}
-            <div className="flex justify-center">
-              <img
-                src={logoWhite}
-                alt="Consultorio Digital"
-                className="h-12 w-auto object-contain"
-                style={{ filter: "drop-shadow(0 4px 16px rgba(0,165,160,0.25))" }}
-              />
-            </div>
             <h2 className="text-2xl font-bold text-white">
               {showForgotPassword ? "Recuperar acceso" : isSignUp ? "Crear cuenta" : "Bienvenido/a"}
             </h2>
