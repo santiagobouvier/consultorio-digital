@@ -132,7 +132,7 @@ export const SaasAdminLayout = ({ activeSection, onSectionChange, children }: Sa
             Powered by
           </span>
           <a
-            href="https://digitalbuilders.uy"
+            href="https://digitalbuilders.net"
             target="_blank"
             rel="noopener noreferrer"
             className="opacity-70 hover:opacity-100 transition-opacity inline-flex items-center"
