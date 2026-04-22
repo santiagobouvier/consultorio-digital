@@ -359,6 +359,29 @@ const Auth = () => {
           Volver al inicio
         </Link>
 
+        {/* Logo Consultorio Digital — SOLO mobile y tablet, arriba del card.
+            En desktop ya hay un logo grande a la izquierda (fila). */}
+        <div className="lg:hidden flex justify-center mb-6" aria-hidden>
+          <div className="relative animate-float-soft" style={{ willChange: "transform" }}>
+            <div
+              className="absolute inset-0 -z-10 blur-2xl opacity-30"
+              style={{
+                background:
+                  "radial-gradient(ellipse at center, hsla(176,80%,40%,0.4), transparent 75%)",
+              }}
+            />
+            <img
+              src={logoWhite}
+              alt=""
+              className="h-40 sm:h-48 w-auto object-contain select-none"
+              draggable={false}
+              decoding="async"
+              loading="eager"
+              style={{ filter: "drop-shadow(0 12px 28px rgba(0,165,160,0.2))" }}
+            />
+          </div>
+        </div>
+
         {/* Plan badge */}
         {selectedPlan && planDef && (
           <div className="w-full mb-4 rounded-xl border border-[hsla(160,80%,50%,0.3)] bg-[hsla(160,80%,50%,0.05)] p-4">
@@ -602,28 +625,6 @@ const Auth = () => {
         </div>
         </div>
       </main>
-
-      {/* Logo grande flotante abajo del fold — SOLO mobile, aparece al scrollear */}
-      <div className="lg:hidden flex justify-center items-center min-h-screen" aria-hidden>
-        <div className="relative animate-float-soft" style={{ willChange: "transform" }}>
-          <div
-            className="absolute inset-0 -z-10 blur-3xl opacity-60"
-            style={{
-              background:
-                "radial-gradient(ellipse at center, hsla(176,80%,40%,0.5), transparent 70%)",
-            }}
-          />
-          <img
-            src={logoWhite}
-            alt=""
-            className="h-56 w-auto object-contain select-none"
-            draggable={false}
-            decoding="async"
-            loading="lazy"
-            style={{ filter: "drop-shadow(0 20px 40px rgba(0,165,160,0.4))" }}
-          />
-        </div>
-      </div>
 
       {/* Footer "Powered by" — transparente, minimalista, igual al panel SaaS Admin pero más chico */}
       <footer className="relative z-10 w-full">
