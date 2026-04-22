@@ -695,6 +695,51 @@ export type Database = {
         }
         Relationships: []
       }
+      pending_business_activations: {
+        Row: {
+          business_name: string
+          created_at: string
+          created_by: string
+          custom_max_patients: number | null
+          custom_max_professionals: number | null
+          expires_at: string
+          id: string
+          owner_email: string
+          plan_code: string
+          token: string
+          updated_at: string
+          used_at: string | null
+        }
+        Insert: {
+          business_name: string
+          created_at?: string
+          created_by: string
+          custom_max_patients?: number | null
+          custom_max_professionals?: number | null
+          expires_at?: string
+          id?: string
+          owner_email: string
+          plan_code?: string
+          token: string
+          updated_at?: string
+          used_at?: string | null
+        }
+        Update: {
+          business_name?: string
+          created_at?: string
+          created_by?: string
+          custom_max_patients?: number | null
+          custom_max_professionals?: number | null
+          expires_at?: string
+          id?: string
+          owner_email?: string
+          plan_code?: string
+          token?: string
+          updated_at?: string
+          used_at?: string | null
+        }
+        Relationships: []
+      }
       professional_portal_invites: {
         Row: {
           auth_user_id: string | null
@@ -1155,6 +1200,17 @@ export type Database = {
       user_belongs_to_business: {
         Args: { _business_id: string; _user_id: string }
         Returns: boolean
+      }
+      validate_business_activation_token: {
+        Args: { p_token: string }
+        Returns: {
+          business_name: string
+          expires_at: string
+          id: string
+          owner_email: string
+          plan_code: string
+          used_at: string
+        }[]
       }
       validate_patient_invite: {
         Args: { p_token: string }
