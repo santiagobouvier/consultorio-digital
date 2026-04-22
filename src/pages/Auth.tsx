@@ -298,7 +298,7 @@ const Auth = () => {
   }
 
   return (
-    <div className="min-h-screen lg:flex lg:items-center lg:justify-center bg-[hsl(180,15%,4%)]">
+    <div className="min-h-screen flex flex-col bg-[hsl(180,15%,4%)]">
       {/* Imagen de fondo de consultorio — SOLO desktop, mobile queda limpio */}
       <div
         className="fixed inset-0 pointer-events-none bg-cover bg-center hidden lg:block"
@@ -324,8 +324,9 @@ const Auth = () => {
         aria-hidden
       />
 
-      {/* Desktop: fila (logo + card centrados). Mobile: solo card centrado en primera pantalla. */}
-      <div className="relative z-10 w-full mx-auto flex flex-col lg:flex-row lg:items-center lg:justify-center lg:gap-10 xl:gap-16 min-h-screen lg:min-h-0 px-4 py-4 lg:py-0">
+      {/* Contenido principal centrado. En mobile ocupa al menos toda la pantalla (card centrado vertical).
+          En desktop también centra logo+card como fila. flex-1 lo hace ocupar el espacio antes del footer. */}
+      <main className="relative z-10 flex-1 w-full flex flex-col lg:flex-row items-center justify-center lg:gap-10 xl:gap-16 px-4 py-8 lg:py-0 min-h-screen lg:min-h-0">
         {/* Logo grande flotante a la izquierda — solo desktop */}
         <div className="hidden lg:flex shrink-0 justify-center" aria-hidden>
           <div className="relative animate-float-soft" style={{ willChange: "transform" }}>
@@ -605,7 +606,7 @@ const Auth = () => {
           </div>
         </div>
         </div>
-      </div>
+      </main>
 
       {/* Logo grande flotante abajo del fold — SOLO mobile, aparece al scrollear */}
       <div className="lg:hidden flex justify-center items-center min-h-screen" aria-hidden>
