@@ -217,10 +217,9 @@ const SaasAdmin = () => {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      if (data?.inviteToken) {
-        const link = `${window.location.origin}/invitar-profesional?token=${data.inviteToken}`;
-        setOwnerInviteLink(link);
-        toast({ title: "Consultorio creado", description: "Copiá el enlace de invitación y envialo al dueño." });
+      if (data?.mode === "invite" && data?.activationUrl) {
+        setOwnerInviteLink(data.activationUrl);
+        toast({ title: "Mail de activación enviado", description: `Le enviamos un correo a ${data.sentTo} para que active el consultorio y defina su contraseña.` });
       } else if (data?.mode === "existing") {
         toast({ title: "Consultorio creado", description: `Asignado a usuario existente. Ya puede acceder.` });
         setShowCreateModal(false); resetCreateForm();
