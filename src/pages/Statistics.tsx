@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -20,6 +21,7 @@ import {
   ArrowDownRight,
   Minus,
   MessageCircle,
+  FileDown,
 } from "lucide-react";
 import LoadingPage from "@/components/LoadingPage";
 import { useBusinessId } from "@/hooks/use-business-id";
@@ -100,6 +102,8 @@ const Statistics = () => {
   const { professionals } = useProfessionals(businessId);
   const [period, setPeriod] = useState<PeriodKey>("90d");
   const [loading, setLoading] = useState(true);
+  const [exportingPDF, setExportingPDF] = useState(false);
+  const reportRef = useRef<HTMLDivElement>(null);
 
   // Raw data
   const [appointments, setAppointments] = useState<Array<{ start_at: string; status: string; professional_id: string | null }>>([]);
@@ -424,6 +428,72 @@ const Statistics = () => {
     exportCSV(headers, rows, `estadisticas_${todayDateString()}.csv`);
   };
 
+  const handleExportPDF = async () => {
+    if (!reportRef.current) return;
+    try {
+      setExportingPDF(true);
+      // Dynamic import to keep initial bundle light
+      const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
+        import("jspdf"),
+        import("html2canvas"),
+      ]);
+
+      // Render at higher scale for sharper output
+      const canvas = await html2canvas(reportRef.current, {
+        scale: 2,
+        backgroundColor: "#ffffff",
+        useCORS: true,
+        logging: false,
+        windowWidth: reportRef.current.scrollWidth,
+      });
+
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 8;
+      const usableWidth = pageWidth - margin * 2;
+      const imgHeight = (canvas.height * usableWidth) / canvas.width;
+
+      // Cover header
+      pdf.setFontSize(16);
+      pdf.text("Estadísticas", margin, 14);
+      pdf.setFontSize(10);
+      pdf.setTextColor(120);
+      pdf.text(`Período: ${PERIOD_LABELS[period]}`, margin, 20);
+      pdf.text(`Generado: ${new Date().toLocaleDateString("es-UY")}`, margin, 25);
+      pdf.setTextColor(0);
+
+      const topOffset = 30;
+      let heightLeft = imgHeight;
+      let position = topOffset;
+
+      // First page
+      pdf.addImage(imgData, "PNG", margin, position, usableWidth, imgHeight);
+      heightLeft -= pageHeight - topOffset;
+
+      // Additional pages
+      while (heightLeft > 0) {
+        pdf.addPage();
+        position = margin - (imgHeight - heightLeft);
+        pdf.addImage(imgData, "PNG", margin, position, usableWidth, imgHeight);
+        heightLeft -= pageHeight - margin;
+      }
+
+      pdf.save(`estadisticas_${todayDateString()}.pdf`);
+      toast({ title: "PDF generado", description: "El reporte se descargó correctamente" });
+    } catch (e) {
+      console.error("PDF export error:", e);
+      toast({
+        title: "Error",
+        description: "No se pudo generar el PDF",
+        variant: "destructive",
+      });
+    } finally {
+      setExportingPDF(false);
+    }
+  };
+
   if (bizLoading || loading) return <LoadingPage />;
 
   return (
@@ -451,11 +521,27 @@ const Statistics = () => {
             </Tabs>
             <Button variant="outline" size="sm" onClick={handleExport} className="gap-2">
               <Download className="h-4 w-4" />
-              Exportar CSV
+              <span className="hidden sm:inline">Exportar CSV</span>
+              <span className="sm:hidden">CSV</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportPDF}
+              disabled={exportingPDF}
+              className="gap-2"
+            >
+              <FileDown className="h-4 w-4" />
+              <span className="hidden sm:inline">
+                {exportingPDF ? "Generando..." : "Exportar PDF"}
+              </span>
+              <span className="sm:hidden">{exportingPDF ? "..." : "PDF"}</span>
             </Button>
           </div>
         </div>
 
+        {/* Reportable content (captured for PDF) */}
+        <div ref={reportRef} className="space-y-6 bg-background">
         {/* Cobros destacado */}
         <Card className="border-2 border-primary/20">
           <CardContent className="p-4 sm:p-6">
@@ -779,6 +865,7 @@ const Statistics = () => {
             )}
           </CardContent>
         </Card>
+        </div>
       </div>
     </div>
   );

@@ -269,15 +269,14 @@ const Patients = () => {
             variant="outline"
             className="h-12 rounded-2xl border-border/50 shadow-sm bg-card gap-2"
             onClick={() => {
-              const headers = ["Nombre", "Email", "WhatsApp", "Motivo de consulta", "Estado", "Tiene portal", "Fecha de registro"];
+              const headers = ["Nombre", "Email", "Teléfono", "Fecha de alta"];
               const rows = filteredPatients.map((p) => [
                 p.full_name,
                 p.email || "",
                 p.whatsapp_phone || "",
-                "",
-                p.is_active ? "Activo" : "Inactivo",
-                p.auth_user_id ? "Sí" : "No",
-                new Date((p as any).created_at || "").toLocaleDateString("es-UY") || "",
+                (p as any).created_at
+                  ? new Date((p as any).created_at).toLocaleDateString("es-UY")
+                  : "",
               ]);
               exportCSV(headers, rows, `pacientes_${todayDateString()}.csv`);
             }}
