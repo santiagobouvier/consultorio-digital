@@ -51,8 +51,12 @@ export const SaasAdminLayout = ({ activeSection, onSectionChange, children }: Sa
             className="flex items-center gap-3 group rounded-lg -ml-1 px-1 py-1 hover:bg-slate-800/40 transition-colors"
             title="Ir al panel principal"
           >
-            <div className="h-9 w-9 rounded-lg bg-teal-500/10 border border-teal-500/25 flex items-center justify-center">
-              <Stethoscope className="h-4 w-4 text-teal-400" />
+            <div className="h-9 w-9 rounded-lg bg-teal-500/10 border border-teal-500/25 flex items-center justify-center overflow-hidden">
+              <img 
+                src="/app-icon.svg" 
+                alt="Consultorio Digital" 
+                className="h-6 w-6 object-contain"
+              />
             </div>
             <div className="text-left leading-tight">
               <p className="text-[10px] font-medium uppercase tracking-[0.18em] text-slate-500">Consultorio Digital</p>
