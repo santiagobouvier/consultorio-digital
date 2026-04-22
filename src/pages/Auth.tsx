@@ -238,7 +238,12 @@ const Auth = () => {
         />
         <div className="relative z-10 w-full max-w-md">
           <div className="flex justify-center mb-6">
-            <Logo variant="full" size="4xl" showTagline={false} />
+            <img
+              src={logoWhite}
+              alt="Consultorio Digital"
+              className="h-12 w-auto object-contain"
+              style={{ filter: "drop-shadow(0 4px 16px rgba(0,165,160,0.25))" }}
+            />
           </div>
           <div
             className="rounded-2xl border border-white/10 shadow-2xl p-8 text-center"
