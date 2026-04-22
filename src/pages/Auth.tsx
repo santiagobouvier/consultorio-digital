@@ -304,7 +304,7 @@ const Auth = () => {
         className="fixed inset-0 pointer-events-none bg-cover bg-center lg:hidden"
         style={{
           backgroundImage: `url(${authBgConsultorioMobile})`,
-          opacity: 0.12,
+          opacity: 0.07,
         }}
         aria-hidden
       />
@@ -312,7 +312,7 @@ const Auth = () => {
         className="fixed inset-0 pointer-events-none bg-cover bg-center hidden lg:block"
         style={{
           backgroundImage: `url(${authBgConsultorio})`,
-          opacity: 0.12,
+          opacity: 0.07,
         }}
         aria-hidden
       />
