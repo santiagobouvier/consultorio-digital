@@ -303,6 +303,31 @@ const Auth = () => {
         style={{ background: "radial-gradient(ellipse 60% 40% at 50% 0%, hsla(176,80%,40%,0.1), transparent)" }}
       />
 
+      {/* Logo gigante flotante — solo desktop, absoluto: no afecta el centrado del card */}
+      <div
+        className="hidden lg:flex pointer-events-none fixed left-[6vw] xl:left-[10vw] top-1/2 -translate-y-1/2 z-0 items-center justify-center"
+        aria-hidden
+      >
+        <div className="relative animate-float-soft" style={{ willChange: "transform" }}>
+          <div
+            className="absolute inset-0 -z-10 blur-3xl opacity-70"
+            style={{
+              background:
+                "radial-gradient(ellipse at center, hsla(176,80%,40%,0.5), transparent 70%)",
+            }}
+          />
+          <img
+            src={logoWhite}
+            alt=""
+            className="h-64 xl:h-80 w-auto object-contain select-none"
+            draggable={false}
+            decoding="async"
+            loading="eager"
+            style={{ filter: "drop-shadow(0 24px 48px rgba(0,165,160,0.4))" }}
+          />
+        </div>
+      </div>
+
       <div className="relative z-10 w-full max-w-md">
         <Link
           to="/"
