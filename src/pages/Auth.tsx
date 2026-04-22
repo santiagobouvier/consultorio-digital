@@ -303,43 +303,40 @@ const Auth = () => {
         style={{ background: "radial-gradient(ellipse 60% 40% at 50% 0%, hsla(176,80%,40%,0.1), transparent)" }}
       />
 
-      {/* Logo gigante flotante — solo desktop, absoluto: no afecta el centrado del card */}
-      <div
-        className="hidden lg:flex pointer-events-none fixed left-[6vw] xl:left-[10vw] top-1/2 -translate-y-1/2 z-0 items-center justify-center"
-        aria-hidden
-      >
-        <div className="relative animate-float-soft" style={{ willChange: "transform" }}>
-          <div
-            className="absolute inset-0 -z-10 blur-3xl opacity-70"
-            style={{
-              background:
-                "radial-gradient(ellipse at center, hsla(176,80%,40%,0.5), transparent 70%)",
-            }}
-          />
-          <img
-            src={logoWhite}
-            alt=""
-            className="h-64 xl:h-80 w-auto object-contain select-none"
-            draggable={false}
-            decoding="async"
-            loading="eager"
-            style={{ filter: "drop-shadow(0 24px 48px rgba(0,165,160,0.4))" }}
-          />
-        </div>
-      </div>
-
-      <div className="relative z-10 w-full max-w-md">
+      <div className="relative z-10 w-full max-w-md lg:max-w-sm flex flex-col items-center">
         <Link
           to="/"
-          className="inline-flex items-center gap-2 text-sm text-white/40 hover:text-white/70 mb-4 transition-colors"
+          className="self-start inline-flex items-center gap-2 text-sm text-white/40 hover:text-white/70 mb-4 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           Volver al inicio
         </Link>
 
+        {/* Logo grande flotante arriba del card — solo desktop */}
+        <div className="hidden lg:flex justify-center mb-6" aria-hidden>
+          <div className="relative animate-float-soft" style={{ willChange: "transform" }}>
+            <div
+              className="absolute inset-0 -z-10 blur-3xl opacity-70"
+              style={{
+                background:
+                  "radial-gradient(ellipse at center, hsla(176,80%,40%,0.5), transparent 70%)",
+              }}
+            />
+            <img
+              src={logoWhite}
+              alt=""
+              className="h-72 xl:h-80 w-auto object-contain select-none"
+              draggable={false}
+              decoding="async"
+              loading="eager"
+              style={{ filter: "drop-shadow(0 24px 48px rgba(0,165,160,0.4))" }}
+            />
+          </div>
+        </div>
+
         {/* Plan badge */}
         {selectedPlan && planDef && (
-          <div className="mb-4 rounded-xl border border-[hsla(160,80%,50%,0.3)] bg-[hsla(160,80%,50%,0.05)] p-4">
+          <div className="w-full mb-4 rounded-xl border border-[hsla(160,80%,50%,0.3)] bg-[hsla(160,80%,50%,0.05)] p-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-[hsla(160,80%,50%,0.1)] flex items-center justify-center">
                 <Sparkles className="w-5 h-5 text-[hsl(160,80%,50%)]" />
@@ -357,7 +354,7 @@ const Auth = () => {
 
         {/* Contextual business header */}
         {showContextualLogin && (
-          <div className="mb-4 rounded-xl border border-[hsla(176,80%,40%,0.2)] bg-[hsla(176,80%,40%,0.05)] p-4 flex items-center gap-3">
+          <div className="w-full mb-4 rounded-xl border border-[hsla(176,80%,40%,0.2)] bg-[hsla(176,80%,40%,0.05)] p-4 flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-[hsla(176,80%,40%,0.1)] flex items-center justify-center">
               <Building2 className="w-5 h-5 text-[hsl(176,80%,40%)]" />
             </div>
@@ -369,7 +366,7 @@ const Auth = () => {
         )}
 
         <div
-          className="rounded-2xl border border-white/10 shadow-2xl"
+          className="w-full rounded-2xl border border-white/10 shadow-2xl"
           style={{
             backgroundColor: '#111111',
             boxShadow: '0 8px 60px rgba(0, 165, 160, 0.08), 0 0 120px rgba(0, 165, 160, 0.04)',
