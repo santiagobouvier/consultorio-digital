@@ -240,10 +240,10 @@ const Auth = () => {
           <div className="flex justify-center mb-6">
             <div className="relative animate-float-soft" style={{ willChange: "transform" }}>
               <div
-                className="absolute inset-0 -z-10 blur-3xl opacity-60"
+                className="absolute inset-0 -z-10 blur-2xl opacity-25"
                 style={{
                   background:
-                    "radial-gradient(ellipse at center, hsla(176,80%,40%,0.45), transparent 70%)",
+                    "radial-gradient(ellipse at center, hsla(176,80%,40%,0.35), transparent 75%)",
                 }}
                 aria-hidden
               />
@@ -254,7 +254,7 @@ const Auth = () => {
                 draggable={false}
                 decoding="async"
                 loading="eager"
-                style={{ filter: "drop-shadow(0 20px 40px rgba(0,165,160,0.35))" }}
+                style={{ filter: "drop-shadow(0 16px 32px rgba(0,165,160,0.18))" }}
               />
             </div>
           </div>
