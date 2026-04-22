@@ -428,6 +428,72 @@ const Statistics = () => {
     exportCSV(headers, rows, `estadisticas_${todayDateString()}.csv`);
   };
 
+  const handleExportPDF = async () => {
+    if (!reportRef.current) return;
+    try {
+      setExportingPDF(true);
+      // Dynamic import to keep initial bundle light
+      const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
+        import("jspdf"),
+        import("html2canvas"),
+      ]);
+
+      // Render at higher scale for sharper output
+      const canvas = await html2canvas(reportRef.current, {
+        scale: 2,
+        backgroundColor: "#ffffff",
+        useCORS: true,
+        logging: false,
+        windowWidth: reportRef.current.scrollWidth,
+      });
+
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 8;
+      const usableWidth = pageWidth - margin * 2;
+      const imgHeight = (canvas.height * usableWidth) / canvas.width;
+
+      // Cover header
+      pdf.setFontSize(16);
+      pdf.text("Estadísticas", margin, 14);
+      pdf.setFontSize(10);
+      pdf.setTextColor(120);
+      pdf.text(`Período: ${PERIOD_LABELS[period]}`, margin, 20);
+      pdf.text(`Generado: ${new Date().toLocaleDateString("es-UY")}`, margin, 25);
+      pdf.setTextColor(0);
+
+      const topOffset = 30;
+      let heightLeft = imgHeight;
+      let position = topOffset;
+
+      // First page
+      pdf.addImage(imgData, "PNG", margin, position, usableWidth, imgHeight);
+      heightLeft -= pageHeight - topOffset;
+
+      // Additional pages
+      while (heightLeft > 0) {
+        pdf.addPage();
+        position = margin - (imgHeight - heightLeft);
+        pdf.addImage(imgData, "PNG", margin, position, usableWidth, imgHeight);
+        heightLeft -= pageHeight - margin;
+      }
+
+      pdf.save(`estadisticas_${todayDateString()}.pdf`);
+      toast({ title: "PDF generado", description: "El reporte se descargó correctamente" });
+    } catch (e) {
+      console.error("PDF export error:", e);
+      toast({
+        title: "Error",
+        description: "No se pudo generar el PDF",
+        variant: "destructive",
+      });
+    } finally {
+      setExportingPDF(false);
+    }
+  };
+
   if (bizLoading || loading) return <LoadingPage />;
 
   return (
