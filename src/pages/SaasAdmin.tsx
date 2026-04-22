@@ -955,6 +955,7 @@ const ComingSoonSection = ({ section }: { section: SaasSection }) => {
     home: { title: "Panel", desc: "" },
     consultorios: { title: "Consultorios", desc: "" },
     finanzas: { title: "Finanzas", desc: "Gráficos de ingresos por mes, MRR por plan, total cobrado vs proyectado." },
+    estadisticas: { title: "Estadísticas", desc: "" },
     usuarios: { title: "Usuarios", desc: "Lista de profesionales registrados en la plataforma con búsqueda y filtros." },
     planes: { title: "Planes", desc: "Editor de nombre, precios y límites de cada plan." },
     sistema: { title: "Sistema", desc: "Salud técnica (webhooks de MercadoPago, edge functions, push) y configuración global del SaaS." },
