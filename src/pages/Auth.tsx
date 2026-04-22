@@ -583,6 +583,28 @@ const Auth = () => {
             )}
           </div>
         </div>
+
+        {/* Logo abajo del card — solo mobile */}
+        <div className="lg:hidden flex justify-center mt-8 mb-2" aria-hidden>
+          <div className="relative animate-float-soft" style={{ willChange: "transform" }}>
+            <div
+              className="absolute inset-0 -z-10 blur-2xl opacity-50"
+              style={{
+                background:
+                  "radial-gradient(ellipse at center, hsla(176,80%,40%,0.4), transparent 70%)",
+              }}
+            />
+            <img
+              src={logoWhite}
+              alt=""
+              className="h-24 w-auto object-contain select-none opacity-90"
+              draggable={false}
+              decoding="async"
+              loading="lazy"
+              style={{ filter: "drop-shadow(0 12px 24px rgba(0,165,160,0.3))" }}
+            />
+          </div>
+        </div>
       </div>
     </div>
   );
