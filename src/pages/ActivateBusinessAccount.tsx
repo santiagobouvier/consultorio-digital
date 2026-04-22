@@ -107,6 +107,21 @@ export default function ActivateBusinessAccount() {
       if (fnError) throw fnError;
       if (data?.error) throw new Error(data.error);
 
+      // Persist plan info from the invitation so the OnboardingWizard
+      // can create the business with the correct plan_code and custom limits.
+      try {
+        sessionStorage.setItem(
+          "pending_activation_plan",
+          JSON.stringify({
+            planCode: data?.planCode || pending.plan_code || "inicial",
+            customMaxProfessionals: data?.customMaxProfessionals ?? null,
+            customMaxPatients: data?.customMaxPatients ?? null,
+          }),
+        );
+      } catch (storageErr) {
+        console.warn("Could not persist activation plan:", storageErr);
+      }
+
       // Activación OK → loguear automáticamente
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email: pending.owner_email,
