@@ -13,7 +13,6 @@ import { getPlanDefinition, formatPrice } from "@/lib/plan-definitions";
 import { isCurrentUserSuperAdmin } from "@/lib/admin-access";
 import logoWhite from "@/assets/logo-consultorio-digital-white.png";
 import authBgConsultorio from "@/assets/auth-bg-consultorio.jpg";
-import authBgConsultorioMobile from "@/assets/auth-bg-consultorio-mobile.jpg";
 
 const REMEMBER_EMAIL_KEY = "auth_remembered_email";
 
