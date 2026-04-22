@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { Building2, DollarSign, Users, Settings2, Server, ArrowLeft, Stethoscope, BarChart3, ChevronRight, type LucideIcon } from "lucide-react";
 import digitalBuildersLogo from "@/assets/logo-digitalbuilders.webp";
+import consultorioDigitalLogo from "@/assets/logo-consultorio-digital-white.png";
 
 export type SaasSection = "home" | "consultorios" | "finanzas" | "usuarios" | "planes" | "sistema" | "estadisticas";
 
@@ -52,11 +53,11 @@ export const SaasAdminLayout = ({ activeSection, onSectionChange, children }: Sa
             className="flex items-center gap-3 group rounded-lg -ml-1 px-1 py-1 hover:bg-slate-800/40 transition-colors"
             title="Ir al panel principal"
           >
-            <div className="h-9 w-9 rounded-lg bg-teal-500/10 border border-teal-500/25 flex items-center justify-center overflow-hidden">
+            <div className="h-10 w-10 rounded-lg bg-teal-500/10 border border-teal-500/25 flex items-center justify-center overflow-hidden p-1">
               <img 
-                src="/app-icon.svg" 
+                src={consultorioDigitalLogo} 
                 alt="Consultorio Digital" 
-                className="h-6 w-6 object-contain"
+                className="h-full w-full object-contain"
               />
             </div>
             <div className="text-left leading-tight">
@@ -128,21 +129,21 @@ export const SaasAdminLayout = ({ activeSection, onSectionChange, children }: Sa
 
       {/* ── Footer minimalista ── */}
       <footer className="border-t border-slate-800/60 bg-[#0e1417]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex items-center justify-center gap-2.5">
-          <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-slate-600">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-7 flex flex-col items-center justify-center gap-2">
+          <span className="text-[10px] font-medium uppercase tracking-[0.22em] text-slate-600">
             Powered by
           </span>
           <a
             href="https://digitalbuilders.uy"
             target="_blank"
             rel="noopener noreferrer"
-            className="opacity-60 hover:opacity-100 transition-opacity"
+            className="opacity-70 hover:opacity-100 transition-opacity"
             title="Digital Builders"
           >
             <img
               src={digitalBuildersLogo}
               alt="Digital Builders"
-              className="h-5 w-auto object-contain"
+              className="h-10 sm:h-12 w-auto object-contain"
             />
           </a>
         </div>
