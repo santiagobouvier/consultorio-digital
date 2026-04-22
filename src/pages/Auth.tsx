@@ -296,17 +296,18 @@ const Auth = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[hsl(180,15%,4%)] p-4">
+    <div className="min-h-screen lg:flex lg:items-center lg:justify-center bg-[hsl(180,15%,4%)]">
       {/* Background glow */}
       <div
         className="fixed inset-0 pointer-events-none"
         style={{ background: "radial-gradient(ellipse 60% 40% at 50% 0%, hsla(176,80%,40%,0.1), transparent)" }}
       />
 
-      <div className="relative z-10 w-full max-w-md lg:max-w-sm flex flex-col items-center">
+      {/* Mobile: card ocupa toda la primera pantalla centrado. Desktop: layout normal. */}
+      <div className="relative z-10 w-full max-w-md lg:max-w-sm mx-auto flex flex-col items-center min-h-screen lg:min-h-0 px-4 py-4 lg:py-0 justify-center lg:justify-start">
         <Link
           to="/"
-          className="self-start inline-flex items-center gap-2 text-sm text-white/40 hover:text-white/70 mb-4 transition-colors"
+          className="self-start inline-flex items-center gap-2 text-sm text-white/40 hover:text-white/70 mb-4 transition-colors absolute top-4 left-4 lg:static"
         >
           <ArrowLeft className="w-4 h-4" />
           Volver al inicio
@@ -580,27 +581,27 @@ const Auth = () => {
             )}
           </div>
         </div>
+      </div>
 
-        {/* Logo abajo del card — solo mobile */}
-        <div className="lg:hidden flex justify-center mt-8 mb-2" aria-hidden>
-          <div className="relative animate-float-soft" style={{ willChange: "transform" }}>
-            <div
-              className="absolute inset-0 -z-10 blur-2xl opacity-50"
-              style={{
-                background:
-                  "radial-gradient(ellipse at center, hsla(176,80%,40%,0.4), transparent 70%)",
-              }}
-            />
-            <img
-              src={logoWhite}
-              alt=""
-              className="h-24 w-auto object-contain select-none opacity-90"
-              draggable={false}
-              decoding="async"
-              loading="lazy"
-              style={{ filter: "drop-shadow(0 12px 24px rgba(0,165,160,0.3))" }}
-            />
-          </div>
+      {/* Logo grande flotante abajo del fold — SOLO mobile, aparece al scrollear */}
+      <div className="lg:hidden flex justify-center pt-12 pb-16" aria-hidden>
+        <div className="relative animate-float-soft" style={{ willChange: "transform" }}>
+          <div
+            className="absolute inset-0 -z-10 blur-3xl opacity-60"
+            style={{
+              background:
+                "radial-gradient(ellipse at center, hsla(176,80%,40%,0.5), transparent 70%)",
+            }}
+          />
+          <img
+            src={logoWhite}
+            alt=""
+            className="h-56 w-auto object-contain select-none"
+            draggable={false}
+            decoding="async"
+            loading="lazy"
+            style={{ filter: "drop-shadow(0 20px 40px rgba(0,165,160,0.4))" }}
+          />
         </div>
       </div>
     </div>
