@@ -125,12 +125,12 @@ export default function ActivateBusinessAccount() {
 
       setSuccess(true);
       toast({
-        title: "¡Consultorio activado!",
-        description: "Te estamos llevando a tu panel.",
+        title: "¡Cuenta activada!",
+        description: "Ahora vas a configurar tu consultorio.",
       });
 
       setTimeout(() => {
-        navigate("/dashboard");
+        navigate("/onboarding");
       }, 1500);
     } catch (err: any) {
       console.error("activate-business error:", err);
