@@ -543,6 +543,73 @@ export type Database = {
         }
         Relationships: []
       }
+      patient_documents: {
+        Row: {
+          business_id: string
+          created_at: string
+          document_type: string
+          file_name: string
+          file_path: string
+          file_size: number | null
+          id: string
+          mime_type: string | null
+          notes: string | null
+          patient_id: string
+          updated_at: string
+          uploaded_by: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          document_type?: string
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          notes?: string | null
+          patient_id: string
+          updated_at?: string
+          uploaded_by: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          document_type?: string
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          notes?: string | null
+          patient_id?: string
+          updated_at?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_documents_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_documents_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public_branding"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_documents_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       patient_portal_invites: {
         Row: {
           auth_user_id: string
