@@ -130,7 +130,7 @@ export default function ActivateBusinessAccount() {
       });
 
       setTimeout(() => {
-        navigate("/onboarding");
+        navigate("/onboarding-consultorio");
       }, 1500);
     } catch (err: any) {
       console.error("activate-business error:", err);
