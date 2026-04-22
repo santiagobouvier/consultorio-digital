@@ -224,7 +224,7 @@ Deno.serve(async (req) => {
         name: businessName,
         email,
       });
-    } else if (mode === "test") {
+    } else {
       // TEST MODE: Create user with password, auto-confirmed
       if (!password || password.length < 6) {
         return new Response(JSON.stringify({ error: "Password must be at least 6 characters for test mode" }), {
@@ -237,37 +237,6 @@ Deno.serve(async (req) => {
         password,
         email_confirm: true,
         user_metadata: { name: businessName }
-      });
-
-      if (createError) {
-        const msg = (createError.message || "").toLowerCase();
-        if (msg.includes("already") && msg.includes("registered")) {
-          const recoveredId = await findAuthUserByEmail(email);
-          if (!recoveredId) {
-            return new Response(JSON.stringify({ error: "El email ya está registrado pero no se pudo recuperar el usuario" }), {
-              status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-            });
-          }
-          ownerId = recoveredId;
-          await supabase.from("profiles").upsert({ id: ownerId, name: businessName, email });
-        } else {
-          console.error("Error creating user:", createError);
-          return new Response(JSON.stringify({ error: createError.message || "Error creating user" }), {
-            status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
-      } else {
-        ownerId = newUser.user.id;
-        await supabase.from("profiles").insert({ id: ownerId, name: businessName, email });
-      }
-    } else {
-      // INVITATION MODE: Create user with temp password, generate invite token
-      const tempPassword = crypto.randomUUID() + crypto.randomUUID();
-      const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
-        email,
-        password: tempPassword,
-        email_confirm: true,
-        user_metadata: { name: businessName, pending_password_setup: true }
       });
 
       if (createError) {
@@ -355,27 +324,12 @@ Deno.serve(async (req) => {
       business_id: business.id,
     });
 
-    // For invitation mode with new users, generate an invite token
-    let inviteToken: string | null = null;
-    if (!userAlreadyExists && mode === "invite") {
-      inviteToken = crypto.randomUUID();
-      await supabase.from("professional_portal_invites").insert({
-        business_id: business.id,
-        auth_user_id: ownerId,
-        email,
-        name: businessName.trim(),
-        token: inviteToken,
-        expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-      });
-    }
-
     return new Response(JSON.stringify({
       success: true,
       businessId: business.id,
       ownerId,
       isExistingUser: userAlreadyExists,
-      inviteToken,
-      mode: userAlreadyExists ? "existing" : mode,
+      mode: userAlreadyExists ? "existing" : "test",
     }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
