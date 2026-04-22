@@ -299,29 +299,21 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen lg:flex lg:items-center lg:justify-center bg-[hsl(180,15%,4%)]">
-      {/* Imagen de fondo de consultorio (opacada) — vertical en mobile, horizontal en desktop */}
-      <div
-        className="fixed inset-0 pointer-events-none bg-cover bg-center lg:hidden"
-        style={{
-          backgroundImage: `url(${authBgConsultorioMobile})`,
-          opacity: 0.07,
-        }}
-        aria-hidden
-      />
+      {/* Imagen de fondo de consultorio — SOLO desktop, mobile queda limpio */}
       <div
         className="fixed inset-0 pointer-events-none bg-cover bg-center hidden lg:block"
         style={{
           backgroundImage: `url(${authBgConsultorio})`,
-          opacity: 0.07,
+          opacity: 0.35,
         }}
         aria-hidden
       />
-      {/* Oscurecedor + viñeta para legibilidad */}
+      {/* Viñeta sutil sólo en bordes para mantener foco en el centro */}
       <div
-        className="fixed inset-0 pointer-events-none"
+        className="fixed inset-0 pointer-events-none hidden lg:block"
         style={{
           background:
-            "radial-gradient(ellipse 80% 60% at 50% 50%, hsla(180,15%,4%,0.55), hsla(180,15%,4%,0.92))",
+            "radial-gradient(ellipse 90% 80% at 50% 50%, transparent 30%, hsla(180,15%,4%,0.5) 100%)",
         }}
         aria-hidden
       />
@@ -616,7 +608,7 @@ const Auth = () => {
       </div>
 
       {/* Logo grande flotante abajo del fold — SOLO mobile, aparece al scrollear */}
-      <div className="lg:hidden flex justify-center pt-12 pb-16" aria-hidden>
+      <div className="lg:hidden flex justify-center items-center min-h-screen" aria-hidden>
         <div className="relative animate-float-soft" style={{ willChange: "transform" }}>
           <div
             className="absolute inset-0 -z-10 blur-3xl opacity-60"
