@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { PaymentWhatsAppMenu } from "@/components/PaymentWhatsAppMenu";
 import LoadingPage from "@/components/LoadingPage";
+import { SessionNotes } from "@/components/SessionNotes";
 import {
   calculatePaymentStatus,
   getPaymentStatusColor,
@@ -659,6 +660,13 @@ const PatientDetail = () => {
           <div className="lg:col-span-2 space-y-6">
             {infoSection}
             {appointmentsSection}
+            {patient && (
+              <SessionNotes
+                patientId={patient.id}
+                businessId={patient.business_id}
+                appointments={appointments.map((a) => ({ id: a.id, start_at: a.start_at }))}
+              />
+            )}
           </div>
           <div className="lg:col-span-1 lg:sticky lg:top-6">
             {paymentsSection}
@@ -668,7 +676,7 @@ const PatientDetail = () => {
         {/* Mobile / tablet: tabs to keep payments accessible without scrolling past appointments */}
         <div className="lg:hidden">
           <Tabs defaultValue="info" className="w-full">
-            <TabsList className="grid grid-cols-3 w-full h-11 rounded-xl">
+            <TabsList className="grid grid-cols-4 w-full h-11 rounded-xl">
               <TabsTrigger value="info" className="rounded-lg">Info</TabsTrigger>
               <TabsTrigger value="appointments" className="rounded-lg gap-1">
                 Citas
@@ -676,6 +684,7 @@ const PatientDetail = () => {
                   <span className="text-xs font-semibold opacity-70">({appointments.length})</span>
                 )}
               </TabsTrigger>
+              <TabsTrigger value="notes" className="rounded-lg">Notas</TabsTrigger>
               <TabsTrigger value="payments" className="rounded-lg gap-1">
                 Pagos
                 {payments.length > 0 && (
@@ -688,6 +697,15 @@ const PatientDetail = () => {
             </TabsContent>
             <TabsContent value="appointments" className="mt-4">
               {appointmentsSection}
+            </TabsContent>
+            <TabsContent value="notes" className="mt-4">
+              {patient && (
+                <SessionNotes
+                  patientId={patient.id}
+                  businessId={patient.business_id}
+                  appointments={appointments.map((a) => ({ id: a.id, start_at: a.start_at }))}
+                />
+              )}
             </TabsContent>
             <TabsContent value="payments" className="mt-4">
               {paymentsSection}
