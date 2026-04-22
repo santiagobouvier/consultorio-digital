@@ -303,6 +303,31 @@ const Auth = () => {
         style={{ background: "radial-gradient(ellipse 60% 40% at 50% 0%, hsla(176,80%,40%,0.1), transparent)" }}
       />
 
+      {/* Logo gigante flotante — solo desktop, absoluto: no afecta el centrado del card */}
+      <div
+        className="hidden lg:flex pointer-events-none fixed left-[6vw] xl:left-[10vw] top-1/2 -translate-y-1/2 z-0 items-center justify-center"
+        aria-hidden
+      >
+        <div className="relative animate-float-soft" style={{ willChange: "transform" }}>
+          <div
+            className="absolute inset-0 -z-10 blur-3xl opacity-70"
+            style={{
+              background:
+                "radial-gradient(ellipse at center, hsla(176,80%,40%,0.5), transparent 70%)",
+            }}
+          />
+          <img
+            src={logoWhite}
+            alt=""
+            className="h-64 xl:h-80 w-auto object-contain select-none"
+            draggable={false}
+            decoding="async"
+            loading="eager"
+            style={{ filter: "drop-shadow(0 24px 48px rgba(0,165,160,0.4))" }}
+          />
+        </div>
+      </div>
+
       <div className="relative z-10 w-full max-w-md">
         <Link
           to="/"
@@ -311,34 +336,6 @@ const Auth = () => {
           <ArrowLeft className="w-4 h-4" />
           Volver al inicio
         </Link>
-
-        {/* Logo grande, flotante, por fuera del card */}
-        <div className="flex justify-center mb-6 mt-2">
-          <div className="relative animate-float-soft" style={{ willChange: "transform" }}>
-            {/* Halo difuso detrás para dar profundidad */}
-            <div
-              className="absolute inset-0 -z-10 blur-3xl opacity-60"
-              style={{
-                background:
-                  "radial-gradient(ellipse at center, hsla(176,80%,40%,0.45), transparent 70%)",
-              }}
-              aria-hidden
-            />
-            <img
-              src={logoWhite}
-              alt="Consultorio Digital"
-              className="h-40 sm:h-48 w-auto object-contain select-none"
-              draggable={false}
-              decoding="async"
-              loading="eager"
-              style={{
-                filter: "drop-shadow(0 20px 40px rgba(0,165,160,0.35))",
-                imageRendering: "auto",
-              }}
-            />
-          </div>
-        </div>
-
 
         {/* Plan badge */}
         {selectedPlan && planDef && (
@@ -584,6 +581,28 @@ const Auth = () => {
                 </div>
               </>
             )}
+          </div>
+        </div>
+
+        {/* Logo abajo del card — solo mobile */}
+        <div className="lg:hidden flex justify-center mt-8 mb-2" aria-hidden>
+          <div className="relative animate-float-soft" style={{ willChange: "transform" }}>
+            <div
+              className="absolute inset-0 -z-10 blur-2xl opacity-50"
+              style={{
+                background:
+                  "radial-gradient(ellipse at center, hsla(176,80%,40%,0.4), transparent 70%)",
+              }}
+            />
+            <img
+              src={logoWhite}
+              alt=""
+              className="h-24 w-auto object-contain select-none opacity-90"
+              draggable={false}
+              decoding="async"
+              loading="lazy"
+              style={{ filter: "drop-shadow(0 12px 24px rgba(0,165,160,0.3))" }}
+            />
           </div>
         </div>
       </div>
