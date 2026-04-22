@@ -13,6 +13,7 @@ import { getPlanDefinition, formatPrice } from "@/lib/plan-definitions";
 import { isCurrentUserSuperAdmin } from "@/lib/admin-access";
 import logoWhite from "@/assets/logo-consultorio-digital-white.png";
 import authBgConsultorio from "@/assets/auth-bg-consultorio.jpg";
+import digitalBuildersLogo from "@/assets/logo-digitalbuilders.webp";
 
 const REMEMBER_EMAIL_KEY = "auth_remembered_email";
 
@@ -303,7 +304,7 @@ const Auth = () => {
         className="fixed inset-0 pointer-events-none bg-cover bg-center hidden lg:block"
         style={{
           backgroundImage: `url(${authBgConsultorio})`,
-          opacity: 0.35,
+          opacity: 0.22,
         }}
         aria-hidden
       />
@@ -312,7 +313,7 @@ const Auth = () => {
         className="fixed inset-0 pointer-events-none hidden lg:block"
         style={{
           background:
-            "radial-gradient(ellipse 90% 80% at 50% 50%, transparent 30%, hsla(180,15%,4%,0.5) 100%)",
+            "radial-gradient(ellipse 90% 80% at 50% 50%, hsla(180,15%,4%,0.25) 20%, hsla(180,15%,4%,0.7) 100%)",
         }}
         aria-hidden
       />
