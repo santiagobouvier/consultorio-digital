@@ -102,6 +102,8 @@ const Statistics = () => {
   const { professionals } = useProfessionals(businessId);
   const [period, setPeriod] = useState<PeriodKey>("90d");
   const [loading, setLoading] = useState(true);
+  const [exportingPDF, setExportingPDF] = useState(false);
+  const reportRef = useRef<HTMLDivElement>(null);
 
   // Raw data
   const [appointments, setAppointments] = useState<Array<{ start_at: string; status: string; professional_id: string | null }>>([]);
