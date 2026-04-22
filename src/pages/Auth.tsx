@@ -12,6 +12,7 @@ import { useHostnameBusiness } from "@/hooks/use-hostname-business";
 import { getPlanDefinition, formatPrice } from "@/lib/plan-definitions";
 import { isCurrentUserSuperAdmin } from "@/lib/admin-access";
 import logoWhite from "@/assets/logo-consultorio-digital-white.png";
+import authBgConsultorio from "@/assets/auth-bg-consultorio.jpg";
 
 const REMEMBER_EMAIL_KEY = "auth_remembered_email";
 
