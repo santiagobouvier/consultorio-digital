@@ -299,6 +299,34 @@ const Auth = () => {
           Volver al inicio
         </Link>
 
+        {/* Logo grande, flotante, por fuera del card */}
+        <div className="flex justify-center mb-6 mt-2">
+          <div className="relative animate-float-soft" style={{ willChange: "transform" }}>
+            {/* Halo difuso detrás para dar profundidad */}
+            <div
+              className="absolute inset-0 -z-10 blur-3xl opacity-60"
+              style={{
+                background:
+                  "radial-gradient(ellipse at center, hsla(176,80%,40%,0.45), transparent 70%)",
+              }}
+              aria-hidden
+            />
+            <img
+              src={logoWhite}
+              alt="Consultorio Digital"
+              className="h-40 sm:h-48 w-auto object-contain select-none"
+              draggable={false}
+              decoding="async"
+              loading="eager"
+              style={{
+                filter: "drop-shadow(0 20px 40px rgba(0,165,160,0.35))",
+                imageRendering: "auto",
+              }}
+            />
+          </div>
+        </div>
+
+
         {/* Plan badge */}
         {selectedPlan && planDef && (
           <div className="mb-4 rounded-xl border border-[hsla(160,80%,50%,0.3)] bg-[hsla(160,80%,50%,0.05)] p-4">

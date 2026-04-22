@@ -103,6 +103,10 @@ export default {
             boxShadow: "0 0 0 6px hsl(0 84% 60% / 0)",
           },
         },
+        "float-soft": {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-10px)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -111,6 +115,7 @@ export default {
         "fade-in": "fade-in 0.2s ease-out forwards",
         "scale-in": "scale-in 0.2s ease-out",
         "badge-pulse": "badge-pulse 1.8s ease-in-out infinite",
+        "float-soft": "float-soft 5s ease-in-out infinite",
       },
     },
   },
