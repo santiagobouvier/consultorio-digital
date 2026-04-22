@@ -628,6 +628,28 @@ const Auth = () => {
           />
         </div>
       </div>
+
+      {/* Footer "Powered by" — transparente, minimalista, igual al panel SaaS Admin pero más chico */}
+      <footer className="relative z-10 w-full">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-center gap-2">
+          <span className="text-[9px] font-medium uppercase tracking-[0.2em] text-white/30">
+            Powered by
+          </span>
+          <a
+            href="https://digitalbuilders.net"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="opacity-50 hover:opacity-90 transition-opacity inline-flex items-center"
+            title="Digital Builders"
+          >
+            <img
+              src={digitalBuildersLogo}
+              alt="Digital Builders"
+              className="h-6 w-auto object-contain"
+            />
+          </a>
+        </div>
+      </footer>
     </div>
   );
 };
