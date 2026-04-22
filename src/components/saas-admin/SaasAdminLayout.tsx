@@ -46,7 +46,7 @@ export const SaasAdminLayout = ({ activeSection, onSectionChange, children }: Sa
     <div className="dark min-h-screen flex flex-col bg-[#0e1417] text-slate-100">
       {/* ── Top header (always visible) ── */}
       <header className="sticky top-0 z-30 bg-[#0e1417]/90 backdrop-blur-md border-b border-slate-800/60">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
           {/* Brand — clickable home */}
           <button
             onClick={() => onSectionChange("home")}
@@ -56,7 +56,7 @@ export const SaasAdminLayout = ({ activeSection, onSectionChange, children }: Sa
             <img 
               src={consultorioDigitalLogo} 
               alt="Consultorio Digital" 
-              className="h-12 w-12 object-contain"
+              className="h-16 w-16 object-contain"
             />
             <div className="text-left leading-tight">
               <p className="text-[10px] font-medium uppercase tracking-[0.18em] text-slate-500">Consultorio Digital</p>
