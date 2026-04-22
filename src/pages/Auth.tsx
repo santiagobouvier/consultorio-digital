@@ -13,6 +13,7 @@ import { getPlanDefinition, formatPrice } from "@/lib/plan-definitions";
 import { isCurrentUserSuperAdmin } from "@/lib/admin-access";
 import logoWhite from "@/assets/logo-consultorio-digital-white.png";
 import authBgConsultorio from "@/assets/auth-bg-consultorio.jpg";
+import digitalBuildersLogo from "@/assets/logo-digitalbuilders.webp";
 
 const REMEMBER_EMAIL_KEY = "auth_remembered_email";
 
@@ -303,7 +304,7 @@ const Auth = () => {
         className="fixed inset-0 pointer-events-none bg-cover bg-center hidden lg:block"
         style={{
           backgroundImage: `url(${authBgConsultorio})`,
-          opacity: 0.35,
+          opacity: 0.22,
         }}
         aria-hidden
       />
@@ -312,7 +313,7 @@ const Auth = () => {
         className="fixed inset-0 pointer-events-none hidden lg:block"
         style={{
           background:
-            "radial-gradient(ellipse 90% 80% at 50% 50%, transparent 30%, hsla(180,15%,4%,0.5) 100%)",
+            "radial-gradient(ellipse 90% 80% at 50% 50%, hsla(180,15%,4%,0.25) 20%, hsla(180,15%,4%,0.7) 100%)",
         }}
         aria-hidden
       />
@@ -627,6 +628,28 @@ const Auth = () => {
           />
         </div>
       </div>
+
+      {/* Footer "Powered by" — transparente, minimalista, igual al panel SaaS Admin pero más chico */}
+      <footer className="relative z-10 w-full">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-center gap-2">
+          <span className="text-[9px] font-medium uppercase tracking-[0.2em] text-white/30">
+            Powered by
+          </span>
+          <a
+            href="https://digitalbuilders.net"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="opacity-50 hover:opacity-90 transition-opacity inline-flex items-center"
+            title="Digital Builders"
+          >
+            <img
+              src={digitalBuildersLogo}
+              alt="Digital Builders"
+              className="h-6 w-auto object-contain"
+            />
+          </a>
+        </div>
+      </footer>
     </div>
   );
 };
