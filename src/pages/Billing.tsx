@@ -307,10 +307,11 @@ const Billing = () => {
                     <div className="flex items-start gap-3">
                       <Sparkles className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
                       <div className="space-y-1.5">
-                        <p className="text-sm font-medium text-blue-400">
+                        <p className="text-sm font-medium text-blue-400 inline-flex items-center gap-1.5">
                           {trial.expired
                             ? "Tu prueba gratuita terminó"
                             : `Te quedan ${trial.label} de prueba gratuita`}
+                          <HelpTooltip id="billingTrial" />
                         </p>
                         {!trial.expired && (
                           <p className="text-xs text-white/60 leading-relaxed">
@@ -357,7 +358,10 @@ const Billing = () => {
             {/* Usage Card */}
             <Card className="bg-[#111111] border-white/10">
               <CardHeader className="pb-4">
-                <CardTitle className="text-white text-lg">Uso actual</CardTitle>
+                <CardTitle className="text-white text-lg inline-flex items-center gap-2">
+                  Uso actual
+                  <HelpTooltip id="billingPlanLimits" />
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 gap-6">
@@ -397,7 +401,10 @@ const Billing = () => {
             <Card className="bg-[#111111] border-white/10">
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-white text-lg">Método de pago</CardTitle>
+                  <CardTitle className="text-white text-lg inline-flex items-center gap-2">
+                    Método de pago
+                    <HelpTooltip id="billingPaymentMethod" />
+                  </CardTitle>
                   <div className="flex items-center gap-1.5 text-[10px] text-white/40">
                     <Lock className="w-3 h-3" />
                     <span>Encriptado</span>
