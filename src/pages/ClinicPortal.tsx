@@ -546,7 +546,7 @@ const ClinicPortal = () => {
       setPatientChecked(true);
     };
     loadPatient();
-  }, [session?.user?.id, branding?.id, authChecked]);
+  }, [session?.user?.id, branding?.id, authChecked, blockedProfessional]);
 
   // Theme
   const themeVars = useMemo(() => {
