@@ -163,6 +163,7 @@ const ClinicSettings = () => {
   const lastFocused = useRef<"reminder" | "confirmation" | "postsession">("reminder");
 
   const { refetch: refetchBranding } = useDashboardBranding();
+  const { hasPublicWeb } = useBusinessPublicWeb();
 
   useEffect(() => {
     checkAuth();
