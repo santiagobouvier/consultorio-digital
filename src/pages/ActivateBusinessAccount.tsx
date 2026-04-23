@@ -34,6 +34,10 @@ export default function ActivateBusinessAccount() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [success, setSuccess] = useState(false);
 
+  // Esta página es PÚBLICA y depende ÚNICAMENTE del token de activación.
+  // No verifica ni reacciona a la sesión existente: si hay otro usuario
+  // logueado (super admin, paciente, profesional) la ignoramos y mostramos
+  // el formulario igual. La única credencial que importa acá es el token.
   useEffect(() => {
     if (!token) {
       setError("No se proporcionó un token de activación.");
@@ -100,6 +104,15 @@ export default function ActivateBusinessAccount() {
 
     setSubmitting(true);
     try {
+      // Antes de activar, cerramos cualquier sesión previa para no mezclar
+      // identidades (p.ej. un super admin probando el link, o un paciente
+      // que abre la invitación desde su propio dispositivo).
+      try {
+        await supabase.auth.signOut();
+      } catch {
+        /* ignore */
+      }
+
       const { data, error: fnError } = await supabase.functions.invoke("activate-business", {
         body: { token, password },
       });
