@@ -102,34 +102,6 @@ const ClinicSettings = () => {
     if (businessId && isOwner) loadTeamMembers();
   }, [businessId, isOwner]);
 
-  // Validate slug availability with debounce
-  useEffect(() => {
-    if (!businessId) return;
-    if (publicSlug === initialSlug) {
-      setSlugStatus("idle");
-      return;
-    }
-    if (!/^[a-z0-9-]{3,}$/.test(publicSlug)) {
-      setSlugStatus("invalid");
-      return;
-    }
-    setSlugStatus("checking");
-    const handle = setTimeout(async () => {
-      const { data, error } = await supabase
-        .from("businesses")
-        .select("id")
-        .eq("public_slug", publicSlug)
-        .neq("id", businessId)
-        .maybeSingle();
-      if (error) {
-        setSlugStatus("idle");
-        return;
-      }
-      setSlugStatus(data ? "taken" : "available");
-    }, 450);
-    return () => clearTimeout(handle);
-  }, [publicSlug, initialSlug, businessId]);
-
   const buildSnapshot = () =>
     JSON.stringify({
       clinicName,
@@ -139,7 +111,6 @@ const ClinicSettings = () => {
       confirmationMessage,
       postsessionMessage,
       autoAcceptBookings,
-      publicSlug,
       isPrivateClinic,
     });
 
@@ -223,7 +194,6 @@ const ClinicSettings = () => {
 
       if (business) {
         setPublicSlug(business.public_slug);
-        setInitialSlug(business.public_slug);
         setBusinessId(business.id);
         setIsOwner(business.owner_user_id === user.id);
         setIsPrivateClinic((business as any).is_private_clinic || false);
