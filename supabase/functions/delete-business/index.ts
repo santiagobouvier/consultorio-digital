@@ -72,8 +72,8 @@ serve(async (req) => {
       await conn.queryObject("DELETE FROM public.scheduled_reminders WHERE business_id = $1", [businessId]);
       // 2. payments
       await conn.queryObject("DELETE FROM public.payments WHERE business_id = $1", [businessId]);
-      // 3. appointment_requests (clinic_user_id = owner of business)
-      await conn.queryObject("DELETE FROM public.appointment_requests WHERE clinic_user_id = $1", [business.owner_user_id]);
+      // 3. appointment_requests (por business_id)
+      await conn.queryObject("DELETE FROM public.appointment_requests WHERE business_id = $1", [businessId]);
       // 4. appointments
       await conn.queryObject("DELETE FROM public.appointments WHERE business_id = $1", [businessId]);
       // 5. availability_slots
