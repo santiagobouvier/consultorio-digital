@@ -30,6 +30,9 @@ import {
   MessageSquare,
   Image as ImageIcon,
   Trash2,
+  Loader2,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react";
 import { NotificationActivationCard } from "@/components/NotificationActivationCard";
 import { useDashboardBranding } from "@/contexts/DashboardBrandingContext";
