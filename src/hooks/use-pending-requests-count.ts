@@ -1,58 +1,56 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useBusinessId } from "@/hooks/use-business-id";
 
 /**
- * Returns the count of pending appointment_requests for the current clinic user.
+ * Returns the count of pending appointment_requests for the active business.
  * Auto-refreshes via Supabase Realtime when new requests arrive or status changes.
  */
 export const usePendingRequestsCount = () => {
   const [count, setCount] = useState(0);
-  const [userId, setUserId] = useState<string | null>(null);
+  const { businessId } = useBusinessId(false);
 
   useEffect(() => {
+    if (!businessId) {
+      setCount(0);
+      return;
+    }
     let cancelled = false;
 
-    const init = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user || cancelled) return;
-      setUserId(user.id);
-      await fetchCount(user.id);
-    };
-
-    const fetchCount = async (uid: string) => {
+    const fetchCount = async () => {
       const { count: c } = await supabase
         .from("appointment_requests")
         .select("id", { count: "exact", head: true })
-        .eq("clinic_user_id", uid)
+        .eq("business_id", businessId)
         .eq("status", "pending");
       if (!cancelled) setCount(c ?? 0);
     };
 
-    init();
+    fetchCount();
 
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [businessId]);
 
   useEffect(() => {
-    if (!userId) return;
+    if (!businessId) return;
 
     const channel = supabase
-      .channel(`appointment-requests-${userId}`)
+      .channel(`appointment-requests-${businessId}`)
       .on(
         "postgres_changes",
         {
           event: "*",
           schema: "public",
           table: "appointment_requests",
-          filter: `clinic_user_id=eq.${userId}`,
+          filter: `business_id=eq.${businessId}`,
         },
         async () => {
           const { count: c } = await supabase
             .from("appointment_requests")
             .select("id", { count: "exact", head: true })
-            .eq("clinic_user_id", userId)
+            .eq("business_id", businessId)
             .eq("status", "pending");
           setCount(c ?? 0);
         }
@@ -62,7 +60,7 @@ export const usePendingRequestsCount = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [userId]);
+  }, [businessId]);
 
   return count;
 };
