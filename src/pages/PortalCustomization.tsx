@@ -194,17 +194,43 @@ const PortalCustomization = () => {
     if (!businessId) return;
     setSaving(true);
     try {
+      const update: Record<string, any> = {
+        portal_clinic_display_name: clinicName,
+        portal_logo_url: logoUrl,
+        portal_primary_color: lightColor,
+        portal_dark_primary_color: darkColor,
+        portal_theme_preset: selectedPreset,
+      };
+      // Validar y persistir cambio de slug
+      if (publicSlug !== initialSlug) {
+        if (!/^[a-z0-9-]{3,}$/.test(publicSlug)) {
+          toast({ title: "Slug inválido", description: "Usá solo letras minúsculas, números y guiones (mín. 3).", variant: "destructive" });
+          setSaving(false);
+          return;
+        }
+        const { data: clash } = await supabase
+          .from("businesses")
+          .select("id")
+          .eq("public_slug", publicSlug)
+          .neq("id", businessId)
+          .maybeSingle();
+        if (clash) {
+          toast({ title: "Slug no disponible", description: "Ese slug ya está siendo usado por otro consultorio.", variant: "destructive" });
+          setSlugStatus("taken");
+          setSaving(false);
+          return;
+        }
+        update.public_slug = publicSlug;
+      }
       const { error } = await supabase
         .from("businesses")
-        .update({
-          portal_clinic_display_name: clinicName,
-          portal_logo_url: logoUrl,
-          portal_primary_color: lightColor,
-          portal_dark_primary_color: darkColor,
-          portal_theme_preset: selectedPreset,
-        } as any)
+        .update(update as any)
         .eq("id", businessId);
       if (error) throw error;
+      if (publicSlug !== initialSlug) {
+        setInitialSlug(publicSlug);
+        setSlugStatus("idle");
+      }
       toast({ title: "Personalización guardada", description: "Los cambios se reflejarán en el portal del paciente." });
     } catch (err: any) {
       toast({ title: "Error al guardar", description: err.message, variant: "destructive" });
