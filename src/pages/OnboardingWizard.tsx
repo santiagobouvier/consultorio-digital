@@ -20,6 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { Globe, CheckCircle2, AlertCircle, Loader2, ArrowLeft, ArrowRight, Check, Building2 } from "lucide-react";
 import { checkSubdomainAvailability, checkCustomDomainAvailability, getSubdomainUrl } from "@/hooks/use-hostname-business";
 import LoadingPage from "@/components/LoadingPage";
+import { getUserAccessPriority } from "@/lib/post-login-routing";
 
 const TIMEZONES = [
   { value: "America/Montevideo", label: "Uruguay (GMT-3)" },
@@ -106,14 +107,8 @@ const OnboardingWizard = () => {
           form.setValue("contact_email", user.email || "", { shouldDirty: false });
         }
 
-        // Verificar rol de paciente y business propio en paralelo.
-        // IMPORTANTE: el rol "patient" en OTRO consultorio NO debe bloquear
-        // el onboarding como dueño de un consultorio nuevo. Un mismo usuario
-        // puede ser paciente de un consultorio y dueño de otro al mismo
-        // tiempo. Solo redirigimos al portal paciente si el usuario es
-        // patient y NO tiene un business propio.
-        const [{ data: patientRole }, { data: business }] = await Promise.all([
-          supabase.from("user_roles").select("role").eq("user_id", user.id).eq("role", "patient").maybeSingle(),
+        const [priority, { data: business }] = await Promise.all([
+          getUserAccessPriority(user.id),
           supabase
             .from("businesses")
             .select("id, name, specialty, timezone, public_slug, custom_subdomain, custom_domain, contact_email, onboarding_completed")
@@ -123,8 +118,13 @@ const OnboardingWizard = () => {
 
         if (cancelled) return;
 
-        if (patientRole && !business) {
+        if (priority.isPatientOnly) {
           navigate("/portal-paciente", { replace: true });
+          return;
+        }
+
+        if (priority.hasBusinessAccess && !business) {
+          navigate("/dashboard", { replace: true });
           return;
         }
 

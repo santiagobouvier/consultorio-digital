@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { ArrowLeft, Building2, Mail, Eye, EyeOff, Sparkles, CheckCircle2 } from "lucide-react";
 import { useHostnameBusiness } from "@/hooks/use-hostname-business";
 import { getPlanDefinition, formatPrice } from "@/lib/plan-definitions";
-import { isCurrentUserSuperAdmin } from "@/lib/admin-access";
+import { getPostLoginDestination } from "@/lib/post-login-routing";
 import logoWhite from "@/assets/logo-consultorio-digital-white.png";
 import authBgConsultorio from "@/assets/auth-bg-consultorio.jpg";
 import digitalBuildersLogo from "@/assets/logo-digitalbuilders.webp";
@@ -67,53 +67,8 @@ const Auth = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const isSuperAdmin = await isCurrentUserSuperAdmin(user.id);
-      if (isSuperAdmin) { navigate("/saas-admin", { replace: true }); return; }
-
-      // Prioridad: ser dueño de un business gana sobre el rol "patient".
-      // Un mismo usuario puede ser paciente de un consultorio Y dueño de
-      // otro consultorio simultáneamente; en ese caso lo mandamos al panel
-      // del consultorio (no al portal paciente).
-      const { data: business } = await supabase
-        .from("businesses").select("id, onboarding_completed, is_demo").eq("owner_user_id", user.id).maybeSingle();
-      if (business) {
-        if (!business.onboarding_completed) {
-          navigate("/onboarding-consultorio", { replace: true });
-          return;
-        } else {
-          // Buscar TODAS las suscripciones del negocio (no solo la más reciente)
-          // para detectar correctamente accesos activados manualmente desde el SaaS Admin,
-          // que pueden coexistir con una suscripción 'trial' anterior más reciente.
-          const { data: subs } = await supabase
-            .from("subscriptions")
-            .select("status, mercadopago_preapproval_id")
-            .eq("business_id", business.id);
-
-          const hasActivatedAccess =
-            business.is_demo ||
-            (subs ?? []).some(
-              (s) => s.status === "active" || !!s.mercadopago_preapproval_id,
-            );
-
-          if (hasActivatedAccess) {
-            navigate("/dashboard", { replace: true });
-          } else {
-            navigate("/activar-prueba", { replace: true });
-          }
-          return;
-        }
-      }
-
-      // Sin business propio: chequear professional, después patient.
-      const { data: professionalRole } = await supabase
-        .from("user_roles").select("role, business_id").eq("user_id", user.id).eq("role", "professional").maybeSingle();
-      if (professionalRole) { navigate("/dashboard", { replace: true }); return; }
-
-      const { data: patientRole } = await supabase
-        .from("user_roles").select("role").eq("user_id", user.id).eq("role", "patient").maybeSingle();
-      if (patientRole) { navigate("/portal-paciente", { replace: true }); return; }
-
-      navigate("/configurar-negocio", { replace: true });
+      const destination = await getPostLoginDestination(user.id);
+      navigate(destination, { replace: true });
     } finally {
       setRedirecting(false);
     }
