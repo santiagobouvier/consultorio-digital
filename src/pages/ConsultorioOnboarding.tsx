@@ -85,20 +85,9 @@ const ConsultorioOnboarding = () => {
       return;
     }
 
-    // Check if user is a patient
-    const { data: patientRole } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", user.id)
-      .eq("role", "patient")
-      .maybeSingle();
-
-    if (patientRole) {
-      navigate("/portal-paciente");
-      return;
-    }
-
-    // Get business
+    // Get business propio. Ser dueño de un consultorio gana sobre el rol
+    // "patient" (un mismo usuario puede ser paciente de un consultorio Y
+    // dueño de otro al mismo tiempo).
     const { data: business } = await supabase
       .from("businesses")
       .select("id, name, specialty, timezone, public_slug, onboarding_completed")
@@ -106,6 +95,20 @@ const ConsultorioOnboarding = () => {
       .maybeSingle();
 
     if (!business) {
+      // Solo redirigir al portal paciente si el usuario es patient y no tiene
+      // business propio.
+      const { data: patientRole } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .eq("role", "patient")
+        .maybeSingle();
+
+      if (patientRole) {
+        navigate("/portal-paciente");
+        return;
+      }
+
       navigate("/configurar-negocio");
       return;
     }

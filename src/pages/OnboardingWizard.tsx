@@ -107,6 +107,11 @@ const OnboardingWizard = () => {
         }
 
         // Verificar rol de paciente y business propio en paralelo.
+        // IMPORTANTE: el rol "patient" en OTRO consultorio NO debe bloquear
+        // el onboarding como dueño de un consultorio nuevo. Un mismo usuario
+        // puede ser paciente de un consultorio y dueño de otro al mismo
+        // tiempo. Solo redirigimos al portal paciente si el usuario es
+        // patient y NO tiene un business propio.
         const [{ data: patientRole }, { data: business }] = await Promise.all([
           supabase.from("user_roles").select("role").eq("user_id", user.id).eq("role", "patient").maybeSingle(),
           supabase
@@ -118,7 +123,7 @@ const OnboardingWizard = () => {
 
         if (cancelled) return;
 
-        if (patientRole) {
+        if (patientRole && !business) {
           navigate("/portal-paciente", { replace: true });
           return;
         }
