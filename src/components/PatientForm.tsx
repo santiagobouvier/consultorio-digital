@@ -404,6 +404,7 @@ export function PatientForm({
                   accept="image/*"
                   className="hidden"
                   onChange={handleAvatarChange}
+                  onClick={(e) => e.stopPropagation()}
                   disabled={uploadingAvatar || isSubmitting}
                 />
                 <Button
@@ -412,7 +413,11 @@ export function PatientForm({
                   size="sm"
                   className="rounded-xl gap-2"
                   disabled={uploadingAvatar || isSubmitting}
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    fileInputRef.current?.click();
+                  }}
                 >
                   {uploadingAvatar ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
