@@ -471,6 +471,14 @@ const ClinicPortal = () => {
   // Load patient data when session + branding available
   useEffect(() => {
     if (!authChecked) return;
+    // Si ya bloqueamos a un profesional/super admin, no re-ejecutar la
+    // verificación. El signOut() previo dispara onAuthStateChange y este
+    // effect, lo que causaría un loop infinito de signOuts.
+    if (blockedProfessional) {
+      setPatientLoading(false);
+      setPatientChecked(true);
+      return;
+    }
     if (!session?.user?.id || !branding?.id) {
       // No session or branding yet → nothing to load, mark as checked only when
       // we know there's no session to query for.
@@ -491,9 +499,12 @@ const ClinicPortal = () => {
       try {
         const priority = await getUserAccessPriority(session.user.id);
         if (priority.hasBusinessAccess || priority.isSuperAdmin) {
+          // Setear el flag ANTES del signOut para que el re-render que dispara
+          // onAuthStateChange no vuelva a entrar en esta lógica.
+          setBlockedProfessional(true);
+          setWrongAudience(true);
           await supabase.auth.signOut();
           setSession(null);
-          setWrongAudience(true);
           setPatientLoading(false);
           setPatientChecked(true);
           return;
