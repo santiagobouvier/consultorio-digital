@@ -554,6 +554,10 @@ const PortalCustomization = () => {
           </CardContent>
         </Card>
 
+        <Separator />
+
+        <PortalInviteBatch businessId={businessId} />
+
         <div className="flex justify-end gap-3 pb-8">
           <Button variant="outline" onClick={() => navigate(-1)}>Cancelar</Button>
           <Button onClick={handleSave} disabled={saving} className="gap-2">
