@@ -168,11 +168,17 @@ export function PatientForm({
       }
 
       // Resolver business
-      let { data: business } = await supabase
-        .from("businesses")
-        .select("id")
-        .eq("owner_user_id", user.id)
-        .maybeSingle();
+      // Priorizar businessId del contexto (respeta super admin en modo visita y no-owners).
+      let business: { id: string } | null = businessId ? { id: businessId } : null;
+
+      if (!business) {
+        const { data: owned } = await supabase
+          .from("businesses")
+          .select("id")
+          .eq("owner_user_id", user.id)
+          .maybeSingle();
+        if (owned) business = { id: owned.id };
+      }
 
       if (!business) {
         const { data: userRole } = await supabase
