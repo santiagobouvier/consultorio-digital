@@ -29,10 +29,10 @@ export function SuperAdminVisitBanner() {
 
   return (
     <div
-      className="sticky top-0 z-30 w-full border-b border-amber-500/20"
+      className="sticky top-0 z-30 w-full border-b border-primary/20"
       style={{
         background:
-          "linear-gradient(90deg, hsla(38, 92%, 50%, 0.10), hsla(38, 92%, 50%, 0.04))",
+          "linear-gradient(90deg, hsla(178, 100%, 32%, 0.12), hsla(178, 100%, 32%, 0.04))",
         backdropFilter: "blur(8px)",
       }}
       role="status"
@@ -41,26 +41,27 @@ export function SuperAdminVisitBanner() {
       <div className="flex items-center justify-between gap-3 px-3 sm:px-4 py-2 max-w-[1400px] mx-auto">
         <div className="flex items-center gap-2 min-w-0">
           <span
-            className="hidden sm:inline-flex items-center justify-center h-6 w-6 rounded-md shrink-0"
-            style={{ background: "hsla(38, 92%, 50%, 0.15)" }}
+            className="inline-flex items-center justify-center h-6 w-6 rounded-md shrink-0"
+            style={{ background: "hsla(178, 100%, 32%, 0.18)" }}
           >
-            <Eye className="h-3.5 w-3.5 text-amber-400" />
+            <Eye className="h-3.5 w-3.5 text-primary" />
           </span>
-          <p className="text-[12px] sm:text-[13px] text-amber-100/90 truncate">
-            <span className="text-amber-300/70">Modo visita ·</span>{" "}
+          <p className="text-[12px] sm:text-[13px] text-foreground/85 truncate">
+            <span className="text-muted-foreground hidden xs:inline">Modo visita ·</span>{" "}
             <span className="font-medium">
-              Estás viendo el consultorio de{" "}
-              <span className="text-amber-200">{displayName || "este negocio"}</span>
+              <span className="hidden sm:inline">Estás viendo el consultorio de </span>
+              <span className="sm:hidden">Visitando </span>
+              <span className="text-primary">{displayName || "este negocio"}</span>
             </span>
           </p>
         </div>
         <button
           onClick={handleBack}
-          className="inline-flex items-center gap-1.5 h-7 sm:h-8 px-2.5 sm:px-3 rounded-md text-[11px] sm:text-[12px] font-medium text-amber-100 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 transition-colors active:scale-[0.97] shrink-0"
+          className="inline-flex items-center gap-1.5 h-7 sm:h-8 px-2.5 sm:px-3 rounded-md text-[11px] sm:text-[12px] font-medium text-primary bg-primary/10 hover:bg-primary/20 border border-primary/30 transition-colors active:scale-[0.97] shrink-0"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
-          <span className="hidden xs:inline sm:inline">Volver al panel</span>
-          <span className="xs:hidden sm:hidden">Volver</span>
+          <span className="hidden sm:inline">Volver al panel</span>
+          <span className="sm:hidden">Volver</span>
         </button>
       </div>
     </div>
