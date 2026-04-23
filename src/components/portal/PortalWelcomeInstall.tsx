@@ -53,15 +53,34 @@ export const PortalWelcomeInstall = ({
   const [platform, setPlatform] = useState<Platform>("desktop");
   const [showInstructions, setShowInstructions] = useState(false);
   const [installing, setInstalling] = useState(false);
+  const [justInstalled, setJustInstalled] = useState(false);
 
   useEffect(() => {
     setPlatform(detectPlatform());
   }, []);
 
-  // Si ya está instalado, saltamos directo al login.
+  // Si ya está instalado al cargar (display-mode standalone), saltamos directo al login.
+  // Si la instalación ocurre en vivo (evento appinstalled), mostramos celebración.
   useEffect(() => {
-    if (isInstalled) onContinue();
-  }, [isInstalled, onContinue]);
+    if (isInstalled && !justInstalled) onContinue();
+  }, [isInstalled, justInstalled, onContinue]);
+
+  // Escuchar evento nativo `appinstalled` (Android/Chrome) para mostrar celebración.
+  useEffect(() => {
+    const handleAppInstalled = () => {
+      setInstalling(false);
+      setShowInstructions(false);
+      setJustInstalled(true);
+    };
+    window.addEventListener("appinstalled", handleAppInstalled);
+    return () => window.removeEventListener("appinstalled", handleAppInstalled);
+  }, []);
+
+  const handleOpenApp = () => {
+    // Navegación full-page: si la PWA está instalada, el SO puede capturar
+    // la URL del scope (/portal/:slug) y abrirla en modo standalone.
+    window.location.href = `/portal/${branding.slug}`;
+  };
 
   const handleInstallClick = async () => {
     if (canInstall) {
@@ -149,7 +168,66 @@ export const PortalWelcomeInstall = ({
         </div>
 
         <div className="mx-auto flex min-h-screen w-full max-w-md flex-col items-center justify-center px-5 py-10">
-          {!showInstructions ? (
+          {justInstalled ? (
+            <div className="w-full space-y-8 animate-in fade-in zoom-in-95 duration-500">
+              <div className="flex flex-col items-center text-center space-y-5">
+                <div className="relative">
+                  <div className="absolute inset-0 rounded-3xl bg-primary/40 blur-2xl animate-pulse" aria-hidden />
+                  {branding.logoUrl ? (
+                    <img
+                      src={branding.logoUrl}
+                      alt={branding.displayName}
+                      className="relative h-28 w-28 rounded-3xl object-cover shadow-2xl ring-2 ring-primary/40"
+                    />
+                  ) : (
+                    <div className="relative flex h-28 w-28 items-center justify-center rounded-3xl bg-primary text-primary-foreground shadow-2xl ring-2 ring-primary/40">
+                      {initials ? (
+                        <span className="text-3xl font-bold">{initials}</span>
+                      ) : (
+                        <Building2 className="h-12 w-12" />
+                      )}
+                    </div>
+                  )}
+                  <div className="absolute -bottom-2 -right-2 flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg ring-2 ring-background">
+                    <CheckCircle2 className="h-5 w-5" />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+                    <Sparkles className="h-3 w-3" />
+                    Instalación completa
+                  </div>
+                  <h1 className="text-3xl font-bold tracking-tight">
+                    ¡App instalada!
+                  </h1>
+                  <p className="text-base text-muted-foreground leading-relaxed max-w-xs mx-auto">
+                    Encontrás el ícono de{" "}
+                    <span className="font-semibold text-foreground">{branding.displayName}</span>{" "}
+                    en tu pantalla de inicio para acceder siempre de forma instantánea.
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <Button
+                  onClick={handleOpenApp}
+                  className="w-full h-12 text-sm font-semibold"
+                  size="lg"
+                >
+                  Abrir app ahora
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+                <button
+                  type="button"
+                  onClick={onContinue}
+                  className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors py-2"
+                >
+                  Continuar en el navegador
+                </button>
+              </div>
+            </div>
+          ) : !showInstructions ? (
             <div className="w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
               {/* Hero branding */}
               <div className="flex flex-col items-center text-center space-y-5">
