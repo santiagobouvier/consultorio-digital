@@ -142,6 +142,8 @@ const ClinicSettings = () => {
   const [coverImageUrl, setCoverImageUrl] = useState("");
   const [autoAcceptBookings, setAutoAcceptBookings] = useState(false);
   const [publicSlug, setPublicSlug] = useState("");
+  const [initialSlug, setInitialSlug] = useState("");
+  const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
   const [isPrivateClinic, setIsPrivateClinic] = useState(false);
   const [dashboardColor, setDashboardColor] = useState("176 100% 32%");
   const [dashboardLogoUrl, setDashboardLogoUrl] = useState("");
