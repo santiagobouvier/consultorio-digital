@@ -427,9 +427,19 @@ const ClinicPortal = () => {
 
   // Load patient data when session + branding available
   useEffect(() => {
-    if (!session?.user?.id || !branding?.id) return;
+    if (!authChecked) return;
+    if (!session?.user?.id || !branding?.id) {
+      // No session or branding yet → nothing to load, mark as checked only when
+      // we know there's no session to query for.
+      if (authChecked && !session?.user?.id) {
+        setPatientChecked(true);
+      }
+      return;
+    }
 
     const loadPatient = async () => {
+      setPatientLoading(true);
+      setPatientChecked(false);
       const { data } = await supabase
         .from("patients")
         .select("id, full_name, email, whatsapp_phone, avatar_url, reason_for_consultation, created_at")
@@ -459,9 +469,11 @@ const ClinicPortal = () => {
           .order("due_date", { ascending: false });
         setPayments(pays || []);
       }
+      setPatientLoading(false);
+      setPatientChecked(true);
     };
     loadPatient();
-  }, [session, branding]);
+  }, [session, branding, authChecked]);
 
   // Theme
   const themeVars = useMemo(() => {
