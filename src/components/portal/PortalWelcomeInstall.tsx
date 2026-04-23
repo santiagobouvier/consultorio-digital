@@ -53,15 +53,34 @@ export const PortalWelcomeInstall = ({
   const [platform, setPlatform] = useState<Platform>("desktop");
   const [showInstructions, setShowInstructions] = useState(false);
   const [installing, setInstalling] = useState(false);
+  const [justInstalled, setJustInstalled] = useState(false);
 
   useEffect(() => {
     setPlatform(detectPlatform());
   }, []);
 
-  // Si ya está instalado, saltamos directo al login.
+  // Si ya está instalado al cargar (display-mode standalone), saltamos directo al login.
+  // Si la instalación ocurre en vivo (evento appinstalled), mostramos celebración.
   useEffect(() => {
-    if (isInstalled) onContinue();
-  }, [isInstalled, onContinue]);
+    if (isInstalled && !justInstalled) onContinue();
+  }, [isInstalled, justInstalled, onContinue]);
+
+  // Escuchar evento nativo `appinstalled` (Android/Chrome) para mostrar celebración.
+  useEffect(() => {
+    const handleAppInstalled = () => {
+      setInstalling(false);
+      setShowInstructions(false);
+      setJustInstalled(true);
+    };
+    window.addEventListener("appinstalled", handleAppInstalled);
+    return () => window.removeEventListener("appinstalled", handleAppInstalled);
+  }, []);
+
+  const handleOpenApp = () => {
+    // Navegación full-page: si la PWA está instalada, el SO puede capturar
+    // la URL del scope (/portal/:slug) y abrirla en modo standalone.
+    window.location.href = `/portal/${branding.slug}`;
+  };
 
   const handleInstallClick = async () => {
     if (canInstall) {
