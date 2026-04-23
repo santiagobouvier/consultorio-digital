@@ -178,27 +178,6 @@ const PortalCustomization = () => {
     setSelectedPreset("custom");
   };
 
-  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !businessId) return;
-    setUploading(true);
-    try {
-      const ext = file.name.split(".").pop();
-      const path = `portal-logos/${businessId}.${ext}`;
-      const { error: uploadError } = await supabase.storage
-        .from("avatars")
-        .upload(path, file, { upsert: true });
-      if (uploadError) throw uploadError;
-      const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
-      setLogoUrl(urlData.publicUrl);
-      toast({ title: "Logo subido correctamente" });
-    } catch (err: any) {
-      toast({ title: "Error al subir logo", description: err.message, variant: "destructive" });
-    } finally {
-      setUploading(false);
-    }
-  };
-
   const handleSave = async () => {
     if (!businessId) return;
     setSaving(true);
