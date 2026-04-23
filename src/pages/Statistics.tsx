@@ -594,6 +594,7 @@ const Statistics = () => {
             <CardTitle className="text-base flex items-center gap-2">
               <DollarSign className="h-5 w-5 text-primary" />
               Ingresos por mes
+              <HelpTooltip id="statsRevenue" />
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -626,6 +627,7 @@ const Statistics = () => {
             <CardTitle className="text-base flex items-center gap-2">
               <Activity className="h-5 w-5 text-primary" />
               Ocupación semanal de agenda
+              <HelpTooltip id="statsOccupancy" />
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -656,6 +658,7 @@ const Statistics = () => {
             <CardTitle className="text-base flex items-center gap-2">
               <Users className="h-5 w-5 text-primary" />
               Pacientes nuevos vs recurrentes
+              <HelpTooltip id="statsRetention" />
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -688,6 +691,7 @@ const Statistics = () => {
               <CardTitle className="text-base flex items-center gap-2">
                 <Users className="h-5 w-5 text-primary" />
                 Desempeño por profesional
+                <HelpTooltip id="statsByProfessional" />
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -721,6 +725,7 @@ const Statistics = () => {
             <CardTitle className="text-base flex items-center gap-2">
               <BarChart3 className="h-5 w-5 text-primary" />
               Horas con mayor cantidad de citas
+              <HelpTooltip id="statsHourDistribution" />
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -758,6 +763,7 @@ const Statistics = () => {
               <span className="flex items-center gap-2">
                 <TrendingDown className="h-5 w-5 text-destructive" />
                 Tendencia de ausencias
+                <HelpTooltip id="statsNoShow" />
               </span>
               {(() => {
                 const { delta, curRate, prevRate } = noShowTrend;
@@ -806,6 +812,7 @@ const Statistics = () => {
             <CardTitle className="text-base flex items-center gap-2">
               <UserX className="h-5 w-5 text-orange-500" />
               Pacientes sin actividad en los últimos 90 días
+              <HelpTooltip id="statsInactivePatients" />
               {inactivePatients.length > 0 && (
                 <span className="text-sm font-normal text-muted-foreground">({inactivePatients.length})</span>
               )}
