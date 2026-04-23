@@ -371,46 +371,51 @@ const ClinicPortal = () => {
     load();
   }, [slug]);
 
-  // Inject dynamic manifest (client-side generated)
+  // Inject dynamic manifest pointing to the get-clinic-manifest edge function.
+  // Using a real HTTP URL (not blob:) is required so that Android/Chrome persists
+  // the clinic name and icon when the PWA is installed from /portal/:slug.
   useEffect(() => {
-    if (!slug || !branding) return;
+    if (!slug) return;
 
-    const manifest = {
-      name: branding.displayName,
-      short_name: branding.displayName.length > 12 ? branding.displayName.substring(0, 12) : branding.displayName,
-      description: branding.specialty ? `${branding.displayName} — ${branding.specialty}` : branding.displayName,
-      start_url: `/portal/${slug}`,
-      scope: `/portal/${slug}`,
-      display: "standalone",
-      background_color: "#ffffff",
-      theme_color: "#00a8a8",
-      icons: branding.logoUrl
-        ? [
-            { src: branding.logoUrl, sizes: "192x192", type: "image/png", purpose: "any maskable" },
-            { src: branding.logoUrl, sizes: "512x512", type: "image/png", purpose: "any maskable" },
-          ]
-        : [
-            { src: "/app-icon-192.png", sizes: "192x192", type: "image/png" },
-            { src: "/app-icon-512.png", sizes: "512x512", type: "image/png" },
-          ],
-    };
+    const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+    if (!projectId) return;
 
-    const blob = new Blob([JSON.stringify(manifest)], { type: "application/manifest+json" });
-    const manifestUrl = URL.createObjectURL(blob);
+    const origin = window.location.origin;
+    const manifestUrl = `https://${projectId}.supabase.co/functions/v1/get-clinic-manifest?slug=${encodeURIComponent(
+      slug
+    )}&origin=${encodeURIComponent(origin)}`;
 
-    // Remove existing manifest links
+    // Remove existing manifest links (including the static one from index.html)
     document.querySelectorAll('link[rel="manifest"]').forEach((el) => el.remove());
 
     const link = document.createElement("link");
     link.rel = "manifest";
     link.href = manifestUrl;
+    // Manifest is served cross-origin (Supabase Edge Function). 'anonymous' matches
+    // the CORS headers the function returns (no credentials).
+    link.crossOrigin = "anonymous";
     document.head.appendChild(link);
+
+    // Also update apple-touch-icon dynamically so iOS uses the clinic logo
+    let appleIcon = document.querySelector<HTMLLinkElement>('link[rel="apple-touch-icon"]');
+    const previousAppleHref = appleIcon?.href;
+    if (branding?.logoUrl) {
+      if (!appleIcon) {
+        appleIcon = document.createElement("link");
+        appleIcon.rel = "apple-touch-icon";
+        document.head.appendChild(appleIcon);
+      }
+      appleIcon.href = branding.logoUrl;
+    }
 
     return () => {
       link.remove();
-      URL.revokeObjectURL(manifestUrl);
+      // Restore previous apple-touch-icon to avoid leaking branding across routes
+      if (appleIcon && previousAppleHref) {
+        appleIcon.href = previousAppleHref;
+      }
     };
-  }, [slug, branding]);
+  }, [slug, branding?.logoUrl]);
 
   // Auth listener
   useEffect(() => {
