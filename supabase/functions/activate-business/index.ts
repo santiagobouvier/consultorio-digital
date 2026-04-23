@@ -91,7 +91,8 @@ Deno.serve(async (req) => {
     }
 
     const email = pending.owner_email;
-    const planCode = pending.plan_code || "inicial";
+    const rawPlanCode = pending.plan_code || "inicial";
+    const planCode = normalizePlanCode(rawPlanCode);
     const customMaxProfessionals = pending.custom_max_professionals ?? null;
     const customMaxPatients = pending.custom_max_patients ?? null;
 
@@ -184,7 +185,7 @@ Deno.serve(async (req) => {
         plan_code: planCode,
         onboarding_completed: false,
       };
-      if (planCode === "personalizado" || planCode === "custom") {
+      if (planCode === "custom" || rawPlanCode === "personalizado") {
         businessInsert.custom_max_professionals = customMaxProfessionals;
         businessInsert.custom_max_patients = customMaxPatients;
       }
