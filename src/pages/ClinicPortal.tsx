@@ -629,7 +629,13 @@ const ClinicPortal = () => {
                   >
                     Ir al login profesional
                   </Button>
-                  <Button variant="outline" onClick={() => setWrongAudience(false)}>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setWrongAudience(false);
+                      setBlockedProfessional(false);
+                    }}
+                  >
                     Volver al portal
                   </Button>
                 </div>
