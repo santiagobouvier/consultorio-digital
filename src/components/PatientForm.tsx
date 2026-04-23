@@ -51,6 +51,12 @@ interface PatientFormProps {
   patientId?: string;
   initialData?: PatientFormData & { avatar_url?: string | null };
   onSuccess: () => void;
+  /**
+   * ID del consultorio activo (respeta el contexto multi-tenant: super admin en modo visita,
+   * profesionales no-owners, etc.). Si se pasa, se usa directamente para el upload del avatar
+   * y para resolver el business al guardar. Si no, se hace fallback por owner_user_id/user_roles.
+   */
+  businessId?: string | null;
 }
 
 const MAX_AVATAR_SIZE = 3 * 1024 * 1024; // 3 MB
@@ -61,6 +67,7 @@ export function PatientForm({
   patientId,
   initialData,
   onSuccess,
+  businessId,
 }: PatientFormProps) {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -116,7 +123,11 @@ export function PatientForm({
       if (!user) throw new Error("Usuario no autenticado");
 
       const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-      const path = `${user.id}/patient-avatars/${crypto.randomUUID()}.${ext}`;
+      // Usar businessId del contexto cuando esté disponible (soporta super admin en modo visita
+      // y profesionales no-owners). Fallback a user.id para compatibilidad con flujos antiguos.
+      const path = businessId
+        ? `business-avatars/${businessId}/${crypto.randomUUID()}.${ext}`
+        : `${user.id}/patient-avatars/${crypto.randomUUID()}.${ext}`;
 
       const { error: uploadError } = await supabase.storage
         .from("avatars")
@@ -157,11 +168,17 @@ export function PatientForm({
       }
 
       // Resolver business
-      let { data: business } = await supabase
-        .from("businesses")
-        .select("id")
-        .eq("owner_user_id", user.id)
-        .maybeSingle();
+      // Priorizar businessId del contexto (respeta super admin en modo visita y no-owners).
+      let business: { id: string } | null = businessId ? { id: businessId } : null;
+
+      if (!business) {
+        const { data: owned } = await supabase
+          .from("businesses")
+          .select("id")
+          .eq("owner_user_id", user.id)
+          .maybeSingle();
+        if (owned) business = { id: owned.id };
+      }
 
       if (!business) {
         const { data: userRole } = await supabase

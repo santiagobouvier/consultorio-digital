@@ -1039,6 +1039,7 @@ const Dashboard = () => {
       <PatientForm
         open={showPatientForm}
         onOpenChange={setShowPatientForm}
+        businessId={businessId}
         onSuccess={() => {
           setShowPatientForm(false);
           fetchDashboardData();
