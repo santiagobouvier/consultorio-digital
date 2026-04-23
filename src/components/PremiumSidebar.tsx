@@ -14,6 +14,7 @@ import {
   Shield,
   LogOut,
   ChevronRight,
+  ArrowLeft,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -28,7 +29,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useDashboardBranding } from "@/contexts/DashboardBrandingContext";
 import { isCurrentUserSuperAdmin } from "@/lib/admin-access";
-import { useBusinessId } from "@/hooks/use-business-id";
+import { useBusinessId, clearActiveBusinessId, getActiveBusinessId } from "@/hooks/use-business-id";
 import { prefetchRoute } from "@/lib/query-prefetch";
 import { usePendingRequestsCount } from "@/hooks/use-pending-requests-count";
 
@@ -104,6 +105,9 @@ export function PremiumSidebar() {
   const avatarUrl = profileData?.avatarUrl ?? null;
   const isSuperAdmin = profileData?.isSuperAdmin ?? false;
 
+  // Visit mode: super admin viewing a specific business from /saas-admin.
+  const isVisitMode = isSuperAdmin && Boolean(getActiveBusinessId());
+
   // Prefetch de la ruta destino al pasar el mouse sobre el item.
   const handlePrefetch = (url: string) => {
     void prefetchRoute(queryClient, url, businessId);
@@ -122,6 +126,11 @@ export function PremiumSidebar() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate("/");
+  };
+
+  const handleBackToAdmin = () => {
+    clearActiveBusinessId();
+    navigate("/saas-admin");
   };
 
   const isActive = (path: string) => location.pathname === path;
@@ -323,7 +332,7 @@ export function PremiumSidebar() {
               <div key={item.url}>{renderItem(item)}</div>
             ))}
 
-            {isSuperAdmin &&
+            {isSuperAdmin && !isVisitMode &&
               renderItem({
                 title: "Panel Admin",
                 url: "/saas-admin",
@@ -365,13 +374,23 @@ export function PremiumSidebar() {
               </div>
 
               {expanded && (
-                <button
-                  onClick={handleLogout}
-                  className="text-white/20 hover:text-rose-400 transition-colors duration-200 p-1.5 rounded-lg hover:bg-rose-500/10"
-                  title="Cerrar sesión"
-                >
-                  <LogOut className="h-3.5 w-3.5" />
-                </button>
+                isVisitMode ? (
+                  <button
+                    onClick={handleBackToAdmin}
+                    className="text-amber-300/70 hover:text-amber-300 transition-colors duration-200 p-1.5 rounded-lg hover:bg-amber-500/10"
+                    title="Volver al panel"
+                  >
+                    <ArrowLeft className="h-3.5 w-3.5" />
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleLogout}
+                    className="text-white/20 hover:text-rose-400 transition-colors duration-200 p-1.5 rounded-lg hover:bg-rose-500/10"
+                    title="Cerrar sesión"
+                  >
+                    <LogOut className="h-3.5 w-3.5" />
+                  </button>
+                )
               )}
             </div>
           </div>

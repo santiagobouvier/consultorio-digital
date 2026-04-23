@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { clearActiveBusinessId, getActiveBusinessId } from "@/hooks/use-business-id";
 import {
   LayoutDashboard,
   Users,
@@ -17,6 +18,7 @@ import {
   LogOut,
   ChevronRight,
   X,
+  ArrowLeft,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useDashboardBranding } from "@/contexts/DashboardBrandingContext";
@@ -56,6 +58,7 @@ export function MobileHeader() {
   const navigate = useNavigate();
   const { primaryColor, logoUrl, displayName } = useDashboardBranding();
   const pendingRequests = usePendingRequestsCount();
+  const isVisitMode = isSuperAdmin && Boolean(getActiveBusinessId());
 
   const brandHsl = `hsl(${primaryColor})`;
   const brandHsla = (alpha: number) => `hsla(${primaryColor}, ${alpha})`;
@@ -85,6 +88,12 @@ export function MobileHeader() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate("/");
+  };
+
+  const handleBackToAdmin = () => {
+    clearActiveBusinessId();
+    setOpen(false);
+    navigate("/saas-admin");
   };
 
   return (
@@ -275,14 +284,25 @@ export function MobileHeader() {
           className="relative flex justify-center pb-6 pt-3 shrink-0"
           style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 1.5rem)" }}
         >
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-2.5 px-5 h-11 rounded-full text-white/45 hover:text-rose-400 hover:bg-rose-500/10 transition-all duration-200 active:scale-[0.97]"
-            style={{ border: "1px solid rgba(255,255,255,0.08)" }}
-          >
-            <LogOut className="h-4 w-4" />
-            <span className="text-[13px] font-medium tracking-tight">Cerrar sesión</span>
-          </button>
+          {isVisitMode ? (
+            <button
+              onClick={handleBackToAdmin}
+              className="flex items-center gap-2.5 px-5 h-11 rounded-full text-amber-200/90 hover:text-amber-100 hover:bg-amber-500/15 transition-all duration-200 active:scale-[0.97]"
+              style={{ border: "1px solid rgba(245,158,11,0.30)" }}
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span className="text-[13px] font-medium tracking-tight">Volver al panel</span>
+            </button>
+          ) : (
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2.5 px-5 h-11 rounded-full text-white/45 hover:text-rose-400 hover:bg-rose-500/10 transition-all duration-200 active:scale-[0.97]"
+              style={{ border: "1px solid rgba(255,255,255,0.08)" }}
+            >
+              <LogOut className="h-4 w-4" />
+              <span className="text-[13px] font-medium tracking-tight">Cerrar sesión</span>
+            </button>
+          )}
         </div>
       </div>
     </>
