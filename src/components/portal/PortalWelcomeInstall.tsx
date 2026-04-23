@@ -271,39 +271,32 @@ export const PortalWelcomeInstall = ({
 
               {/* Install CTA Card */}
               <Card className="border-primary/20 shadow-xl bg-card/80 backdrop-blur">
-                <CardContent className="p-5 space-y-4">
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
-                      <Smartphone className="h-5 w-5" />
-                    </div>
-                    <div className="flex-1 space-y-1">
-                      <h2 className="text-base font-semibold leading-tight">
-                        Instalá la app del consultorio
-                      </h2>
-                      <p className="text-xs text-muted-foreground leading-relaxed">
-                        Acceso directo desde tu pantalla de inicio, más rápido y sin abrir el navegador.
-                      </p>
-                    </div>
-                  </div>
+                <CardContent className="p-5 space-y-5">
+                  {/* Benefit text */}
+                  <p className="text-sm text-muted-foreground leading-relaxed text-center">
+                    Accedé a tus turnos y pagos en un toque, sin abrir el navegador.
+                  </p>
 
                   <Button
                     onClick={handleInstallClick}
                     disabled={installing}
-                    className="w-full h-11 text-sm font-semibold"
+                    className="w-full h-14 text-base font-semibold"
                     size="lg"
-                  >
-                    <Download className="mr-2 h-4 w-4" />
+                    style={{ backgroundColor: 'hsl(var(--primary))' }}
+                  >n                    <Download className="mr-2 h-5 w-5" />
                     {installing ? "Instalando..." : "Instalá la app"}
                   </Button>
 
-                  <button
-                    type="button"
-                    onClick={onContinue}
-                    className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    Continuar sin instalar
-                    <ArrowRight className="inline ml-1 h-3 w-3" />
-                  </button>
+                  {/* Skip link - small, grey, at bottom */}
+                  <div className="pt-2 text-center">
+                    <button
+                      type="button"
+                      onClick={onContinue}
+                      className="text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors"
+                    >
+                      Hacerlo después
+                    </button>
+                  </div>
                 </CardContent>
               </Card>
 
