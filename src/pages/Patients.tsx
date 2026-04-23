@@ -56,6 +56,53 @@ const Patients = () => {
     }
   }, [businessId]);
 
+  // Refrescar al volver a la pestaña / al foco / al volver a la ruta
+  useEffect(() => {
+    if (!businessId) return;
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        fetchPatients();
+      }
+    };
+    const handleFocus = () => fetchPatients();
+
+    document.addEventListener("visibilitychange", handleVisibility);
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("focus", handleFocus);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [businessId]);
+
+  // Realtime: cualquier cambio en patients del business actual refresca la lista
+  useEffect(() => {
+    if (!businessId) return;
+
+    const channel = supabase
+      .channel(`patients-list-${businessId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "patients",
+          filter: `business_id=eq.${businessId}`,
+        },
+        () => {
+          fetchPatients();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [businessId]);
+
   const fetchBusinessName = async () => {
     if (!businessId) return;
     const { data } = await supabase
