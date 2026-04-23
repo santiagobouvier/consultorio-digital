@@ -596,6 +596,42 @@ const ClinicPortal = () => {
 
   // Not logged in → branded login
   if (!session) {
+    // Si quien intentó entrar era profesional/super admin, mostramos un
+    // bloqueo claro con link al login profesional en lugar del login normal.
+    if (wrongAudience) {
+      return (
+        <div className="min-h-screen" style={themeStyle as any}>
+          <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-4">
+            <Card className="max-w-md w-full">
+              <CardContent className="pt-8 pb-6 text-center space-y-4">
+                <div className="mx-auto h-14 w-14 rounded-full bg-destructive/10 flex items-center justify-center">
+                  <AlertCircle className="h-7 w-7 text-destructive" />
+                </div>
+                <div className="space-y-2">
+                  <h2 className="text-xl font-bold">Portal exclusivo para pacientes</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Este portal es solo para pacientes de {branding.displayName}. Si sos profesional, ingresá desde Consultorio Digital.
+                  </p>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                  <Button
+                    onClick={() => {
+                      window.location.href = "https://consultoriodigital.app/auth";
+                    }}
+                  >
+                    Ir al login profesional
+                  </Button>
+                  <Button variant="outline" onClick={() => setWrongAudience(false)}>
+                    Volver al portal
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      );
+    }
+
     // Pantalla de bienvenida + instalación PWA (solo la primera vez por slug).
     if (!welcomeSeen) {
       return (
