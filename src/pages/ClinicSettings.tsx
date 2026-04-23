@@ -304,44 +304,12 @@ const ClinicSettings = () => {
         if (clinicName && clinicName.trim()) {
           businessUpdate.name = clinicName.trim();
         }
-        if (publicSlug !== initialSlug) {
-          if (!/^[a-z0-9-]{3,}$/.test(publicSlug)) {
-            toast({
-              title: "Slug inválido",
-              description: "Usá solo letras minúsculas, números y guiones (mín. 3 caracteres).",
-              variant: "destructive",
-            });
-            setSaving(false);
-            return;
-          }
-          const { data: clash } = await supabase
-            .from("businesses")
-            .select("id")
-            .eq("public_slug", publicSlug)
-            .neq("id", businessId)
-            .maybeSingle();
-          if (clash) {
-            toast({
-              title: "Slug no disponible",
-              description: "Ese slug ya está siendo usado por otro consultorio.",
-              variant: "destructive",
-            });
-            setSlugStatus("taken");
-            setSaving(false);
-            return;
-          }
-          businessUpdate.public_slug = publicSlug;
-        }
         const { error: brandError } = await supabase
           .from("businesses")
           .update(businessUpdate as any)
           .eq("id", businessId);
         if (brandError) console.error("Error saving business:", brandError);
         await refetchBranding();
-        if (publicSlug !== initialSlug) {
-          setInitialSlug(publicSlug);
-          setSlugStatus("idle");
-        }
       }
 
       setInitialSnapshot(buildSnapshot());
