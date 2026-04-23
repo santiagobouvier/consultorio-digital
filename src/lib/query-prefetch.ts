@@ -93,6 +93,7 @@ export async function prefetchRoute(
           const { data } = await supabase
             .from("appointment_requests")
             .select("*")
+            .eq("business_id", businessId)
             .order("created_at", { ascending: false })
             .limit(50);
           return data ?? [];
