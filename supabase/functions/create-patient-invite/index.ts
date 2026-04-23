@@ -63,9 +63,33 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Verify that the caller owns this patient's business
+    // Verify caller has permission: owner of the business, professional of the business, or super admin
     const businessData = patient.businesses as unknown as { owner_user_id: string };
-    if (businessData.owner_user_id !== callerUser.id) {
+    const isOwner = businessData.owner_user_id === callerUser.id;
+
+    let hasPermission = isOwner;
+
+    if (!hasPermission) {
+      // Check if caller is super_admin or a professional/owner role in this business
+      const { data: callerRoles, error: rolesError } = await supabaseAdmin
+        .from("user_roles")
+        .select("role, business_id")
+        .eq("user_id", callerUser.id);
+
+      if (rolesError) {
+        console.error("Error fetching caller roles:", rolesError);
+      } else if (callerRoles) {
+        const isSuperAdmin = callerRoles.some((r) => r.role === "super_admin");
+        const belongsToBusiness = callerRoles.some(
+          (r) =>
+            r.business_id === patient.business_id &&
+            (r.role === "owner" || r.role === "professional")
+        );
+        hasPermission = isSuperAdmin || belongsToBusiness;
+      }
+    }
+
+    if (!hasPermission) {
       return new Response(
         JSON.stringify({ error: "You don't have permission to invite this patient" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
