@@ -154,14 +154,6 @@ const PatientInvitation = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
-            {status === "used" && (
-              <Button 
-                onClick={() => navigate("/auth")} 
-                className="w-full rounded-xl"
-              >
-                Iniciar sesión
-              </Button>
-            )}
             <Button 
               variant="outline" 
               onClick={() => navigate("/")} 
