@@ -14,6 +14,7 @@ import { GenerateSlotsDialog } from "@/components/horarios/GenerateSlotsDialog";
 import { PunctualBlockForm } from "@/components/horarios/PunctualBlockForm";
 import { SlotsList, SlotRow } from "@/components/horarios/SlotsList";
 import { toast } from "@/hooks/use-toast";
+import { HelpTooltip } from "@/components/HelpTooltip";
 
 const AvailableSlots = () => {
   const navigate = useNavigate();

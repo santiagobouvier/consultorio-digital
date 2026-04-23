@@ -20,6 +20,7 @@ import LoadingPage from "@/components/LoadingPage";
 import { cn } from "@/lib/utils";
 import { ListPagination, usePagination, ITEMS_PER_PAGE } from "@/components/ListPagination";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { HelpTooltip } from "@/components/HelpTooltip";
 
 interface Patient {
   id: string;

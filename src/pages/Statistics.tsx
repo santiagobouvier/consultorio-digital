@@ -28,6 +28,7 @@ import { useBusinessId } from "@/hooks/use-business-id";
 import { useProfessionals } from "@/hooks/use-professionals";
 import { buildShareUrl } from "@/config/app";
 import { ListPagination, usePagination, ITEMS_PER_PAGE } from "@/components/ListPagination";
+import { HelpTooltip } from "@/components/HelpTooltip";
 import {
   BarChart,
   Bar,

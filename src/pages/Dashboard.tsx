@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { isCurrentUserSuperAdmin } from "@/lib/admin-access";
+import { HelpTooltip } from "@/components/HelpTooltip";
 
 // Lazy load desktop dashboard (executive view)
 const DesktopDashboard = lazy(() => 

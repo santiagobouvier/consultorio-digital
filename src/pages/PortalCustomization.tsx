@@ -15,6 +15,7 @@ import {
   Sun, Moon, Type, Image as ImageIcon, Sparkles,
   Copy, ExternalLink, Share2, Smartphone
 } from "lucide-react";
+import { HelpTooltip } from "@/components/HelpTooltip";
 
 const THEME_PRESETS = [
   { id: "teal", name: "Teal", light: "176 100% 32%", dark: "176 85% 42%", preview: "hsl(176, 100%, 32%)" },
