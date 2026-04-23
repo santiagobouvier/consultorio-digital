@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       appointment_requests: {
         Row: {
+          business_id: string
           clinic_user_id: string
           created_at: string
           email: string
@@ -28,6 +29,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          business_id: string
           clinic_user_id: string
           created_at?: string
           email: string
@@ -40,6 +42,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          business_id?: string
           clinic_user_id?: string
           created_at?: string
           email?: string
@@ -51,7 +54,22 @@ export type Database = {
           status?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "appointment_requests_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_requests_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public_branding"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       appointments: {
         Row: {
