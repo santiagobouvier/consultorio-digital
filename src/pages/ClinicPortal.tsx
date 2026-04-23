@@ -322,6 +322,11 @@ const ClinicPortal = () => {
   const [tab, setTab] = useState("resumen");
   const [isDark, setIsDark] = useState(false);
   const [welcomeSeen, setWelcomeSeen] = useState<boolean>(true);
+  // Flag local para evitar el loop infinito: una vez que detectamos que el
+  // usuario logueado es profesional/super admin y hacemos signOut(), el
+  // listener de auth re-dispara el effect. Sin este flag, volveríamos a
+  // chequear el rol, volveríamos a hacer signOut(), y así infinitamente.
+  const [blockedProfessional, setBlockedProfessional] = useState(false);
 
   // Cargar flag de "bienvenida vista" desde localStorage por slug.
   useEffect(() => {
@@ -466,6 +471,14 @@ const ClinicPortal = () => {
   // Load patient data when session + branding available
   useEffect(() => {
     if (!authChecked) return;
+    // Si ya bloqueamos a un profesional/super admin, no re-ejecutar la
+    // verificación. El signOut() previo dispara onAuthStateChange y este
+    // effect, lo que causaría un loop infinito de signOuts.
+    if (blockedProfessional) {
+      setPatientLoading(false);
+      setPatientChecked(true);
+      return;
+    }
     if (!session?.user?.id || !branding?.id) {
       // No session or branding yet → nothing to load, mark as checked only when
       // we know there's no session to query for.
@@ -486,9 +499,12 @@ const ClinicPortal = () => {
       try {
         const priority = await getUserAccessPriority(session.user.id);
         if (priority.hasBusinessAccess || priority.isSuperAdmin) {
+          // Setear el flag ANTES del signOut para que el re-render que dispara
+          // onAuthStateChange no vuelva a entrar en esta lógica.
+          setBlockedProfessional(true);
+          setWrongAudience(true);
           await supabase.auth.signOut();
           setSession(null);
-          setWrongAudience(true);
           setPatientLoading(false);
           setPatientChecked(true);
           return;
@@ -530,7 +546,7 @@ const ClinicPortal = () => {
       setPatientChecked(true);
     };
     loadPatient();
-  }, [session?.user?.id, branding?.id, authChecked]);
+  }, [session?.user?.id, branding?.id, authChecked, blockedProfessional]);
 
   // Theme
   const themeVars = useMemo(() => {
@@ -613,7 +629,13 @@ const ClinicPortal = () => {
                   >
                     Ir al login profesional
                   </Button>
-                  <Button variant="outline" onClick={() => setWrongAudience(false)}>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setWrongAudience(false);
+                      setBlockedProfessional(false);
+                    }}
+                  >
                     Volver al portal
                   </Button>
                 </div>
