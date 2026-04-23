@@ -162,13 +162,21 @@ const PublicClinic = () => {
   if (!business) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <Card className="w-full max-w-md">
+        <Card className="w-full max-w-2xl">
           <CardContent className="pt-6 text-center space-y-2">
             <p className="font-semibold text-foreground">Este portal no está disponible</p>
             <p className="text-sm text-muted-foreground">
               Verificá el link que te envió tu profesional. Si el problema persiste, contactá
               directamente al consultorio.
             </p>
+            <div className="mt-6 text-left bg-muted/40 border border-border rounded-md p-3 text-xs font-mono space-y-1 overflow-auto">
+              <p className="font-bold text-foreground">[DEBUG]</p>
+              <p><span className="text-muted-foreground">slug param:</span> {JSON.stringify(debugInfo.slug)}</p>
+              <p><span className="text-muted-foreground">bySlug result:</span> {JSON.stringify(debugInfo.bySlugResult)}</p>
+              <p><span className="text-muted-foreground">bySlug error:</span> {JSON.stringify(debugInfo.bySlugError)}</p>
+              <p><span className="text-muted-foreground">bySubdomain result:</span> {JSON.stringify(debugInfo.bySubdomainResult)}</p>
+              <p><span className="text-muted-foreground">bySubdomain error:</span> {JSON.stringify(debugInfo.bySubdomainError)}</p>
+            </div>
           </CardContent>
         </Card>
       </div>
