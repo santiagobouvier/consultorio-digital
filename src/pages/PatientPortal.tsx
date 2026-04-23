@@ -172,7 +172,9 @@ const PatientPortal = () => {
   const loadData = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { navigate("/auth"); return; }
+      // Pacientes nunca van a /auth (esa ruta es solo para profesionales/admins).
+      // Si no hay sesión, los mandamos al inicio para que vuelvan por su portal.
+      if (!user) { navigate("/"); return; }
 
       const { data: roleData } = await supabase
         .from("user_roles").select("role")
@@ -368,7 +370,13 @@ const PatientPortal = () => {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    navigate("/auth");
+    // Tras cerrar sesión, el paciente vuelve al portal de su consultorio
+    // (que ofrece su propio login). Nunca a /auth (uso interno).
+    if (business?.public_slug) {
+      navigate(`/portal/${business.public_slug}`);
+    } else {
+      navigate("/");
+    }
   };
 
   const handleInstallApp = async () => {
@@ -957,7 +965,17 @@ const PatientPortal = () => {
           <CardContent className="pt-6 text-center">
             <AlertTriangle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <p className="text-muted-foreground">{error}</p>
-            <Button variant="outline" className="mt-4" onClick={() => navigate("/auth")}>Volver al inicio</Button>
+            <Button
+              variant="outline"
+              className="mt-4"
+              onClick={() =>
+                business?.public_slug
+                  ? navigate(`/portal/${business.public_slug}`)
+                  : navigate("/")
+              }
+            >
+              Volver al inicio
+            </Button>
           </CardContent>
         </Card>
       </div>
