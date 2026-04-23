@@ -394,12 +394,11 @@ const PatientPortal = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 lg:gap-4">
         {[
           { icon: Calendar, value: upcomingAppointments.length, label: "Próximas citas", accent: false },
           { icon: CalendarCheck, value: totalSessions, label: "Sesiones realizadas", accent: false },
           { icon: AlertCircle, value: pendingCount, label: "Pagos pendientes", accent: pendingCount > 0 },
-          { icon: TrendingUp, value: formatCurrency(totalPaid, "UYU"), label: "Total pagado", accent: false },
         ].map((stat, i) => (
           <Card key={i} className="group hover:shadow-md transition-all border-border/60">
             <CardContent className="pt-4 pb-3 lg:pt-6 lg:pb-4 text-center">
@@ -691,20 +690,14 @@ const PatientPortal = () => {
   const PagosTab = () => (
     <div className="space-y-4 lg:space-y-6">
       {/* Summary */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
-        <Card className="border-primary/20">
-          <CardContent className="p-4 text-center">
-            <p className="text-2xl lg:text-3xl font-bold text-primary">{formatCurrency(totalPaid, "UYU")}</p>
-            <p className="text-xs text-muted-foreground mt-1">Total pagado</p>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-2 gap-3 lg:gap-4">
         <Card className={pendingCount > 0 ? "border-destructive/30" : ""}>
           <CardContent className="p-4 text-center">
             <p className={`text-2xl lg:text-3xl font-bold ${pendingCount > 0 ? "text-destructive" : "text-foreground"}`}>{pendingCount}</p>
             <p className="text-xs text-muted-foreground mt-1">Pendiente{pendingCount !== 1 ? "s" : ""}</p>
           </CardContent>
         </Card>
-        <Card className="hidden lg:block">
+        <Card>
           <CardContent className="p-4 text-center">
             <p className="text-2xl lg:text-3xl font-bold text-foreground">{payments.length}</p>
             <p className="text-xs text-muted-foreground mt-1">Total registros</p>

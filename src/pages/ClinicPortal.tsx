@@ -596,7 +596,6 @@ const ClinicPortal = () => {
   const pastAppts = appointments.filter(a => new Date(a.start_at) < new Date() || a.status === "completed");
   const pendingPayments = payments.filter(p => p.status === "pending");
   const paidPayments = payments.filter(p => p.status === "paid");
-  const totalPaid = paidPayments.reduce((s, p) => s + Number(p.amount), 0);
 
   const formatDate = (d: string) => new Date(d).toLocaleDateString("es-UY", { weekday: "long", day: "numeric", month: "long" });
   const formatShort = (d: string) => new Date(d).toLocaleDateString("es-UY", { day: "numeric", month: "long", year: "numeric" });
@@ -638,12 +637,11 @@ const ClinicPortal = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {[
           { icon: Calendar, value: upcomingAppts.length, label: "Próximas citas", accent: false },
           { icon: CalendarCheck, value: pastAppts.filter(a => a.status === "completed").length, label: "Sesiones realizadas", accent: false },
           { icon: AlertCircle, value: pendingPayments.length, label: "Pagos pendientes", accent: pendingPayments.length > 0 },
-          { icon: TrendingUp, value: formatCurrency(totalPaid, "UYU"), label: "Total pagado", accent: false },
         ].map((stat, i) => (
           <Card key={i} className="hover:shadow-md transition-all border-border/60">
             <CardContent className="pt-4 pb-3 text-center">
@@ -819,13 +817,7 @@ const ClinicPortal = () => {
         <CreditCard className="h-5 w-5 text-primary" /> Pagos
       </h2>
       {/* Summary */}
-      <div className="grid grid-cols-2 gap-3">
-        <Card>
-          <CardContent className="pt-4 pb-3 text-center">
-            <p className="text-xl font-bold text-primary">{formatCurrency(totalPaid, "UYU")}</p>
-            <p className="text-xs text-muted-foreground">Total pagado</p>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 gap-3">
         <Card className={pendingPayments.length > 0 ? "border-destructive/30" : ""}>
           <CardContent className="pt-4 pb-3 text-center">
             <p className={`text-xl font-bold ${pendingPayments.length > 0 ? "text-destructive" : "text-muted-foreground"}`}>
