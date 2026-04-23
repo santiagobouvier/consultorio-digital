@@ -515,6 +515,21 @@ const ClinicPortal = () => {
 
   // Not logged in → branded login
   if (!session) {
+    // Pantalla de bienvenida + instalación PWA (solo la primera vez por slug).
+    if (!welcomeSeen) {
+      return (
+        <PortalWelcomeInstall
+          branding={{
+            displayName: branding.displayName,
+            specialty: branding.specialty,
+            logoUrl: branding.logoUrl,
+            slug: branding.slug,
+          }}
+          themeStyle={themeStyle}
+          onContinue={markWelcomeSeen}
+        />
+      );
+    }
     return (
       <BrandedLogin
         branding={branding}
