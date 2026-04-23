@@ -557,6 +557,15 @@ const ClinicPortal = () => {
     );
   }
 
+  // Logged in but patient data still loading → show spinner (avoid error flash)
+  if (session && (!patientChecked || patientLoading)) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
   // Logged in but no patient record → access denied
   if (!patient) {
     return (
