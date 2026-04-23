@@ -434,32 +434,22 @@ const PortalCustomization = () => {
           <Card>
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
-                <ImageIcon className="h-4 w-4 text-primary" /> Logo del consultorio
+                <ImageIcon className="h-4 w-4 text-primary" /> Ícono de la app
                 <HelpTooltip id="portalLogo" />
               </CardTitle>
-              <CardDescription>Aparece en el portal y en las comunicaciones con pacientes</CardDescription>
+              <CardDescription>
+                Es el ícono que verán tus pacientes al instalar el portal en el celular. Encuadrá tu logo dentro del círculo.
+              </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center gap-4">
-                <Avatar className="h-20 w-20 rounded-xl border-2 border-dashed border-border">
-                  {logoUrl ? (
-                    <AvatarImage src={logoUrl} className="object-cover rounded-xl" />
-                  ) : (
-                    <AvatarFallback className="rounded-xl bg-primary/10">
-                      <Building2 className="h-8 w-8 text-primary" />
-                    </AvatarFallback>
-                  )}
-                </Avatar>
-                <div className="space-y-2">
-                  <label className="cursor-pointer">
-                    <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} disabled={uploading} />
-                    <Button variant="outline" size="sm" className="gap-2" asChild>
-                      <span><Upload className="h-4 w-4" />{uploading ? "Subiendo..." : "Subir logo"}</span>
-                    </Button>
-                  </label>
-                  <p className="text-xs text-muted-foreground">PNG, JPG o SVG. Máx 2MB.</p>
-                </div>
-              </div>
+            <CardContent>
+              <PWAIconEditor
+                iconUrl={logoUrl}
+                bgColor={iconBgColor}
+                onBgColorChange={setIconBgColor}
+                suggestedBgColor={customLightHex}
+                onPendingChange={setPendingIcon}
+                uploading={uploading}
+              />
             </CardContent>
           </Card>
 
