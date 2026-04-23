@@ -252,6 +252,9 @@ export const SessionNotes = ({ patientId, businessId, appointments }: SessionNot
               </div>
               <div className="space-y-1">
                 <Label>Estado</Label>
+                <span className="ml-1 inline-block align-middle">
+                  <HelpTooltip id="sessionNoteStatus" />
+                </span>
                 <Select value={status} onValueChange={(v) => setStatus(v as "draft" | "finalized")}>
                   <SelectTrigger>
                     <SelectValue />
@@ -264,7 +267,10 @@ export const SessionNotes = ({ patientId, businessId, appointments }: SessionNot
               </div>
             </div>
             <div className="space-y-1">
-              <Label>Turno asociado (opcional)</Label>
+              <div className="inline-flex items-center gap-1">
+                <Label>Turno asociado (opcional)</Label>
+                <HelpTooltip id="sessionNoteLinkAppointment" />
+              </div>
               <Select value={appointmentId} onValueChange={setAppointmentId}>
                 <SelectTrigger>
                   <SelectValue placeholder="Sin turno" />

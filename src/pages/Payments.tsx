@@ -222,6 +222,7 @@ const Payments = () => {
               icon: DollarSign,
               color: "text-primary",
               bg: "bg-primary/10",
+              helpId: "paymentsTotalBilled" as const,
             },
             {
               label: "Cobrado",
@@ -229,6 +230,7 @@ const Payments = () => {
               icon: CheckCircle2,
               color: "text-emerald-600",
               bg: "bg-emerald-500/10",
+              helpId: "paymentsTotalCollected" as const,
             },
             {
               label: "Vencidos",
@@ -236,6 +238,7 @@ const Payments = () => {
               icon: AlertTriangle,
               color: "text-destructive",
               bg: "bg-destructive/10",
+              helpId: "paymentsOverdueCount" as const,
             },
             {
               label: "Pendientes",
@@ -243,6 +246,7 @@ const Payments = () => {
               icon: Clock,
               color: "text-amber-600",
               bg: "bg-amber-500/10",
+              helpId: "paymentsPendingCount" as const,
             },
           ].map((stat, i) => (
             <Card
@@ -258,7 +262,10 @@ const Payments = () => {
                   <p className="text-lg sm:text-xl font-bold text-foreground leading-none truncate">
                     {stat.value}
                   </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{stat.label}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5 inline-flex items-center gap-1">
+                    {stat.label}
+                    <HelpTooltip id={stat.helpId} />
+                  </p>
                 </div>
               </CardContent>
             </Card>

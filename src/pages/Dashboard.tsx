@@ -670,8 +670,9 @@ const Dashboard = () => {
           <Card className="mobile-card-compact">
             <CardContent className="p-4 text-center">
               <CalendarDays className="h-5 w-5 mx-auto text-primary mb-1" />
-              <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wide">
+              <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wide inline-flex items-center gap-1 justify-center">
                 Citas hoy
+                <HelpTooltip id="dashboardTodayAppointments" />
               </p>
               <p className="text-2xl font-bold text-foreground mt-1">
                 {todayAppointmentsCount}
@@ -681,8 +682,9 @@ const Dashboard = () => {
           <Card className="mobile-card-compact">
             <CardContent className="p-4 text-center">
               <Users className="h-5 w-5 mx-auto text-primary mb-1" />
-              <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wide">
+              <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wide inline-flex items-center gap-1 justify-center">
                 Pacientes
+                <HelpTooltip id="dashboardActivePatients" />
               </p>
               <p className="text-2xl font-bold text-foreground mt-1">
                 {activePatientsCount}
@@ -692,8 +694,9 @@ const Dashboard = () => {
           <Card className="mobile-card-compact bg-green-500/5 border-green-500/30">
             <CardContent className="p-4 text-center">
               <CreditCard className="h-5 w-5 mx-auto text-green-600 mb-1" />
-              <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wide">
+              <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wide inline-flex items-center gap-1 justify-center">
                 Cobrado mes
+                <HelpTooltip id="dashboardMonthlyIncome" />
               </p>
               <p className="text-2xl font-bold text-green-600 mt-1">
                 {privacyMode ? "•••" : formatCurrency(monthlyIncome, "UYU")}
@@ -706,8 +709,9 @@ const Dashboard = () => {
           >
             <CardContent className="p-4 text-center">
               <AlertTriangle className={`h-5 w-5 mx-auto mb-1 ${overduePayments > 0 ? 'text-destructive' : 'text-muted-foreground'}`} />
-              <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wide">
+              <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wide inline-flex items-center gap-1 justify-center">
                 Vencidos
+                <HelpTooltip id="dashboardOverduePayments" />
               </p>
               <p className={`text-2xl font-bold mt-1 ${overduePayments > 0 ? 'text-destructive' : 'text-foreground'}`}>
                 {overduePayments}

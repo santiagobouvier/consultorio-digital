@@ -14,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { MonthlyHighlights } from "@/components/MonthlyHighlights";
+import { HelpTooltip } from "@/components/HelpTooltip";
 
 import {
   Select,
@@ -405,8 +406,9 @@ export const DesktopDashboard = () => {
               <p className="text-4xl font-bold text-foreground tracking-tight">
                 {todayAppointmentsCount}
               </p>
-              <p className="text-sm font-medium text-muted-foreground mt-1">
+              <p className="text-sm font-medium text-muted-foreground mt-1 inline-flex items-center gap-1">
                 Citas hoy
+                <HelpTooltip id="dashboardTodayAppointments" />
               </p>
             </div>
           </Card>
@@ -423,8 +425,9 @@ export const DesktopDashboard = () => {
               <p className="text-4xl font-bold text-foreground tracking-tight">
                 {activePatientsCount}
               </p>
-              <p className="text-sm font-medium text-muted-foreground mt-1">
+              <p className="text-sm font-medium text-muted-foreground mt-1 inline-flex items-center gap-1">
                 Pacientes activos
+                <HelpTooltip id="dashboardActivePatients" />
               </p>
             </div>
           </Card>
@@ -441,8 +444,9 @@ export const DesktopDashboard = () => {
               <p className="text-4xl font-bold text-foreground tracking-tight">
                 {formatCurrency(collectedThisMonth)}
               </p>
-              <p className="text-sm font-medium text-muted-foreground mt-1">
+              <p className="text-sm font-medium text-muted-foreground mt-1 inline-flex items-center gap-1">
                 Cobrado este mes
+                <HelpTooltip id="dashboardMonthlyIncome" />
               </p>
             </div>
           </Card>
@@ -459,13 +463,14 @@ export const DesktopDashboard = () => {
               <p className={`text-4xl font-bold tracking-tight ${overduePaymentsCount > 0 ? 'text-destructive' : 'text-foreground'}`}>
                 {overduePaymentsCount}
               </p>
-              <p className="text-sm font-medium text-muted-foreground mt-1">
+              <p className="text-sm font-medium text-muted-foreground mt-1 inline-flex items-center gap-1 flex-wrap">
                 Pagos vencidos
                 {overduePaymentsCount > 0 && (
                   <span className="text-destructive ml-1">
                     ({formatCurrency(overdueAmount)})
                   </span>
                 )}
+                <HelpTooltip id="dashboardOverduePayments" />
               </p>
             </div>
           </Card>
