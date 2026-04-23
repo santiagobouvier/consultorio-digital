@@ -128,8 +128,34 @@ const BrandedLogin = ({
 
     try {
       if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
+
+        // GUARDIA DE AUDIENCIA: si quien se logueó es profesional/owner del
+        // SaaS, no permitirle entrar al portal del paciente. Hacemos signOut
+        // y redirigimos al login profesional.
+        if (data.user) {
+          const priority = await getUserAccessPriority(data.user.id);
+          if (priority.hasBusinessAccess || priority.isSuperAdmin) {
+            await supabase.auth.signOut();
+            toast({
+              title: "Portal exclusivo para pacientes",
+              description: "Si sos profesional, ingresá desde consultoriodigital.app",
+              variant: "destructive",
+              action: (
+                <a
+                  href="https://consultoriodigital.app/auth"
+                  className="inline-flex items-center justify-center rounded-md border border-current px-3 py-1.5 text-xs font-medium hover:bg-current/10"
+                >
+                  Ir al login profesional
+                </a>
+              ) as any,
+            });
+            setLoading(false);
+            return;
+          }
+        }
+
         onLoginSuccess();
       } else {
         const { error } = await supabase.auth.signUp({
