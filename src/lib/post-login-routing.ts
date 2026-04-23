@@ -7,6 +7,24 @@ export type PostLoginDestination =
   | "/portal-paciente"
   | "/configurar-negocio";
 
+export interface UserAccessPriority {
+  isSuperAdmin: boolean;
+  hasBusinessAccess: boolean;
+  isPatientOnly: boolean;
+}
+
+export const getUserAccessPriority = async (
+  userId: string,
+): Promise<UserAccessPriority> => {
+  const isSuperAdmin = await isCurrentUserSuperAdmin(userId);
+  if (isSuperAdmin) {
+    return {
+      isSuperAdmin: true,
+      hasBusinessAccess: true,
+      isPatientOnly: false,
+    };
+  }
+
 export const getPostLoginDestination = async (
   userId: string,
 ): Promise<PostLoginDestination> => {
@@ -35,8 +53,24 @@ export const getPostLoginDestination = async (
   if (businessRoleResult.error) throw businessRoleResult.error;
   if (patientRoleResult.error) throw patientRoleResult.error;
 
-  if (ownedBusinessResult.data || businessRoleResult.data) return "/dashboard";
-  if (patientRoleResult.data) return "/portal-paciente";
+  const hasBusinessAccess = Boolean(ownedBusinessResult.data || businessRoleResult.data);
+  const isPatientOnly = Boolean(patientRoleResult.data) && !hasBusinessAccess;
+
+  return {
+    isSuperAdmin: false,
+    hasBusinessAccess,
+    isPatientOnly,
+  };
+};
+
+export const getPostLoginDestination = async (
+  userId: string,
+): Promise<PostLoginDestination> => {
+  const priority = await getUserAccessPriority(userId);
+
+  if (priority.isSuperAdmin) return "/saas-admin";
+  if (priority.hasBusinessAccess) return "/dashboard";
+  if (priority.isPatientOnly) return "/portal-paciente";
 
   return "/configurar-negocio";
 };

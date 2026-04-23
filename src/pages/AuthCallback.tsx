@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/Logo";
 import { CheckCircle2 } from "lucide-react";
-import { isCurrentUserSuperAdmin } from "@/lib/admin-access";
+import { getPostLoginDestination } from "@/lib/post-login-routing";
 
 /**
  * Handles Supabase auth redirects (email verification, OAuth callbacks).
@@ -47,54 +47,8 @@ const AuthCallback = () => {
     };
 
     const redirectByState = async (userId: string) => {
-      // Check super_admin
-      const isSuperAdmin = await isCurrentUserSuperAdmin(userId);
-      if (isSuperAdmin) { navigate("/saas-admin", { replace: true }); return; }
-
-      // Prioridad de redirección:
-      // 1) Si es dueño de un business → panel del consultorio (owner gana
-      //    sobre patient: un usuario puede ser paciente de un consultorio
-      //    Y dueño de otro al mismo tiempo).
-      // 2) Si tiene rol professional → dashboard.
-      // 3) Si solo tiene rol patient (sin business propio) → portal paciente.
-      // 4) Si no tiene nada → onboarding.
-      const { data: business } = await supabase
-        .from("businesses").select("id, onboarding_completed, is_demo").eq("owner_user_id", userId).maybeSingle();
-
-      if (business) {
-        if (!business.onboarding_completed) {
-          navigate("/onboarding-consultorio", { replace: true });
-          return;
-        }
-        const { data: subs } = await supabase
-          .from("subscriptions")
-          .select("status, mercadopago_preapproval_id")
-          .eq("business_id", business.id);
-
-        const hasActivatedAccess =
-          business.is_demo ||
-          (subs ?? []).some(
-            (s) => s.status === "active" || !!s.mercadopago_preapproval_id,
-          );
-
-        if (hasActivatedAccess) {
-          navigate("/dashboard", { replace: true });
-        } else {
-          navigate("/activar-prueba", { replace: true });
-        }
-        return;
-      }
-
-      // Sin business propio: chequear professional, después patient.
-      const { data: professionalRole } = await supabase
-        .from("user_roles").select("role").eq("user_id", userId).eq("role", "professional").maybeSingle();
-      if (professionalRole) { navigate("/dashboard", { replace: true }); return; }
-
-      const { data: patientRole } = await supabase
-        .from("user_roles").select("role").eq("user_id", userId).eq("role", "patient").maybeSingle();
-      if (patientRole) { navigate("/portal-paciente", { replace: true }); return; }
-
-      navigate("/configurar-negocio", { replace: true });
+      const destination = await getPostLoginDestination(userId);
+      navigate(destination, { replace: true });
     };
 
     handleCallback();
