@@ -30,6 +30,9 @@ import {
   MessageSquare,
   Image as ImageIcon,
   Trash2,
+  Loader2,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react";
 import { NotificationActivationCard } from "@/components/NotificationActivationCard";
 import { useDashboardBranding } from "@/contexts/DashboardBrandingContext";
@@ -139,6 +142,8 @@ const ClinicSettings = () => {
   const [coverImageUrl, setCoverImageUrl] = useState("");
   const [autoAcceptBookings, setAutoAcceptBookings] = useState(false);
   const [publicSlug, setPublicSlug] = useState("");
+  const [initialSlug, setInitialSlug] = useState("");
+  const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
   const [isPrivateClinic, setIsPrivateClinic] = useState(false);
   const [dashboardColor, setDashboardColor] = useState("176 100% 32%");
   const [dashboardLogoUrl, setDashboardLogoUrl] = useState("");
@@ -174,6 +179,34 @@ const ClinicSettings = () => {
     if (businessId && isOwner) loadTeamMembers();
   }, [businessId, isOwner]);
 
+  // Validate slug availability with debounce
+  useEffect(() => {
+    if (!businessId) return;
+    if (publicSlug === initialSlug) {
+      setSlugStatus("idle");
+      return;
+    }
+    if (!/^[a-z0-9-]{3,}$/.test(publicSlug)) {
+      setSlugStatus("invalid");
+      return;
+    }
+    setSlugStatus("checking");
+    const handle = setTimeout(async () => {
+      const { data, error } = await supabase
+        .from("businesses")
+        .select("id")
+        .eq("public_slug", publicSlug)
+        .neq("id", businessId)
+        .maybeSingle();
+      if (error) {
+        setSlugStatus("idle");
+        return;
+      }
+      setSlugStatus(data ? "taken" : "available");
+    }, 450);
+    return () => clearTimeout(handle);
+  }, [publicSlug, initialSlug, businessId]);
+
   const buildSnapshot = () =>
     JSON.stringify({
       clinicName,
@@ -188,6 +221,7 @@ const ClinicSettings = () => {
       dashboardColor,
       dashboardLogoUrl,
       dashboardDisplayName,
+      publicSlug,
     });
 
   const isDirty = !loading && initialSnapshot !== "" && buildSnapshot() !== initialSnapshot;
@@ -272,6 +306,7 @@ const ClinicSettings = () => {
 
       if (business) {
         setPublicSlug(business.public_slug);
+        setInitialSlug(business.public_slug);
         setBusinessId(business.id);
         setIsOwner(business.owner_user_id === user.id);
         setIsPrivateClinic((business as any).is_private_clinic || false);
@@ -395,12 +430,45 @@ const ClinicSettings = () => {
         if (clinicName && clinicName.trim()) {
           businessUpdate.name = clinicName.trim();
         }
+        // Slug update: validate format + uniqueness one more time before persisting
+        if (publicSlug !== initialSlug) {
+          if (!/^[a-z0-9-]{3,}$/.test(publicSlug)) {
+            toast({
+              title: "Slug inválido",
+              description: "Usá solo letras minúsculas, números y guiones (mín. 3 caracteres).",
+              variant: "destructive",
+            });
+            setSaving(false);
+            return;
+          }
+          const { data: clash } = await supabase
+            .from("businesses")
+            .select("id")
+            .eq("public_slug", publicSlug)
+            .neq("id", businessId)
+            .maybeSingle();
+          if (clash) {
+            toast({
+              title: "Slug no disponible",
+              description: "Ese slug ya está siendo usado por otro consultorio.",
+              variant: "destructive",
+            });
+            setSlugStatus("taken");
+            setSaving(false);
+            return;
+          }
+          businessUpdate.public_slug = publicSlug;
+        }
         const { error: brandError } = await supabase
           .from("businesses")
           .update(businessUpdate as any)
           .eq("id", businessId);
         if (brandError) console.error("Error saving branding:", brandError);
         await refetchBranding();
+        if (publicSlug !== initialSlug) {
+          setInitialSlug(publicSlug);
+          setSlugStatus("idle");
+        }
       }
 
       setInitialSnapshot(buildSnapshot());
@@ -569,17 +637,74 @@ const ClinicSettings = () => {
             </Card>
 
             <Card>
-              <CardHeader><CardTitle className="text-base flex items-center gap-2"><LinkIcon className="h-4 w-4" /> Tu página pública</CardTitle></CardHeader>
-              <CardContent className="space-y-2">
-                <p className="text-xs text-muted-foreground">Compartí esta URL para que pacientes puedan solicitar citas.</p>
-                <div className="flex gap-2">
-                  <Input value={portalUrl} readOnly className="font-mono text-xs h-11 flex-1" />
-                  <Button variant="outline" size="icon" onClick={copyPublicUrl} className="h-11 w-11 shrink-0">
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                  <Button variant="outline" size="icon" onClick={() => window.open(portalUrl, "_blank")} className="h-11 w-11 shrink-0">
-                    <ExternalLink className="h-4 w-4" />
-                  </Button>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <LinkIcon className="h-4 w-4" /> URL del portal de pacientes
+                </CardTitle>
+                <p className="text-xs text-muted-foreground">
+                  Esta es la dirección que tus pacientes usarán para acceder a su portal.
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="space-y-2">
+                  <Label htmlFor="publicSlug">Identificador (slug)</Label>
+                  <div className="flex flex-col sm:flex-row sm:items-stretch gap-2">
+                    <div className="flex items-center px-3 rounded-md border bg-muted/40 text-xs font-mono text-muted-foreground whitespace-nowrap h-11">
+                      consultoriodigital.app/portal/
+                    </div>
+                    <div className="relative flex-1">
+                      <Input
+                        id="publicSlug"
+                        value={publicSlug}
+                        onChange={(e) => setPublicSlug(e.target.value.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, ""))}
+                        placeholder="mi-consultorio"
+                        className="h-11 font-mono text-sm pr-10"
+                        minLength={3}
+                        autoComplete="off"
+                      />
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        {slugStatus === "checking" && (
+                          <Loader2 className="h-4 w-4 text-muted-foreground animate-spin" />
+                        )}
+                        {slugStatus === "available" && (
+                          <CheckCircle2 className="h-4 w-4 text-green-600" />
+                        )}
+                        {(slugStatus === "taken" || slugStatus === "invalid") && (
+                          <XCircle className="h-4 w-4 text-destructive" />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Solo letras minúsculas, números y guiones. Mínimo 3 caracteres.
+                  </p>
+                  {slugStatus === "invalid" && (
+                    <p className="text-xs text-destructive">
+                      Formato inválido. Usá solo letras minúsculas, números y guiones (mín. 3 caracteres).
+                    </p>
+                  )}
+                  {slugStatus === "taken" && (
+                    <p className="text-xs text-destructive">Ese slug ya está en uso por otro consultorio.</p>
+                  )}
+                  {slugStatus === "available" && (
+                    <p className="text-xs text-green-600">Disponible. Recordá guardar para aplicar el cambio.</p>
+                  )}
+                  {slugStatus === "checking" && (
+                    <p className="text-xs text-muted-foreground">Verificando disponibilidad...</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label>URL completa</Label>
+                  <div className="flex gap-2">
+                    <Input value={portalUrl} readOnly className="font-mono text-xs h-11 flex-1" />
+                    <Button variant="outline" size="icon" onClick={copyPublicUrl} className="h-11 w-11 shrink-0" aria-label="Copiar URL">
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                    <Button variant="outline" size="icon" onClick={() => window.open(portalUrl, "_blank")} className="h-11 w-11 shrink-0" aria-label="Abrir portal">
+                      <ExternalLink className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
