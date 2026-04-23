@@ -326,6 +326,7 @@ const ClinicPortal = () => {
   const [patient, setPatient] = useState<PatientData | null>(null);
   const [patientLoading, setPatientLoading] = useState(false);
   const [patientChecked, setPatientChecked] = useState(false);
+  const [wrongAudience, setWrongAudience] = useState(false);
   const [tab, setTab] = useState("resumen");
   const [isDark, setIsDark] = useState(false);
   const [welcomeSeen, setWelcomeSeen] = useState<boolean>(true);
@@ -485,6 +486,25 @@ const ClinicPortal = () => {
     const loadPatient = async () => {
       setPatientLoading(true);
       setPatientChecked(false);
+
+      // GUARDIA DE AUDIENCIA: si la sesión activa pertenece a un
+      // profesional/owner/super admin, no permitirle entrar al portal del
+      // paciente. Lo deslogueamos y mostramos un mensaje con link al login
+      // profesional. Aplica tanto al login fresh como a sesiones persistidas.
+      try {
+        const priority = await getUserAccessPriority(session.user.id);
+        if (priority.hasBusinessAccess || priority.isSuperAdmin) {
+          await supabase.auth.signOut();
+          setSession(null);
+          setWrongAudience(true);
+          setPatientLoading(false);
+          setPatientChecked(true);
+          return;
+        }
+      } catch {
+        /* si falla, seguimos al chequeo de patients normal */
+      }
+
       const { data } = await supabase
         .from("patients")
         .select("id, full_name, email, whatsapp_phone, avatar_url, reason_for_consultation, created_at")
