@@ -52,12 +52,20 @@ const PublicClinic = () => {
   const [business, setBusiness] = useState<any>(null);
   const [settings, setSettings] = useState<any>(null);
   const [schedule, setSchedule] = useState<ScheduleRow[]>([]);
+  const [debugInfo, setDebugInfo] = useState<{
+    slug?: string;
+    bySlugResult?: any;
+    bySlugError?: any;
+    bySubdomainResult?: any;
+    bySubdomainError?: any;
+  }>({});
 
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
       try {
         setLoading(true);
+        setDebugInfo({ slug });
         if (!slug) {
           if (!cancelled) setLoading(false);
           return;
@@ -73,6 +81,11 @@ const PublicClinic = () => {
           .select(columns)
           .eq("public_slug", slug)
           .maybeSingle();
+        setDebugInfo((prev) => ({
+          ...prev,
+          bySlugResult: bySlug.data,
+          bySlugError: bySlug.error?.message ?? null,
+        }));
         if (bySlug.error) throw bySlug.error;
         businessData = bySlug.data;
 
@@ -82,6 +95,11 @@ const PublicClinic = () => {
             .select(columns)
             .eq("custom_subdomain", slug)
             .maybeSingle();
+          setDebugInfo((prev) => ({
+            ...prev,
+            bySubdomainResult: bySubdomain.data,
+            bySubdomainError: bySubdomain.error?.message ?? null,
+          }));
           if (bySubdomain.error) throw bySubdomain.error;
           businessData = bySubdomain.data;
         }
