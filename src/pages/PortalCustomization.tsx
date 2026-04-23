@@ -12,8 +12,10 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   ArrowLeft, Palette, Upload, Eye, Check, Building2,
   Sun, Moon, Type, Image as ImageIcon, Sparkles,
+  Link as LinkIcon, Copy, ExternalLink, Loader2, CheckCircle2, XCircle,
 } from "lucide-react";
 import { HelpTooltip } from "@/components/HelpTooltip";
+import { buildShareUrl } from "@/config/app";
 
 const THEME_PRESETS = [
   { id: "teal", name: "Teal", light: "176 100% 32%", dark: "176 85% 42%", preview: "hsl(176, 100%, 32%)" },
@@ -72,6 +74,10 @@ const PortalCustomization = () => {
   const [customDarkHex, setCustomDarkHex] = useState("#00bfb3");
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [publicSlug, setPublicSlug] = useState("");
+  const [initialSlug, setInitialSlug] = useState("");
+  const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (!businessId) return;
