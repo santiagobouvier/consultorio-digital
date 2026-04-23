@@ -9,6 +9,7 @@ import { es } from "date-fns/locale";
 import { X, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { ListPagination, ITEMS_PER_PAGE } from "@/components/ListPagination";
 
 export interface SlotRow {
   id: string;
@@ -26,8 +27,6 @@ interface Props {
   slots: SlotRow[];
   onChange: () => void;
 }
-
-const PAGE_SIZE = 10;
 
 export const SlotsList = ({ slots, onChange }: Props) => {
   const [filter, setFilter] = useState<string>("upcoming");
@@ -48,8 +47,9 @@ export const SlotsList = ({ slots, onChange }: Props) => {
     return list;
   }, [slots, filter, search]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const pageSlots = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
+  const currentPage = Math.min(page, totalPages);
+  const pageSlots = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
   const handleBlock = async (id: string) => {
     const { error } = await (supabase as any).from("availability_slots").update({ status: "blocked" }).eq("id", id);
@@ -148,13 +148,14 @@ export const SlotsList = ({ slots, onChange }: Props) => {
           </div>
         )}
 
-        {totalPages > 1 && (
-          <div className="flex items-center justify-center gap-2 mt-4">
-            <Button size="sm" variant="outline" disabled={page === 1} onClick={() => setPage(page - 1)}>Anterior</Button>
-            <span className="text-sm text-muted-foreground">{page} / {totalPages}</span>
-            <Button size="sm" variant="outline" disabled={page === totalPages} onClick={() => setPage(page + 1)}>Siguiente</Button>
-          </div>
-        )}
+        <ListPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          totalItems={filtered.length}
+          pageSize={ITEMS_PER_PAGE}
+          className="mt-4"
+        />
       </CardContent>
     </Card>
   );

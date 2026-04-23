@@ -6,6 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
 import { Mail, Loader2, UserPlus, CheckCircle2, Search, RefreshCw } from "lucide-react";
+import { ListPagination, ITEMS_PER_PAGE } from "@/components/ListPagination";
 
 interface PendingPatient {
   id: string;
@@ -29,6 +30,7 @@ export const PortalInviteBatch = ({ businessId }: PortalInviteBatchProps) => {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [sending, setSending] = useState(false);
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
 
   const loadPatients = useCallback(async () => {
     if (!businessId) return;
@@ -66,6 +68,11 @@ export const PortalInviteBatch = ({ businessId }: PortalInviteBatchProps) => {
 
   const eligibleIds = filtered.filter((p) => isRealEmail(p.email)).map((p) => p.id);
   const allSelected = eligibleIds.length > 0 && eligibleIds.every((id) => selected.has(id));
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
+  const currentPage = Math.min(page, totalPages);
+  const pageStart = (currentPage - 1) * ITEMS_PER_PAGE;
+  const pageItems = filtered.slice(pageStart, pageStart + ITEMS_PER_PAGE);
 
   const toggleAll = () => {
     if (allSelected) {
@@ -167,7 +174,7 @@ export const PortalInviteBatch = ({ businessId }: PortalInviteBatchProps) => {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   value={search}
-                  onChange={(e) => setSearch(e.target.value)}
+                  onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                   placeholder="Buscar por nombre o correo"
                   className="pl-9 h-10"
                 />
@@ -183,13 +190,13 @@ export const PortalInviteBatch = ({ businessId }: PortalInviteBatchProps) => {
               </Button>
             </div>
 
-            <div className="rounded-xl border border-border divide-y divide-border max-h-[360px] overflow-y-auto">
+            <div className="rounded-xl border border-border divide-y divide-border">
               {filtered.length === 0 ? (
                 <div className="p-6 text-center text-sm text-muted-foreground">
                   No se encontraron pacientes con ese criterio.
                 </div>
               ) : (
-                filtered.map((p) => {
+                pageItems.map((p) => {
                   const hasEmail = isRealEmail(p.email);
                   const isChecked = selected.has(p.id);
                   return (
@@ -222,6 +229,14 @@ export const PortalInviteBatch = ({ businessId }: PortalInviteBatchProps) => {
                 })
               )}
             </div>
+
+            <ListPagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setPage}
+              totalItems={filtered.length}
+              pageSize={ITEMS_PER_PAGE}
+            />
 
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-1">
               <p className="text-xs text-muted-foreground">
