@@ -9,7 +9,6 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useBusinessId } from "@/hooks/use-business-id";
 import { supabase } from "@/integrations/supabase/client";
-import { APP_URL, buildShareUrl } from "@/config/app";
 import {
   ArrowLeft, Palette, Upload, Eye, Check, Building2,
   Sun, Moon, Type, Image as ImageIcon, Sparkles,
@@ -63,7 +62,6 @@ const PortalCustomization = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { businessId, loading: bizLoading } = useBusinessId();
-  const [publicSlug, setPublicSlug] = useState("");
 
   const [clinicName, setClinicName] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
@@ -80,7 +78,7 @@ const PortalCustomization = () => {
     const load = async () => {
       const { data } = await supabase
         .from("businesses")
-        .select("name, portal_clinic_display_name, portal_logo_url, portal_primary_color, portal_dark_primary_color, portal_theme_preset, public_slug")
+        .select("name, portal_clinic_display_name, portal_logo_url, portal_primary_color, portal_dark_primary_color, portal_theme_preset")
         .eq("id", businessId)
         .single();
       if (data) {
@@ -94,7 +92,6 @@ const PortalCustomization = () => {
         setDarkColor(dc);
         setCustomLightHex(hslToHex(lc));
         setCustomDarkHex(hslToHex(dc));
-        setPublicSlug(data.public_slug || "");
       }
     };
     load();
