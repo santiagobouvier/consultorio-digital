@@ -10,6 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, CalendarDays, CheckCircle2, Clock, Loader2, Stethoscope, Video } from "lucide-react";
 import LoadingPage from "@/components/LoadingPage";
 import { toast } from "sonner";
+import NotFound from "./NotFound";
+import { getPlanDefinition } from "@/lib/plan-definitions";
 
 type Slot = {
   id: string;
@@ -47,6 +49,7 @@ const PublicBooking = () => {
 
   const [loading, setLoading] = useState(true);
   const [business, setBusiness] = useState<any>(null);
+  const [planAllowsPublicWeb, setPlanAllowsPublicWeb] = useState(true);
   const [slots, setSlots] = useState<Slot[]>([]);
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -66,7 +69,7 @@ const PublicBooking = () => {
         }
 
         const columns =
-          "id, name, specialty, public_slug, custom_subdomain, portal_logo_url, portal_primary_color, portal_dark_primary_color, portal_clinic_display_name";
+          "id, name, specialty, public_slug, custom_subdomain, portal_logo_url, portal_primary_color, portal_dark_primary_color, portal_clinic_display_name, plan_code";
 
         let businessData: any = null;
         const bySlug = await supabase
@@ -89,6 +92,17 @@ const PublicBooking = () => {
 
         if (!businessData) {
           if (!cancelled) {
+            setLoading(false);
+          }
+          return;
+        }
+
+        // Restricción por plan: la reserva pública solo está disponible
+        // en planes con `hasPublicWeb`.
+        const planDef = getPlanDefinition(businessData.plan_code);
+        if (!planDef.hasPublicWeb) {
+          if (!cancelled) {
+            setPlanAllowsPublicWeb(false);
             setLoading(false);
           }
           return;
