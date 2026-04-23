@@ -97,6 +97,10 @@ export function PatientForm({
   }, [open]);
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Defensa anti-submit: aunque <input type="file"> no debería disparar submit,
+    // detenemos cualquier propagación del evento change para evitar que algún
+    // listener del form lo interprete como envío.
+    e.stopPropagation();
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -400,6 +404,7 @@ export function PatientForm({
                   accept="image/*"
                   className="hidden"
                   onChange={handleAvatarChange}
+                  onClick={(e) => e.stopPropagation()}
                   disabled={uploadingAvatar || isSubmitting}
                 />
                 <Button
@@ -408,7 +413,11 @@ export function PatientForm({
                   size="sm"
                   className="rounded-xl gap-2"
                   disabled={uploadingAvatar || isSubmitting}
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    fileInputRef.current?.click();
+                  }}
                 >
                   {uploadingAvatar ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
