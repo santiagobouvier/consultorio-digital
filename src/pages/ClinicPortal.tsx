@@ -391,8 +391,9 @@ const ClinicPortal = () => {
     const link = document.createElement("link");
     link.rel = "manifest";
     link.href = manifestUrl;
-    // crossOrigin is required for manifests served from a different origin
-    link.crossOrigin = "use-credentials";
+    // Manifest is served cross-origin (Supabase Edge Function). 'anonymous' matches
+    // the CORS headers the function returns (no credentials).
+    link.crossOrigin = "anonymous";
     document.head.appendChild(link);
 
     // Also update apple-touch-icon dynamically so iOS uses the clinic logo
