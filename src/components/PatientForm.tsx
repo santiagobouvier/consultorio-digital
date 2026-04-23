@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -66,6 +66,7 @@ export function PatientForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(initialData?.avatar_url ?? null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<PatientFormData>({
     resolver: zodResolver(patientSchema),
@@ -337,33 +338,30 @@ export function PatientForm({
                 </AvatarFallback>
               </Avatar>
               <div className="flex flex-col gap-2">
-                <label htmlFor="patient-avatar-input">
-                  <input
-                    id="patient-avatar-input"
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleAvatarChange}
-                    disabled={uploadingAvatar || isSubmitting}
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="rounded-xl gap-2 cursor-pointer"
-                    disabled={uploadingAvatar || isSubmitting}
-                    asChild
-                  >
-                    <span>
-                      {uploadingAvatar ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Camera className="h-4 w-4" />
-                      )}
-                      {avatarUrl ? "Cambiar foto" : "Subir foto"}
-                    </span>
-                  </Button>
-                </label>
+                <input
+                  ref={fileInputRef}
+                  id="patient-avatar-input"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleAvatarChange}
+                  disabled={uploadingAvatar || isSubmitting}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="rounded-xl gap-2"
+                  disabled={uploadingAvatar || isSubmitting}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  {uploadingAvatar ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Camera className="h-4 w-4" />
+                  )}
+                  {avatarUrl ? "Cambiar foto" : "Subir foto"}
+                </Button>
                 {avatarUrl && (
                   <Button
                     type="button"
