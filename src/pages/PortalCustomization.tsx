@@ -82,6 +82,10 @@ const PortalCustomization = () => {
   const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
   const [copied, setCopied] = useState(false);
 
+  // PWA icon editor
+  const [iconBgColor, setIconBgColor] = useState<string>("#00a89d");
+  const [pendingIcon, setPendingIcon] = useState<{ sourceImage: string; crop: Area; bgColor: string } | null>(null);
+
   useEffect(() => {
     if (!businessId) return;
     const load = async () => {
