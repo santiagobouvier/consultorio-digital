@@ -144,17 +144,28 @@ const AvailableSlots = () => {
           </Card>
         ) : (
           <Tabs defaultValue="template" className="w-full">
-            <TabsList className="grid grid-cols-3 w-full max-w-md">
-              <TabsTrigger value="template" className="gap-2">
-                <CalendarRange className="h-4 w-4" /> Plantilla
-              </TabsTrigger>
-              <TabsTrigger value="punctual" className="gap-2">
-                <Calendar className="h-4 w-4" /> Bloque puntual
-              </TabsTrigger>
-              <TabsTrigger value="list" className="gap-2">
-                <ListChecks className="h-4 w-4" /> Lista
-              </TabsTrigger>
-            </TabsList>
+            <div className="flex items-center gap-3 flex-wrap">
+              <TabsList className="grid grid-cols-3 w-full max-w-md">
+                <TabsTrigger value="template" className="gap-2">
+                  <CalendarRange className="h-4 w-4" /> Plantilla
+                </TabsTrigger>
+                <TabsTrigger value="punctual" className="gap-2">
+                  <Calendar className="h-4 w-4" /> Bloque puntual
+                </TabsTrigger>
+                <TabsTrigger value="list" className="gap-2">
+                  <ListChecks className="h-4 w-4" /> Lista
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="template" className="m-0">
+                <HelpTooltip id="schedulesTemplate" />
+              </TabsContent>
+              <TabsContent value="punctual" className="m-0">
+                <HelpTooltip id="schedulesPunctual" />
+              </TabsContent>
+              <TabsContent value="list" className="m-0">
+                <HelpTooltip id="schedulesList" />
+              </TabsContent>
+            </div>
 
             <TabsContent value="template" className="mt-6">
               <WeeklyTemplateEditor

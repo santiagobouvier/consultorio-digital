@@ -264,6 +264,7 @@ const PortalCustomization = () => {
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
                 <ImageIcon className="h-4 w-4 text-primary" /> Logo del consultorio
+                <HelpTooltip id="portalLogo" />
               </CardTitle>
               <CardDescription>Aparece en el portal y en las comunicaciones con pacientes</CardDescription>
             </CardHeader>
@@ -295,6 +296,7 @@ const PortalCustomization = () => {
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
                 <Type className="h-4 w-4 text-primary" /> Nombre del consultorio
+                <HelpTooltip id="portalDisplayName" />
               </CardTitle>
               <CardDescription>Se muestra como título principal en el portal del paciente</CardDescription>
             </CardHeader>
@@ -314,6 +316,7 @@ const PortalCustomization = () => {
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-primary" /> Tema de colores
+              <HelpTooltip id="portalThemeColor" />
             </CardTitle>
             <CardDescription>Elegí una paleta predefinida o personalizá los colores del portal</CardDescription>
           </CardHeader>

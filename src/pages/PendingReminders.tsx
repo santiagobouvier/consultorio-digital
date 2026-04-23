@@ -413,10 +413,10 @@ const PendingReminders = () => {
         {/* ── Stats Row ── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: "Pendientes", value: stats.pending, icon: Clock, accent: "text-orange-400" },
-            { label: "Enviados", value: stats.sent, icon: MailCheck, accent: "text-green-400" },
-            { label: "WhatsApp", value: stats.whatsapp, icon: MessageSquare, accent: "text-emerald-400" },
-            { label: "Email", value: stats.email, icon: Mail, accent: "text-blue-400" },
+            { label: "Pendientes", value: stats.pending, icon: Clock, accent: "text-orange-400", helpId: "remindersPendingTab" as const },
+            { label: "Enviados", value: stats.sent, icon: MailCheck, accent: "text-green-400", helpId: undefined },
+            { label: "WhatsApp", value: stats.whatsapp, icon: MessageSquare, accent: "text-emerald-400", helpId: "remindersHowItWorks" as const },
+            { label: "Email", value: stats.email, icon: Mail, accent: "text-blue-400", helpId: "remindersAutoSend" as const },
           ].map((s, i) => (
             <Card key={i} className="border-border/50 bg-card/50 backdrop-blur-sm">
               <CardContent className="p-4 flex items-center gap-3">
@@ -425,7 +425,10 @@ const PendingReminders = () => {
                 </div>
                 <div>
                   <p className="text-xl font-bold">{s.value}</p>
-                  <p className="text-xs text-muted-foreground">{s.label}</p>
+                  <p className="text-xs text-muted-foreground inline-flex items-center gap-1">
+                    {s.label}
+                    {s.helpId && <HelpTooltip id={s.helpId} />}
+                  </p>
                 </div>
               </CardContent>
             </Card>

@@ -353,7 +353,12 @@ const Patients = () => {
                     <TableRow className="bg-muted/30 hover:bg-muted/30">
                       <TableHead className="font-semibold">Paciente</TableHead>
                       <TableHead className="font-semibold">Contacto</TableHead>
-                      <TableHead className="font-semibold text-center">Portal</TableHead>
+                      <TableHead className="font-semibold text-center">
+                        <span className="inline-flex items-center gap-1 justify-center">
+                          Portal
+                          <HelpTooltip id="patientsPortalColumn" />
+                        </span>
+                      </TableHead>
                       <TableHead className="font-semibold text-center">Estado</TableHead>
                       <TableHead className="font-semibold">Última consulta</TableHead>
                       <TableHead className="font-semibold">Próxima consulta</TableHead>
