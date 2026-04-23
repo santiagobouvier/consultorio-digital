@@ -120,6 +120,32 @@ const Auth = () => {
   // debe iniciar sesión manualmente apretando el botón. Esto evita el comportamiento
   // confuso de la PWA que entraba directo al dashboard sin pedir credenciales.
 
+  // GUARDIA DE ACCESO: Si hay una sesión activa de un usuario que solo tiene
+  // rol "patient", lo deslogueamos automáticamente al cargar /auth. Este login
+  // es exclusivo para profesionales/admin del SaaS — los pacientes deben usar
+  // /portal/:slug. Sin redirección automática (no sabemos a qué portal van).
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (cancelled || !session?.user) return;
+      try {
+        const priority = await getUserAccessPriority(session.user.id);
+        if (cancelled) return;
+        if (priority.isPatientOnly) {
+          await supabase.auth.signOut();
+          toast.error(
+            "Este acceso es exclusivo para profesionales. Si sos paciente, ingresá desde el portal de tu consultorio.",
+            { duration: 8000 },
+          );
+        }
+      } catch {
+        /* ignore — al fallar la verificación dejamos que el usuario opere normal */
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
