@@ -52,20 +52,12 @@ const PublicClinic = () => {
   const [business, setBusiness] = useState<any>(null);
   const [settings, setSettings] = useState<any>(null);
   const [schedule, setSchedule] = useState<ScheduleRow[]>([]);
-  const [debugInfo, setDebugInfo] = useState<{
-    slug?: string;
-    bySlugResult?: any;
-    bySlugError?: any;
-    bySubdomainResult?: any;
-    bySubdomainError?: any;
-  }>({});
 
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
       try {
         setLoading(true);
-        setDebugInfo({ slug });
         if (!slug) {
           if (!cancelled) setLoading(false);
           return;
@@ -81,11 +73,6 @@ const PublicClinic = () => {
           .select(columns)
           .eq("public_slug", slug)
           .maybeSingle();
-        setDebugInfo((prev) => ({
-          ...prev,
-          bySlugResult: bySlug.data,
-          bySlugError: bySlug.error?.message ?? null,
-        }));
         if (bySlug.error) throw bySlug.error;
         businessData = bySlug.data;
 
@@ -95,11 +82,6 @@ const PublicClinic = () => {
             .select(columns)
             .eq("custom_subdomain", slug)
             .maybeSingle();
-          setDebugInfo((prev) => ({
-            ...prev,
-            bySubdomainResult: bySubdomain.data,
-            bySubdomainError: bySubdomain.error?.message ?? null,
-          }));
           if (bySubdomain.error) throw bySubdomain.error;
           businessData = bySubdomain.data;
         }
@@ -169,14 +151,6 @@ const PublicClinic = () => {
               Verificá el link que te envió tu profesional. Si el problema persiste, contactá
               directamente al consultorio.
             </p>
-            <div className="mt-6 text-left bg-muted/40 border border-border rounded-md p-3 text-xs font-mono space-y-1 overflow-auto">
-              <p className="font-bold text-foreground">[DEBUG]</p>
-              <p><span className="text-muted-foreground">slug param:</span> {JSON.stringify(debugInfo.slug)}</p>
-              <p><span className="text-muted-foreground">bySlug result:</span> {JSON.stringify(debugInfo.bySlugResult)}</p>
-              <p><span className="text-muted-foreground">bySlug error:</span> {JSON.stringify(debugInfo.bySlugError)}</p>
-              <p><span className="text-muted-foreground">bySubdomain result:</span> {JSON.stringify(debugInfo.bySubdomainResult)}</p>
-              <p><span className="text-muted-foreground">bySubdomain error:</span> {JSON.stringify(debugInfo.bySubdomainError)}</p>
-            </div>
           </CardContent>
         </Card>
       </div>
