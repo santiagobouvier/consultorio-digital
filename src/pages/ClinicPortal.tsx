@@ -322,6 +322,11 @@ const ClinicPortal = () => {
   const [tab, setTab] = useState("resumen");
   const [isDark, setIsDark] = useState(false);
   const [welcomeSeen, setWelcomeSeen] = useState<boolean>(true);
+  // Flag local para evitar el loop infinito: una vez que detectamos que el
+  // usuario logueado es profesional/super admin y hacemos signOut(), el
+  // listener de auth re-dispara el effect. Sin este flag, volveríamos a
+  // chequear el rol, volveríamos a hacer signOut(), y así infinitamente.
+  const [blockedProfessional, setBlockedProfessional] = useState(false);
 
   // Cargar flag de "bienvenida vista" desde localStorage por slug.
   useEffect(() => {
