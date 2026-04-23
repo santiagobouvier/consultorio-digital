@@ -107,6 +107,8 @@ const PortalCustomization = () => {
         setCustomDarkHex(hslToHex(dc));
         setPublicSlug((data as any).public_slug || "");
         setInitialSlug((data as any).public_slug || "");
+        // Inicializar color de fondo del ícono con el color primario del consultorio
+        setIconBgColor(hslToHex(lc));
       }
     };
     load();
