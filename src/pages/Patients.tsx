@@ -81,7 +81,7 @@ const Patients = () => {
 
       const { data: patientsData } = await supabase
         .from("patients")
-        .select("*")
+        .select("id, full_name, email, whatsapp_phone, avatar_url, is_active, reason_for_consultation, auth_user_id, created_at")
         .eq("business_id", businessId)
         .order("full_name", { ascending: true });
 

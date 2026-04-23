@@ -258,6 +258,8 @@ export function PremiumSidebar() {
                 <img
                   src={logoUrl}
                   alt="Logo"
+                  loading="lazy"
+                  decoding="async"
                   className="w-8 h-8 rounded-lg object-cover shrink-0"
                   style={{ boxShadow: `0 4px 12px ${brandHsla(0.2)}` }}
                 />
