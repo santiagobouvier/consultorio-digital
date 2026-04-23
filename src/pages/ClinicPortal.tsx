@@ -297,6 +297,8 @@ const ClinicPortal = () => {
   const [session, setSession] = useState<any>(null);
   const [authChecked, setAuthChecked] = useState(false);
   const [patient, setPatient] = useState<PatientData | null>(null);
+  const [patientLoading, setPatientLoading] = useState(false);
+  const [patientChecked, setPatientChecked] = useState(false);
   const [tab, setTab] = useState("resumen");
   const [isDark, setIsDark] = useState(false);
   const [welcomeSeen, setWelcomeSeen] = useState<boolean>(true);
@@ -425,9 +427,19 @@ const ClinicPortal = () => {
 
   // Load patient data when session + branding available
   useEffect(() => {
-    if (!session?.user?.id || !branding?.id) return;
+    if (!authChecked) return;
+    if (!session?.user?.id || !branding?.id) {
+      // No session or branding yet → nothing to load, mark as checked only when
+      // we know there's no session to query for.
+      if (authChecked && !session?.user?.id) {
+        setPatientChecked(true);
+      }
+      return;
+    }
 
     const loadPatient = async () => {
+      setPatientLoading(true);
+      setPatientChecked(false);
       const { data } = await supabase
         .from("patients")
         .select("id, full_name, email, whatsapp_phone, avatar_url, reason_for_consultation, created_at")
@@ -457,9 +469,11 @@ const ClinicPortal = () => {
           .order("due_date", { ascending: false });
         setPayments(pays || []);
       }
+      setPatientLoading(false);
+      setPatientChecked(true);
     };
     loadPatient();
-  }, [session, branding]);
+  }, [session, branding, authChecked]);
 
   // Theme
   const themeVars = useMemo(() => {
@@ -480,6 +494,8 @@ const ClinicPortal = () => {
     await supabase.auth.signOut();
     setSession(null);
     setPatient(null);
+    setPatientChecked(false);
+    setPatientLoading(false);
   };
 
   const handleInstall = async () => {
@@ -538,6 +554,15 @@ const ClinicPortal = () => {
         themeStyle={themeStyle}
         onLoginSuccess={() => {}}
       />
+    );
+  }
+
+  // Logged in but patient data still loading → show spinner (avoid error flash)
+  if (session && (!patientChecked || patientLoading)) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
     );
   }
 
