@@ -223,8 +223,9 @@ Deno.serve(async (req) => {
 
     // Send invite email via Resend (MANDATORY — if it fails, rollback the invite)
     const patientEmail = patient.email!;
-    const origin = req.headers.get("origin") || "https://consultoriodigital.app";
-    const inviteUrl = `${origin}/portal-paciente/invitacion?token=${invite.token}`;
+    // Always use the canonical production domain so emails never leak preview URLs.
+    const APP_URL = "https://consultoriodigital.app";
+    const inviteUrl = `${APP_URL}/portal-paciente/invitacion?token=${invite.token}`;
 
     let emailSent = false;
     let emailErrorDetails: string | null = null;
