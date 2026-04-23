@@ -225,6 +225,7 @@ const ClinicSettings = () => {
       setAutoAcceptBookings(loadedAuto);
 
       setTimeout(() => setInitialSnapshot(buildSnapshot()), 0);
+      // cache-bust: ensure HMR drops stale slug references
     } catch (error) {
       console.error("Error loading settings:", error);
       toast({ title: "Error", description: "No se pudo cargar la configuración", variant: "destructive" });
