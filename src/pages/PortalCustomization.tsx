@@ -17,6 +17,8 @@ import {
 import { HelpTooltip } from "@/components/HelpTooltip";
 import { buildShareUrl } from "@/config/app";
 import { PortalInviteBatch } from "@/components/PortalInviteBatch";
+import { PWAIconEditor, generatePwaIconBlob } from "@/components/PWAIconEditor";
+import type { Area } from "react-easy-crop";
 
 const THEME_PRESETS = [
   { id: "teal", name: "Teal", light: "176 100% 32%", dark: "176 85% 42%", preview: "hsl(176, 100%, 32%)" },
