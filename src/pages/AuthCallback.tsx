@@ -51,17 +51,13 @@ const AuthCallback = () => {
       const isSuperAdmin = await isCurrentUserSuperAdmin(userId);
       if (isSuperAdmin) { navigate("/saas-admin", { replace: true }); return; }
 
-      // Check patient
-      const { data: patientRole } = await supabase
-        .from("user_roles").select("role").eq("user_id", userId).eq("role", "patient").maybeSingle();
-      if (patientRole) { navigate("/portal-paciente", { replace: true }); return; }
-
-      // Check professional
-      const { data: professionalRole } = await supabase
-        .from("user_roles").select("role").eq("user_id", userId).eq("role", "professional").maybeSingle();
-      if (professionalRole) { navigate("/dashboard", { replace: true }); return; }
-
-      // Check business
+      // Prioridad de redirección:
+      // 1) Si es dueño de un business → panel del consultorio (owner gana
+      //    sobre patient: un usuario puede ser paciente de un consultorio
+      //    Y dueño de otro al mismo tiempo).
+      // 2) Si tiene rol professional → dashboard.
+      // 3) Si solo tiene rol patient (sin business propio) → portal paciente.
+      // 4) Si no tiene nada → onboarding.
       const { data: business } = await supabase
         .from("businesses").select("id, onboarding_completed, is_demo").eq("owner_user_id", userId).maybeSingle();
 
@@ -86,9 +82,19 @@ const AuthCallback = () => {
         } else {
           navigate("/activar-prueba", { replace: true });
         }
-      } else {
-        navigate("/configurar-negocio", { replace: true });
+        return;
       }
+
+      // Sin business propio: chequear professional, después patient.
+      const { data: professionalRole } = await supabase
+        .from("user_roles").select("role").eq("user_id", userId).eq("role", "professional").maybeSingle();
+      if (professionalRole) { navigate("/dashboard", { replace: true }); return; }
+
+      const { data: patientRole } = await supabase
+        .from("user_roles").select("role").eq("user_id", userId).eq("role", "patient").maybeSingle();
+      if (patientRole) { navigate("/portal-paciente", { replace: true }); return; }
+
+      navigate("/configurar-negocio", { replace: true });
     };
 
     handleCallback();

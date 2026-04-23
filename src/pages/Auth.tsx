@@ -70,19 +70,16 @@ const Auth = () => {
       const isSuperAdmin = await isCurrentUserSuperAdmin(user.id);
       if (isSuperAdmin) { navigate("/saas-admin", { replace: true }); return; }
 
-      const { data: patientRole } = await supabase
-        .from("user_roles").select("role").eq("user_id", user.id).eq("role", "patient").maybeSingle();
-      if (patientRole) { navigate("/portal-paciente", { replace: true }); return; }
-
-      const { data: professionalRole } = await supabase
-        .from("user_roles").select("role, business_id").eq("user_id", user.id).eq("role", "professional").maybeSingle();
-      if (professionalRole) { navigate("/dashboard", { replace: true }); return; }
-
+      // Prioridad: ser dueño de un business gana sobre el rol "patient".
+      // Un mismo usuario puede ser paciente de un consultorio Y dueño de
+      // otro consultorio simultáneamente; en ese caso lo mandamos al panel
+      // del consultorio (no al portal paciente).
       const { data: business } = await supabase
         .from("businesses").select("id, onboarding_completed, is_demo").eq("owner_user_id", user.id).maybeSingle();
       if (business) {
         if (!business.onboarding_completed) {
           navigate("/onboarding-consultorio", { replace: true });
+          return;
         } else {
           // Buscar TODAS las suscripciones del negocio (no solo la más reciente)
           // para detectar correctamente accesos activados manualmente desde el SaaS Admin,
@@ -103,10 +100,20 @@ const Auth = () => {
           } else {
             navigate("/activar-prueba", { replace: true });
           }
+          return;
         }
-      } else {
-        navigate("/configurar-negocio", { replace: true });
       }
+
+      // Sin business propio: chequear professional, después patient.
+      const { data: professionalRole } = await supabase
+        .from("user_roles").select("role, business_id").eq("user_id", user.id).eq("role", "professional").maybeSingle();
+      if (professionalRole) { navigate("/dashboard", { replace: true }); return; }
+
+      const { data: patientRole } = await supabase
+        .from("user_roles").select("role").eq("user_id", user.id).eq("role", "patient").maybeSingle();
+      if (patientRole) { navigate("/portal-paciente", { replace: true }); return; }
+
+      navigate("/configurar-negocio", { replace: true });
     } finally {
       setRedirecting(false);
     }
