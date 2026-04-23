@@ -385,7 +385,12 @@ const ClinicPortal = () => {
       slug
     )}&origin=${encodeURIComponent(origin)}`;
 
-    // Remove existing manifest links (including the static one from index.html)
+    // Guardar referencia al manifest estático original (Consultorio Digital)
+    // para poder restaurarlo cuando el usuario salga del portal del paciente.
+    // Las dos PWAs (app principal y portal del paciente) son independientes.
+    const previousManifestLinks = Array.from(
+      document.querySelectorAll<HTMLLinkElement>('link[rel="manifest"]'),
+    ).map((el) => ({ href: el.href, crossOrigin: el.crossOrigin }));
     document.querySelectorAll('link[rel="manifest"]').forEach((el) => el.remove());
 
     const link = document.createElement("link");
@@ -410,6 +415,14 @@ const ClinicPortal = () => {
 
     return () => {
       link.remove();
+      // Restaurar manifest(s) original(es) de Consultorio Digital
+      previousManifestLinks.forEach(({ href, crossOrigin }) => {
+        const restored = document.createElement("link");
+        restored.rel = "manifest";
+        restored.href = href;
+        if (crossOrigin) restored.crossOrigin = crossOrigin;
+        document.head.appendChild(restored);
+      });
       // Restore previous apple-touch-icon to avoid leaking branding across routes
       if (appleIcon && previousAppleHref) {
         appleIcon.href = previousAppleHref;
