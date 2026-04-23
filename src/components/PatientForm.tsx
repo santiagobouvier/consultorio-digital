@@ -119,6 +119,12 @@ export function PatientForm({
 
     try {
       setUploadingAvatar(true);
+      // [DEBUG] Log 1: archivo seleccionado
+      toast({
+        title: "DEBUG 1/4 — Archivo",
+        description: `name=${file.name} | type=${file.type} | size=${(file.size / 1024).toFixed(1)} KB`,
+      });
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuario no autenticado");
 
@@ -129,17 +135,49 @@ export function PatientForm({
         ? `business-avatars/${businessId}/${crypto.randomUUID()}.${ext}`
         : `${user.id}/patient-avatars/${crypto.randomUUID()}.${ext}`;
 
+      // [DEBUG] Log 2: businessId del contexto
+      toast({
+        title: "DEBUG 2/4 — businessId",
+        description: `businessId=${businessId ?? "NULL"} | user.id=${user.id}`,
+      });
+
+      // [DEBUG] Log 3: path de upload
+      toast({
+        title: "DEBUG 3/4 — Path",
+        description: path,
+      });
+
       const { error: uploadError } = await supabase.storage
         .from("avatars")
         .upload(path, file, { cacheControl: "3600", upsert: false });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        // [DEBUG] Log 4: error exacto de Supabase Storage
+        toast({
+          title: "DEBUG 4/4 — Storage ERROR",
+          description: `${uploadError.name || "Error"}: ${uploadError.message}`,
+          variant: "destructive",
+        });
+        throw uploadError;
+      }
+
+      // [DEBUG] Log 4: éxito
+      toast({
+        title: "DEBUG 4/4 — Upload OK",
+        description: "Subida completada sin errores",
+      });
 
       const { data: pub } = supabase.storage.from("avatars").getPublicUrl(path);
       setAvatarUrl(pub.publicUrl);
       toast({ title: "Foto cargada", description: "Se guardará al confirmar." });
     } catch (err: any) {
       console.error("Error subiendo avatar:", err);
+      // [DEBUG] catch genérico
+      toast({
+        title: "DEBUG — Catch genérico",
+        description: `${err?.name || "Error"}: ${err?.message || JSON.stringify(err)}`,
+        variant: "destructive",
+      });
       toast({
         title: "No se pudo subir la foto",
         description: err?.message || "Intentá de nuevo",
