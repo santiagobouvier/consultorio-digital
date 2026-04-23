@@ -19,6 +19,7 @@ import {
   Smartphone, LogOut, Eye, EyeOff, Loader2
 } from "lucide-react";
 import { formatCurrency } from "@/lib/payments";
+import { getUserAccessPriority } from "@/lib/post-login-routing";
 
 // ---- Theme generator ----
 const generateThemeVars = (primaryColor: string, isDark: boolean) => {
@@ -127,8 +128,26 @@ const BrandedLogin = ({
 
     try {
       if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
+
+        // GUARDIA DE AUDIENCIA: si quien se logueó es profesional/owner del
+        // SaaS, no permitirle entrar al portal del paciente. Hacemos signOut
+        // y redirigimos al login profesional.
+        if (data.user) {
+          const priority = await getUserAccessPriority(data.user.id);
+          if (priority.hasBusinessAccess || priority.isSuperAdmin) {
+            await supabase.auth.signOut();
+            toast({
+              title: "Portal exclusivo para pacientes",
+              description: "Si sos profesional, ingresá desde consultoriodigital.app/auth",
+              variant: "destructive",
+            });
+            setLoading(false);
+            return;
+          }
+        }
+
         onLoginSuccess();
       } else {
         const { error } = await supabase.auth.signUp({
@@ -299,6 +318,7 @@ const ClinicPortal = () => {
   const [patient, setPatient] = useState<PatientData | null>(null);
   const [patientLoading, setPatientLoading] = useState(false);
   const [patientChecked, setPatientChecked] = useState(false);
+  const [wrongAudience, setWrongAudience] = useState(false);
   const [tab, setTab] = useState("resumen");
   const [isDark, setIsDark] = useState(false);
   const [welcomeSeen, setWelcomeSeen] = useState<boolean>(true);
@@ -458,6 +478,25 @@ const ClinicPortal = () => {
     const loadPatient = async () => {
       setPatientLoading(true);
       setPatientChecked(false);
+
+      // GUARDIA DE AUDIENCIA: si la sesión activa pertenece a un
+      // profesional/owner/super admin, no permitirle entrar al portal del
+      // paciente. Lo deslogueamos y mostramos un mensaje con link al login
+      // profesional. Aplica tanto al login fresh como a sesiones persistidas.
+      try {
+        const priority = await getUserAccessPriority(session.user.id);
+        if (priority.hasBusinessAccess || priority.isSuperAdmin) {
+          await supabase.auth.signOut();
+          setSession(null);
+          setWrongAudience(true);
+          setPatientLoading(false);
+          setPatientChecked(true);
+          return;
+        }
+      } catch {
+        /* si falla, seguimos al chequeo de patients normal */
+      }
+
       const { data } = await supabase
         .from("patients")
         .select("id, full_name, email, whatsapp_phone, avatar_url, reason_for_consultation, created_at")
@@ -549,6 +588,42 @@ const ClinicPortal = () => {
 
   // Not logged in → branded login
   if (!session) {
+    // Si quien intentó entrar era profesional/super admin, mostramos un
+    // bloqueo claro con link al login profesional en lugar del login normal.
+    if (wrongAudience) {
+      return (
+        <div className="min-h-screen" style={themeStyle as any}>
+          <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-4">
+            <Card className="max-w-md w-full">
+              <CardContent className="pt-8 pb-6 text-center space-y-4">
+                <div className="mx-auto h-14 w-14 rounded-full bg-destructive/10 flex items-center justify-center">
+                  <AlertCircle className="h-7 w-7 text-destructive" />
+                </div>
+                <div className="space-y-2">
+                  <h2 className="text-xl font-bold">Portal exclusivo para pacientes</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Este portal es solo para pacientes de {branding.displayName}. Si sos profesional, ingresá desde Consultorio Digital.
+                  </p>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                  <Button
+                    onClick={() => {
+                      window.location.href = "https://consultoriodigital.app/auth";
+                    }}
+                  >
+                    Ir al login profesional
+                  </Button>
+                  <Button variant="outline" onClick={() => setWrongAudience(false)}>
+                    Volver al portal
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      );
+    }
+
     // Pantalla de bienvenida + instalación PWA (solo la primera vez por slug).
     if (!welcomeSeen) {
       return (
