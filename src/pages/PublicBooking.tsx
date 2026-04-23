@@ -289,6 +289,18 @@ const PublicBooking = () => {
               <ArrowLeft className="h-4 w-4" />
               Volver al consultorio
             </Button>
+            <div className="pt-4 border-t border-border space-y-2">
+              <p className="text-xs text-muted-foreground px-2">
+                Tu profesional te enviará acceso a tu portal personal donde podrás ver tus citas y más.
+              </p>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => navigate(`/portal/${targetSlug}`)}
+              >
+                Conocé tu portal
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
