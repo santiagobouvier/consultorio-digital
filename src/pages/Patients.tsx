@@ -199,7 +199,10 @@ const Patients = () => {
             Gestión de pacientes
           </div>
           <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">
-            Pacientes
+            <span className="inline-flex items-center gap-2">
+              Pacientes
+              <HelpTooltip id="patients" />
+            </span>
           </h1>
           {businessName && (
             <p className="text-sm text-muted-foreground">{businessName}</p>

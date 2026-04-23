@@ -102,7 +102,10 @@ const AvailableSlots = () => {
         <div className="rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border p-6">
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Horarios del consultorio</h1>
+              <h1 className="text-2xl md:text-3xl font-bold tracking-tight inline-flex items-center gap-2">
+                Horarios del consultorio
+                <HelpTooltip id="schedules" />
+              </h1>
               <p className="text-muted-foreground mt-1 text-sm md:text-base">
                 Configurá tu semana tipo una vez y generá los horarios del mes en segundos.
               </p>

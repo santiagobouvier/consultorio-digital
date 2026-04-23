@@ -256,7 +256,10 @@ const Billing = () => {
           Volver al dashboard
         </button>
 
-        <h1 className="text-2xl sm:text-3xl font-bold mb-8">Facturación</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold mb-8 inline-flex items-center gap-2">
+          Facturación
+          <HelpTooltip id="billing" />
+        </h1>
 
         {!subscription ? (
           <Card className="bg-[#111111] border-white/10">

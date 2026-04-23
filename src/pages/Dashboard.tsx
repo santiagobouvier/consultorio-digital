@@ -632,8 +632,9 @@ const Dashboard = () => {
               </div>
             </div>
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-foreground">
+              <h1 className="text-xl sm:text-2xl font-bold text-foreground inline-flex items-center gap-2">
                 Hola, {userName}
+                <HelpTooltip id="dashboard" />
               </h1>
             </div>
           </div>

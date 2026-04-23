@@ -507,7 +507,10 @@ const Statistics = () => {
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold">Estadísticas</h1>
+              <h1 className="text-xl sm:text-2xl font-bold inline-flex items-center gap-2">
+                Estadísticas
+                <HelpTooltip id="statistics" />
+              </h1>
               <p className="text-sm text-muted-foreground">{PERIOD_LABELS[period]}</p>
             </div>
           </div>

@@ -167,7 +167,10 @@ export const SessionNotes = ({ patientId, businessId, appointments }: SessionNot
       <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
         <div className="flex items-center gap-2">
           <FileText className="h-5 w-5 text-primary" />
-          <CardTitle className="text-lg">Notas de sesión</CardTitle>
+          <CardTitle className="text-lg inline-flex items-center gap-1.5">
+            Notas de sesión
+            <HelpTooltip id="sessionNotes" />
+          </CardTitle>
           <Badge variant="outline" className="gap-1 text-xs">
             <Lock className="h-3 w-3" /> Privadas
           </Badge>

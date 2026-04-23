@@ -241,6 +241,7 @@ const PortalCustomization = () => {
               <h1 className="text-lg lg:text-xl font-bold flex items-center gap-2">
                 <Palette className="h-5 w-5 text-primary" />
                 Personalizar Portal
+                <HelpTooltip id="patientPortal" />
               </h1>
               <p className="text-xs text-muted-foreground">Configurá cómo ven los pacientes su portal</p>
             </div>
