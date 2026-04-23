@@ -70,24 +70,16 @@ export const useBusinessId = (redirectIfNoBusiness = true): UseBusinessIdResult 
         }
       }
 
-      // Super admin sin selección: tomar primer business disponible
+      // Super admin sin selección: NUNCA tomar un business automáticamente.
+      // El super admin está por encima de todos los consultorios y debe elegir
+      // explícitamente cuál visitar desde el panel SaaS Admin. Esto previene
+      // que se creen/modifiquen datos en el consultorio equivocado por error.
       if (isSuperAdmin) {
-        const { data: businesses } = await supabase
-          .from("businesses")
-          .select("id")
-          .order("name")
-          .limit(1);
-
-        if (businesses && businesses.length > 0) {
-          const firstBusinessId = businesses[0].id;
-          sessionStorage.setItem(SAAS_SELECTED_BUSINESS_KEY, firstBusinessId);
-          setBusinessId(firstBusinessId);
-          setLoading(false);
-          return;
-        }
-
         setBusinessId(null);
         setLoading(false);
+        if (redirectIfNoBusiness && window.location.pathname !== "/saas-admin") {
+          navigate("/saas-admin");
+        }
         return;
       }
 
