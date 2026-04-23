@@ -247,25 +247,6 @@ const PortalCustomization = () => {
             </div>
           </div>
           <div className="flex items-center gap-2 flex-wrap justify-end">
-            {publicSlug && (
-              <>
-                <Button
-                  variant="outline" size="sm" className="gap-2"
-                  onClick={() => {
-                    navigator.clipboard.writeText(buildShareUrl(`/portal/${publicSlug}`));
-                    toast({ title: "URL copiada", description: "Compartilo con tus pacientes" });
-                  }}
-                >
-                  <Copy className="h-4 w-4" /> <span className="hidden sm:inline">Copiar URL</span>
-                </Button>
-                <Button
-                  variant="outline" size="sm" className="gap-2"
-                  onClick={() => window.open(buildShareUrl(`/portal/${publicSlug}`), "_blank")}
-                >
-                  <ExternalLink className="h-4 w-4" /> <span className="hidden sm:inline">Ver portal</span>
-                </Button>
-              </>
-            )}
             <Button size="sm" onClick={handleSave} disabled={saving} className="gap-2">
               {saving ? "Guardando..." : "Guardar"}
             </Button>
@@ -427,62 +408,6 @@ const PortalCustomization = () => {
             </div>
           </CardContent>
         </Card>
-
-        {/* Share portal link */}
-        {publicSlug && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Share2 className="h-5 w-5 text-primary" /> Compartir portal con pacientes
-              </CardTitle>
-              <CardDescription>
-                Compartí este link con tus pacientes para que accedan a su portal personalizado e instalen la app con tu marca.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center gap-2">
-                <div className="flex-1 bg-muted rounded-lg px-3 py-2.5 text-sm font-mono truncate border border-border">
-                  {APP_URL}/portal/{publicSlug}
-                </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="gap-2 shrink-0"
-                  onClick={() => {
-                    navigator.clipboard.writeText(buildShareUrl(`/portal/${publicSlug}`));
-                    toast({ title: "Link copiado", description: "Compartilo con tus pacientes" });
-                  }}
-                >
-                  <Copy className="h-4 w-4" /> Copiar
-                </Button>
-                <Button
-                  size="sm"
-                  className="gap-2 shrink-0"
-                  onClick={() => {
-                    const url = buildShareUrl(`/portal/${publicSlug}`);
-                    if (navigator.share) {
-                      navigator.share({
-                        title: clinicName || "Mi Consultorio",
-                        text: `Accedé a tu portal de ${clinicName || "Mi Consultorio"}`,
-                        url,
-                      });
-                    } else {
-                      navigator.clipboard.writeText(url);
-                      toast({ title: "Link copiado" });
-                    }
-                  }}
-                >
-                  <ExternalLink className="h-4 w-4" /> Compartir
-                </Button>
-              </div>
-              <div className="p-3 rounded-xl bg-primary/5 border border-primary/10">
-                <p className="text-xs text-muted-foreground">
-                  <strong className="text-foreground">💡 Tip:</strong> Tus pacientes podrán iniciar sesión, ver sus citas, pagos e historial, e instalar la app en su dispositivo con tu logo y nombre.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
         <div className="flex justify-end gap-3 pb-8">
           <Button variant="outline" onClick={() => navigate(-1)}>Cancelar</Button>
