@@ -38,6 +38,7 @@ import { ProfessionalInviteModal } from "@/components/ProfessionalInviteModal";
 import { PlanUsageCard } from "@/components/PlanUsageCard";
 import LoadingPage from "@/components/LoadingPage";
 import { buildShareUrl } from "@/config/app";
+import { useBusinessPublicWeb } from "@/hooks/use-business-public-web";
 
 const DEFAULT_TEMPLATES = {
   reminder:
