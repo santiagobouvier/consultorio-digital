@@ -11,6 +11,7 @@ import { ArrowLeft, Building2, Mail, Eye, EyeOff, Sparkles, CheckCircle2 } from 
 import { useHostnameBusiness } from "@/hooks/use-hostname-business";
 import { getPlanDefinition, formatPrice } from "@/lib/plan-definitions";
 import { getPostLoginDestination, getUserAccessPriority } from "@/lib/post-login-routing";
+import { useAuth } from "@/contexts/AuthContext";
 import logoWhite from "@/assets/logo-consultorio-digital-white.png";
 import authBgConsultorio from "@/assets/auth-bg-consultorio.jpg";
 import digitalBuildersLogo from "@/assets/logo-digitalbuilders.webp";
@@ -46,6 +47,10 @@ const Auth = () => {
   const navigate = useNavigate();
 
   const { business: hostnameBusiness, loading: businessLoading } = useHostnameBusiness();
+  // AuthContext es la fuente de verdad primaria para isSuperAdmin (resuelta
+  // localmente vía email shortcut + RPC cacheada). Si el routing por RPC falla,
+  // usamos este valor como fallback para no perder al super admin en /configurar-negocio.
+  const { isSuperAdmin: ctxIsSuperAdmin } = useAuth();
 
   const planDef = selectedPlan ? getPlanDefinition(selectedPlan) : null;
   const planPrice = planDef ? (billingPeriod === "annual" ? planDef.priceAnnual : planDef.priceMonthly) : 0;
@@ -67,24 +72,36 @@ const Auth = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Bloquear usuarios que solo tienen rol "patient" — esta app es exclusiva
-      // para profesionales/admins. Los pacientes deben entrar por /portal/:slug.
-      const priority = await getUserAccessPriority(user.id);
-      if (priority.isPatientOnly) {
-        await supabase.auth.signOut();
-        toast.error(
-          "Este acceso es exclusivo para profesionales. Si sos paciente, ingresá desde el portal de tu consultorio.",
-          { duration: 8000 },
-        );
-        return;
-      }
+      try {
+        // Bloquear usuarios que solo tienen rol "patient" — esta app es exclusiva
+        // para profesionales/admins. Los pacientes deben entrar por /portal/:slug.
+        const priority = await getUserAccessPriority(user.id);
+        if (priority.isPatientOnly) {
+          await supabase.auth.signOut();
+          toast.error(
+            "Este acceso es exclusivo para profesionales. Si sos paciente, ingresá desde el portal de tu consultorio.",
+            { duration: 8000 },
+          );
+          return;
+        }
 
-      const destination = await getPostLoginDestination(user.id);
-      navigate(destination, { replace: true });
+        const destination = await getPostLoginDestination(user.id);
+        navigate(destination, { replace: true });
+      } catch (err) {
+        // Fallback: si las consultas de routing fallan, no dejamos al usuario
+        // varado en /configurar-negocio. Usamos el AuthContext que ya tiene
+        // isSuperAdmin resuelto sin llamadas extra (email shortcut o RPC cacheada).
+        console.error("[Auth] redirectByRole falló, usando fallback de AuthContext:", err);
+        if (ctxIsSuperAdmin) {
+          navigate("/saas-admin", { replace: true });
+        } else {
+          navigate("/dashboard", { replace: true });
+        }
+      }
     } finally {
       setRedirecting(false);
     }
-  }, [navigate, redirecting]);
+  }, [navigate, redirecting, ctxIsSuperAdmin]);
 
   // Poll for email verification when awaiting
   useEffect(() => {
