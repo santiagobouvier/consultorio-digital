@@ -270,7 +270,6 @@ const PatientPortal = () => {
   const totalSessions = pastAppointments.filter(a => a.status === "completed").length;
   const pendingPayments = payments.filter(p => p.status !== "paid" && p.status !== "cancelled");
   const overduePayments = pendingPayments.filter(p => p.status === "overdue");
-  const totalPaid = payments.filter(p => p.status === "paid").reduce((s, p) => s + p.amount, 0);
   const pendingCount = pendingPayments.length;
 
   const initials = (patient?.full_name || "?")
