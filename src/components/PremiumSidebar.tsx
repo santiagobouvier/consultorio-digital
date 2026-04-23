@@ -14,6 +14,7 @@ import {
   Shield,
   LogOut,
   ChevronRight,
+  ArrowLeft,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -28,7 +29,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useDashboardBranding } from "@/contexts/DashboardBrandingContext";
 import { isCurrentUserSuperAdmin } from "@/lib/admin-access";
-import { useBusinessId } from "@/hooks/use-business-id";
+import { useBusinessId, clearActiveBusinessId, getActiveBusinessId } from "@/hooks/use-business-id";
 import { prefetchRoute } from "@/lib/query-prefetch";
 import { usePendingRequestsCount } from "@/hooks/use-pending-requests-count";
 
