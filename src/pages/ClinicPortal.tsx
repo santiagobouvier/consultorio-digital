@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { usePWAInstall } from "@/hooks/use-pwa-install";
+import { PortalWelcomeInstall } from "@/components/portal/PortalWelcomeInstall";
 import {
   User, Calendar, CreditCard, Clock, MapPin, Video,
   Phone, Mail, Building2, FileText, LayoutDashboard,
@@ -298,6 +299,28 @@ const ClinicPortal = () => {
   const [patient, setPatient] = useState<PatientData | null>(null);
   const [tab, setTab] = useState("resumen");
   const [isDark, setIsDark] = useState(false);
+  const [welcomeSeen, setWelcomeSeen] = useState<boolean>(true);
+
+  // Cargar flag de "bienvenida vista" desde localStorage por slug.
+  useEffect(() => {
+    if (!slug) return;
+    try {
+      const key = `portal-welcome-seen:${slug}`;
+      setWelcomeSeen(localStorage.getItem(key) === "1");
+    } catch {
+      setWelcomeSeen(true);
+    }
+  }, [slug]);
+
+  const markWelcomeSeen = useCallback(() => {
+    if (!slug) return;
+    try {
+      localStorage.setItem(`portal-welcome-seen:${slug}`, "1");
+    } catch {
+      /* ignore */
+    }
+    setWelcomeSeen(true);
+  }, [slug]);
 
   // Appointments & payments from DB
   const [appointments, setAppointments] = useState<any[]>([]);
@@ -492,6 +515,21 @@ const ClinicPortal = () => {
 
   // Not logged in → branded login
   if (!session) {
+    // Pantalla de bienvenida + instalación PWA (solo la primera vez por slug).
+    if (!welcomeSeen) {
+      return (
+        <PortalWelcomeInstall
+          branding={{
+            displayName: branding.displayName,
+            specialty: branding.specialty,
+            logoUrl: branding.logoUrl,
+            slug: branding.slug,
+          }}
+          themeStyle={themeStyle}
+          onContinue={markWelcomeSeen}
+        />
+      );
+    }
     return (
       <BrandedLogin
         branding={branding}
