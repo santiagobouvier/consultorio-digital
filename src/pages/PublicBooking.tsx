@@ -223,6 +223,11 @@ const PublicBooking = () => {
 
   if (loading) return <LoadingPage />;
 
+  // Plan sin web pública: 404 genérico para no exponer el negocio.
+  if (!planAllowsPublicWeb) {
+    return <NotFound />;
+  }
+
   if (!business) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
