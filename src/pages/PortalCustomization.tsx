@@ -429,7 +429,7 @@ const PortalCustomization = () => {
                   variant="outline"
                   className="gap-2 shrink-0"
                   onClick={() => {
-                    navigator.clipboard.writeText(`${window.location.origin}/portal/${publicSlug}`);
+                    navigator.clipboard.writeText(buildShareUrl(`/portal/${publicSlug}`));
                     toast({ title: "Link copiado", description: "Compartilo con tus pacientes" });
                   }}
                 >
@@ -439,7 +439,7 @@ const PortalCustomization = () => {
                   size="sm"
                   className="gap-2 shrink-0"
                   onClick={() => {
-                    const url = `${window.location.origin}/portal/${publicSlug}`;
+                    const url = buildShareUrl(`/portal/${publicSlug}`);
                     if (navigator.share) {
                       navigator.share({
                         title: clinicName || "Mi Consultorio",
