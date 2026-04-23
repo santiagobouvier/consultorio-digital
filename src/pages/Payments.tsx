@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { HelpTooltip } from "@/components/HelpTooltip";
 import {
   Select,
   SelectContent,
@@ -202,7 +203,10 @@ const Payments = () => {
             Gestión financiera
           </div>
           <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">
-            Pagos
+            <span className="inline-flex items-center gap-2">
+              Pagos
+              <HelpTooltip id="payments" />
+            </span>
           </h1>
           <p className="text-sm text-muted-foreground">
             {filteredPayments.length} pago{filteredPayments.length !== 1 ? "s" : ""} registrado{filteredPayments.length !== 1 ? "s" : ""}

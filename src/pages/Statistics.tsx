@@ -28,6 +28,7 @@ import { useBusinessId } from "@/hooks/use-business-id";
 import { useProfessionals } from "@/hooks/use-professionals";
 import { buildShareUrl } from "@/config/app";
 import { ListPagination, usePagination, ITEMS_PER_PAGE } from "@/components/ListPagination";
+import { HelpTooltip } from "@/components/HelpTooltip";
 import {
   BarChart,
   Bar,
@@ -507,7 +508,10 @@ const Statistics = () => {
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold">Estadísticas</h1>
+              <h1 className="text-xl sm:text-2xl font-bold inline-flex items-center gap-2">
+                Estadísticas
+                <HelpTooltip id="statistics" />
+              </h1>
               <p className="text-sm text-muted-foreground">{PERIOD_LABELS[period]}</p>
             </div>
           </div>

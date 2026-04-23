@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { HelpTooltip } from "@/components/HelpTooltip";
 import {
   Dialog,
   DialogContent,
@@ -256,7 +257,10 @@ const Billing = () => {
           Volver al dashboard
         </button>
 
-        <h1 className="text-2xl sm:text-3xl font-bold mb-8">Facturación</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold mb-8 inline-flex items-center gap-2">
+          Facturación
+          <HelpTooltip id="billing" />
+        </h1>
 
         {!subscription ? (
           <Card className="bg-[#111111] border-white/10">

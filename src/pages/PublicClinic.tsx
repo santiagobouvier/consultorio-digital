@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CalendarDays, LogIn, Clock, Stethoscope } from "lucide-react";
 import LoadingPage from "@/components/LoadingPage";
+import NotFound from "./NotFound";
+import { getPlanDefinition } from "@/lib/plan-definitions";
 
 type DayKey = "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday";
 
@@ -50,6 +52,7 @@ const PublicClinic = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [business, setBusiness] = useState<any>(null);
+  const [planAllowsPublicWeb, setPlanAllowsPublicWeb] = useState(true);
   const [settings, setSettings] = useState<any>(null);
   const [schedule, setSchedule] = useState<ScheduleRow[]>([]);
 
@@ -64,7 +67,7 @@ const PublicClinic = () => {
         }
 
         const columns =
-          "id, owner_user_id, name, specialty, public_slug, custom_subdomain, portal_logo_url, portal_primary_color, portal_dark_primary_color, portal_clinic_display_name";
+          "id, owner_user_id, name, specialty, public_slug, custom_subdomain, portal_logo_url, portal_primary_color, portal_dark_primary_color, portal_clinic_display_name, plan_code";
 
         // Buscar primero por public_slug (caso más común), luego fallback a custom_subdomain.
         let businessData: any = null;
@@ -88,6 +91,16 @@ const PublicClinic = () => {
 
         if (!businessData) {
           if (!cancelled) setLoading(false);
+          return;
+        }
+
+        // Restricción por plan: solo planes con `hasPublicWeb` exponen la web pública.
+        const planDef = getPlanDefinition(businessData.plan_code);
+        if (!planDef.hasPublicWeb) {
+          if (!cancelled) {
+            setPlanAllowsPublicWeb(false);
+            setLoading(false);
+          }
           return;
         }
 
@@ -140,6 +153,12 @@ const PublicClinic = () => {
   );
 
   if (loading) return <LoadingPage />;
+
+  // El plan del consultorio no incluye web pública: respondemos como 404 genérico
+  // para no revelar la existencia del negocio.
+  if (!planAllowsPublicWeb) {
+    return <NotFound />;
+  }
 
   if (!business) {
     return (

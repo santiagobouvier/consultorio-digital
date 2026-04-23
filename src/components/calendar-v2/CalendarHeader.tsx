@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ChevronLeft, ChevronRight, Plus, Filter, Download, CalendarPlus, CreditCard } from "lucide-react";
 import { ViewType } from "./types";
+import { HelpTooltip } from "@/components/HelpTooltip";
 
 interface CalendarHeaderProps {
   currentDate: Date;
@@ -116,7 +117,10 @@ export const CalendarHeader = ({
         {/* Date Display */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold capitalize">{dateLabel}</h1>
+            <h1 className="text-2xl font-bold capitalize inline-flex items-center gap-2">
+              {dateLabel}
+              <HelpTooltip id="agenda" />
+            </h1>
             <button
               onClick={onToday}
               className="text-sm text-primary font-medium hover:underline"
@@ -176,7 +180,10 @@ export const CalendarHeader = ({
 
           {/* Date Display */}
           <div>
-            <h1 className="text-xl font-bold capitalize">{dateLabel}</h1>
+            <h1 className="text-xl font-bold capitalize inline-flex items-center gap-2">
+              {dateLabel}
+              <HelpTooltip id="agenda" />
+            </h1>
           </div>
 
           <Button

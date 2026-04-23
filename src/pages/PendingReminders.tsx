@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
+import { HelpTooltip } from "@/components/HelpTooltip";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -399,7 +400,10 @@ const PendingReminders = () => {
             Centro de notificaciones
           </Badge>
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight">
-            Recordatorios
+            <span className="inline-flex items-center gap-2">
+              Recordatorios
+              <HelpTooltip id="reminders" />
+            </span>
           </h1>
           <p className="text-sm text-muted-foreground max-w-md mx-auto">
             Gestioná, editá y enviá todos los recordatorios de tus pacientes
