@@ -37,6 +37,7 @@ import { DomainSettingsCard } from "@/components/DomainSettingsCard";
 import { ProfessionalInviteModal } from "@/components/ProfessionalInviteModal";
 import { PlanUsageCard } from "@/components/PlanUsageCard";
 import LoadingPage from "@/components/LoadingPage";
+import { buildShareUrl } from "@/config/app";
 
 const DEFAULT_TEMPLATES = {
   reminder:
@@ -418,7 +419,7 @@ const ClinicSettings = () => {
   };
 
   const copyPublicUrl = () => {
-    navigator.clipboard.writeText(`${window.location.origin}/portal/${publicSlug}`);
+    navigator.clipboard.writeText(buildShareUrl(`/portal/${publicSlug}`));
     toast({ title: "URL copiada", description: "La URL se copió al portapapeles" });
   };
 
@@ -474,8 +475,8 @@ const ClinicSettings = () => {
   const initials = (clinicName || "Mi Consultorio")
     .split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
   const displayLogo = dashboardLogoUrl || logoUrl;
-  const portalUrl = `${window.location.origin}/portal/${publicSlug}`;
-  const registrationUrl = `${window.location.origin}/registrarse-profesional?business=${publicSlug}`;
+  const portalUrl = buildShareUrl(`/portal/${publicSlug}`);
+  const registrationUrl = buildShareUrl(`/registrarse-profesional?business=${publicSlug}`);
 
   return (
     <div className="min-h-screen bg-background pb-32">

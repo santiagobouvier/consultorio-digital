@@ -114,7 +114,9 @@ Deno.serve(async (req) => {
       }
 
       const origin = req.headers.get("origin") || "https://consultoriodigital.app";
-      const activationUrl = `${origin}/activar-consultorio?token=${activationToken}`;
+      // Always use the canonical production domain so emails never leak preview URLs.
+      const activationUrl = `https://consultoriodigital.app/activar-consultorio?token=${activationToken}`;
+      void origin; // kept for backwards compat / debugging
 
       // Send activation email via Resend
       let emailSent = false;
