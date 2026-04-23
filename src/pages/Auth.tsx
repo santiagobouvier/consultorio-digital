@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { ArrowLeft, Building2, Mail, Eye, EyeOff, Sparkles, CheckCircle2 } from "lucide-react";
 import { useHostnameBusiness } from "@/hooks/use-hostname-business";
 import { getPlanDefinition, formatPrice } from "@/lib/plan-definitions";
-import { getPostLoginDestination } from "@/lib/post-login-routing";
+import { getPostLoginDestination, getUserAccessPriority } from "@/lib/post-login-routing";
 import logoWhite from "@/assets/logo-consultorio-digital-white.png";
 import authBgConsultorio from "@/assets/auth-bg-consultorio.jpg";
 import digitalBuildersLogo from "@/assets/logo-digitalbuilders.webp";
@@ -66,6 +66,18 @@ const Auth = () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+
+      // Bloquear usuarios que solo tienen rol "patient" — esta app es exclusiva
+      // para profesionales/admins. Los pacientes deben entrar por /portal/:slug.
+      const priority = await getUserAccessPriority(user.id);
+      if (priority.isPatientOnly) {
+        await supabase.auth.signOut();
+        toast.error(
+          "Este acceso es exclusivo para profesionales. Si sos paciente, ingresá desde el portal de tu consultorio.",
+          { duration: 8000 },
+        );
+        return;
+      }
 
       const destination = await getPostLoginDestination(user.id);
       navigate(destination, { replace: true });
