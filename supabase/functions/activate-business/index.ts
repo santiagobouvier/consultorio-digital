@@ -11,6 +11,25 @@ const json = (status: number, body: unknown) =>
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 
+// Map new (Spanish) plan codes to legacy (English) ones used historically
+// in the businesses table. The CHECK constraint now accepts both formats,
+// but we normalize here defensively so downstream code that still expects
+// legacy codes (RPCs like can_add_patient, can_add_professional that
+// special-case 'enterprise' / 'custom') keeps working.
+const LEGACY_PLAN_MAP: Record<string, string> = {
+  emprendedor: "starter",
+  esencial: "individual",
+  profesional: "professional",
+  consultorio: "advanced",
+  clinica: "enterprise",
+  personalizado: "custom",
+};
+
+const normalizePlanCode = (code: string): string => {
+  if (!code) return "individual";
+  return LEGACY_PLAN_MAP[code] || code;
+};
+
 // Build a placeholder business name + slug from the email so the row is valid
 // even before the owner completes the OnboardingWizard.
 const buildPlaceholders = (email: string) => {
@@ -72,7 +91,8 @@ Deno.serve(async (req) => {
     }
 
     const email = pending.owner_email;
-    const planCode = pending.plan_code || "inicial";
+    const rawPlanCode = pending.plan_code || "inicial";
+    const planCode = normalizePlanCode(rawPlanCode);
     const customMaxProfessionals = pending.custom_max_professionals ?? null;
     const customMaxPatients = pending.custom_max_patients ?? null;
 
@@ -165,7 +185,7 @@ Deno.serve(async (req) => {
         plan_code: planCode,
         onboarding_completed: false,
       };
-      if (planCode === "personalizado" || planCode === "custom") {
+      if (planCode === "custom" || rawPlanCode === "personalizado") {
         businessInsert.custom_max_professionals = customMaxProfessionals;
         businessInsert.custom_max_patients = customMaxPatients;
       }
