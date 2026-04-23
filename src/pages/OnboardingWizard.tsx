@@ -261,7 +261,8 @@ const OnboardingWizard = () => {
       }
 
       if (existingBusinessId) {
-        // Update existing business
+        // Update the business that activate-business (or a previous wizard
+        // run) already created. We only touch user-editable fields here.
         const { error } = await supabase.from("businesses").update({
           name: data.name,
           specialty: data.specialty || null,
@@ -271,17 +272,12 @@ const OnboardingWizard = () => {
           custom_domain: data.custom_domain || null,
           timezone: data.timezone,
           onboarding_completed: true,
-          ...(invitationPlan.planCode ? { plan_code: invitationPlan.planCode } : {}),
-          ...(invitationPlan.planCode === "personalizado"
-            ? {
-                custom_max_professionals: invitationPlan.customMaxProfessionals ?? null,
-                custom_max_patients: invitationPlan.customMaxPatients ?? null,
-              }
-            : {}),
         }).eq("id", existingBusinessId);
         if (error) throw error;
       } else {
-        // Create new business
+        // Fallback for legacy flows (e.g. self-signup without invitation)
+        // where no business was pre-created. Apply plan info from the
+        // invitation if it exists in sessionStorage.
         const { error } = await supabase.from("businesses").insert([{
           owner_user_id: userId,
           name: data.name,
