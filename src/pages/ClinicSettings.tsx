@@ -38,6 +38,7 @@ import { ProfessionalInviteModal } from "@/components/ProfessionalInviteModal";
 import { PlanUsageCard } from "@/components/PlanUsageCard";
 import LoadingPage from "@/components/LoadingPage";
 import { buildShareUrl } from "@/config/app";
+import { useBusinessPublicWeb } from "@/hooks/use-business-public-web";
 
 const DEFAULT_TEMPLATES = {
   reminder:
@@ -162,6 +163,7 @@ const ClinicSettings = () => {
   const lastFocused = useRef<"reminder" | "confirmation" | "postsession">("reminder");
 
   const { refetch: refetchBranding } = useDashboardBranding();
+  const { hasPublicWeb } = useBusinessPublicWeb();
 
   useEffect(() => {
     checkAuth();
@@ -490,58 +492,29 @@ const ClinicSettings = () => {
           Volver al dashboard
         </button>
 
-        {/* HERO */}
-        <Card className="overflow-hidden border-primary/10">
-          <div
-            className="h-24 sm:h-32 bg-gradient-to-br from-primary/20 via-primary/10 to-transparent relative"
-            style={{
-              backgroundImage: coverImageUrl
-                ? `linear-gradient(to bottom right, hsl(var(--primary) / 0.4), transparent), url(${coverImageUrl})`
-                : undefined,
-              backgroundSize: "cover",
-              backgroundPosition: "center",
-            }}
-          />
-          <CardContent className="px-5 pb-5 pt-0">
-            <div className="flex flex-col sm:flex-row sm:items-end gap-4 -mt-10">
-              <div className="h-20 w-20 rounded-2xl border-4 border-background bg-card shadow-lg flex items-center justify-center overflow-hidden shrink-0">
-                {displayLogo ? (
-                  <img src={displayLogo} alt="Logo" className="w-full h-full object-cover" />
-                ) : (
-                  <div
-                    className="w-full h-full flex items-center justify-center text-xl font-bold text-white"
-                    style={{ backgroundColor: `hsl(${dashboardColor})` }}
-                  >
-                    {initials}
-                  </div>
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h1 className="text-xl sm:text-2xl font-bold truncate">
-                    {clinicName || "Mi Consultorio"}
-                  </h1>
-                  {isPrivateClinic && (
-                    <Badge variant="secondary" className="text-[10px]">Clínica privada</Badge>
-                  )}
-                </div>
-                {specialty && (
-                  <p className="text-sm text-muted-foreground truncate">{specialty}</p>
-                )}
-              </div>
-              <div className="flex gap-2 shrink-0">
-                <Button variant="outline" size="sm" onClick={copyPublicUrl} className="gap-2">
-                  <Copy className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Copiar URL</span>
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => window.open(portalUrl, "_blank")} className="gap-2">
-                  <ExternalLink className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Ver portal</span>
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Header administrativo */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between border-b pb-5">
+          <div className="min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Mi Consultorio</h1>
+            <p className="text-sm text-muted-foreground mt-1 truncate">
+              {clinicName || "Mi Consultorio"}
+              {specialty ? ` · ${specialty}` : ""}
+            </p>
+            {isPrivateClinic && (
+              <Badge variant="secondary" className="text-[10px] mt-2">Clínica privada</Badge>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2 sm:shrink-0">
+            <Button variant="outline" size="sm" onClick={copyPublicUrl} className="gap-2">
+              <Copy className="h-3.5 w-3.5" />
+              Copiar URL del portal de pacientes
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => window.open(portalUrl, "_blank")} className="gap-2">
+              <ExternalLink className="h-3.5 w-3.5" />
+              Ver portal de pacientes
+            </Button>
+          </div>
+        </div>
 
         {/* Plan y uso */}
         <PlanUsageCard businessId={businessId} />
@@ -793,8 +766,11 @@ const ClinicSettings = () => {
             <Card>
               <CardHeader>
                 <CardTitle className="text-base flex items-center gap-2">
-                  <ImageIcon className="h-4 w-4" /> Imágenes del portal del paciente
+                  <ImageIcon className="h-4 w-4" /> Marca del portal del paciente
                 </CardTitle>
+                <p className="text-xs text-muted-foreground">
+                  Estos elementos se muestran a tus pacientes cuando entran a su portal.
+                </p>
               </CardHeader>
               <CardContent className="space-y-5">
                 {/* Clinic logo */}
@@ -827,40 +803,10 @@ const ClinicSettings = () => {
                     </div>
                   </div>
                 </div>
-
-                {/* Cover */}
-                <div className="space-y-2">
-                  <Label>Imagen de portada</Label>
-                  <div className="rounded-xl border overflow-hidden bg-muted/30 aspect-[3/1] flex items-center justify-center">
-                    {coverImageUrl
-                      ? <img src={coverImageUrl} alt="" className="w-full h-full object-cover" />
-                      : <ImageIcon className="h-8 w-8 text-muted-foreground" />}
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <label className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-md border bg-muted/40 hover:bg-muted cursor-pointer text-sm font-medium transition-colors">
-                      <Upload className="h-4 w-4" />
-                      {uploadingCover ? "Subiendo..." : "Subir portada"}
-                      <input
-                        type="file" accept="image/*" className="hidden" disabled={uploadingCover}
-                        onChange={(e) => {
-                          const f = e.target.files?.[0];
-                          if (f) uploadImage(f, "cover", setCoverImageUrl, setUploadingCover);
-                          e.target.value = "";
-                        }}
-                      />
-                    </label>
-                    {coverImageUrl && (
-                      <Button type="button" variant="ghost" size="sm" onClick={() => setCoverImageUrl("")}
-                        className="text-destructive hover:text-destructive gap-2 h-10">
-                        <Trash2 className="h-4 w-4" /> Quitar
-                      </Button>
-                    )}
-                  </div>
-                </div>
               </CardContent>
             </Card>
 
-            {isOwner && businessId && (
+            {hasPublicWeb && isOwner && businessId && (
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base flex items-center gap-2">
