@@ -17,6 +17,8 @@ import {
 import { HelpTooltip } from "@/components/HelpTooltip";
 import { buildShareUrl } from "@/config/app";
 import { PortalInviteBatch } from "@/components/PortalInviteBatch";
+import { PWAIconEditor, generatePwaIconBlob } from "@/components/PWAIconEditor";
+import type { Area } from "react-easy-crop";
 
 const THEME_PRESETS = [
   { id: "teal", name: "Teal", light: "176 100% 32%", dark: "176 85% 42%", preview: "hsl(176, 100%, 32%)" },
@@ -80,6 +82,10 @@ const PortalCustomization = () => {
   const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
   const [copied, setCopied] = useState(false);
 
+  // PWA icon editor
+  const [iconBgColor, setIconBgColor] = useState<string>("#00a89d");
+  const [pendingIcon, setPendingIcon] = useState<{ sourceImage: string; crop: Area; bgColor: string } | null>(null);
+
   useEffect(() => {
     if (!businessId) return;
     const load = async () => {
@@ -101,6 +107,8 @@ const PortalCustomization = () => {
         setCustomDarkHex(hslToHex(dc));
         setPublicSlug((data as any).public_slug || "");
         setInitialSlug((data as any).public_slug || "");
+        // Inicializar color de fondo del ícono con el color primario del consultorio
+        setIconBgColor(hslToHex(lc));
       }
     };
     load();
@@ -170,34 +178,35 @@ const PortalCustomization = () => {
     setSelectedPreset("custom");
   };
 
-  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !businessId) return;
-    setUploading(true);
-    try {
-      const ext = file.name.split(".").pop();
-      const path = `portal-logos/${businessId}.${ext}`;
-      const { error: uploadError } = await supabase.storage
-        .from("avatars")
-        .upload(path, file, { upsert: true });
-      if (uploadError) throw uploadError;
-      const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
-      setLogoUrl(urlData.publicUrl);
-      toast({ title: "Logo subido correctamente" });
-    } catch (err: any) {
-      toast({ title: "Error al subir logo", description: err.message, variant: "destructive" });
-    } finally {
-      setUploading(false);
-    }
-  };
-
   const handleSave = async () => {
     if (!businessId) return;
     setSaving(true);
     try {
+      let nextLogoUrl = logoUrl;
+
+      // Si hay un ícono pendiente, generarlo y subirlo
+      if (pendingIcon) {
+        const blob = await generatePwaIconBlob(
+          pendingIcon.sourceImage,
+          pendingIcon.crop,
+          pendingIcon.bgColor,
+          512
+        );
+        const path = `portal-logos/${businessId}-icon.png`;
+        const { error: upErr } = await supabase.storage
+          .from("avatars")
+          .upload(path, blob, { upsert: true, contentType: "image/png", cacheControl: "3600" });
+        if (upErr) throw upErr;
+        const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
+        // Cache-bust para forzar refresh de manifest/imagen
+        nextLogoUrl = `${urlData.publicUrl}?v=${Date.now()}`;
+        setLogoUrl(nextLogoUrl);
+        setPendingIcon(null);
+      }
+
       const update: Record<string, any> = {
         portal_clinic_display_name: clinicName,
-        portal_logo_url: logoUrl,
+        portal_logo_url: nextLogoUrl,
         portal_primary_color: lightColor,
         portal_dark_primary_color: darkColor,
         portal_theme_preset: selectedPreset,
@@ -404,32 +413,22 @@ const PortalCustomization = () => {
           <Card>
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
-                <ImageIcon className="h-4 w-4 text-primary" /> Logo del consultorio
+                <ImageIcon className="h-4 w-4 text-primary" /> Ícono de la app
                 <HelpTooltip id="portalLogo" />
               </CardTitle>
-              <CardDescription>Aparece en el portal y en las comunicaciones con pacientes</CardDescription>
+              <CardDescription>
+                Es el ícono que verán tus pacientes al instalar el portal en el celular. Encuadrá tu logo dentro del círculo.
+              </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center gap-4">
-                <Avatar className="h-20 w-20 rounded-xl border-2 border-dashed border-border">
-                  {logoUrl ? (
-                    <AvatarImage src={logoUrl} className="object-cover rounded-xl" />
-                  ) : (
-                    <AvatarFallback className="rounded-xl bg-primary/10">
-                      <Building2 className="h-8 w-8 text-primary" />
-                    </AvatarFallback>
-                  )}
-                </Avatar>
-                <div className="space-y-2">
-                  <label className="cursor-pointer">
-                    <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} disabled={uploading} />
-                    <Button variant="outline" size="sm" className="gap-2" asChild>
-                      <span><Upload className="h-4 w-4" />{uploading ? "Subiendo..." : "Subir logo"}</span>
-                    </Button>
-                  </label>
-                  <p className="text-xs text-muted-foreground">PNG, JPG o SVG. Máx 2MB.</p>
-                </div>
-              </div>
+            <CardContent>
+              <PWAIconEditor
+                iconUrl={logoUrl}
+                bgColor={iconBgColor}
+                onBgColorChange={setIconBgColor}
+                suggestedBgColor={customLightHex}
+                onPendingChange={setPendingIcon}
+                uploading={uploading}
+              />
             </CardContent>
           </Card>
 
