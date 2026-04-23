@@ -19,6 +19,7 @@ import {
   Smartphone, LogOut, Eye, EyeOff, Loader2
 } from "lucide-react";
 import { formatCurrency } from "@/lib/payments";
+import { getUserAccessPriority } from "@/lib/post-login-routing";
 
 // ---- Theme generator ----
 const generateThemeVars = (primaryColor: string, isDark: boolean) => {
