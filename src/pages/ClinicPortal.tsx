@@ -595,7 +595,6 @@ const ClinicPortal = () => {
   const upcomingAppts = appointments.filter(a => new Date(a.start_at) >= new Date() && a.status !== "cancelled");
   const pastAppts = appointments.filter(a => new Date(a.start_at) < new Date() || a.status === "completed");
   const pendingPayments = payments.filter(p => p.status === "pending");
-  const paidPayments = payments.filter(p => p.status === "paid");
 
   const formatDate = (d: string) => new Date(d).toLocaleDateString("es-UY", { weekday: "long", day: "numeric", month: "long" });
   const formatShort = (d: string) => new Date(d).toLocaleDateString("es-UY", { day: "numeric", month: "long", year: "numeric" });
@@ -816,17 +815,6 @@ const ClinicPortal = () => {
       <h2 className="text-lg font-bold flex items-center gap-2">
         <CreditCard className="h-5 w-5 text-primary" /> Pagos
       </h2>
-      {/* Summary */}
-      <div className="grid grid-cols-1 gap-3">
-        <Card className={pendingPayments.length > 0 ? "border-destructive/30" : ""}>
-          <CardContent className="pt-4 pb-3 text-center">
-            <p className={`text-xl font-bold ${pendingPayments.length > 0 ? "text-destructive" : "text-muted-foreground"}`}>
-              {formatCurrency(pendingPayments.reduce((s, p) => s + Number(p.amount), 0), "UYU")}
-            </p>
-            <p className="text-xs text-muted-foreground">Pendiente</p>
-          </CardContent>
-        </Card>
-      </div>
       {/* List */}
       <div className="space-y-3">
         {payments.map(pay => (
