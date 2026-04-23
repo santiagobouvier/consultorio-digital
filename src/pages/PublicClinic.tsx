@@ -58,16 +58,34 @@ const PublicClinic = () => {
     const load = async () => {
       try {
         setLoading(true);
-        const { data: businessData, error: businessError } = await supabase
-          .from("businesses")
-          .select(
-            "id, owner_user_id, name, specialty, public_slug, custom_subdomain, portal_logo_url, portal_primary_color, portal_dark_primary_color, portal_clinic_display_name"
-          )
-          .or(`public_slug.eq.${slug},custom_subdomain.eq.${slug}`)
-          .limit(1)
-          .maybeSingle();
+        if (!slug) {
+          if (!cancelled) setLoading(false);
+          return;
+        }
 
-        if (businessError) throw businessError;
+        const columns =
+          "id, owner_user_id, name, specialty, public_slug, custom_subdomain, portal_logo_url, portal_primary_color, portal_dark_primary_color, portal_clinic_display_name";
+
+        // Buscar primero por public_slug (caso más común), luego fallback a custom_subdomain.
+        let businessData: any = null;
+        const bySlug = await supabase
+          .from("businesses")
+          .select(columns)
+          .eq("public_slug", slug)
+          .maybeSingle();
+        if (bySlug.error) throw bySlug.error;
+        businessData = bySlug.data;
+
+        if (!businessData) {
+          const bySubdomain = await supabase
+            .from("businesses")
+            .select(columns)
+            .eq("custom_subdomain", slug)
+            .maybeSingle();
+          if (bySubdomain.error) throw bySubdomain.error;
+          businessData = bySubdomain.data;
+        }
+
         if (!businessData) {
           if (!cancelled) setLoading(false);
           return;
