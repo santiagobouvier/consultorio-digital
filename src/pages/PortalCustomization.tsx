@@ -13,7 +13,6 @@ import { APP_URL, buildShareUrl } from "@/config/app";
 import {
   ArrowLeft, Palette, Upload, Eye, Check, Building2,
   Sun, Moon, Type, Image as ImageIcon, Sparkles,
-  Copy, ExternalLink, Share2, Smartphone
 } from "lucide-react";
 import { HelpTooltip } from "@/components/HelpTooltip";
 
