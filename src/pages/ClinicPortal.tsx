@@ -299,6 +299,28 @@ const ClinicPortal = () => {
   const [patient, setPatient] = useState<PatientData | null>(null);
   const [tab, setTab] = useState("resumen");
   const [isDark, setIsDark] = useState(false);
+  const [welcomeSeen, setWelcomeSeen] = useState<boolean>(true);
+
+  // Cargar flag de "bienvenida vista" desde localStorage por slug.
+  useEffect(() => {
+    if (!slug) return;
+    try {
+      const key = `portal-welcome-seen:${slug}`;
+      setWelcomeSeen(localStorage.getItem(key) === "1");
+    } catch {
+      setWelcomeSeen(true);
+    }
+  }, [slug]);
+
+  const markWelcomeSeen = useCallback(() => {
+    if (!slug) return;
+    try {
+      localStorage.setItem(`portal-welcome-seen:${slug}`, "1");
+    } catch {
+      /* ignore */
+    }
+    setWelcomeSeen(true);
+  }, [slug]);
 
   // Appointments & payments from DB
   const [appointments, setAppointments] = useState<any[]>([]);
