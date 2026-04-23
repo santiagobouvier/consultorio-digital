@@ -21,6 +21,7 @@ const PatientInvitation = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [portalSlug, setPortalSlug] = useState<string | null>(null);
 
   useEffect(() => {
     if (!token) {
@@ -100,6 +101,10 @@ const PatientInvitation = () => {
 
       if (data.error) {
         throw new Error(data.error);
+      }
+
+      if (data.slug) {
+        setPortalSlug(data.slug);
       }
 
       setStatus("success");
@@ -217,7 +222,7 @@ const PatientInvitation = () => {
             {!isMobile && <DesktopInstructions />}
 
             <Button
-              onClick={() => navigate("/portal-paciente")}
+              onClick={() => navigate(portalSlug ? `/portal/${portalSlug}` : "/portal-paciente")}
               className="w-full rounded-xl"
               size="lg"
             >
@@ -226,7 +231,7 @@ const PatientInvitation = () => {
             </Button>
             <button
               type="button"
-              onClick={() => navigate("/portal-paciente")}
+              onClick={() => navigate(portalSlug ? `/portal/${portalSlug}` : "/portal-paciente")}
               className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               Lo hago más tarde

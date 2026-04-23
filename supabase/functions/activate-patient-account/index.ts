@@ -86,6 +86,36 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Link the auth user to the patient record so portal queries
+    // (which filter by auth_user_id) find them. Without this, the portal
+    // loads empty even though the patient invite is valid.
+    const { error: linkError } = await supabaseAdmin
+      .from("patients")
+      .update({ auth_user_id: invite.auth_user_id })
+      .eq("id", invite.patient_id);
+
+    if (linkError) {
+      console.error("Error linking auth_user_id to patient:", linkError);
+    }
+
+    // Fetch the business slug so the frontend can redirect the patient
+    // to their branded portal at /portal/:slug.
+    let portalSlug: string | null = null;
+    const { data: patientRow } = await supabaseAdmin
+      .from("patients")
+      .select("business_id")
+      .eq("id", invite.patient_id)
+      .single();
+
+    if (patientRow?.business_id) {
+      const { data: businessRow } = await supabaseAdmin
+        .from("businesses")
+        .select("public_slug")
+        .eq("id", patientRow.business_id)
+        .single();
+      portalSlug = businessRow?.public_slug ?? null;
+    }
+
     // Mark invite as used
     await supabaseAdmin
       .from("patient_portal_invites")
@@ -105,6 +135,7 @@ Deno.serve(async (req) => {
           success: true, 
           message: "Account activated. Please log in with your new password.",
           email: authUser.user.email,
+          slug: portalSlug,
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
@@ -115,6 +146,7 @@ Deno.serve(async (req) => {
         success: true,
         session: signInData.session,
         email: authUser.user.email,
+        slug: portalSlug,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
