@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { HelpTooltip } from "@/components/HelpTooltip";
 import { buildShareUrl } from "@/config/app";
+import { PortalInviteBatch } from "@/components/PortalInviteBatch";
 
 const THEME_PRESETS = [
   { id: "teal", name: "Teal", light: "176 100% 32%", dark: "176 85% 42%", preview: "hsl(176, 100%, 32%)" },
@@ -552,6 +553,10 @@ const PortalCustomization = () => {
             </div>
           </CardContent>
         </Card>
+
+        <Separator />
+
+        <PortalInviteBatch businessId={businessId} />
 
         <div className="flex justify-end gap-3 pb-8">
           <Button variant="outline" onClick={() => navigate(-1)}>Cancelar</Button>
