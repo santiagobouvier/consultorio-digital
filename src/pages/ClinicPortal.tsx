@@ -494,6 +494,8 @@ const ClinicPortal = () => {
     await supabase.auth.signOut();
     setSession(null);
     setPatient(null);
+    setPatientChecked(false);
+    setPatientLoading(false);
   };
 
   const handleInstall = async () => {
