@@ -16,8 +16,12 @@ export interface UserAccessPriority {
 export const getUserAccessPriority = async (
   userId: string,
 ): Promise<UserAccessPriority> => {
-  const isSuperAdmin = await isCurrentUserSuperAdmin(userId);
-  if (isSuperAdmin) {
+  // No swallowear errores: si la RPC is_super_admin falla, queremos que el
+  // caller lo sepa para hacer fallback a otra fuente de verdad (AuthContext)
+  // en lugar de degradar silenciosamente al super_admin a /configurar-negocio.
+  const { data, error } = await supabase.rpc("is_super_admin", { _user_id: userId });
+  if (error) throw error;
+  if (Boolean(data)) {
     return {
       isSuperAdmin: true,
       hasBusinessAccess: true,
