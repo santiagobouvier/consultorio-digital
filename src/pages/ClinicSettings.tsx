@@ -193,6 +193,7 @@ const ClinicSettings = () => {
       dashboardColor,
       dashboardLogoUrl,
       dashboardDisplayName,
+      publicSlug,
     });
 
   const isDirty = !loading && initialSnapshot !== "" && buildSnapshot() !== initialSnapshot;
