@@ -52,6 +52,7 @@ interface BusinessData {
   portal_clinic_display_name: string | null;
   portal_primary_color: string | null;
   portal_dark_primary_color: string | null;
+  public_slug: string | null;
 }
 
 interface Appointment {
@@ -195,7 +196,7 @@ const PatientPortal = () => {
       // Business with branding
       const { data: businessData } = await supabase
         .from("businesses")
-        .select("id, name, specialty, contact_email, portal_logo_url, portal_clinic_display_name, portal_primary_color, portal_dark_primary_color")
+        .select("id, name, specialty, contact_email, portal_logo_url, portal_clinic_display_name, portal_primary_color, portal_dark_primary_color, public_slug")
         .eq("id", patientData.business_id)
         .maybeSingle();
       if (businessData) setBusiness(businessData as BusinessData);
