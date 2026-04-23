@@ -297,6 +297,8 @@ const ClinicPortal = () => {
   const [session, setSession] = useState<any>(null);
   const [authChecked, setAuthChecked] = useState(false);
   const [patient, setPatient] = useState<PatientData | null>(null);
+  const [patientLoading, setPatientLoading] = useState(false);
+  const [patientChecked, setPatientChecked] = useState(false);
   const [tab, setTab] = useState("resumen");
   const [isDark, setIsDark] = useState(false);
   const [welcomeSeen, setWelcomeSeen] = useState<boolean>(true);
