@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useBusinessId } from "@/hooks/use-business-id";
 import { supabase } from "@/integrations/supabase/client";
+import { APP_URL, buildShareUrl } from "@/config/app";
 import {
   ArrowLeft, Palette, Upload, Eye, Check, Building2,
   Sun, Moon, Type, Image as ImageIcon, Sparkles,
@@ -421,7 +422,7 @@ const PortalCustomization = () => {
             <CardContent className="space-y-4">
               <div className="flex items-center gap-2">
                 <div className="flex-1 bg-muted rounded-lg px-3 py-2.5 text-sm font-mono truncate border border-border">
-                  {window.location.origin}/portal/{publicSlug}
+                  {APP_URL}/portal/{publicSlug}
                 </div>
                 <Button
                   size="sm"

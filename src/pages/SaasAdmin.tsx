@@ -44,6 +44,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { isCurrentUserSuperAdmin } from "@/lib/admin-access";
 import { SaasAdminLayout, type SaasSection } from "@/components/saas-admin/SaasAdminLayout";
 import { EstadisticasSection } from "@/components/saas-admin/EstadisticasSection";
+import { buildShareUrl } from "@/config/app";
 
 // ── Types ──────────────────────────────────────────────
 interface BusinessWithDetails {
@@ -272,7 +273,7 @@ const SaasAdmin = () => {
       const { data, error } = await supabase.functions.invoke("create-professional-invite", { body: { email: newProfEmail.trim().toLowerCase() || undefined, name: newProfName.trim(), businessId: selectedBusiness.id } });
       if (error) throw error;
       if (newProfEmail && data?.token) {
-        const link = `${window.location.origin}/invitar-profesional?token=${data.token}`;
+        const link = buildShareUrl(`/invitar-profesional?token=${data.token}`);
         setInviteLink(link);
         toast({ title: "Invitación creada", description: "Copia el enlace y envíalo al profesional." });
       } else {

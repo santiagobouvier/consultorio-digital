@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { ArrowLeft, ArrowRight, Check, Building2 } from "lucide-react";
 import LoadingPage from "@/components/LoadingPage";
+import { APP_URL } from "@/config/app";
 
 const TIMEZONES = [
   { value: "America/Montevideo", label: "Uruguay (GMT-3)" },
@@ -326,7 +327,7 @@ const ConsultorioOnboarding = () => {
                   <div className="p-3 bg-muted rounded-lg">
                     <p className="text-xs text-muted-foreground mb-1">Tu link público:</p>
                     <p className="text-sm font-mono break-all">
-                      {window.location.origin}/clinica/{publicSlug}
+                      {APP_URL}/clinica/{publicSlug}
                     </p>
                   </div>
                 )}
