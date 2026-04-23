@@ -426,66 +426,6 @@ const ClinicSettings = () => {
             </Card>
 
             <Card>
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <LinkIcon className="h-4 w-4" /> URL del portal de pacientes
-                </CardTitle>
-                <p className="text-xs text-muted-foreground">
-                  Esta es la dirección que tus pacientes usarán para acceder a su portal.
-                </p>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="space-y-2">
-                  <Label htmlFor="publicSlug">Identificador (slug)</Label>
-                  <div className="flex flex-col sm:flex-row sm:items-stretch gap-2">
-                    <div className="flex items-center px-3 rounded-md border bg-muted/40 text-xs font-mono text-muted-foreground whitespace-nowrap h-11">
-                      consultoriodigital.app/portal/
-                    </div>
-                    <div className="relative flex-1">
-                      <Input
-                        id="publicSlug"
-                        value={publicSlug}
-                        onChange={(e) => setPublicSlug(e.target.value.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, ""))}
-                        placeholder="mi-consultorio"
-                        className="h-11 font-mono text-sm pr-10"
-                        minLength={3}
-                        autoComplete="off"
-                      />
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                        {slugStatus === "checking" && (
-                          <Loader2 className="h-4 w-4 text-muted-foreground animate-spin" />
-                        )}
-                        {slugStatus === "available" && (
-                          <CheckCircle2 className="h-4 w-4 text-green-600" />
-                        )}
-                        {(slugStatus === "taken" || slugStatus === "invalid") && (
-                          <XCircle className="h-4 w-4 text-destructive" />
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Solo letras minúsculas, números y guiones. Mínimo 3 caracteres.
-                  </p>
-                  {slugStatus === "invalid" && (
-                    <p className="text-xs text-destructive">
-                      Formato inválido. Usá solo letras minúsculas, números y guiones (mín. 3 caracteres).
-                    </p>
-                  )}
-                  {slugStatus === "taken" && (
-                    <p className="text-xs text-destructive">Ese slug ya está en uso por otro consultorio.</p>
-                  )}
-                  {slugStatus === "available" && (
-                    <p className="text-xs text-green-600">Disponible. Recordá guardar para aplicar el cambio.</p>
-                  )}
-                  {slugStatus === "checking" && (
-                    <p className="text-xs text-muted-foreground">Verificando disponibilidad...</p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
               <CardContent className="p-5 flex items-center justify-between gap-4">
                 <div>
                   <p className="text-sm font-semibold">Agenda privada</p>
