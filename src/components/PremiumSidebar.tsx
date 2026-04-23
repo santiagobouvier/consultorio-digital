@@ -105,6 +105,9 @@ export function PremiumSidebar() {
   const avatarUrl = profileData?.avatarUrl ?? null;
   const isSuperAdmin = profileData?.isSuperAdmin ?? false;
 
+  // Visit mode: super admin viewing a specific business from /saas-admin.
+  const isVisitMode = isSuperAdmin && Boolean(getActiveBusinessId());
+
   // Prefetch de la ruta destino al pasar el mouse sobre el item.
   const handlePrefetch = (url: string) => {
     void prefetchRoute(queryClient, url, businessId);
@@ -123,6 +126,11 @@ export function PremiumSidebar() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate("/");
+  };
+
+  const handleBackToAdmin = () => {
+    clearActiveBusinessId();
+    navigate("/saas-admin");
   };
 
   const isActive = (path: string) => location.pathname === path;
@@ -324,7 +332,7 @@ export function PremiumSidebar() {
               <div key={item.url}>{renderItem(item)}</div>
             ))}
 
-            {isSuperAdmin &&
+            {isSuperAdmin && !isVisitMode &&
               renderItem({
                 title: "Panel Admin",
                 url: "/saas-admin",
