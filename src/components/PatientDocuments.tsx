@@ -372,6 +372,15 @@ export const PatientDocuments = ({ patientId, businessId }: PatientDocumentsProp
             );
           })
         )}
+        {documents.length > ITEMS_PER_PAGE && (
+          <ListPagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setPage}
+            totalItems={documents.length}
+            pageSize={ITEMS_PER_PAGE}
+          />
+        )}
       </CardContent>
 
       {/* Upload metadata dialog */}

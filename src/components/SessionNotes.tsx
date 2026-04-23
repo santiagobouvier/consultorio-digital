@@ -24,6 +24,7 @@ import { es } from "date-fns/locale";
 import { FileText, Plus, Pencil, Trash2, Lock, CheckCircle2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { HelpTooltip } from "@/components/HelpTooltip";
+import { ListPagination, ITEMS_PER_PAGE } from "@/components/ListPagination";
 
 interface AppointmentRef {
   id: string;
@@ -56,6 +57,7 @@ export const SessionNotes = ({ patientId, businessId, appointments }: SessionNot
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<SessionNote | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
 
   // Form state
   const [noteDate, setNoteDate] = useState(format(new Date(), "yyyy-MM-dd"));
@@ -86,6 +88,11 @@ export const SessionNotes = ({ patientId, businessId, appointments }: SessionNot
     fetchNotes();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [patientId]);
+
+  const totalPages = Math.max(1, Math.ceil(notes.length / ITEMS_PER_PAGE));
+  const currentPage = Math.min(page, totalPages);
+  const pageStart = (currentPage - 1) * ITEMS_PER_PAGE;
+  const pageNotes = notes.slice(pageStart, pageStart + ITEMS_PER_PAGE);
 
   const openCreate = () => {
     setEditing(null);
@@ -189,7 +196,7 @@ export const SessionNotes = ({ patientId, businessId, appointments }: SessionNot
             <p className="text-sm">Aún no hay notas para este paciente</p>
           </div>
         ) : (
-          notes.map((note) => {
+          pageNotes.map((note) => {
             const linkedAppt = appointments.find((a) => a.id === note.appointment_id);
             return (
               <div key={note.id} className="border rounded-xl p-4 bg-card hover:bg-accent/30 transition-colors">
@@ -230,6 +237,15 @@ export const SessionNotes = ({ patientId, businessId, appointments }: SessionNot
               </div>
             );
           })
+        )}
+        {notes.length > ITEMS_PER_PAGE && (
+          <ListPagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setPage}
+            totalItems={notes.length}
+            pageSize={ITEMS_PER_PAGE}
+          />
         )}
       </CardContent>
 
