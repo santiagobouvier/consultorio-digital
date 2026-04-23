@@ -766,8 +766,11 @@ const ClinicSettings = () => {
             <Card>
               <CardHeader>
                 <CardTitle className="text-base flex items-center gap-2">
-                  <ImageIcon className="h-4 w-4" /> Imágenes del portal del paciente
+                  <ImageIcon className="h-4 w-4" /> Marca del portal del paciente
                 </CardTitle>
+                <p className="text-xs text-muted-foreground">
+                  Estos elementos se muestran a tus pacientes cuando entran a su portal.
+                </p>
               </CardHeader>
               <CardContent className="space-y-5">
                 {/* Clinic logo */}
@@ -800,40 +803,10 @@ const ClinicSettings = () => {
                     </div>
                   </div>
                 </div>
-
-                {/* Cover */}
-                <div className="space-y-2">
-                  <Label>Imagen de portada</Label>
-                  <div className="rounded-xl border overflow-hidden bg-muted/30 aspect-[3/1] flex items-center justify-center">
-                    {coverImageUrl
-                      ? <img src={coverImageUrl} alt="" className="w-full h-full object-cover" />
-                      : <ImageIcon className="h-8 w-8 text-muted-foreground" />}
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <label className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-md border bg-muted/40 hover:bg-muted cursor-pointer text-sm font-medium transition-colors">
-                      <Upload className="h-4 w-4" />
-                      {uploadingCover ? "Subiendo..." : "Subir portada"}
-                      <input
-                        type="file" accept="image/*" className="hidden" disabled={uploadingCover}
-                        onChange={(e) => {
-                          const f = e.target.files?.[0];
-                          if (f) uploadImage(f, "cover", setCoverImageUrl, setUploadingCover);
-                          e.target.value = "";
-                        }}
-                      />
-                    </label>
-                    {coverImageUrl && (
-                      <Button type="button" variant="ghost" size="sm" onClick={() => setCoverImageUrl("")}
-                        className="text-destructive hover:text-destructive gap-2 h-10">
-                        <Trash2 className="h-4 w-4" /> Quitar
-                      </Button>
-                    )}
-                  </div>
-                </div>
               </CardContent>
             </Card>
 
-            {isOwner && businessId && (
+            {hasPublicWeb && isOwner && businessId && (
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base flex items-center gap-2">
