@@ -43,14 +43,12 @@ const AppointmentRequests = () => {
   const loadRequests = async () => {
     try {
       setDataLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) return;
+      if (!businessId) return;
 
       const { data, error } = await supabase
         .from("appointment_requests")
         .select("*")
-        .eq("clinic_user_id", user.id)
+        .eq("business_id", businessId)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -71,26 +69,16 @@ const AppointmentRequests = () => {
 
   const handleAccept = async (request: any) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      // Get business
-      const { data: business, error: businessError } = await supabase
-        .from("businesses")
-        .select("id")
-        .eq("owner_user_id", user.id)
-        .single();
-
-      if (businessError) throw businessError;
+      if (!businessId) return;
 
       // Check if patient exists
       let patientId = null;
       const { data: existingPatient } = await supabase
         .from("patients")
         .select("id")
-        .eq("business_id", business.id)
+        .eq("business_id", businessId)
         .eq("email", request.email)
-        .single();
+        .maybeSingle();
 
       if (existingPatient) {
         patientId = existingPatient.id;
@@ -99,7 +87,7 @@ const AppointmentRequests = () => {
         const { data: newPatient, error: patientError } = await supabase
           .from("patients")
           .insert({
-            business_id: business.id,
+            business_id: businessId,
             full_name: request.name,
             email: request.email,
             whatsapp_phone: request.phone,
@@ -119,7 +107,7 @@ const AppointmentRequests = () => {
       const { error: appointmentError } = await supabase
         .from("appointments")
         .insert({
-          business_id: business.id,
+          business_id: businessId,
           patient_id: patientId,
           start_at: request.requested_datetime,
           end_at: endDatetime.toISOString(),
