@@ -46,6 +46,7 @@ import {
   Paperclip,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { ListPagination, ITEMS_PER_PAGE } from "@/components/ListPagination";
 
 type DocumentType = "consentimiento" | "informe" | "otro";
 
@@ -104,6 +105,7 @@ export const PatientDocuments = ({ patientId, businessId }: PatientDocumentsProp
   const [uploading, setUploading] = useState(false);
   const [deletingDoc, setDeletingDoc] = useState<PatientDocument | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
 
   const fetchDocuments = async () => {
     setLoading(true);
@@ -130,6 +132,11 @@ export const PatientDocuments = ({ patientId, businessId }: PatientDocumentsProp
     fetchDocuments();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [patientId]);
+
+  const totalPages = Math.max(1, Math.ceil(documents.length / ITEMS_PER_PAGE));
+  const currentPage = Math.min(page, totalPages);
+  const pageStart = (currentPage - 1) * ITEMS_PER_PAGE;
+  const pageDocs = documents.slice(pageStart, pageStart + ITEMS_PER_PAGE);
 
   const resetUploadForm = () => {
     setPendingFile(null);
@@ -300,7 +307,7 @@ export const PatientDocuments = ({ patientId, businessId }: PatientDocumentsProp
             <p className="text-xs mt-1">PDF, Word o imágenes hasta 15 MB</p>
           </div>
         ) : (
-          documents.map((doc) => {
+          pageDocs.map((doc) => {
             const Icon = fileIcon(doc.mime_type);
             return (
               <div
