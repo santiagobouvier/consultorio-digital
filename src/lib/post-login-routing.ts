@@ -1,5 +1,4 @@
 import { supabase } from "@/integrations/supabase/client";
-import { isCurrentUserSuperAdmin } from "@/lib/admin-access";
 
 export type PostLoginDestination =
   | "/saas-admin"
