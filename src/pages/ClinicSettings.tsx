@@ -492,58 +492,29 @@ const ClinicSettings = () => {
           Volver al dashboard
         </button>
 
-        {/* HERO */}
-        <Card className="overflow-hidden border-primary/10">
-          <div
-            className="h-24 sm:h-32 bg-gradient-to-br from-primary/20 via-primary/10 to-transparent relative"
-            style={{
-              backgroundImage: coverImageUrl
-                ? `linear-gradient(to bottom right, hsl(var(--primary) / 0.4), transparent), url(${coverImageUrl})`
-                : undefined,
-              backgroundSize: "cover",
-              backgroundPosition: "center",
-            }}
-          />
-          <CardContent className="px-5 pb-5 pt-0">
-            <div className="flex flex-col sm:flex-row sm:items-end gap-4 -mt-10">
-              <div className="h-20 w-20 rounded-2xl border-4 border-background bg-card shadow-lg flex items-center justify-center overflow-hidden shrink-0">
-                {displayLogo ? (
-                  <img src={displayLogo} alt="Logo" className="w-full h-full object-cover" />
-                ) : (
-                  <div
-                    className="w-full h-full flex items-center justify-center text-xl font-bold text-white"
-                    style={{ backgroundColor: `hsl(${dashboardColor})` }}
-                  >
-                    {initials}
-                  </div>
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h1 className="text-xl sm:text-2xl font-bold truncate">
-                    {clinicName || "Mi Consultorio"}
-                  </h1>
-                  {isPrivateClinic && (
-                    <Badge variant="secondary" className="text-[10px]">Clínica privada</Badge>
-                  )}
-                </div>
-                {specialty && (
-                  <p className="text-sm text-muted-foreground truncate">{specialty}</p>
-                )}
-              </div>
-              <div className="flex gap-2 shrink-0">
-                <Button variant="outline" size="sm" onClick={copyPublicUrl} className="gap-2">
-                  <Copy className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Copiar URL</span>
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => window.open(portalUrl, "_blank")} className="gap-2">
-                  <ExternalLink className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Ver portal</span>
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Header administrativo */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between border-b pb-5">
+          <div className="min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Mi Consultorio</h1>
+            <p className="text-sm text-muted-foreground mt-1 truncate">
+              {clinicName || "Mi Consultorio"}
+              {specialty ? ` · ${specialty}` : ""}
+            </p>
+            {isPrivateClinic && (
+              <Badge variant="secondary" className="text-[10px] mt-2">Clínica privada</Badge>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2 sm:shrink-0">
+            <Button variant="outline" size="sm" onClick={copyPublicUrl} className="gap-2">
+              <Copy className="h-3.5 w-3.5" />
+              Copiar URL del portal de pacientes
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => window.open(portalUrl, "_blank")} className="gap-2">
+              <ExternalLink className="h-3.5 w-3.5" />
+              Ver portal de pacientes
+            </Button>
+          </div>
+        </div>
 
         {/* Plan y uso */}
         <PlanUsageCard businessId={businessId} />
