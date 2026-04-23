@@ -247,10 +247,26 @@ const PortalCustomization = () => {
               <p className="text-xs text-muted-foreground">Configurá cómo ven los pacientes su portal</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="gap-2" onClick={() => navigate("/portal-paciente/demo")}>
-              <Eye className="h-4 w-4" /> Vista previa
-            </Button>
+          <div className="flex items-center gap-2 flex-wrap justify-end">
+            {publicSlug && (
+              <>
+                <Button
+                  variant="outline" size="sm" className="gap-2"
+                  onClick={() => {
+                    navigator.clipboard.writeText(buildShareUrl(`/portal/${publicSlug}`));
+                    toast({ title: "URL copiada", description: "Compartilo con tus pacientes" });
+                  }}
+                >
+                  <Copy className="h-4 w-4" /> <span className="hidden sm:inline">Copiar URL</span>
+                </Button>
+                <Button
+                  variant="outline" size="sm" className="gap-2"
+                  onClick={() => window.open(buildShareUrl(`/portal/${publicSlug}`), "_blank")}
+                >
+                  <ExternalLink className="h-4 w-4" /> <span className="hidden sm:inline">Ver portal</span>
+                </Button>
+              </>
+            )}
             <Button size="sm" onClick={handleSave} disabled={saving} className="gap-2">
               {saving ? "Guardando..." : "Guardar"}
             </Button>
