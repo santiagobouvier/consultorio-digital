@@ -278,6 +278,7 @@ const ClinicSettings = () => {
 
       if (business) {
         setPublicSlug(business.public_slug);
+        setInitialSlug(business.public_slug);
         setBusinessId(business.id);
         setIsOwner(business.owner_user_id === user.id);
         setIsPrivateClinic((business as any).is_private_clinic || false);
