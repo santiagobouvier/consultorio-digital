@@ -140,16 +140,8 @@ const BrandedLogin = ({
             await supabase.auth.signOut();
             toast({
               title: "Portal exclusivo para pacientes",
-              description: "Si sos profesional, ingresá desde consultoriodigital.app",
+              description: "Si sos profesional, ingresá desde consultoriodigital.app/auth",
               variant: "destructive",
-              action: (
-                <a
-                  href="https://consultoriodigital.app/auth"
-                  className="inline-flex items-center justify-center rounded-md border border-current px-3 py-1.5 text-xs font-medium hover:bg-current/10"
-                >
-                  Ir al login profesional
-                </a>
-              ) as any,
             });
             setLoading(false);
             return;
