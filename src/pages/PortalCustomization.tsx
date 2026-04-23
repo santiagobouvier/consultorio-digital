@@ -84,7 +84,7 @@ const PortalCustomization = () => {
     const load = async () => {
       const { data } = await supabase
         .from("businesses")
-        .select("name, portal_clinic_display_name, portal_logo_url, portal_primary_color, portal_dark_primary_color, portal_theme_preset")
+        .select("name, public_slug, portal_clinic_display_name, portal_logo_url, portal_primary_color, portal_dark_primary_color, portal_theme_preset")
         .eq("id", businessId)
         .single();
       if (data) {
@@ -98,10 +98,54 @@ const PortalCustomization = () => {
         setDarkColor(dc);
         setCustomLightHex(hslToHex(lc));
         setCustomDarkHex(hslToHex(dc));
+        setPublicSlug((data as any).public_slug || "");
+        setInitialSlug((data as any).public_slug || "");
       }
     };
     load();
   }, [businessId]);
+
+  // Validar slug con debounce
+  useEffect(() => {
+    if (!businessId) return;
+    if (publicSlug === initialSlug) {
+      setSlugStatus("idle");
+      return;
+    }
+    if (!/^[a-z0-9-]{3,}$/.test(publicSlug)) {
+      setSlugStatus("invalid");
+      return;
+    }
+    setSlugStatus("checking");
+    const handle = setTimeout(async () => {
+      const { data, error } = await supabase
+        .from("businesses")
+        .select("id")
+        .eq("public_slug", publicSlug)
+        .neq("id", businessId)
+        .maybeSingle();
+      if (error) {
+        setSlugStatus("idle");
+        return;
+      }
+      setSlugStatus(data ? "taken" : "available");
+    }, 450);
+    return () => clearTimeout(handle);
+  }, [publicSlug, initialSlug, businessId]);
+
+  const portalUrl = publicSlug ? buildShareUrl(`/portal/${publicSlug}`) : "";
+
+  const copyPortalUrl = async () => {
+    if (!portalUrl) return;
+    await navigator.clipboard.writeText(portalUrl);
+    setCopied(true);
+    toast({ title: "URL copiada" });
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const openPortal = () => {
+    if (portalUrl) window.open(portalUrl, "_blank");
+  };
 
   const handlePresetSelect = (preset: typeof THEME_PRESETS[0]) => {
     setSelectedPreset(preset.id);
