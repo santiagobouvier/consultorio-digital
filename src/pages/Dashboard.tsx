@@ -131,7 +131,10 @@ const Dashboard = () => {
       let currentBusinessId = overrideBusinessId || null;
 
       if (isAdmin) {
-        // Super admin: load all businesses
+        // Super admin: cargar lista de consultorios para el selector,
+        // pero NUNCA seleccionar uno automáticamente. Si no hay un
+        // business previamente seleccionado en sessionStorage, redirigir
+        // al panel SaaS Admin para que el admin elija explícitamente.
         const { data: businesses } = await supabase
           .from("businesses")
           .select("id, name, owner_user_id")
@@ -139,19 +142,29 @@ const Dashboard = () => {
 
         if (businesses && businesses.length > 0) {
           setAllBusinesses(businesses);
-          
-          // Use override or first business
-          if (!currentBusinessId) {
-            currentBusinessId = businesses[0].id;
-            // Store in sessionStorage for other pages
-            sessionStorage.setItem("saas_selected_business", currentBusinessId);
+
+          // Resolver business actual SOLO desde override o sessionStorage
+          const sessionBusinessId =
+            currentBusinessId || sessionStorage.getItem("saas_selected_business");
+
+          const selected = sessionBusinessId
+            ? businesses.find((b) => b.id === sessionBusinessId)
+            : null;
+
+          if (!selected) {
+            // Sin selección explícita: volver al panel SaaS Admin
+            sessionStorage.removeItem("saas_selected_business");
+            navigate("/saas-admin");
+            return;
           }
-          
-          const selected = businesses.find(b => b.id === currentBusinessId) || businesses[0];
+
           setSelectedBusiness(selected);
           currentBusinessId = selected.id;
-          // Ensure sessionStorage is always synced
           sessionStorage.setItem("saas_selected_business", currentBusinessId);
+        } else {
+          // Super admin sin consultorios en el sistema
+          navigate("/saas-admin");
+          return;
         }
       } else {
         // Regular user: check for owned or member business
