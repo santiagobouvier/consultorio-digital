@@ -25,12 +25,6 @@ export const getUserAccessPriority = async (
     };
   }
 
-export const getPostLoginDestination = async (
-  userId: string,
-): Promise<PostLoginDestination> => {
-  const isSuperAdmin = await isCurrentUserSuperAdmin(userId);
-  if (isSuperAdmin) return "/saas-admin";
-
   const [ownedBusinessResult, businessRoleResult, patientRoleResult] = await Promise.all([
     supabase.from("businesses").select("id").eq("owner_user_id", userId).limit(1).maybeSingle(),
     supabase

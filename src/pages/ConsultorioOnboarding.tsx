@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { isCurrentUserSuperAdmin } from "@/lib/admin-access";
+import { getUserAccessPriority } from "@/lib/post-login-routing";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -77,10 +77,9 @@ const ConsultorioOnboarding = () => {
 
     setUserId(user.id);
 
-    // Check if user is super_admin - redirect to SaaS panel
-    const isSuperAdmin = await isCurrentUserSuperAdmin(user.id);
+    const priority = await getUserAccessPriority(user.id);
 
-    if (isSuperAdmin) {
+    if (priority.isSuperAdmin) {
       navigate("/saas-admin");
       return;
     }
@@ -95,17 +94,13 @@ const ConsultorioOnboarding = () => {
       .maybeSingle();
 
     if (!business) {
-      // Solo redirigir al portal paciente si el usuario es patient y no tiene
-      // business propio.
-      const { data: patientRole } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .eq("role", "patient")
-        .maybeSingle();
-
-      if (patientRole) {
+      if (priority.isPatientOnly) {
         navigate("/portal-paciente");
+        return;
+      }
+
+      if (priority.hasBusinessAccess) {
+        navigate("/dashboard");
         return;
       }
 
