@@ -799,6 +799,7 @@ const PatientDetail = () => {
           open={showEditPatient}
           onOpenChange={setShowEditPatient}
           patientId={patient.id}
+          businessId={patient.business_id}
           initialData={{
             full_name: patient.full_name,
             email: patient.email || "",

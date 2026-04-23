@@ -509,6 +509,7 @@ const Patients = () => {
       <PatientForm
         open={showForm}
         onOpenChange={setShowForm}
+        businessId={businessId}
         onSuccess={() => {
           setShowForm(false);
           fetchPatients();
