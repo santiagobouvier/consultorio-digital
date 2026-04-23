@@ -179,6 +179,34 @@ const ClinicSettings = () => {
     if (businessId && isOwner) loadTeamMembers();
   }, [businessId, isOwner]);
 
+  // Validate slug availability with debounce
+  useEffect(() => {
+    if (!businessId) return;
+    if (publicSlug === initialSlug) {
+      setSlugStatus("idle");
+      return;
+    }
+    if (!/^[a-z0-9-]{3,}$/.test(publicSlug)) {
+      setSlugStatus("invalid");
+      return;
+    }
+    setSlugStatus("checking");
+    const handle = setTimeout(async () => {
+      const { data, error } = await supabase
+        .from("businesses")
+        .select("id")
+        .eq("public_slug", publicSlug)
+        .neq("id", businessId)
+        .maybeSingle();
+      if (error) {
+        setSlugStatus("idle");
+        return;
+      }
+      setSlugStatus(data ? "taken" : "available");
+    }, 450);
+    return () => clearTimeout(handle);
+  }, [publicSlug, initialSlug, businessId]);
+
   const buildSnapshot = () =>
     JSON.stringify({
       clinicName,
