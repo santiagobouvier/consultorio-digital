@@ -120,7 +120,7 @@ const Payments = () => {
       setDataLoading(true);
       const { data: paymentsData, error: paymentsError } = await supabase
         .from("payments")
-        .select("*, recurrence_type, anchor_day, method, notes")
+        .select("id, business_id, patient_id, appointment_id, amount, currency, due_date, paid_at, status, method, notes, recurrence_type, anchor_day, created_at")
         .eq("business_id", businessId)
         .order("due_date", { ascending: true });
 
