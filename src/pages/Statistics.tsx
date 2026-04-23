@@ -26,6 +26,7 @@ import {
 import LoadingPage from "@/components/LoadingPage";
 import { useBusinessId } from "@/hooks/use-business-id";
 import { useProfessionals } from "@/hooks/use-professionals";
+import { buildShareUrl } from "@/config/app";
 import { ListPagination, usePagination, ITEMS_PER_PAGE } from "@/components/ListPagination";
 import {
   BarChart,
@@ -260,7 +261,7 @@ const Statistics = () => {
   // Portal link for WhatsApp message
   const portalUrl = useMemo(() => {
     if (!publicSlug) return "";
-    return `${window.location.origin}/portal/${publicSlug}`;
+    return buildShareUrl(`/portal/${publicSlug}`);
   }, [publicSlug]);
 
   const sendWhatsAppToInactive = (patient: InactivePatient & { whatsapp_phone?: string | null }) => {

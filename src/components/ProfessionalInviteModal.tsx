@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Copy, Check, UserPlus, Link, AlertTriangle } from "lucide-react";
 import { checkProfessionalLimit } from "@/hooks/use-plan-limits";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { buildShareUrl } from "@/config/app";
 
 interface ProfessionalInviteModalProps {
   open: boolean;
@@ -80,8 +81,7 @@ export function ProfessionalInviteModal({
       }
 
       // Generate the invite link
-      const baseUrl = window.location.origin;
-      const link = `${baseUrl}/invitar-profesional?token=${data.token}`;
+      const link = buildShareUrl(`/invitar-profesional?token=${data.token}`);
       setInviteLink(link);
 
       toast({

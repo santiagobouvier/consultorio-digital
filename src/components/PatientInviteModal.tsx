@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { Copy, Check, Loader2, Link as LinkIcon, MessageCircle, Mail, CheckCircle2 } from "lucide-react";
+import { buildShareUrl } from "@/config/app";
 
 interface PatientInviteModalProps {
   open: boolean;
@@ -67,8 +68,7 @@ export const PatientInviteModal = ({
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.message || data.error);
 
-      const baseUrl = window.location.origin;
-      const link = `${baseUrl}/portal-paciente/invitacion?token=${data.token}`;
+      const link = buildShareUrl(`/portal-paciente/invitacion?token=${data.token}`);
       setInviteLink(link);
       setSentToEmail(data.sentTo || overrideEmail || patientEmail || null);
 
