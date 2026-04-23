@@ -10,6 +10,7 @@ import { clearServiceWorkerCaches } from "@/lib/session-recovery";
 import { SessionExpiredDialog, triggerSessionExpired } from "@/components/SessionExpiredDialog";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { PWAInstalledCelebrationModal } from "@/components/PWAInstalledCelebrationModal";
+import LoadingPage from "@/components/LoadingPage";
 
 
 // Lazy load all pages for optimal performance (code-split per route)
@@ -133,7 +134,7 @@ const App = () => {
         <PWAInstalledCelebrationModal />
         <BrowserRouter>
           <AuthProvider>
-            <Suspense fallback={null}>
+            <Suspense fallback={<LoadingPage />}>
               <Routes>
                 {/* Public routes */}
                 <Route path="/" element={<Landing />} />
