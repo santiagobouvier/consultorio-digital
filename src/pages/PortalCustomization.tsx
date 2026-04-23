@@ -12,8 +12,10 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   ArrowLeft, Palette, Upload, Eye, Check, Building2,
   Sun, Moon, Type, Image as ImageIcon, Sparkles,
+  Link as LinkIcon, Copy, ExternalLink, Loader2, CheckCircle2, XCircle,
 } from "lucide-react";
 import { HelpTooltip } from "@/components/HelpTooltip";
+import { buildShareUrl } from "@/config/app";
 
 const THEME_PRESETS = [
   { id: "teal", name: "Teal", light: "176 100% 32%", dark: "176 85% 42%", preview: "hsl(176, 100%, 32%)" },
@@ -72,13 +74,17 @@ const PortalCustomization = () => {
   const [customDarkHex, setCustomDarkHex] = useState("#00bfb3");
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [publicSlug, setPublicSlug] = useState("");
+  const [initialSlug, setInitialSlug] = useState("");
+  const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (!businessId) return;
     const load = async () => {
       const { data } = await supabase
         .from("businesses")
-        .select("name, portal_clinic_display_name, portal_logo_url, portal_primary_color, portal_dark_primary_color, portal_theme_preset")
+        .select("name, public_slug, portal_clinic_display_name, portal_logo_url, portal_primary_color, portal_dark_primary_color, portal_theme_preset")
         .eq("id", businessId)
         .single();
       if (data) {
@@ -92,10 +98,54 @@ const PortalCustomization = () => {
         setDarkColor(dc);
         setCustomLightHex(hslToHex(lc));
         setCustomDarkHex(hslToHex(dc));
+        setPublicSlug((data as any).public_slug || "");
+        setInitialSlug((data as any).public_slug || "");
       }
     };
     load();
   }, [businessId]);
+
+  // Validar slug con debounce
+  useEffect(() => {
+    if (!businessId) return;
+    if (publicSlug === initialSlug) {
+      setSlugStatus("idle");
+      return;
+    }
+    if (!/^[a-z0-9-]{3,}$/.test(publicSlug)) {
+      setSlugStatus("invalid");
+      return;
+    }
+    setSlugStatus("checking");
+    const handle = setTimeout(async () => {
+      const { data, error } = await supabase
+        .from("businesses")
+        .select("id")
+        .eq("public_slug", publicSlug)
+        .neq("id", businessId)
+        .maybeSingle();
+      if (error) {
+        setSlugStatus("idle");
+        return;
+      }
+      setSlugStatus(data ? "taken" : "available");
+    }, 450);
+    return () => clearTimeout(handle);
+  }, [publicSlug, initialSlug, businessId]);
+
+  const portalUrl = publicSlug ? buildShareUrl(`/portal/${publicSlug}`) : "";
+
+  const copyPortalUrl = async () => {
+    if (!portalUrl) return;
+    await navigator.clipboard.writeText(portalUrl);
+    setCopied(true);
+    toast({ title: "URL copiada" });
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const openPortal = () => {
+    if (portalUrl) window.open(portalUrl, "_blank");
+  };
 
   const handlePresetSelect = (preset: typeof THEME_PRESETS[0]) => {
     setSelectedPreset(preset.id);
@@ -144,17 +194,43 @@ const PortalCustomization = () => {
     if (!businessId) return;
     setSaving(true);
     try {
+      const update: Record<string, any> = {
+        portal_clinic_display_name: clinicName,
+        portal_logo_url: logoUrl,
+        portal_primary_color: lightColor,
+        portal_dark_primary_color: darkColor,
+        portal_theme_preset: selectedPreset,
+      };
+      // Validar y persistir cambio de slug
+      if (publicSlug !== initialSlug) {
+        if (!/^[a-z0-9-]{3,}$/.test(publicSlug)) {
+          toast({ title: "Slug inválido", description: "Usá solo letras minúsculas, números y guiones (mín. 3).", variant: "destructive" });
+          setSaving(false);
+          return;
+        }
+        const { data: clash } = await supabase
+          .from("businesses")
+          .select("id")
+          .eq("public_slug", publicSlug)
+          .neq("id", businessId)
+          .maybeSingle();
+        if (clash) {
+          toast({ title: "Slug no disponible", description: "Ese slug ya está siendo usado por otro consultorio.", variant: "destructive" });
+          setSlugStatus("taken");
+          setSaving(false);
+          return;
+        }
+        update.public_slug = publicSlug;
+      }
       const { error } = await supabase
         .from("businesses")
-        .update({
-          portal_clinic_display_name: clinicName,
-          portal_logo_url: logoUrl,
-          portal_primary_color: lightColor,
-          portal_dark_primary_color: darkColor,
-          portal_theme_preset: selectedPreset,
-        } as any)
+        .update(update as any)
         .eq("id", businessId);
       if (error) throw error;
+      if (publicSlug !== initialSlug) {
+        setInitialSlug(publicSlug);
+        setSlugStatus("idle");
+      }
       toast({ title: "Personalización guardada", description: "Los cambios se reflejarán en el portal del paciente." });
     } catch (err: any) {
       toast({ title: "Error al guardar", description: err.message, variant: "destructive" });
@@ -252,6 +328,77 @@ const PortalCustomization = () => {
       </header>
 
       <main className="max-w-5xl mx-auto px-4 lg:px-8 py-6 lg:py-10 space-y-6 lg:space-y-8">
+        {/* URL del portal — vive acá porque es 100% portal del paciente */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <LinkIcon className="h-4 w-4 text-primary" /> URL del portal de pacientes
+            </CardTitle>
+            <CardDescription>
+              Esta es la dirección que tus pacientes usan para entrar a su portal. Podés personalizar el identificador.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="publicSlug">Identificador (slug)</Label>
+              <div className="flex flex-col sm:flex-row sm:items-stretch gap-2">
+                <div className="flex items-center px-3 rounded-md border bg-muted/40 text-xs font-mono text-muted-foreground whitespace-nowrap h-11">
+                  consultoriodigital.app/portal/
+                </div>
+                <div className="relative flex-1">
+                  <Input
+                    id="publicSlug"
+                    value={publicSlug}
+                    onChange={(e) => setPublicSlug(e.target.value.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, ""))}
+                    placeholder="mi-consultorio"
+                    className="h-11 font-mono text-sm pr-10"
+                    minLength={3}
+                    autoComplete="off"
+                  />
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    {slugStatus === "checking" && <Loader2 className="h-4 w-4 text-muted-foreground animate-spin" />}
+                    {slugStatus === "available" && <CheckCircle2 className="h-4 w-4 text-primary" />}
+                    {(slugStatus === "taken" || slugStatus === "invalid") && <XCircle className="h-4 w-4 text-destructive" />}
+                  </div>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Solo letras minúsculas, números y guiones. Mínimo 3 caracteres.
+              </p>
+              {slugStatus === "invalid" && (
+                <p className="text-xs text-destructive">Formato inválido. Usá solo letras minúsculas, números y guiones.</p>
+              )}
+              {slugStatus === "taken" && (
+                <p className="text-xs text-destructive">Ese slug ya está en uso por otro consultorio.</p>
+              )}
+              {slugStatus === "available" && (
+                <p className="text-xs text-primary">Disponible. Recordá guardar para aplicar el cambio.</p>
+              )}
+              {slugStatus === "checking" && (
+                <p className="text-xs text-muted-foreground">Verificando disponibilidad...</p>
+              )}
+            </div>
+
+            {portalUrl && (
+              <div className="space-y-2">
+                <Label>URL completa</Label>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Input value={portalUrl} readOnly className="font-mono text-xs h-11 flex-1" />
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={copyPortalUrl} className="h-11 gap-2 flex-1 sm:flex-initial">
+                      {copied ? <Check className="h-4 w-4 text-primary" /> : <Copy className="h-4 w-4" />}
+                      {copied ? "Copiada" : "Copiar"}
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={openPortal} className="h-11 gap-2 flex-1 sm:flex-initial">
+                      <ExternalLink className="h-4 w-4" /> Ver portal
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card>
             <CardHeader>
