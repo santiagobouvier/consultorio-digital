@@ -203,9 +203,31 @@ const PortalCustomization = () => {
     if (!businessId) return;
     setSaving(true);
     try {
+      let nextLogoUrl = logoUrl;
+
+      // Si hay un ícono pendiente, generarlo y subirlo
+      if (pendingIcon) {
+        const blob = await generatePwaIconBlob(
+          pendingIcon.sourceImage,
+          pendingIcon.crop,
+          pendingIcon.bgColor,
+          512
+        );
+        const path = `portal-logos/${businessId}-icon.png`;
+        const { error: upErr } = await supabase.storage
+          .from("avatars")
+          .upload(path, blob, { upsert: true, contentType: "image/png", cacheControl: "3600" });
+        if (upErr) throw upErr;
+        const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
+        // Cache-bust para forzar refresh de manifest/imagen
+        nextLogoUrl = `${urlData.publicUrl}?v=${Date.now()}`;
+        setLogoUrl(nextLogoUrl);
+        setPendingIcon(null);
+      }
+
       const update: Record<string, any> = {
         portal_clinic_display_name: clinicName,
-        portal_logo_url: logoUrl,
+        portal_logo_url: nextLogoUrl,
         portal_primary_color: lightColor,
         portal_dark_primary_color: darkColor,
         portal_theme_preset: selectedPreset,
