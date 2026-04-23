@@ -1,316 +1,302 @@
-import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { toast } from "@/hooks/use-toast";
-import { Send, CheckCircle2 } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { CalendarDays, LogIn, Clock, Stethoscope } from "lucide-react";
 import LoadingPage from "@/components/LoadingPage";
+
+type DayKey = "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday";
+
+const DAY_LABELS: Record<DayKey, string> = {
+  monday: "Lunes",
+  tuesday: "Martes",
+  wednesday: "Miércoles",
+  thursday: "Jueves",
+  friday: "Viernes",
+  saturday: "Sábado",
+  sunday: "Domingo",
+};
+
+const DAY_ORDER: DayKey[] = [
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+  "sunday",
+];
+
+const formatRange = (start?: string | null, end?: string | null) => {
+  if (!start || !end) return null;
+  return `${start.slice(0, 5)} – ${end.slice(0, 5)}`;
+};
+
+type ScheduleRow = { day: DayKey; ranges: string[] };
+
+const buildSchedule = (template: any): ScheduleRow[] => {
+  if (!template) return [];
+  return DAY_ORDER.map((day) => {
+    if (!template[`${day}_enabled`]) return { day, ranges: [] };
+    const r1 = formatRange(template[`${day}_start_1`], template[`${day}_end_1`]);
+    const r2 = formatRange(template[`${day}_start_2`], template[`${day}_end_2`]);
+    return { day, ranges: [r1, r2].filter(Boolean) as string[] };
+  }).filter((row) => row.ranges.length > 0);
+};
 
 const PublicClinic = () => {
   const { slug } = useParams();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [clinicData, setClinicData] = useState<any>(null);
-  const [businessId, setBusinessId] = useState<string | null>(null);
-  const [showRequestForm, setShowRequestForm] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    message: "",
-  });
+  const [business, setBusiness] = useState<any>(null);
+  const [settings, setSettings] = useState<any>(null);
+  const [schedule, setSchedule] = useState<ScheduleRow[]>([]);
 
   useEffect(() => {
-    loadClinicData();
+    let cancelled = false;
+    const load = async () => {
+      try {
+        setLoading(true);
+        const { data: businessData, error: businessError } = await supabase
+          .from("businesses")
+          .select(
+            "id, owner_user_id, name, specialty, public_slug, custom_subdomain, portal_logo_url, portal_primary_color, portal_dark_primary_color, portal_clinic_display_name"
+          )
+          .or(`public_slug.eq.${slug},custom_subdomain.eq.${slug}`)
+          .limit(1)
+          .maybeSingle();
+
+        if (businessError) throw businessError;
+        if (!businessData) {
+          if (!cancelled) setLoading(false);
+          return;
+        }
+
+        const [{ data: settingsData }, { data: templateData }] = await Promise.all([
+          supabase
+            .from("clinic_settings")
+            .select("*")
+            .eq("user_id", businessData.owner_user_id)
+            .maybeSingle(),
+          supabase
+            .from("availability_templates")
+            .select("*")
+            .eq("business_id", businessData.id)
+            .eq("is_active", true)
+            .order("created_at", { ascending: true })
+            .limit(1)
+            .maybeSingle(),
+        ]);
+
+        if (cancelled) return;
+        setBusiness(businessData);
+        setSettings(settingsData);
+        setSchedule(buildSchedule(templateData));
+      } catch (error) {
+        console.error("[PublicClinic] Error cargando consultorio:", error);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    void load();
+    return () => {
+      cancelled = true;
+    };
   }, [slug]);
 
-  const loadClinicData = async () => {
-    try {
-      setLoading(true);
-      console.log("[PublicClinic] Buscando consultorio con slug:", slug);
+  const accent = useMemo(() => {
+    const light = business?.portal_primary_color || "176 100% 32%";
+    const dark = business?.portal_dark_primary_color || "176 85% 42%";
+    return { light, dark };
+  }, [business]);
 
-      // Get business data — busca por public_slug O custom_subdomain
-      const { data: business, error: businessError } = await supabase
-        .from("businesses")
-        .select("id, owner_user_id, name, specialty, public_slug, custom_subdomain")
-        .or(`public_slug.eq.${slug},custom_subdomain.eq.${slug}`)
-        .limit(1)
-        .maybeSingle();
+  // Inject brand color overrides scoped to this page via CSS variables
+  const brandStyle = useMemo(
+    () =>
+      ({
+        ["--brand" as any]: accent.light,
+        ["--brand-dark" as any]: accent.dark,
+      }) as React.CSSProperties,
+    [accent]
+  );
 
-      if (businessError) {
-        console.error("[PublicClinic] Error consultando businesses:", businessError);
-        throw businessError;
-      }
-      if (!business) {
-        console.warn("[PublicClinic] No se encontró consultorio para el slug:", slug);
-        setLoading(false);
-        return;
-      }
-      console.log("[PublicClinic] Consultorio encontrado:", { id: business.id, public_slug: business.public_slug, custom_subdomain: business.custom_subdomain });
+  if (loading) return <LoadingPage />;
 
-      setBusinessId(business.id);
-
-      // Get clinic settings
-      const { data: settings } = await supabase
-        .from("clinic_settings")
-        .select("*")
-        .eq("user_id", business.owner_user_id)
-        .maybeSingle();
-
-      setClinicData({
-        ...settings,
-        business_name: business.name,
-        business_specialty: business.specialty,
-      });
-    } catch (error) {
-      console.error("Error loading clinic:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSubmitRequest = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!businessId) {
-      toast({
-        title: "Error",
-        description: "No se pudo identificar el consultorio",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setSubmitting(true);
-
-    try {
-      // Get the owner_user_id for the clinic_user_id field
-      const { data: business } = await supabase
-        .from("businesses")
-        .select("owner_user_id")
-        .eq("id", businessId)
-        .single();
-
-      if (!business) throw new Error("Business not found");
-
-      // Create appointment request with a placeholder datetime
-      const { error } = await supabase
-        .from("appointment_requests")
-        .insert({
-          clinic_user_id: business.owner_user_id,
-          name: formData.name,
-          email: formData.email,
-          phone: formData.phone,
-          message: formData.message,
-          requested_datetime: new Date().toISOString(),
-          status: "pending",
-        });
-
-      if (error) throw error;
-
-      setSubmitted(true);
-      toast({
-        title: "Solicitud enviada",
-        description: "El consultorio recibirá tu solicitud y se pondrá en contacto contigo.",
-      });
-    } catch (error) {
-      console.error("Error submitting request:", error);
-      toast({
-        title: "Error",
-        description: "No se pudo enviar la solicitud. Intenta nuevamente.",
-        variant: "destructive",
-      });
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  if (loading) {
-    return <LoadingPage />;
-  }
-
-  if (!businessId) {
+  if (!business) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <Card className="w-full max-w-md">
           <CardContent className="pt-6 text-center space-y-2">
             <p className="font-semibold text-foreground">Este portal no está disponible</p>
-            <p className="text-sm text-muted-foreground">Verificá el link que te envió tu profesional. Si el problema persiste, contactá directamente al consultorio.</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // Show default content if no clinic settings exist yet
-  const displayData = clinicData || {
-    clinic_name: "Consultorio",
-    specialty: null,
-    welcome_message: "Bienvenido a nuestro consultorio. Estamos aquí para ayudarte.",
-    logo_url: null,
-    cover_image_url: null,
-  };
-
-  const clinicName = displayData.clinic_name || displayData.business_name || "Consultorio";
-  const specialty = displayData.specialty || displayData.business_specialty;
-
-  if (submitted) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardContent className="pt-6 text-center space-y-4">
-            <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto" />
-            <h2 className="text-xl font-semibold">¡Solicitud enviada!</h2>
-            <p className="text-muted-foreground">
-              Hemos recibido tu solicitud. El consultorio revisará tu mensaje y se pondrá en contacto contigo pronto.
+            <p className="text-sm text-muted-foreground">
+              Verificá el link que te envió tu profesional. Si el problema persiste, contactá
+              directamente al consultorio.
             </p>
-            <Button variant="outline" onClick={() => {
-              setSubmitted(false);
-              setShowRequestForm(false);
-              setFormData({ name: "", email: "", phone: "", message: "" });
-            }}>
-              Volver al inicio
-            </Button>
           </CardContent>
         </Card>
       </div>
     );
   }
+
+  const clinicName =
+    settings?.clinic_name ||
+    business.portal_clinic_display_name ||
+    business.name ||
+    "Consultorio";
+  const specialty = settings?.specialty || business.specialty;
+  const description =
+    settings?.welcome_message?.trim() ||
+    "Gracias por visitarnos. Reservá tu turno online o accedé a tu portal si ya sos paciente.";
+  const logoUrl = business.portal_logo_url || settings?.logo_url;
+  const coverUrl = settings?.cover_image_url;
+  const targetSlug = business.public_slug || slug;
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Cover Image */}
-      {displayData.cover_image_url && (
-        <div 
-          className="h-64 bg-cover bg-center"
-          style={{ backgroundImage: `url(${displayData.cover_image_url})` }}
-        />
-      )}
-
-      {/* Main Content */}
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        {/* Logo and Header */}
-        <div className={`flex flex-col items-center text-center mb-8 ${displayData.cover_image_url ? '-mt-16' : ''}`}>
-          {displayData.logo_url && (
-            <img 
-              src={displayData.logo_url} 
-              alt="Logo"
-              className="w-32 h-32 rounded-full border-4 border-background shadow-lg mb-4 object-cover"
-            />
-          )}
-          <h1 className="text-4xl font-bold text-foreground mb-2">
-            {clinicName}
-          </h1>
-          {specialty && (
-            <p className="text-xl text-muted-foreground">
-              {specialty}
-            </p>
-          )}
-        </div>
-
-        {/* Welcome Message */}
-        <Card className="mb-8">
-          <CardContent className="pt-6">
-            <p className="text-foreground whitespace-pre-wrap">
-              {displayData.welcome_message}
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Request Consultation Section */}
-        {!showRequestForm ? (
-          <div className="flex justify-center">
-            <Button 
-              size="lg"
-              onClick={() => setShowRequestForm(true)}
-              className="gap-2"
-            >
-              <Send className="h-5 w-5" />
-              Solicitar consulta
-            </Button>
-          </div>
+    <div className="min-h-screen bg-background text-foreground" style={brandStyle}>
+      {/* Hero */}
+      <header className="relative overflow-hidden border-b border-border">
+        {coverUrl ? (
+          <div
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ backgroundImage: `url(${coverUrl})` }}
+            aria-hidden
+          />
         ) : (
-          <Card>
-            <CardHeader>
-              <CardTitle>Solicitar una consulta</CardTitle>
-              <CardDescription>
-                Completá tus datos y el consultorio se pondrá en contacto contigo para coordinar una cita.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmitRequest} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Nombre completo *</Label>
-                  <Input
-                    id="name"
-                    required
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  />
-                </div>
+          <div
+            className="absolute inset-0"
+            style={{
+              background: `linear-gradient(135deg, hsl(var(--brand) / 0.18), hsl(var(--brand) / 0.04) 60%, transparent)`,
+            }}
+            aria-hidden
+          />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-b from-background/40 via-background/70 to-background" aria-hidden />
 
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email *</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    required
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  />
-                </div>
+        <div className="relative container mx-auto max-w-5xl px-4 py-12 sm:py-16 md:py-20">
+          <div className="flex flex-col items-center text-center gap-5 sm:gap-6">
+            {logoUrl ? (
+              <img
+                src={logoUrl}
+                alt={`Logo de ${clinicName}`}
+                className="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-2xl object-cover shadow-xl ring-4 ring-background"
+              />
+            ) : (
+              <div
+                className="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-2xl flex items-center justify-center shadow-xl ring-4 ring-background"
+                style={{ background: `hsl(var(--brand) / 0.15)` }}
+              >
+                <Stethoscope
+                  className="w-10 h-10 sm:w-12 sm:h-12"
+                  style={{ color: `hsl(var(--brand))` }}
+                />
+              </div>
+            )}
 
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Teléfono / WhatsApp *</Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    required
-                    placeholder="Ej: +598 99 123 456"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  />
-                </div>
+            <div className="space-y-2 sm:space-y-3">
+              <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-foreground">
+                {clinicName}
+              </h1>
+              {specialty && (
+                <p
+                  className="inline-block text-sm sm:text-base font-medium px-3 py-1 rounded-full"
+                  style={{
+                    background: `hsl(var(--brand) / 0.12)`,
+                    color: `hsl(var(--brand))`,
+                  }}
+                >
+                  {specialty}
+                </p>
+              )}
+            </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="message">Motivo de la consulta</Label>
-                  <Textarea
-                    id="message"
-                    value={formData.message}
-                    onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                    placeholder="Contanos brevemente el motivo de tu consulta..."
-                    rows={4}
-                  />
-                </div>
+            <p className="max-w-2xl text-sm sm:text-base md:text-lg text-muted-foreground whitespace-pre-wrap leading-relaxed">
+              {description}
+            </p>
 
-                <div className="flex gap-2 pt-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setShowRequestForm(false)}
-                    className="flex-1"
-                  >
-                    Cancelar
-                  </Button>
-                  <Button type="submit" disabled={submitting} className="flex-1">
-                    {submitting ? "Enviando..." : "Enviar solicitud"}
-                  </Button>
+            {/* CTAs */}
+            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto pt-2">
+              <Button
+                size="lg"
+                className="w-full sm:w-auto gap-2 text-base font-semibold shadow-lg transition-transform hover:scale-[1.02]"
+                style={{
+                  background: `hsl(var(--brand))`,
+                  color: "white",
+                }}
+                onClick={() => navigate(`/consultorio/${targetSlug}/reservar`)}
+              >
+                <CalendarDays className="h-5 w-5" />
+                Reservar turno
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                className="w-full sm:w-auto gap-2 text-base font-semibold border-2"
+                style={{
+                  borderColor: `hsl(var(--brand) / 0.5)`,
+                  color: `hsl(var(--brand))`,
+                }}
+                onClick={() => navigate(`/portal/${targetSlug}`)}
+              >
+                <LogIn className="h-5 w-5" />
+                Ya soy paciente
+              </Button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Body */}
+      <main className="container mx-auto max-w-5xl px-4 py-10 sm:py-14 space-y-8">
+        {schedule.length > 0 && (
+          <section>
+            <div className="flex items-center gap-2 mb-4">
+              <div
+                className="p-2 rounded-lg"
+                style={{ background: `hsl(var(--brand) / 0.12)` }}
+              >
+                <Clock className="h-5 w-5" style={{ color: `hsl(var(--brand))` }} />
+              </div>
+              <h2 className="text-xl sm:text-2xl font-semibold">Horarios de atención</h2>
+            </div>
+            <Card>
+              <CardContent className="p-4 sm:p-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {schedule.map(({ day, ranges }) => (
+                    <div
+                      key={day}
+                      className="flex flex-col gap-1 p-3 rounded-lg bg-muted/40 border border-border/50"
+                    >
+                      <span className="text-sm font-semibold text-foreground">
+                        {DAY_LABELS[day]}
+                      </span>
+                      <div className="flex flex-wrap gap-2">
+                        {ranges.map((range) => (
+                          <span
+                            key={range}
+                            className="text-xs sm:text-sm px-2 py-0.5 rounded-md font-mono"
+                            style={{
+                              background: `hsl(var(--brand) / 0.1)`,
+                              color: `hsl(var(--brand))`,
+                            }}
+                          >
+                            {range}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </form>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </section>
         )}
 
-        {/* Info notice */}
-        <p className="text-center text-sm text-muted-foreground mt-8">
-          ¿Ya sos paciente del consultorio? <a href="/auth" className="text-primary hover:underline">Iniciá sesión</a> para ver tu agenda y reservar citas.
+        {/* Footer note */}
+        <p className="text-center text-xs sm:text-sm text-muted-foreground pt-4">
+          ¿Tenés dudas? Comunicate directamente con el consultorio para coordinar tu consulta.
         </p>
-      </div>
+      </main>
     </div>
   );
 };
