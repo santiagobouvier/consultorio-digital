@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { clearActiveBusinessId, getActiveBusinessId } from "@/hooks/use-business-id";
 import {
   LayoutDashboard,
   Users,
@@ -17,6 +18,7 @@ import {
   LogOut,
   ChevronRight,
   X,
+  ArrowLeft,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useDashboardBranding } from "@/contexts/DashboardBrandingContext";
@@ -56,6 +58,7 @@ export function MobileHeader() {
   const navigate = useNavigate();
   const { primaryColor, logoUrl, displayName } = useDashboardBranding();
   const pendingRequests = usePendingRequestsCount();
+  const isVisitMode = isSuperAdmin && Boolean(getActiveBusinessId());
 
   const brandHsl = `hsl(${primaryColor})`;
   const brandHsla = (alpha: number) => `hsla(${primaryColor}, ${alpha})`;
@@ -85,6 +88,12 @@ export function MobileHeader() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate("/");
+  };
+
+  const handleBackToAdmin = () => {
+    clearActiveBusinessId();
+    setOpen(false);
+    navigate("/saas-admin");
   };
 
   return (

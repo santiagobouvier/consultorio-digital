@@ -374,13 +374,23 @@ export function PremiumSidebar() {
               </div>
 
               {expanded && (
-                <button
-                  onClick={handleLogout}
-                  className="text-white/20 hover:text-rose-400 transition-colors duration-200 p-1.5 rounded-lg hover:bg-rose-500/10"
-                  title="Cerrar sesión"
-                >
-                  <LogOut className="h-3.5 w-3.5" />
-                </button>
+                isVisitMode ? (
+                  <button
+                    onClick={handleBackToAdmin}
+                    className="text-amber-300/70 hover:text-amber-300 transition-colors duration-200 p-1.5 rounded-lg hover:bg-amber-500/10"
+                    title="Volver al panel"
+                  >
+                    <ArrowLeft className="h-3.5 w-3.5" />
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleLogout}
+                    className="text-white/20 hover:text-rose-400 transition-colors duration-200 p-1.5 rounded-lg hover:bg-rose-500/10"
+                    title="Cerrar sesión"
+                  >
+                    <LogOut className="h-3.5 w-3.5" />
+                  </button>
+                )
               )}
             </div>
           </div>
