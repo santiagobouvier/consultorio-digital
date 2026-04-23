@@ -473,7 +473,7 @@ const ClinicPortal = () => {
       setPatientChecked(true);
     };
     loadPatient();
-  }, [session, branding, authChecked]);
+  }, [session?.user?.id, branding?.id, authChecked]);
 
   // Theme
   const themeVars = useMemo(() => {
