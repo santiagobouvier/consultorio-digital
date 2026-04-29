@@ -1,6 +1,6 @@
 {
-  "name": "Tu Consultorio Digital",
-  "short_name": "Tu Consultorio",
+  "name": "Consultorio Digital",
+  "short_name": "Consultorio Digital",
   "description": "Sistema de gestión de consultorios con agenda inteligente, pacientes y pagos.",
   "start_url": "/",
   "scope": "/",
