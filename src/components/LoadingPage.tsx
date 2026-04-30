@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import logoLoading from "@/assets/logo-loading.png";
 
 // Si el LoadingPage llega a montarse, lo dejamos visible al menos este tiempo
 // para que no "parpadee" cuando el contenido carga inmediatamente después.
@@ -84,12 +83,11 @@ const LoadingPage = () => {
       `}</style>
       
       <div className="flex flex-col items-center gap-8">
-        {/* Logo con glow pulsante */}
-        <div className="logo-entrance rounded-full p-4 overflow-hidden flex items-center justify-center" style={{ backgroundColor: "hsl(180 12% 8%)" }}>
-          <img 
-            src={logoLoading} 
-            alt="Cargando..." 
-            className="w-20 h-20 object-contain rounded-full"
+        <div className="logo-entrance flex items-center justify-center">
+          <img
+            src="/logo-loading.png"
+            alt="Cargando..."
+            className="w-[120px] h-[120px] object-contain"
           />
         </div>
         
