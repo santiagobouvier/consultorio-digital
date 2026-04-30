@@ -83,11 +83,14 @@ const LoadingPage = () => {
       `}</style>
       
       <div className="flex flex-col items-center gap-8">
-        <div className="logo-entrance flex items-center justify-center">
+        <div
+          className="logo-entrance flex h-[124px] w-[124px] items-center justify-center overflow-hidden rounded-full"
+          style={{ backgroundColor: "hsl(180 12% 8%)" }}
+        >
           <img
             src="/logo-loading.png"
             alt="Cargando..."
-            className="w-[120px] h-[120px] object-contain"
+            className="h-[74px] w-[74px] object-contain"
           />
         </div>
         
