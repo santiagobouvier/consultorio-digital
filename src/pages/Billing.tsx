@@ -118,8 +118,6 @@ const Billing = () => {
         .from("subscriptions")
         .select("*")
         .eq("business_id", business.id)
-        .order("created_at", { ascending: false })
-        .limit(1)
         .maybeSingle();
 
       setSubscription(sub as Subscription | null);
