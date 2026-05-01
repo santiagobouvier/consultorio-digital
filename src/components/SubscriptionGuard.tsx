@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useSubscriptionStatus } from "@/hooks/use-subscription-status";
 import LoadingPage from "@/components/LoadingPage";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, CreditCard, Loader2, Sparkles, PartyPopper } from "lucide-react";
+import { AlertTriangle, CreditCard, Loader2, Sparkles, PartyPopper, Clock } from "lucide-react";
 import { triggerSessionExpired } from "@/components/SessionExpiredDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { getActiveBusinessId } from "@/hooks/use-business-id";
@@ -20,6 +20,8 @@ interface SubscriptionGuardProps {
 // Se invalida al cambiar de userId o al hacer signOut (handler abajo).
 const businessIdCache = new Map<string, string | null>();
 const activationCache = new Map<string, boolean>(); // businessId → ya verificado
+const POLL_INTERVAL = 3000; // 3 seconds
+const MAX_POLL_TIME = 30000; // 30 seconds
 
 // Limpiar cachés al cerrar sesión (un único listener a nivel módulo).
 supabase.auth.onAuthStateChange((event) => {
@@ -41,7 +43,11 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
   const [checkingActivation, setCheckingActivation] = useState(cachedActivation !== true);
   const [activationChecked, setActivationChecked] = useState(cachedActivation === true);
   const lastResolvedUserId = useRef<string | null>(cachedBusinessId !== undefined && user ? user.id : null);
-  const hasSuccessfulSubscriptionRedirect = searchParams.get("subscription") === "success";
+
+  // Payment verification polling state
+  const [verifyingPayment, setVerifyingPayment] = useState(false);
+  const [paymentVerified, setPaymentVerified] = useState(false);
+  const [paymentTimedOut, setPaymentTimedOut] = useState(false);
 
   // Resolver businessId una vez que la auth está lista.
   // Super admin: si está impersonando un business (sessionStorage), lo usa;
@@ -106,12 +112,55 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
   const [reactivating, setReactivating] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
 
-  // Detect successful subscription return
+  // When returning from Mercado Pago with ?subscription=success, poll DB to verify payment
   useEffect(() => {
-    if (searchParams.get("subscription") === "success") {
+    if (searchParams.get("subscription") !== "success") return;
+    if (!businessId || loading || businessLoading) return;
+    // If already active, just show celebration
+    if (status === "active") {
       setShowCelebration(true);
+      return;
     }
-  }, [searchParams]);
+
+    // Start polling
+    setVerifyingPayment(true);
+    setPaymentTimedOut(false);
+    let cancelled = false;
+    const startTime = Date.now();
+
+    const poll = async () => {
+      while (!cancelled && Date.now() - startTime < MAX_POLL_TIME) {
+        try {
+          const { data: sub } = await supabase
+            .from("subscriptions")
+            .select("status")
+            .eq("business_id", businessId)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (cancelled) return;
+
+          if (sub?.status === "active") {
+            setVerifyingPayment(false);
+            setPaymentVerified(true);
+            setShowCelebration(true);
+            return;
+          }
+        } catch (err) {
+          console.error("Payment verification poll error:", err);
+        }
+        await new Promise((r) => setTimeout(r, POLL_INTERVAL));
+      }
+      if (!cancelled) {
+        setVerifyingPayment(false);
+        setPaymentTimedOut(true);
+      }
+    };
+
+    poll();
+    return () => { cancelled = true; };
+  }, [searchParams, businessId, status, loading, businessLoading]);
 
   const handleReactivate = useCallback(async () => {
     if (!businessId) return;
@@ -154,6 +203,7 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
 
   const handleDismissCelebration = useCallback(() => {
     setShowCelebration(false);
+    setPaymentVerified(false);
     // Clean URL param
     const newParams = new URLSearchParams(searchParams);
     newParams.delete("subscription");
@@ -193,13 +243,6 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
       return;
     }
 
-    if (hasSuccessfulSubscriptionRedirect) {
-      activationCache.set(businessId, true);
-      setCheckingActivation(false);
-      setActivationChecked(true);
-      return;
-    }
-
     let cancelled = false;
     (async () => {
       try {
@@ -232,19 +275,56 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
     })();
 
     return () => { cancelled = true; };
-  }, [businessId, status, loading, businessLoading, isSuperAdmin, hasSuccessfulSubscriptionRedirect]);
+  }, [businessId, status, loading, businessLoading, isSuperAdmin]);
 
   if (!authReady || businessLoading) return <LoadingPage />;
   if (isSuperAdmin) return <>{children}</>;
   if (businessId && (loading || checkingActivation || !activationChecked)) return <LoadingPage />;
 
+  // Show payment verification spinner when polling
+  if (verifyingPayment) {
+    return (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ backgroundColor: '#111111' }}>
+        <div className="w-full max-w-md text-center space-y-6">
+          <div className="mx-auto w-20 h-20 rounded-full bg-[hsla(176,100%,32%,0.15)] flex items-center justify-center">
+            <Loader2 className="w-10 h-10 text-[hsl(176,100%,32%)] animate-spin" />
+          </div>
+          <h2 className="text-2xl font-bold text-white">Verificando tu pago...</h2>
+          <p className="text-white/50">Esto puede tardar unos segundos mientras confirmamos con Mercado Pago.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show timed-out message (payment not yet confirmed)
+  if (paymentTimedOut) {
+    return (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ backgroundColor: '#111111' }}>
+        <div className="w-full max-w-md text-center space-y-6">
+          <div className="mx-auto w-20 h-20 rounded-full bg-[hsla(40,100%,60%,0.12)] flex items-center justify-center">
+            <Clock className="w-10 h-10 text-[hsl(40,100%,60%)]" />
+          </div>
+          <h2 className="text-2xl font-bold text-white">Pago en proceso</h2>
+          <p className="text-white/50">
+            Si ya pagaste, tu acceso se activará en unos minutos. Podés recargar la página más tarde.
+          </p>
+          <Button
+            onClick={() => window.location.reload()}
+            className="w-full h-12 font-semibold text-white text-base"
+            style={{ backgroundColor: '#00a5a0', boxShadow: '0 4px 20px rgba(0,165,160,0.3)' }}
+          >
+            Recargar página
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   // Sin business → onboarding
   if (!businessId) return <>{children}</>;
 
-  // Activos / trial → permitido
-  // TESTING MODE — también dejamos pasar "none" (negocios recién creados desde
-  // el wizard que aún no tienen fila en subscriptions). Revertir antes del lanzamiento.
-  if (status === "active" || status === "trial" || status === "none") {
+  // Only active and trial (with days left) get access
+  if (status === "active" || status === "trial") {
     return (
       <>
         {showCelebration && (
@@ -282,7 +362,7 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
     );
   }
 
-  // Bloqueado: expired, cancelled, past_due, none
+  // Bloqueado: expired, cancelled, past_due, none — all show reactivation modal
   const messages: Record<string, { title: string; desc: string }> = {
     expired: {
       title: "Tu período de prueba ha terminado",
