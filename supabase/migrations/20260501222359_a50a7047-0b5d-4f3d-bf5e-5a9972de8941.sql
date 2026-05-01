@@ -1,0 +1,2 @@
+ALTER TABLE public.subscriptions DROP CONSTRAINT valid_status;
+ALTER TABLE public.subscriptions ADD CONSTRAINT valid_status CHECK (status IN ('trial', 'active', 'past_due', 'cancelled', 'expired', 'pending'));
