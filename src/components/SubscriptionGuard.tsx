@@ -1,14 +1,14 @@
-import { ReactNode, useEffect, useRef, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { ReactNode, useEffect, useRef, useState, useCallback } from "react";
+import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useSubscriptionStatus } from "@/hooks/use-subscription-status";
 import LoadingPage from "@/components/LoadingPage";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertTriangle, CreditCard } from "lucide-react";
+import { AlertTriangle, CreditCard, Loader2, Sparkles, PartyPopper } from "lucide-react";
 import { triggerSessionExpired } from "@/components/SessionExpiredDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { getActiveBusinessId } from "@/hooks/use-business-id";
+import { toast } from "sonner";
 
 interface SubscriptionGuardProps {
   children: ReactNode;
@@ -32,6 +32,7 @@ supabase.auth.onAuthStateChange((event) => {
 const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const location = useLocation();
   const { user, isSuperAdmin, isReady: authReady } = useAuth();
   const cachedBusinessId = user ? businessIdCache.get(user.id) : undefined;
   const cachedActivation = cachedBusinessId ? activationCache.get(cachedBusinessId) : undefined;
@@ -102,6 +103,62 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
   }, [authReady, user, isSuperAdmin, navigate]);
 
   const { status, loading } = useSubscriptionStatus(businessId);
+  const [reactivating, setReactivating] = useState(false);
+  const [showCelebration, setShowCelebration] = useState(false);
+
+  // Detect successful subscription return
+  useEffect(() => {
+    if (searchParams.get("subscription") === "success") {
+      setShowCelebration(true);
+    }
+  }, [searchParams]);
+
+  const handleReactivate = useCallback(async () => {
+    if (!businessId) return;
+    setReactivating(true);
+    try {
+      // Get business plan info
+      const { data: business } = await supabase
+        .from("businesses")
+        .select("plan_code, billing_period")
+        .eq("id", businessId)
+        .maybeSingle();
+
+      if (!business?.plan_code) {
+        navigate("/billing");
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke("create-subscription", {
+        body: {
+          plan_code: business.plan_code,
+          billing_period: business.billing_period || "annual",
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.checkout_url) {
+        window.location.href = data.checkout_url;
+      } else {
+        toast.success("¡Cuenta reactivada!");
+        navigate("/dashboard");
+      }
+    } catch (err: any) {
+      console.error("Reactivation error:", err);
+      toast.error("Error al reactivar. Intentá de nuevo.");
+    } finally {
+      setReactivating(false);
+    }
+  }, [businessId, navigate]);
+
+  const handleDismissCelebration = useCallback(() => {
+    setShowCelebration(false);
+    // Clean URL param
+    const newParams = new URLSearchParams(searchParams);
+    newParams.delete("subscription");
+    navigate({ pathname: location.pathname, search: newParams.toString() }, { replace: true });
+  }, [searchParams, navigate, location.pathname]);
 
   // Verificar si el usuario en trial activó MP
   useEffect(() => {
@@ -188,7 +245,41 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
   // TESTING MODE — también dejamos pasar "none" (negocios recién creados desde
   // el wizard que aún no tienen fila en subscriptions). Revertir antes del lanzamiento.
   if (status === "active" || status === "trial" || status === "none") {
-    return <>{children}</>;
+    return (
+      <>
+        {showCelebration && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+            <div
+              className="relative z-10 w-full max-w-md rounded-2xl border border-white/10 p-8 text-center space-y-6 animate-scale-in"
+              style={{
+                backgroundColor: '#111111',
+                boxShadow: '0 8px 60px rgba(0, 165, 160, 0.15)',
+              }}
+            >
+              <div className="mx-auto w-20 h-20 rounded-full bg-[hsla(160,80%,50%,0.15)] flex items-center justify-center">
+                <PartyPopper className="w-10 h-10 text-[hsl(160,80%,50%)]" />
+              </div>
+              <h2 className="text-2xl font-bold text-white">
+                ¡Cuenta reactivada!
+              </h2>
+              <p className="text-white/60">
+                Podés seguir gestionando tu consultorio con todas las funcionalidades.
+              </p>
+              <Button
+                onClick={handleDismissCelebration}
+                className="w-full h-12 font-semibold text-white text-base"
+                style={{ backgroundColor: '#00a5a0', boxShadow: '0 4px 20px rgba(0,165,160,0.3)' }}
+              >
+                <Sparkles className="w-5 h-5 mr-2" />
+                Ir al consultorio
+              </Button>
+            </div>
+          </div>
+        )}
+        {children}
+      </>
+    );
   }
 
   // Bloqueado: expired, cancelled, past_due, none
@@ -214,27 +305,54 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
   const msg = messages[status] || messages.none;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="max-w-md w-full text-center">
-        <CardHeader>
-          <div className="mx-auto mb-4 w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center">
-            <AlertTriangle className="h-8 w-8 text-destructive" />
+    <div className="relative min-h-screen">
+      {/* Blurred dashboard behind */}
+      <div className="pointer-events-none select-none" style={{ filter: 'blur(12px)' }} aria-hidden="true">
+        {children}
+      </div>
+
+      {/* Dark overlay + centered modal */}
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+
+        <div
+          className="relative z-10 w-full max-w-md rounded-2xl border border-white/10 p-6 sm:p-8 text-center space-y-5 animate-scale-in"
+          style={{
+            backgroundColor: '#111111',
+            boxShadow: '0 8px 60px rgba(0, 165, 160, 0.08), 0 0 120px rgba(0, 165, 160, 0.04)',
+          }}
+        >
+          <div className="mx-auto w-16 h-16 rounded-full bg-[hsla(40,100%,60%,0.12)] flex items-center justify-center">
+            <AlertTriangle className="h-8 w-8 text-[hsl(40,100%,60%)]" />
           </div>
-          <CardTitle className="text-xl">{msg.title}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-muted-foreground">{msg.desc}</p>
-          <div className="flex flex-col gap-2">
-            <Button onClick={() => navigate("/billing")} className="w-full">
-              <CreditCard className="mr-2 h-4 w-4" />
-              Ir a Facturación
+
+          <h2 className="text-xl sm:text-2xl font-bold text-white">{msg.title}</h2>
+          <p className="text-sm sm:text-base text-white/50">{msg.desc}</p>
+
+          <div className="flex flex-col gap-3 pt-2">
+            <Button
+              onClick={handleReactivate}
+              disabled={reactivating}
+              className="w-full h-12 font-semibold text-white text-base"
+              style={{ backgroundColor: '#00a5a0', boxShadow: '0 4px 20px rgba(0,165,160,0.3)' }}
+            >
+              {reactivating ? (
+                <Loader2 className="w-5 h-5 animate-spin mr-2" />
+              ) : (
+                <CreditCard className="w-5 h-5 mr-2" />
+              )}
+              {reactivating ? "Redirigiendo..." : "Reactivar cuenta"}
             </Button>
-            <Button variant="outline" onClick={() => navigate("/")} className="w-full">
-              Volver al inicio
+            <Button
+              variant="ghost"
+              onClick={() => navigate("/billing")}
+              className="w-full text-white/40 hover:text-white/60"
+            >
+              Ver planes disponibles
             </Button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 };
