@@ -81,11 +81,6 @@ serve(async (req) => {
 
     if (existingBusiness) {
       businessId = existingBusiness.id;
-      // Update plan
-      await supabaseAdmin
-        .from("businesses")
-        .update({ plan_code, billing_period: period })
-        .eq("id", businessId);
     } else {
       // Create business
       const slug = public_slug || `consultorio-${Date.now()}`;
@@ -168,7 +163,7 @@ serve(async (req) => {
       .insert({
         business_id: businessId,
         plan_code,
-        status: "trial",
+        status: "pending",
         billing_period: period,
         amount,
         currency: "UYU",
@@ -186,7 +181,7 @@ serve(async (req) => {
         success: true,
         checkout_url: mpData.init_point,
         business_id: businessId,
-        subscription_status: "trial",
+        subscription_status: "pending",
       }),
       {
         status: 200,
