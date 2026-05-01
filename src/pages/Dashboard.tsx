@@ -230,12 +230,10 @@ const Dashboard = () => {
       if (isAdmin) {
         setTrialEndsAt(null);
       } else {
-        const { data: subData } = await supabase
+          const { data: subData } = await supabase
           .from("subscriptions")
           .select("status, trial_ends_at")
           .eq("business_id", currentBusinessId)
-          .order("created_at", { ascending: false })
-          .limit(1)
           .maybeSingle();
 
         if (subData?.status === "trial" && subData.trial_ends_at) {
