@@ -57,16 +57,15 @@ export const useSubscriptionStatus = (businessId: string | null): UseSubscriptio
           return;
         }
 
-        const { data: subscriptions } = await supabase
+        const { data: subscription } = await supabase
           .from("subscriptions")
           .select("status, trial_ends_at, current_period_end, created_at")
           .eq("business_id", businessId)
-          .order("created_at", { ascending: false })
-          .limit(5);
+          .maybeSingle();
 
         if (cancelled) return;
 
-        const resolvedStatus = resolveSubscriptionStatus(subscriptions);
+        const resolvedStatus = resolveSubscriptionStatus(subscription);
 
         if (resolvedStatus === "none") {
           setTrialDaysLeft(null);
@@ -75,7 +74,7 @@ export const useSubscriptionStatus = (businessId: string | null): UseSubscriptio
           return;
         }
 
-        const activeTrial = subscriptions?.find((subscription) => hasActiveTrial(subscription));
+        const activeTrial = hasActiveTrial(subscription) ? subscription : null;
 
         if (resolvedStatus === "trial" && activeTrial?.trial_ends_at) {
           const now = new Date();
