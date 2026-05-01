@@ -31,12 +31,9 @@ export const resolveSubscriptionStatus = (
   if (latest.status === "trial") return hasActiveTrial(latest, now) ? "trial" : "expired";
 
   if (latest.status === "pending") {
-    const fallback = list.slice(1).find((subscription) => {
-      return subscription.status === "active" || hasActiveTrial(subscription, now);
-    });
+    const fallback = list.slice(1).find((subscription) => subscription.status === "active");
 
     if (fallback?.status === "active") return "active";
-    if (fallback && hasActiveTrial(fallback, now)) return "trial";
     return "pending";
   }
 
