@@ -56,13 +56,11 @@ serve(async (req) => {
       });
     }
 
-    // Get latest subscription
+    // Get current subscription
     const { data: sub } = await supabaseAdmin
       .from("subscriptions")
       .select("*")
       .eq("business_id", business.id)
-      .order("created_at", { ascending: false })
-      .limit(1)
       .maybeSingle();
 
     if (!sub) {
@@ -101,6 +99,11 @@ serve(async (req) => {
         cancelled_at: new Date().toISOString(),
       })
       .eq("id", sub.id);
+
+    await supabaseAdmin
+      .from("businesses")
+      .update({ is_active: false })
+      .eq("id", business.id);
 
     return new Response(
       JSON.stringify({ success: true, message: "Subscription cancelled" }),

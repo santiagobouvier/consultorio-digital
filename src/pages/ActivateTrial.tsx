@@ -69,13 +69,12 @@ const ActivateTrial = () => {
       // Check if already has an activated subscription/trial
       // Polling: re-verificar hasta 3 veces (cubre timing de activación manual)
       let resolvedStatus: string | null = null;
-      for (let attempt = 0; attempt < 3; attempt++) {
-        const { data } = await supabase
+        for (let attempt = 0; attempt < 3; attempt++) {
+          const { data } = await supabase
           .from("subscriptions")
           .select("status, trial_ends_at, current_period_end, created_at")
           .eq("business_id", business.id)
-          .order("created_at", { ascending: false })
-          .limit(5);
+            .maybeSingle();
 
         if (cancelled) return;
         resolvedStatus = resolveSubscriptionStatus(data);

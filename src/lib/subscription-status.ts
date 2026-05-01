@@ -7,6 +7,26 @@ export interface SubscriptionStatusRecord {
   created_at?: string | null;
 }
 
+const resolveSingleSubscriptionStatus = (
+  subscription: SubscriptionStatusRecord | null | undefined,
+): SubscriptionStatus => {
+  if (!subscription?.status) return "none";
+
+  if (subscription.status === "active") return "active";
+  if (subscription.status === "trial") return hasActiveTrial(subscription) ? "trial" : "expired";
+
+  if (
+    subscription.status === "pending"
+    || subscription.status === "past_due"
+    || subscription.status === "cancelled"
+    || subscription.status === "expired"
+  ) {
+    return subscription.status;
+  }
+
+  return "none";
+};
+
 export const hasActiveTrial = (
   subscription: SubscriptionStatusRecord | null | undefined,
   now = new Date(),
@@ -19,8 +39,12 @@ export const hasActiveTrial = (
 };
 
 export const resolveSubscriptionStatus = (
-  subscriptions: SubscriptionStatusRecord[] | null | undefined,
+  subscriptions: SubscriptionStatusRecord[] | SubscriptionStatusRecord | null | undefined,
 ): SubscriptionStatus => {
+  if (!Array.isArray(subscriptions)) {
+    return resolveSingleSubscriptionStatus(subscriptions);
+  }
+
   const list = (subscriptions ?? []).filter(Boolean);
   if (!list.length) return "none";
 

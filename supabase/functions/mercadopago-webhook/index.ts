@@ -23,6 +23,20 @@ serve(async (req) => {
 
     const { type, data } = body;
 
+    const parseExternalReference = (value: unknown) => {
+      if (typeof value !== "string" || !value.trim()) return null;
+      try {
+        return JSON.parse(value) as {
+          business_id?: string;
+          plan_code?: string;
+          billing_period?: string;
+          amount?: number;
+        };
+      } catch {
+        return null;
+      }
+    };
+
     // Mercado Pago sends different notification types
     // For subscriptions (preapproval): type = "subscription_preapproval"
     // For payments: type = "payment"
@@ -70,15 +84,21 @@ serve(async (req) => {
         return new Response("OK", { status: 200, headers: corsHeaders });
       }
 
-      // Update subscription status
-      const updateData: Record<string, unknown> = { status: newStatus };
+      const externalReference = parseExternalReference(preapproval.external_reference);
 
-      if (newStatus === "cancelled") {
-        updateData.cancelled_at = new Date().toISOString();
-      }
+      // Update subscription status
+      const updateData: Record<string, unknown> = {
+        status: newStatus,
+        cancelled_at: newStatus === "cancelled" ? new Date().toISOString() : null,
+      };
+
+      if (externalReference?.plan_code) updateData.plan_code = externalReference.plan_code;
+      if (externalReference?.billing_period) updateData.billing_period = externalReference.billing_period;
+      if (typeof externalReference?.amount === "number") updateData.amount = externalReference.amount;
 
       if (newStatus === "active" && preapproval.next_payment_date) {
         updateData.current_period_end = preapproval.next_payment_date;
+        updateData.current_period_start = new Date().toISOString();
       }
 
       await supabase
@@ -97,8 +117,8 @@ serve(async (req) => {
           .from("businesses")
           .update({
             is_active: true,
-            plan_code: subscription.plan_code,
-            billing_period: subscription.billing_period,
+            plan_code: externalReference?.plan_code || subscription.plan_code,
+            billing_period: externalReference?.billing_period || subscription.billing_period,
             plan_started_at: new Date().toISOString(),
           })
           .eq("id", subscription.business_id);
@@ -129,11 +149,17 @@ serve(async (req) => {
           .maybeSingle();
 
         if (subscription) {
+          const externalReference = parseExternalReference(payment.external_reference);
+
           await supabase
             .from("subscriptions")
             .update({
               status: "active",
               current_period_start: new Date().toISOString(),
+              cancelled_at: null,
+              ...(externalReference?.plan_code ? { plan_code: externalReference.plan_code } : {}),
+              ...(externalReference?.billing_period ? { billing_period: externalReference.billing_period } : {}),
+              ...(typeof externalReference?.amount === "number" ? { amount: externalReference.amount } : {}),
             })
             .eq("id", subscription.id);
 
@@ -141,8 +167,8 @@ serve(async (req) => {
             .from("businesses")
             .update({
               is_active: true,
-              plan_code: subscription.plan_code,
-              billing_period: subscription.billing_period,
+              plan_code: externalReference?.plan_code || subscription.plan_code,
+              billing_period: externalReference?.billing_period || subscription.billing_period,
               plan_started_at: new Date().toISOString(),
             })
             .eq("id", subscription.business_id);

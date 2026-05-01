@@ -69,14 +69,13 @@ const Activating = () => {
       const check = async () => {
         if (cancelled) return;
 
-        const { data: subscriptions } = await supabase
+        const { data: subscription } = await supabase
           .from("subscriptions")
           .select("status, trial_ends_at, current_period_end, created_at")
           .eq("business_id", business.id)
-          .order("created_at", { ascending: false })
-          .limit(5);
+          .maybeSingle();
 
-        const resolvedStatus = resolveSubscriptionStatus(subscriptions);
+        const resolvedStatus = resolveSubscriptionStatus(subscription);
 
         if (resolvedStatus === "active" || resolvedStatus === "trial") {
           setActivated(true);

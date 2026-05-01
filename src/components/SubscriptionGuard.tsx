@@ -132,16 +132,15 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
     const poll = async () => {
       while (!cancelled && Date.now() - startTime < MAX_POLL_TIME) {
         try {
-          const { data: subscriptions } = await supabase
+          const { data: subscription } = await supabase
             .from("subscriptions")
             .select("status, trial_ends_at, current_period_end, created_at")
             .eq("business_id", businessId)
-            .order("created_at", { ascending: false })
-            .limit(5);
+            .maybeSingle();
 
           if (cancelled) return;
 
-          const resolvedStatus = resolveSubscriptionStatus(subscriptions);
+          const resolvedStatus = resolveSubscriptionStatus(subscription);
 
           if (resolvedStatus === "active") {
             setVerifyingPayment(false);
