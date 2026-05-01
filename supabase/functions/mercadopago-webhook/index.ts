@@ -71,14 +71,14 @@ serve(async (req) => {
       }
 
       // Update subscription status
-      const updateData: Record<string, unknown> = { status: newStatus };
-
-      if (newStatus === "cancelled") {
-        updateData.cancelled_at = new Date().toISOString();
-      }
+      const updateData: Record<string, unknown> = {
+        status: newStatus,
+        cancelled_at: newStatus === "cancelled" ? new Date().toISOString() : null,
+      };
 
       if (newStatus === "active" && preapproval.next_payment_date) {
         updateData.current_period_end = preapproval.next_payment_date;
+        updateData.current_period_start = new Date().toISOString();
       }
 
       await supabase
@@ -134,6 +134,7 @@ serve(async (req) => {
             .update({
               status: "active",
               current_period_start: new Date().toISOString(),
+              cancelled_at: null,
             })
             .eq("id", subscription.id);
 
