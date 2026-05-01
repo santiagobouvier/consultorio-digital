@@ -49,19 +49,19 @@ serve(async (req) => {
           break;
         case "paused":
         case "pending":
-          newStatus = "trial"; // Could still be in trial
+          newStatus = "pending";
           break;
         case "cancelled":
           newStatus = "cancelled";
           break;
         default:
-          newStatus = "active";
+          newStatus = "pending";
       }
 
       // Find subscription by MP preapproval id
       const { data: subscription, error: findError } = await supabase
         .from("subscriptions")
-        .select("id, business_id, status")
+        .select("id, business_id, status, plan_code, billing_period")
         .eq("mercadopago_preapproval_id", data.id)
         .maybeSingle();
 
@@ -87,7 +87,7 @@ serve(async (req) => {
         .eq("id", subscription.id);
 
       // Update business active status
-      if (newStatus === "cancelled" || newStatus === "expired") {
+      if (newStatus === "cancelled" || newStatus === "expired" || newStatus === "pending") {
         await supabase
           .from("businesses")
           .update({ is_active: false })
@@ -95,7 +95,12 @@ serve(async (req) => {
       } else if (newStatus === "active") {
         await supabase
           .from("businesses")
-          .update({ is_active: true })
+          .update({
+            is_active: true,
+            plan_code: subscription.plan_code,
+            billing_period: subscription.billing_period,
+            plan_started_at: new Date().toISOString(),
+          })
           .eq("id", subscription.business_id);
       }
 
@@ -119,7 +124,7 @@ serve(async (req) => {
       if (payment.status === "approved" && payment.metadata?.preapproval_id) {
         const { data: subscription } = await supabase
           .from("subscriptions")
-          .select("id")
+          .select("id, business_id, plan_code, billing_period")
           .eq("mercadopago_preapproval_id", payment.metadata.preapproval_id)
           .maybeSingle();
 
@@ -131,6 +136,16 @@ serve(async (req) => {
               current_period_start: new Date().toISOString(),
             })
             .eq("id", subscription.id);
+
+          await supabase
+            .from("businesses")
+            .update({
+              is_active: true,
+              plan_code: subscription.plan_code,
+              billing_period: subscription.billing_period,
+              plan_started_at: new Date().toISOString(),
+            })
+            .eq("id", subscription.business_id);
         }
       }
     }

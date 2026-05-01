@@ -8,6 +8,7 @@ import { Logo } from "@/components/Logo";
 import { getPlanDefinition, formatPrice } from "@/lib/plan-definitions";
 import LoadingPage from "@/components/LoadingPage";
 import { isCurrentUserSuperAdmin } from "@/lib/admin-access";
+import { resolveSubscriptionStatus } from "@/lib/subscription-status";
 
 const ActivateTrial = () => {
   const navigate = useNavigate();
@@ -67,20 +68,19 @@ const ActivateTrial = () => {
 
       // Check if already has an activated subscription/trial
       // Polling: re-verificar hasta 3 veces (cubre timing de activación manual)
-      let sub: { status: string | null; mercadopago_preapproval_id: string | null } | null = null;
+      let resolvedStatus: string | null = null;
       for (let attempt = 0; attempt < 3; attempt++) {
         const { data } = await supabase
           .from("subscriptions")
-          .select("status, mercadopago_preapproval_id")
+          .select("status, trial_ends_at, current_period_end, created_at")
           .eq("business_id", business.id)
           .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
+          .limit(5);
 
         if (cancelled) return;
-        sub = data;
+        resolvedStatus = resolveSubscriptionStatus(data);
 
-        if (sub?.status === "active" || sub?.mercadopago_preapproval_id) {
+        if (resolvedStatus === "active" || resolvedStatus === "trial") {
           navigate("/dashboard", { replace: true });
           return;
         }

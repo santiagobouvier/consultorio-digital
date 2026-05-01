@@ -1,8 +1,11 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-
-export type SubscriptionStatus = "trial" | "active" | "past_due" | "cancelled" | "expired" | "none";
+import {
+  hasActiveTrial,
+  resolveSubscriptionStatus,
+  type SubscriptionStatus,
+} from "@/lib/subscription-status";
 
 interface UseSubscriptionStatusResult {
   status: SubscriptionStatus;
@@ -54,36 +57,36 @@ export const useSubscriptionStatus = (businessId: string | null): UseSubscriptio
           return;
         }
 
-        const { data: sub } = await supabase
+        const { data: subscriptions } = await supabase
           .from("subscriptions")
-          .select("*")
+          .select("status, trial_ends_at, current_period_end, created_at")
           .eq("business_id", businessId)
           .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
+          .limit(5);
 
         if (cancelled) return;
 
-        if (!sub) {
+        const resolvedStatus = resolveSubscriptionStatus(subscriptions);
+
+        if (resolvedStatus === "none") {
+          setTrialDaysLeft(null);
           setStatus("none");
           setLoading(false);
           return;
         }
 
-        const now = new Date();
+        const activeTrial = subscriptions?.find((subscription) => hasActiveTrial(subscription));
 
-        if (sub.status === "trial" && sub.trial_ends_at) {
-          const trialEnd = new Date(sub.trial_ends_at);
-          if (now < trialEnd) {
-            const daysLeft = Math.ceil((trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-            setTrialDaysLeft(daysLeft);
-            setStatus("trial");
-          } else {
-            setStatus("expired");
-          }
+        if (resolvedStatus === "trial" && activeTrial?.trial_ends_at) {
+          const now = new Date();
+          const trialEnd = new Date(activeTrial.trial_ends_at);
+          const daysLeft = Math.ceil((trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+          setTrialDaysLeft(daysLeft);
         } else {
-          setStatus(sub.status as SubscriptionStatus);
+          setTrialDaysLeft(null);
         }
+
+        setStatus(resolvedStatus);
       } catch (err) {
         console.error("Error checking subscription:", err);
         if (!cancelled) setStatus("none");

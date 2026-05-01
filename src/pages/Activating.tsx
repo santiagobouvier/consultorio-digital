@@ -5,6 +5,7 @@ import { Logo } from "@/components/Logo";
 import { Loader2, CheckCircle2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { isCurrentUserSuperAdmin } from "@/lib/admin-access";
+import { resolveSubscriptionStatus } from "@/lib/subscription-status";
 
 const MAX_POLL_MS = 30_000;
 const POLL_INTERVAL_MS = 2_000;
@@ -68,15 +69,16 @@ const Activating = () => {
       const check = async () => {
         if (cancelled) return;
 
-        const { data: sub } = await supabase
+        const { data: subscriptions } = await supabase
           .from("subscriptions")
-          .select("status, mercadopago_preapproval_id")
+          .select("status, trial_ends_at, current_period_end, created_at")
           .eq("business_id", business.id)
           .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
+          .limit(5);
 
-        if (sub?.status === "active" || sub?.mercadopago_preapproval_id) {
+        const resolvedStatus = resolveSubscriptionStatus(subscriptions);
+
+        if (resolvedStatus === "active" || resolvedStatus === "trial") {
           setActivated(true);
           setTimeout(() => {
             if (!cancelled) navigate("/dashboard?subscription=success", { replace: true });

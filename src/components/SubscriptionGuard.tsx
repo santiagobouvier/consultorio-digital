@@ -9,6 +9,7 @@ import { triggerSessionExpired } from "@/components/SessionExpiredDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { getActiveBusinessId } from "@/hooks/use-business-id";
 import { toast } from "sonner";
+import { resolveSubscriptionStatus } from "@/lib/subscription-status";
 
 interface SubscriptionGuardProps {
   children: ReactNode;
@@ -131,17 +132,18 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
     const poll = async () => {
       while (!cancelled && Date.now() - startTime < MAX_POLL_TIME) {
         try {
-          const { data: sub } = await supabase
+          const { data: subscriptions } = await supabase
             .from("subscriptions")
-            .select("status")
+            .select("status, trial_ends_at, current_period_end, created_at")
             .eq("business_id", businessId)
             .order("created_at", { ascending: false })
-            .limit(1)
-            .maybeSingle();
+            .limit(5);
 
           if (cancelled) return;
 
-          if (sub?.status === "active") {
+          const resolvedStatus = resolveSubscriptionStatus(subscriptions);
+
+          if (resolvedStatus === "active") {
             setVerifyingPayment(false);
             setPaymentVerified(true);
             setShowCelebration(true);
@@ -367,6 +369,10 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
     expired: {
       title: "Tu período de prueba ha terminado",
       desc: "Para seguir usando Tu Consultorio Digital, activá tu suscripción eligiendo un plan.",
+    },
+    pending: {
+      title: "Tu pago todavía no fue aprobado",
+      desc: "Hasta que Mercado Pago confirme el cobro, el acceso al sistema permanece bloqueado.",
     },
     cancelled: {
       title: "Tu suscripción fue cancelada",
