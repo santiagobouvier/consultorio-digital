@@ -390,31 +390,25 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
   const msg = messages[status] || messages.none;
 
   return (
-    <div className="relative min-h-screen">
-      {/* Blurred dashboard behind */}
-      <div className="pointer-events-none select-none" style={{ filter: 'blur(12px)' }} aria-hidden="true">
-        {children}
-      </div>
-
+    <div className="fixed inset-0 z-50 overflow-hidden" style={{ backgroundColor: '#111111' }}>
       {/* Dark overlay + centered modal */}
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <div className="flex items-center justify-center w-full h-full px-5 py-8">
 
         <div
-          className="relative z-10 w-full max-w-md rounded-2xl border border-white/10 p-6 sm:p-8 text-center space-y-5 animate-scale-in"
+          className="w-full max-w-md rounded-2xl border border-white/10 p-5 sm:p-8 text-center space-y-4 sm:space-y-5 animate-scale-in"
           style={{
             backgroundColor: '#111111',
             boxShadow: '0 8px 60px rgba(0, 165, 160, 0.08), 0 0 120px rgba(0, 165, 160, 0.04)',
           }}
         >
-          <div className="mx-auto w-16 h-16 rounded-full bg-[hsla(40,100%,60%,0.12)] flex items-center justify-center">
-            <AlertTriangle className="h-8 w-8 text-[hsl(40,100%,60%)]" />
+          <div className="mx-auto w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-[hsla(40,100%,60%,0.12)] flex items-center justify-center">
+            <AlertTriangle className="h-7 w-7 sm:h-8 sm:w-8 text-[hsl(40,100%,60%)]" />
           </div>
 
           <h2 className="text-xl sm:text-2xl font-bold text-white">{msg.title}</h2>
           <p className="text-sm sm:text-base text-white/50">{msg.desc}</p>
 
-          <div className="flex flex-col gap-3 pt-2">
+          <div className="flex flex-col gap-3 pt-1 sm:pt-2">
             <Button
               onClick={handleReactivate}
               disabled={reactivating}
@@ -441,5 +435,4 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
     </div>
   );
 };
-
 export default SubscriptionGuard;
