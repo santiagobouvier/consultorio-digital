@@ -285,13 +285,13 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
   // Show payment verification spinner when polling
   if (verifyingPayment) {
     return (
-      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ backgroundColor: '#111111' }}>
-        <div className="w-full max-w-md text-center space-y-6">
-          <div className="mx-auto w-20 h-20 rounded-full bg-[hsla(176,100%,32%,0.15)] flex items-center justify-center">
-            <Loader2 className="w-10 h-10 text-[hsl(176,100%,32%)] animate-spin" />
+      <div className="fixed inset-0 z-[100] flex items-center justify-center px-5 py-8" style={{ backgroundColor: '#111111' }}>
+        <div className="w-full max-w-md text-center space-y-5 sm:space-y-6">
+          <div className="mx-auto w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[hsla(176,100%,32%,0.15)] flex items-center justify-center">
+            <Loader2 className="w-8 h-8 sm:w-10 sm:h-10 text-[hsl(176,100%,32%)] animate-spin" />
           </div>
-          <h2 className="text-2xl font-bold text-white">Verificando tu pago...</h2>
-          <p className="text-white/50">Esto puede tardar unos segundos mientras confirmamos con Mercado Pago.</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-white">Verificando tu pago...</h2>
+          <p className="text-sm sm:text-base text-white/50 px-2">Esto puede tardar unos segundos mientras confirmamos con Mercado Pago.</p>
         </div>
       </div>
     );
@@ -300,13 +300,13 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
   // Show timed-out message (payment not yet confirmed)
   if (paymentTimedOut) {
     return (
-      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ backgroundColor: '#111111' }}>
-        <div className="w-full max-w-md text-center space-y-6">
-          <div className="mx-auto w-20 h-20 rounded-full bg-[hsla(40,100%,60%,0.12)] flex items-center justify-center">
-            <Clock className="w-10 h-10 text-[hsl(40,100%,60%)]" />
+      <div className="fixed inset-0 z-[100] flex items-center justify-center px-5 py-8" style={{ backgroundColor: '#111111' }}>
+        <div className="w-full max-w-md text-center space-y-5 sm:space-y-6">
+          <div className="mx-auto w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[hsla(40,100%,60%,0.12)] flex items-center justify-center">
+            <Clock className="w-8 h-8 sm:w-10 sm:h-10 text-[hsl(40,100%,60%)]" />
           </div>
-          <h2 className="text-2xl font-bold text-white">Pago en proceso</h2>
-          <p className="text-white/50">
+          <h2 className="text-xl sm:text-2xl font-bold text-white">Pago en proceso</h2>
+          <p className="text-sm sm:text-base text-white/50 px-2">
             Si ya pagaste, tu acceso se activará en unos minutos. Podés recargar la página más tarde.
           </p>
           <Button
