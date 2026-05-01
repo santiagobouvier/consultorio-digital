@@ -44,6 +44,10 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
   const [checkingActivation, setCheckingActivation] = useState(cachedActivation !== true);
   const [activationChecked, setActivationChecked] = useState(cachedActivation === true);
   const lastResolvedUserId = useRef<string | null>(cachedBusinessId !== undefined && user ? user.id : null);
+  
+  // Grace period: when status is "none" but we have a businessId, wait before blocking
+  const [noneGraceActive, setNoneGraceActive] = useState(false);
+  const noneGraceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Payment verification polling state
   const [verifyingPayment, setVerifyingPayment] = useState(false);
@@ -112,6 +116,27 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
   const { status, loading } = useSubscriptionStatus(businessId);
   const [reactivating, setReactivating] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
+
+  // When status resolves to "none" with a businessId, give the DB trigger time to create the subscription
+  useEffect(() => {
+    if (noneGraceRef.current) {
+      clearTimeout(noneGraceRef.current);
+      noneGraceRef.current = null;
+    }
+
+    if (!loading && businessId && status === "none") {
+      setNoneGraceActive(true);
+      noneGraceRef.current = setTimeout(() => {
+        setNoneGraceActive(false);
+      }, 4000);
+    } else {
+      setNoneGraceActive(false);
+    }
+
+    return () => {
+      if (noneGraceRef.current) clearTimeout(noneGraceRef.current);
+    };
+  }, [loading, businessId, status]);
 
   // When returning from Mercado Pago with ?subscription=success, poll DB to verify payment
   useEffect(() => {
@@ -281,6 +306,7 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
   if (!authReady || businessLoading) return <LoadingPage />;
   if (isSuperAdmin) return <>{children}</>;
   if (businessId && (loading || checkingActivation || !activationChecked)) return <LoadingPage />;
+  if (noneGraceActive) return <LoadingPage />;
 
   // Show payment verification spinner when polling
   if (verifyingPayment) {
