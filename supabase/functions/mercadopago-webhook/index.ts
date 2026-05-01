@@ -49,7 +49,7 @@ serve(async (req) => {
           break;
         case "paused":
         case "pending":
-          newStatus = "trial"; // Could still be in trial
+          newStatus = "pending";
           break;
         case "cancelled":
           newStatus = "cancelled";
@@ -87,7 +87,7 @@ serve(async (req) => {
         .eq("id", subscription.id);
 
       // Update business active status
-      if (newStatus === "cancelled" || newStatus === "expired") {
+      if (newStatus === "cancelled" || newStatus === "expired" || newStatus === "pending") {
         await supabase
           .from("businesses")
           .update({ is_active: false })
