@@ -78,9 +78,26 @@ serve(async (req) => {
       .maybeSingle();
 
     let businessId: string;
+    let existingSubscription: {
+      id: string;
+      status: string;
+      trial_ends_at: string | null;
+      current_period_start: string | null;
+      current_period_end: string | null;
+      mercadopago_preapproval_id: string | null;
+    } | null = null;
 
     if (existingBusiness) {
       businessId = existingBusiness.id;
+
+      const { data: currentSubscription, error: existingSubscriptionError } = await supabaseAdmin
+        .from("subscriptions")
+        .select("id, status, trial_ends_at, current_period_start, current_period_end, mercadopago_preapproval_id")
+        .eq("business_id", businessId)
+        .maybeSingle();
+
+      if (existingSubscriptionError) throw existingSubscriptionError;
+      existingSubscription = currentSubscription;
     } else {
       // Create business
       const slug = public_slug || `consultorio-${Date.now()}`;
@@ -110,6 +127,35 @@ serve(async (req) => {
           business_id: businessId,
           role: "owner",
         });
+
+      const { data: createdSubscription, error: createdSubscriptionError } = await supabaseAdmin
+        .from("subscriptions")
+        .select("id, status, trial_ends_at, current_period_start, current_period_end, mercadopago_preapproval_id")
+        .eq("business_id", businessId)
+        .maybeSingle();
+
+      if (createdSubscriptionError) throw createdSubscriptionError;
+      existingSubscription = createdSubscription;
+    }
+
+    if (existingSubscription?.mercadopago_preapproval_id) {
+      const cancelResponse = await fetch(
+        `https://api.mercadopago.com/preapproval/${existingSubscription.mercadopago_preapproval_id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${mercadoPagoToken}`,
+          },
+          body: JSON.stringify({ status: "cancelled" }),
+        }
+      );
+
+      if (!cancelResponse.ok) {
+        const cancelError = await cancelResponse.json();
+        console.error("Mercado Pago cancel error:", JSON.stringify(cancelError));
+        throw new Error("No se pudo reemplazar la suscripción anterior en Mercado Pago");
+      }
     }
 
     // Create Mercado Pago preapproval (subscription)
@@ -157,22 +203,45 @@ serve(async (req) => {
       throw new Error(`Mercado Pago error: ${mpData.message || mpResponse.status}`);
     }
 
-    // Save subscription in DB
-    const { error: subError } = await supabaseAdmin
-      .from("subscriptions")
-      .insert({
-        business_id: businessId,
-        plan_code,
-        status: "pending",
-        billing_period: period,
-        amount,
-        currency: "UYU",
-        mercadopago_preapproval_id: mpData.id,
-        mercadopago_payer_id: mpData.payer_id?.toString() || null,
-        trial_ends_at: trialEndDate.toISOString(),
-        current_period_start: new Date().toISOString(),
-        current_period_end: trialEndDate.toISOString(),
-      });
+    const hasAccessibleTrial = existingSubscription?.status === "trial"
+      && !!existingSubscription.trial_ends_at
+      && new Date(existingSubscription.trial_ends_at).getTime() > Date.now();
+
+    const nextStatus = existingSubscription?.status === "active"
+      ? "active"
+      : hasAccessibleTrial
+        ? "trial"
+        : "pending";
+
+    const subscriptionPayload = {
+      business_id: businessId,
+      plan_code,
+      status: nextStatus,
+      billing_period: period,
+      amount,
+      currency: "UYU",
+      mercadopago_preapproval_id: mpData.id,
+      mercadopago_payer_id: mpData.payer_id?.toString() || null,
+      trial_ends_at: hasAccessibleTrial
+        ? existingSubscription?.trial_ends_at || trialEndDate.toISOString()
+        : trialEndDate.toISOString(),
+      current_period_start: existingSubscription?.status === "active"
+        ? existingSubscription.current_period_start || new Date().toISOString()
+        : new Date().toISOString(),
+      current_period_end: existingSubscription?.status === "active"
+        ? existingSubscription.current_period_end || trialEndDate.toISOString()
+        : trialEndDate.toISOString(),
+      cancelled_at: null,
+    };
+
+    const { error: subError } = existingSubscription?.id
+      ? await supabaseAdmin
+          .from("subscriptions")
+          .update(subscriptionPayload)
+          .eq("id", existingSubscription.id)
+      : await supabaseAdmin
+          .from("subscriptions")
+          .insert(subscriptionPayload);
 
     if (subError) throw subError;
 
