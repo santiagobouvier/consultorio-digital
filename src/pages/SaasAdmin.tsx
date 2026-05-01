@@ -358,13 +358,11 @@ const SaasAdmin = () => {
       const trialEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
       const periodEnd = trialEnd;
 
-      // Buscar suscripción más reciente
+      // Buscar suscripción actual
       const { data: existingSub } = await supabase
         .from("subscriptions")
         .select("id")
         .eq("business_id", businessToActivate.id)
-        .order("created_at", { ascending: false })
-        .limit(1)
         .maybeSingle();
 
       if (existingSub?.id) {
