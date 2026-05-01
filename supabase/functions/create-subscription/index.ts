@@ -157,7 +157,10 @@ serve(async (req) => {
       if (!cancelResponse.ok) {
         const cancelError = await cancelResponse.json();
         console.error("Mercado Pago cancel error:", JSON.stringify(cancelError));
-        throw new Error("No se pudo reemplazar la suscripción anterior en Mercado Pago");
+        // If already cancelled, that's fine — continue
+        if (cancelResponse.status !== 400) {
+          throw new Error("No se pudo reemplazar la suscripción anterior en Mercado Pago");
+        }
       }
     }
 
