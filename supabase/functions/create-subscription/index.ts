@@ -81,6 +81,9 @@ serve(async (req) => {
     let existingSubscription: {
       id: string;
       status: string;
+      plan_code: string;
+      billing_period: string;
+      amount: number;
       trial_ends_at: string | null;
       current_period_start: string | null;
       current_period_end: string | null;
@@ -92,7 +95,7 @@ serve(async (req) => {
 
       const { data: currentSubscription, error: existingSubscriptionError } = await supabaseAdmin
         .from("subscriptions")
-        .select("id, status, trial_ends_at, current_period_start, current_period_end, mercadopago_preapproval_id")
+        .select("id, status, plan_code, billing_period, amount, trial_ends_at, current_period_start, current_period_end, mercadopago_preapproval_id")
         .eq("business_id", businessId)
         .maybeSingle();
 
@@ -130,7 +133,7 @@ serve(async (req) => {
 
       const { data: createdSubscription, error: createdSubscriptionError } = await supabaseAdmin
         .from("subscriptions")
-        .select("id, status, trial_ends_at, current_period_start, current_period_end, mercadopago_preapproval_id")
+        .select("id, status, plan_code, billing_period, amount, trial_ends_at, current_period_start, current_period_end, mercadopago_preapproval_id")
         .eq("business_id", businessId)
         .maybeSingle();
 
@@ -183,6 +186,12 @@ serve(async (req) => {
         },
       },
       payer_email: user.email,
+      external_reference: JSON.stringify({
+        business_id: businessId,
+        plan_code,
+        billing_period: period,
+        amount,
+      }),
       back_url: `${req.headers.get("origin") || "https://consultoriodigital.app"}/activating?subscription=success`,
       status: "pending",
     };
@@ -207,18 +216,24 @@ serve(async (req) => {
       && !!existingSubscription.trial_ends_at
       && new Date(existingSubscription.trial_ends_at).getTime() > Date.now();
 
-    const nextStatus = existingSubscription?.status === "active"
-      ? "active"
-      : hasAccessibleTrial
-        ? "trial"
-        : "pending";
+    const preserveCurrentAccess = existingSubscription?.status === "active" || hasAccessibleTrial;
+
+    const nextStatus = preserveCurrentAccess
+      ? existingSubscription?.status || "pending"
+      : "pending";
 
     const subscriptionPayload = {
       business_id: businessId,
-      plan_code,
+      plan_code: preserveCurrentAccess
+        ? existingSubscription?.plan_code || plan_code
+        : plan_code,
       status: nextStatus,
-      billing_period: period,
-      amount,
+      billing_period: preserveCurrentAccess
+        ? existingSubscription?.billing_period || period
+        : period,
+      amount: preserveCurrentAccess
+        ? existingSubscription?.amount || amount
+        : amount,
       currency: "UYU",
       mercadopago_preapproval_id: mpData.id,
       mercadopago_payer_id: mpData.payer_id?.toString() || null,
