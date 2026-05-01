@@ -126,13 +126,15 @@ serve(async (req) => {
     // `amount` ya es el precio correcto por período (priceAnnual o priceMonthly).
     const mpFrequency = period === "annual" ? 12 : 1;
     const mpFrequencyType = "months";
+    // Para anual: cobrar el monto mensual * 12 en un solo pago cada 12 meses
+    const mpTransactionAmount = period === "annual" ? amount * 12 : amount;
 
     const preapprovalBody = {
       reason: `Tu Consultorio Digital - Plan ${plan_code.charAt(0).toUpperCase() + plan_code.slice(1)} (${period === "annual" ? "Anual" : "Mensual"})`,
       auto_recurring: {
         frequency: mpFrequency,
         frequency_type: mpFrequencyType,
-        transaction_amount: amount,
+        transaction_amount: mpTransactionAmount,
         currency_id: "UYU",
         free_trial: {
           frequency: 7,
