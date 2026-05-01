@@ -425,7 +425,7 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
             </Button>
             <Button
               variant="ghost"
-              onClick={() => navigate("/billing")}
+              onClick={() => navigate("/pricing")}
               className="w-full text-white/40 hover:text-white/60"
             >
               Ver planes disponibles
