@@ -65,6 +65,8 @@ interface BusinessWithDetails {
   customSubdomain?: string | null;
   customDomain?: string | null;
   isDemo: boolean;
+  subStatus?: string | null;
+  trialDaysLeft?: number | null;
 }
 
 interface SaasMetrics {
