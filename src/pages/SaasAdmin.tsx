@@ -65,8 +65,6 @@ interface BusinessWithDetails {
   customSubdomain?: string | null;
   customDomain?: string | null;
   isDemo: boolean;
-  subStatus?: string | null;
-  trialDaysLeft?: number | null;
 }
 
 interface SaasMetrics {
@@ -84,32 +82,6 @@ const getPlanMonthlyRevenue = (planCode: string, billingCycle: string): number =
 
 type PlanFilter = "all" | "esencial" | "inicial" | "profesional" | "equipo" | "clinica" | "personalizado";
 type UsageFilter = "all" | "near_limit" | "at_limit";
-
-
-const StatusBadges = ({ business, worstStatus }: { business: BusinessWithDetails; worstStatus: "ok" | "warning" | "danger" }) => {
-  const badges: { label: string; className: string }[] = [];
-  const isInactive = !business.isActive || business.subStatus === "expired" || business.subStatus === "cancelled";
-  const isTrialActive = business.subStatus === "trial" && business.trialDaysLeft != null && business.trialDaysLeft > 0;
-  const isAtLimit = worstStatus === "danger";
-  const isNearLimit = worstStatus === "warning";
-  const isActive = business.isActive && (business.subStatus === "active" || (!business.subStatus && !isInactive));
-
-  if (isInactive) badges.push({ label: "Inactivo", className: "bg-destructive/10 text-destructive border-destructive/20" });
-  if (isAtLimit) badges.push({ label: "Límite", className: "bg-warning/10 text-warning border-warning/20" });
-  if (isNearLimit && !isAtLimit) badges.push({ label: "Cerca", className: "bg-amber-500/10 text-amber-500 border-amber-500/20" });
-  if (isTrialActive) badges.push({ label: `Trial ${business.trialDaysLeft}d`, className: "bg-blue-500/10 text-blue-400 border-blue-500/20" });
-  if (isActive && !isTrialActive && !isInactive) badges.push({ label: "Activo", className: "bg-success/10 text-success border-success/20" });
-
-  if (badges.length === 0) badges.push({ label: "—", className: "bg-muted text-muted-foreground" });
-
-  return (
-    <div className="flex flex-wrap gap-1 justify-center">
-      {badges.map((b, i) => (
-        <Badge key={i} variant="outline" className={`text-[10px] px-2 py-0.5 ${b.className}`}>{b.label}</Badge>
-      ))}
-    </div>
-  );
-};
 
 const getUsageStatus = (current: number, max: number | null) => {
   if (max === null) return { percentage: 0, status: "ok" as const };
@@ -214,31 +186,14 @@ const SaasAdmin = () => {
       const { data: patientsData } = await supabase.from("patients").select("business_id").eq("is_active", true);
       const patientCountMap = new Map<string, number>();
       patientsData?.forEach(p => { patientCountMap.set(p.business_id, (patientCountMap.get(p.business_id) || 0) + 1); });
-      const { data: subsData } = await supabase.from("subscriptions").select("business_id, status, trial_ends_at");
-      const subMap = new Map<string, { status: string; trial_ends_at: string | null }>();
-      subsData?.forEach(s => { if (s.business_id) subMap.set(s.business_id, { status: s.status, trial_ends_at: s.trial_ends_at }); });
-      const businessesWithDetails: BusinessWithDetails[] = (businessesData || []).map(b => {
-        const sub = subMap.get(b.id);
-        const subStatus = (() => {
-          if (!sub) return null;
-          if (sub.status === "trial" && sub.trial_ends_at && new Date(sub.trial_ends_at) < new Date()) return "expired";
-          return sub.status;
-        })();
-        const trialDaysLeft = (() => {
-          if (!sub || sub.status !== "trial" || !sub.trial_ends_at) return null;
-          const days = Math.ceil((new Date(sub.trial_ends_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-          return days > 0 ? days : null;
-        })();
-        return {
-          ...b, ownerEmail: profileMap.get(b.owner_user_id) || "N/A",
-          professionalsCount: profCountMap.get(b.id) || 0, patientsCount: patientCountMap.get(b.id) || 0,
-          planCode: b.plan_code || "individual", isActive: b.is_active !== false,
-          customMaxProfessionals: b.custom_max_professionals, customMaxPatients: b.custom_max_patients,
-          billingPeriod: b.billing_period || "annual", isPrivateClinic: b.is_private_clinic || false,
-          customSubdomain: b.custom_subdomain || null, customDomain: b.custom_domain || null, isDemo: b.is_demo || false,
-          subStatus, trialDaysLeft,
-        };
-      });
+      const businessesWithDetails: BusinessWithDetails[] = (businessesData || []).map(b => ({
+        ...b, ownerEmail: profileMap.get(b.owner_user_id) || "N/A",
+        professionalsCount: profCountMap.get(b.id) || 0, patientsCount: patientCountMap.get(b.id) || 0,
+        planCode: b.plan_code || "individual", isActive: b.is_active !== false,
+        customMaxProfessionals: b.custom_max_professionals, customMaxPatients: b.custom_max_patients,
+        billingPeriod: b.billing_period || "annual", isPrivateClinic: b.is_private_clinic || false,
+        customSubdomain: b.custom_subdomain || null, customDomain: b.custom_domain || null, isDemo: b.is_demo || false,
+      }));
       setBusinesses(businessesWithDetails);
       const estimatedRevenue = businessesWithDetails.reduce((sum, b) => sum + getPlanMonthlyRevenue(b.planCode, b.billingPeriod), 0);
       setMetrics({ totalBusinesses: businessesWithDetails.length, totalProfessionals: rolesData?.length || 0, totalPatients: patientsData?.length || 0, estimatedRevenue });
@@ -683,9 +638,6 @@ const SaasAdmin = () => {
                             {business.patientsCount}/{config.maxPatients ?? "∞"} pac
                           </span>
                         </div>
-                        <div className="mt-1.5">
-                          <StatusBadges business={business} worstStatus={worstStatus} />
-                        </div>
                       </div>
 
                       {/* Single action menu */}
@@ -782,7 +734,9 @@ const SaasAdmin = () => {
                             </div>
                           </TableCell>
                           <TableCell className={`text-center ${compactMode ? 'py-2.5' : 'py-4'}`}>
-                            <StatusBadges business={business} worstStatus={worstStatus} />
+                            <Badge variant="secondary" className={`text-[10px] px-2 py-0.5 ${!business.isActive ? "bg-muted text-muted-foreground" : worstStatus === "danger" ? "bg-destructive/10 text-destructive" : worstStatus === "warning" ? "bg-warning/10 text-warning" : "bg-success/10 text-success"}`}>
+                              {!business.isActive ? "Inactivo" : worstStatus === "danger" ? "Límite" : worstStatus === "warning" ? "Cerca" : "OK"}
+                            </Badge>
                           </TableCell>
                           <TableCell className={`pr-6 text-right ${compactMode ? 'py-2.5' : 'py-4'}`}>
                             <DropdownMenu>
