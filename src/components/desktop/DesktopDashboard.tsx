@@ -4,7 +4,6 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useBusinessId } from "@/hooks/use-business-id";
 import { useProfessionals } from "@/hooks/use-professionals";
-import { useAuth } from "@/contexts/AuthContext";
 import { calculatePaymentStatus, formatCurrency } from "@/lib/payments";
 import { format, startOfMonth, endOfMonth, addDays, isToday, isTomorrow } from "date-fns";
 import { es } from "date-fns/locale";
@@ -76,7 +75,6 @@ export const DesktopDashboard = () => {
   const navigate = useNavigate();
   const { businessId, loading: businessLoading } = useBusinessId();
   const { professionals, loading: professionalsLoading, isOwner } = useProfessionals(businessId);
-  const { isSuperAdmin } = useAuth();
 
   // Data state
   const [businessName, setBusinessName] = useState("");
@@ -344,7 +342,7 @@ export const DesktopDashboard = () => {
               </div>
               <div>
                 <p className="text-muted-foreground text-sm font-medium">
-                  {getGreeting()}, {userName ? userName.split(" ")[0] : (isSuperAdmin ? "Administrador" : "")}
+                  {getGreeting()}, {userName.split(" ")[0]}
                 </p>
                 <h1 className="text-xl font-bold text-foreground tracking-tight">
                   {businessName}
