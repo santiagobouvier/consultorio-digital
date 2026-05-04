@@ -130,25 +130,11 @@ const BrandedLogin = ({
       if (isLogin) {
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-
-        // GUARDIA DE AUDIENCIA: si quien se logueó es profesional/owner del
-        // SaaS, no permitirle entrar al portal del paciente. Hacemos signOut
-        // y redirigimos al login profesional.
-        if (data.user) {
-          const priority = await getUserAccessPriority(data.user.id);
-          if (priority.hasBusinessAccess || priority.isSuperAdmin) {
-            await supabase.auth.signOut();
-            toast({
-              title: "Portal exclusivo para pacientes",
-              description: "Si sos profesional, ingresá desde consultoriodigital.app/auth",
-              variant: "destructive",
-            });
-            setLoading(false);
-            return;
-          }
-        }
-
-        onLoginSuccess();
+        // El useEffect de loadPatient se encarga de verificar si es
+        // profesional/owner y mostrar la pantalla de bloqueo. No duplicamos
+        // la lógica acá para evitar race conditions con onAuthStateChange.
+        // onLoginSuccess ya no es necesario — el cambio de session dispara
+        // el effect automáticamente.
       } else {
         const { error } = await supabase.auth.signUp({
           email,
