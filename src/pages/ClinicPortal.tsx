@@ -650,7 +650,6 @@ const ClinicPortal = () => {
         isDark={isDark}
         setIsDark={setIsDark}
         themeStyle={themeStyle}
-        onLoginSuccess={() => {}}
       />
     );
   }
