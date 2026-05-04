@@ -469,7 +469,7 @@ const SaasAdmin = () => {
   const filteredBusinesses = useMemo(() => {
     return businesses.filter(b => {
       if (searchQuery.trim()) { const q = searchQuery.toLowerCase(); if (!b.name.toLowerCase().includes(q) && !b.ownerEmail?.toLowerCase().includes(q)) return false; }
-      if (planFilter !== "all" && b.planCode !== planFilter) return false;
+       if (planFilter !== "all" && normalizePlanCode(b.planCode) !== planFilter) return false;
       if (usageFilter !== "all") {
         const cl = b.planCode === "custom" ? { maxProfessionals: b.customMaxProfessionals ?? null, maxPatients: b.customMaxPatients ?? null } : undefined;
         const cfg = getPlanConfig(b.planCode, cl);
