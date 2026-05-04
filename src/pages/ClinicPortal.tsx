@@ -106,13 +106,11 @@ const BrandedLogin = ({
   isDark,
   setIsDark,
   themeStyle,
-  onLoginSuccess,
 }: {
   branding: ClinicBranding;
   isDark: boolean;
   setIsDark: (v: boolean) => void;
   themeStyle: Record<string, string>;
-  onLoginSuccess: () => void;
 }) => {
   const { toast } = useToast();
   const [isLogin, setIsLogin] = useState(true);
@@ -133,8 +131,7 @@ const BrandedLogin = ({
         // El useEffect de loadPatient se encarga de verificar si es
         // profesional/owner y mostrar la pantalla de bloqueo. No duplicamos
         // la lógica acá para evitar race conditions con onAuthStateChange.
-        // onLoginSuccess ya no es necesario — el cambio de session dispara
-        // el effect automáticamente.
+        // El cambio de session dispara el effect automáticamente.
       } else {
         const { error } = await supabase.auth.signUp({
           email,
