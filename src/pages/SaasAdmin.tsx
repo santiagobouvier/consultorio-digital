@@ -683,6 +683,9 @@ const SaasAdmin = () => {
                             {business.patientsCount}/{config.maxPatients ?? "∞"} pac
                           </span>
                         </div>
+                        <div className="mt-1.5">
+                          <StatusBadges business={business} worstStatus={worstStatus} />
+                        </div>
                       </div>
 
                       {/* Single action menu */}
