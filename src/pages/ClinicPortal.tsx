@@ -338,6 +338,24 @@ const ClinicPortal = () => {
   const [appointments, setAppointments] = useState<any[]>([]);
   const [payments, setPayments] = useState<any[]>([]);
 
+  const reloadPatientData = useCallback(async (patientId: string, bizId: string) => {
+    const { data: appts } = await supabase
+      .from("appointments")
+      .select("*")
+      .eq("business_id", bizId)
+      .eq("patient_id", patientId)
+      .order("start_at", { ascending: false });
+    setAppointments(appts || []);
+
+    const { data: pays } = await supabase
+      .from("payments")
+      .select("*")
+      .eq("business_id", bizId)
+      .eq("patient_id", patientId)
+      .order("due_date", { ascending: false });
+    setPayments(pays || []);
+  }, []);
+
   // Handle payment success callback
   useEffect(() => {
     const paymentStatus = searchParams.get("payment");
