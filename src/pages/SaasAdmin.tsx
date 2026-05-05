@@ -654,6 +654,10 @@ const SaasAdmin = () => {
                           <span className="shrink-0">
                             {business.patientsCount}/{config.maxPatients ?? "∞"} pac
                           </span>
+                          <span className="text-muted-foreground/40">·</span>
+                          <span className={`shrink-0 ${business.subscriptionStatus === "active" ? "text-success" : business.subscriptionStatus === "expired" ? "text-destructive" : business.subscriptionStatus === "trial" ? "text-amber-500" : ""}`}>
+                            {business.isDemo ? "Demo" : business.subscriptionStatus === "active" ? "Pagando" : business.subscriptionStatus === "trial" ? `Prueba ${business.trialDaysLeft}d` : business.subscriptionStatus === "expired" ? "Expirado" : business.subscriptionStatus === "cancelled" ? "Cancelado" : !business.isActive ? "Inactivo" : "Sin plan"}
+                          </span>
                         </div>
                       </div>
 
