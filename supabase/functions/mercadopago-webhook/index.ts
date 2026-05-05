@@ -128,20 +128,92 @@ serve(async (req) => {
     }
 
     if (type === "payment" && data?.id) {
-      // Fetch payment details
-      const mpResponse = await fetch(`https://api.mercadopago.com/v1/payments/${data.id}`, {
+      // Try fetching with platform token first
+      let mpResponse = await fetch(`https://api.mercadopago.com/v1/payments/${data.id}`, {
         headers: { Authorization: `Bearer ${mercadoPagoToken}` },
       });
 
+      // If platform token fails (403/401), this may be a session payment made with a clinic token.
+      // We'll try to find the right token below after parsing external_reference.
+      let payment: any = null;
+      let usedClinicToken = false;
+
       if (!mpResponse.ok) {
-        console.error("Failed to fetch payment:", mpResponse.status);
-        return new Response("OK", { status: 200, headers: corsHeaders });
+        console.log("Platform token failed for payment, will try clinic token after parsing reference");
+      } else {
+        payment = await mpResponse.json();
       }
 
-      const payment = await mpResponse.json();
-      
-      // If payment is approved and has preapproval_id, update subscription
-      if (payment.status === "approved" && payment.metadata?.preapproval_id) {
+      // If we couldn't fetch with platform token, try to get payment info
+      // from the notification body or try clinic tokens
+      if (!payment) {
+        // Try to fetch using all clinic tokens (fallback)
+        const { data: policies } = await supabase
+          .from("payment_policies")
+          .select("mp_access_token, business_id")
+          .not("mp_access_token", "is", null);
+
+        if (policies) {
+          for (const p of policies) {
+            const tryResp = await fetch(`https://api.mercadopago.com/v1/payments/${data.id}`, {
+              headers: { Authorization: `Bearer ${p.mp_access_token}` },
+            });
+            if (tryResp.ok) {
+              payment = await tryResp.json();
+              usedClinicToken = true;
+              break;
+            }
+          }
+        }
+
+        if (!payment) {
+          console.error("Failed to fetch payment with any token:", data.id);
+          return new Response("OK", { status: 200, headers: corsHeaders });
+        }
+      }
+
+      console.log("Payment status:", payment.status, "external_reference:", payment.external_reference);
+
+      // Parse external_reference to determine payment type
+      const extRef = parseExternalReference(payment.external_reference);
+
+      // SESSION PAYMENT: external_reference has type "session_payment"
+      if (extRef && (extRef as any).type === "session_payment" && payment.status === "approved") {
+        const sessionRef = extRef as {
+          type: string;
+          appointment_id?: string;
+          business_id?: string;
+          patient_id?: string;
+        };
+
+        console.log("Session payment approved:", sessionRef);
+
+        if (sessionRef.appointment_id) {
+          // Update payment record to paid
+          await supabase
+            .from("payments")
+            .update({
+              status: "paid",
+              paid_at: new Date().toISOString(),
+              method: "mercadopago",
+            })
+            .eq("appointment_id", sessionRef.appointment_id)
+            .eq("status", "pending");
+
+          // Update appointment status to confirmed and payment_status to pagado
+          await supabase
+            .from("appointments")
+            .update({
+              status: "confirmed",
+              payment_status: "pagado",
+            })
+            .eq("id", sessionRef.appointment_id);
+
+          console.log(`Session payment confirmed for appointment ${sessionRef.appointment_id}`);
+        }
+      }
+      // SUBSCRIPTION PAYMENT: has preapproval_id in metadata
+      else if (payment.status === "approved" && payment.metadata?.preapproval_id) {
         const { data: subscription } = await supabase
           .from("subscriptions")
           .select("id, business_id, plan_code, billing_period")

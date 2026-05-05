@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -290,6 +290,7 @@ const BrandedLogin = ({
 const ClinicPortal = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
   const { canInstall, install, isInstalled } = usePWAInstall();
 
@@ -310,6 +311,7 @@ const ClinicPortal = () => {
   // listener de auth re-dispara el effect. Sin este flag, volveríamos a
   // chequear el rol, volveríamos a hacer signOut(), y así infinitamente.
   const [blockedProfessional, setBlockedProfessional] = useState(false);
+  const [payingAppointment, setPayingAppointment] = useState<string | null>(null);
 
   // Cargar flag de "bienvenida vista" desde localStorage por slug.
   useEffect(() => {
@@ -335,6 +337,46 @@ const ClinicPortal = () => {
   // Appointments & payments from DB
   const [appointments, setAppointments] = useState<any[]>([]);
   const [payments, setPayments] = useState<any[]>([]);
+
+  const reloadPatientData = useCallback(async (patientId: string, bizId: string) => {
+    const { data: appts } = await supabase
+      .from("appointments")
+      .select("*")
+      .eq("business_id", bizId)
+      .eq("patient_id", patientId)
+      .order("start_at", { ascending: false });
+    setAppointments(appts || []);
+
+    const { data: pays } = await supabase
+      .from("payments")
+      .select("*")
+      .eq("business_id", bizId)
+      .eq("patient_id", patientId)
+      .order("due_date", { ascending: false });
+    setPayments(pays || []);
+  }, []);
+
+  // Handle payment success callback
+  useEffect(() => {
+    const paymentStatus = searchParams.get("payment");
+    const apptId = searchParams.get("appointment_id");
+    if (paymentStatus === "success" && apptId) {
+      toast({
+        title: "¡Pago recibido!",
+        description: "Tu sesión fue confirmada exitosamente.",
+      });
+      // Clean URL
+      searchParams.delete("payment");
+      searchParams.delete("appointment_id");
+      setSearchParams(searchParams, { replace: true });
+      // Reload data after short delay to let webhook process
+      setTimeout(() => {
+        if (patient && branding) {
+          reloadPatientData(patient.id, branding.id);
+        }
+      }, 2000);
+    }
+  }, [searchParams]);
 
   // Load branding
   useEffect(() => {
@@ -507,23 +549,7 @@ const ClinicPortal = () => {
 
       if (data) {
         setPatient(data);
-        // Load appointments
-        const { data: appts } = await supabase
-          .from("appointments")
-          .select("*")
-          .eq("business_id", branding.id)
-          .eq("patient_id", data.id)
-          .order("start_at", { ascending: false });
-        setAppointments(appts || []);
-
-        // Load payments
-        const { data: pays } = await supabase
-          .from("payments")
-          .select("*")
-          .eq("business_id", branding.id)
-          .eq("patient_id", data.id)
-          .order("due_date", { ascending: false });
-        setPayments(pays || []);
+        await reloadPatientData(data.id, branding.id);
       }
       setPatientLoading(false);
       setPatientChecked(true);
@@ -557,6 +583,30 @@ const ClinicPortal = () => {
   const handleInstall = async () => {
     if (canInstall) {
       await install();
+    }
+  };
+
+  const handlePaySession = async (appointmentId: string) => {
+    if (!branding) return;
+    try {
+      setPayingAppointment(appointmentId);
+      const { data, error } = await supabase.functions.invoke("create-session-payment", {
+        body: { appointment_id: appointmentId, business_id: branding.id },
+      });
+      if (error) throw error;
+      if (data?.init_point) {
+        window.location.href = data.init_point;
+      } else {
+        throw new Error("No checkout URL received");
+      }
+    } catch (err: any) {
+      console.error("Payment error:", err);
+      toast({
+        title: "Error",
+        description: "No se pudo iniciar el pago. Intentá de nuevo.",
+        variant: "destructive",
+      });
+      setPayingAppointment(null);
     }
   };
 
@@ -700,6 +750,7 @@ const ClinicPortal = () => {
   const statusBadge = (status: string) => {
     const map: Record<string, { variant: "default" | "secondary" | "destructive" | "outline"; label: string }> = {
       pending: { variant: "secondary", label: "Pendiente" },
+      pending_payment: { variant: "secondary", label: "Pago pendiente" },
       confirmed: { variant: "default", label: "Confirmada" },
       completed: { variant: "outline", label: "Completada" },
       cancelled: { variant: "destructive", label: "Cancelada" },
@@ -860,6 +911,24 @@ const ClinicPortal = () => {
                       {apt.modality === "online" ? <Video className="h-4 w-4 text-primary" /> : <MapPin className="h-4 w-4" />}
                       <span>{apt.modality === "online" ? "Sesión online" : apt.location}</span>
                     </div>
+                  </>
+                )}
+                {(apt.payment_status === "pendiente" || apt.status === "pending_payment") && (
+                  <>
+                    <Separator />
+                    <Button
+                      size="sm"
+                      className="w-full gap-2"
+                      onClick={() => handlePaySession(apt.id)}
+                      disabled={payingAppointment === apt.id}
+                    >
+                      {payingAppointment === apt.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <CreditCard className="h-4 w-4" />
+                      )}
+                      {payingAppointment === apt.id ? "Procesando..." : "Pagar sesión"}
+                    </Button>
                   </>
                 )}
               </CardContent>
