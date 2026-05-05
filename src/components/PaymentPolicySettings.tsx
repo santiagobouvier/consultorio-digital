@@ -61,8 +61,11 @@ export const PaymentPolicySettings = ({ businessId }: Props) => {
   useEffect(() => {
     const code = searchParams.get("code");
     const mpConnectedParam = searchParams.get("mp_connected");
+    const mpCode = searchParams.get("mp_code");
     if (code && mpConnectedParam === "true") {
       handleMPOAuthCallback(code);
+    } else if (mpCode) {
+      handleMPOAuthCallback(mpCode);
     }
   }, [searchParams]);
 
