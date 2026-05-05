@@ -676,6 +676,7 @@ export type Database = {
           full_name: string
           id: string
           is_active: boolean
+          payment_policy_override: Database["public"]["Enums"]["patient_payment_override"]
           private_notes: string | null
           reason_for_consultation: string | null
           updated_at: string
@@ -690,6 +691,7 @@ export type Database = {
           full_name: string
           id?: string
           is_active?: boolean
+          payment_policy_override?: Database["public"]["Enums"]["patient_payment_override"]
           private_notes?: string | null
           reason_for_consultation?: string | null
           updated_at?: string
@@ -704,6 +706,7 @@ export type Database = {
           full_name?: string
           id?: string
           is_active?: boolean
+          payment_policy_override?: Database["public"]["Enums"]["patient_payment_override"]
           private_notes?: string | null
           reason_for_consultation?: string | null
           updated_at?: string
@@ -721,6 +724,57 @@ export type Database = {
             foreignKeyName: "patients_business_id_fkey"
             columns: ["business_id"]
             isOneToOne: false
+            referencedRelation: "businesses_public_branding"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_policies: {
+        Row: {
+          business_id: string
+          created_at: string
+          deposit_percentage: number | null
+          id: string
+          mp_access_token: string | null
+          mp_public_key: string | null
+          policy_type: Database["public"]["Enums"]["payment_policy_type"]
+          session_price: number
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          deposit_percentage?: number | null
+          id?: string
+          mp_access_token?: string | null
+          mp_public_key?: string | null
+          policy_type?: Database["public"]["Enums"]["payment_policy_type"]
+          session_price?: number
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          deposit_percentage?: number | null
+          id?: string
+          mp_access_token?: string | null
+          mp_public_key?: string | null
+          policy_type?: Database["public"]["Enums"]["payment_policy_type"]
+          session_price?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_policies_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: true
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_policies_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: true
             referencedRelation: "businesses_public_branding"
             referencedColumns: ["id"]
           },
@@ -1387,7 +1441,8 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      patient_payment_override: "inherit" | "none" | "optional" | "required"
+      payment_policy_type: "none" | "optional" | "required"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1514,6 +1569,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      patient_payment_override: ["inherit", "none", "optional", "required"],
+      payment_policy_type: ["none", "optional", "required"],
+    },
   },
 } as const
