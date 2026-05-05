@@ -118,6 +118,8 @@ export const PaymentPolicySettings = ({ businessId }: Props) => {
       // Clean URL params
       searchParams.delete("code");
       searchParams.delete("mp_connected");
+      searchParams.delete("mp_code");
+      searchParams.delete("tab");
       setSearchParams(searchParams, { replace: true });
       await loadPolicy();
     } catch (err) {
