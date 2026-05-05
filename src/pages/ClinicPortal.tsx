@@ -750,6 +750,7 @@ const ClinicPortal = () => {
   const statusBadge = (status: string) => {
     const map: Record<string, { variant: "default" | "secondary" | "destructive" | "outline"; label: string }> = {
       pending: { variant: "secondary", label: "Pendiente" },
+      pending_payment: { variant: "secondary", label: "Pago pendiente" },
       confirmed: { variant: "default", label: "Confirmada" },
       completed: { variant: "outline", label: "Completada" },
       cancelled: { variant: "destructive", label: "Cancelada" },
@@ -910,6 +911,24 @@ const ClinicPortal = () => {
                       {apt.modality === "online" ? <Video className="h-4 w-4 text-primary" /> : <MapPin className="h-4 w-4" />}
                       <span>{apt.modality === "online" ? "Sesión online" : apt.location}</span>
                     </div>
+                  </>
+                )}
+                {(apt.payment_status === "pendiente" || apt.status === "pending_payment") && (
+                  <>
+                    <Separator />
+                    <Button
+                      size="sm"
+                      className="w-full gap-2"
+                      onClick={() => handlePaySession(apt.id)}
+                      disabled={payingAppointment === apt.id}
+                    >
+                      {payingAppointment === apt.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <CreditCard className="h-4 w-4" />
+                      )}
+                      {payingAppointment === apt.id ? "Procesando..." : "Pagar sesión"}
+                    </Button>
                   </>
                 )}
               </CardContent>
