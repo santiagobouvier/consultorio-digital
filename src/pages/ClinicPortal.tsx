@@ -586,6 +586,30 @@ const ClinicPortal = () => {
     }
   };
 
+  const handlePaySession = async (appointmentId: string) => {
+    if (!branding) return;
+    try {
+      setPayingAppointment(appointmentId);
+      const { data, error } = await supabase.functions.invoke("create-session-payment", {
+        body: { appointment_id: appointmentId, business_id: branding.id },
+      });
+      if (error) throw error;
+      if (data?.init_point) {
+        window.location.href = data.init_point;
+      } else {
+        throw new Error("No checkout URL received");
+      }
+    } catch (err: any) {
+      console.error("Payment error:", err);
+      toast({
+        title: "Error",
+        description: "No se pudo iniciar el pago. Intentá de nuevo.",
+        variant: "destructive",
+      });
+      setPayingAppointment(null);
+    }
+  };
+
   // Loading state
   if (loading || !authChecked) {
     return (
