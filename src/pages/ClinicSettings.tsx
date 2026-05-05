@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,7 @@ import {
   Bell,
   Building2,
   MessageSquare,
+  CreditCard,
 } from "lucide-react";
 import { NotificationActivationCard } from "@/components/NotificationActivationCard";
 import { useDashboardBranding } from "@/contexts/DashboardBrandingContext";
@@ -31,6 +32,7 @@ import { ProfessionalInviteModal } from "@/components/ProfessionalInviteModal";
 import { PlanUsageCard } from "@/components/PlanUsageCard";
 import LoadingPage from "@/components/LoadingPage";
 import { buildShareUrl } from "@/config/app";
+import { PaymentPolicySettings } from "@/components/PaymentPolicySettings";
 
 const DEFAULT_TEMPLATES = {
   reminder:
@@ -58,12 +60,13 @@ interface TeamMember {
 
 const ClinicSettings = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [settingsId, setSettingsId] = useState<string | null>(null);
   const [businessId, setBusinessId] = useState<string | null>(null);
   const [isOwner, setIsOwner] = useState(false);
-  const [activeTab, setActiveTab] = useState("general");
+  const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "general");
 
   // Form state
   const [clinicName, setClinicName] = useState("");
@@ -382,7 +385,7 @@ const ClinicSettings = () => {
         <PlanUsageCard businessId={businessId} />
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid grid-cols-2 sm:grid-cols-4 w-full h-auto p-1">
+          <TabsList className="grid grid-cols-3 sm:grid-cols-5 w-full h-auto p-1">
             <TabsTrigger value="general" className="gap-1.5 text-xs sm:text-sm py-2">
               <Building2 className="h-3.5 w-3.5" /> General
             </TabsTrigger>
@@ -394,6 +397,9 @@ const ClinicSettings = () => {
             </TabsTrigger>
             <TabsTrigger value="notificaciones" className="gap-1.5 text-xs sm:text-sm py-2">
               <Bell className="h-3.5 w-3.5" /> Avisos
+            </TabsTrigger>
+            <TabsTrigger value="pagos" className="gap-1.5 text-xs sm:text-sm py-2">
+              <CreditCard className="h-3.5 w-3.5" /> Pagos
             </TabsTrigger>
           </TabsList>
 
@@ -609,6 +615,17 @@ const ClinicSettings = () => {
                 <NotificationActivationCard variant="full" />
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* TAB: PAGOS ONLINE */}
+          <TabsContent value="pagos" className="space-y-5 mt-5">
+            {businessId ? (
+              <PaymentPolicySettings businessId={businessId} />
+            ) : (
+              <Card><CardContent className="p-8 text-center text-sm text-muted-foreground">
+                No se encontró un consultorio asociado.
+              </CardContent></Card>
+            )}
           </TabsContent>
         </Tabs>
       </div>

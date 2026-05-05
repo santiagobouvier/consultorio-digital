@@ -85,6 +85,12 @@ const Billing = () => {
     if (searchParams.get("subscription") === "success") {
       toast.success("¡Suscripción activada exitosamente!");
     }
+    // MP OAuth callback — redirect to settings with code
+    if (searchParams.get("mp_connected") === "true" && searchParams.get("code")) {
+      const code = searchParams.get("code");
+      navigate(`/mi-consultorio?tab=pagos&mp_code=${encodeURIComponent(code!)}`, { replace: true });
+      return;
+    }
     fetchBillingData();
   }, []);
 
