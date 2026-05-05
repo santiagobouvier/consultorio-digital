@@ -188,8 +188,23 @@ const SaasAdmin = () => {
       const { data: patientsData } = await supabase.from("patients").select("business_id").eq("is_active", true);
       const patientCountMap = new Map<string, number>();
       patientsData?.forEach(p => { patientCountMap.set(p.business_id, (patientCountMap.get(p.business_id) || 0) + 1); });
+      const { data: subsData } = await supabase.from("subscriptions").select("business_id, status, trial_ends_at");
+      const subsMap = new Map<string, { status: string; trial_ends_at: string | null }>();
+      subsData?.forEach((s: any) => { if (s.business_id) subsMap.set(s.business_id, s); });
       const businessesWithDetails: BusinessWithDetails[] = (businessesData || []).map(b => ({
         ...b, ownerEmail: profileMap.get(b.owner_user_id) || "N/A",
+        ...(() => {
+          const sub = subsMap.get(b.id);
+          if (!sub) return { subscriptionStatus: "none" as const, trialDaysLeft: null };
+          if (sub.status === "active") return { subscriptionStatus: "active" as const, trialDaysLeft: null };
+          if (sub.status === "trial" && sub.trial_ends_at) {
+            const daysLeft = Math.ceil((new Date(sub.trial_ends_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+            if (daysLeft > 0) return { subscriptionStatus: "trial" as const, trialDaysLeft: daysLeft };
+            return { subscriptionStatus: "expired" as const, trialDaysLeft: 0 };
+          }
+          if (sub.status === "cancelled") return { subscriptionStatus: "cancelled" as const, trialDaysLeft: null };
+          return { subscriptionStatus: (sub.status as any) || ("none" as const), trialDaysLeft: null };
+        })(),
         professionalsCount: profCountMap.get(b.id) || 0, patientsCount: patientCountMap.get(b.id) || 0,
         planCode: b.plan_code || "individual", isActive: b.is_active !== false,
         customMaxProfessionals: b.custom_max_professionals, customMaxPatients: b.custom_max_patients,
