@@ -690,7 +690,7 @@ const SaasAdmin = () => {
                 <Table>
                   <TableHeader>
                     <TableRow className="hover:bg-transparent border-0 bg-muted/40">
-                      {["Consultorio", "Dueño", "Plan", "Uso", "Estado", ""].map((h, i) => (
+                      {["Consultorio", "Dueño", "Plan", "Uso", "Suscripción", ""].map((h, i) => (
                         <TableHead key={i} className={`font-semibold text-[11px] uppercase tracking-wider text-muted-foreground ${compactMode ? 'py-2.5' : 'py-3.5'} ${i === 0 ? 'pl-6' : ''} ${i === 5 ? 'pr-6 text-right w-12' : ''} ${i === 4 ? 'text-center' : ''}`}>
                           {h}
                         </TableHead>
