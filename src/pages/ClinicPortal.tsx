@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -290,6 +290,7 @@ const BrandedLogin = ({
 const ClinicPortal = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
   const { canInstall, install, isInstalled } = usePWAInstall();
 
@@ -310,6 +311,7 @@ const ClinicPortal = () => {
   // listener de auth re-dispara el effect. Sin este flag, volveríamos a
   // chequear el rol, volveríamos a hacer signOut(), y así infinitamente.
   const [blockedProfessional, setBlockedProfessional] = useState(false);
+  const [payingAppointment, setPayingAppointment] = useState<string | null>(null);
 
   // Cargar flag de "bienvenida vista" desde localStorage por slug.
   useEffect(() => {
@@ -335,6 +337,28 @@ const ClinicPortal = () => {
   // Appointments & payments from DB
   const [appointments, setAppointments] = useState<any[]>([]);
   const [payments, setPayments] = useState<any[]>([]);
+
+  // Handle payment success callback
+  useEffect(() => {
+    const paymentStatus = searchParams.get("payment");
+    const apptId = searchParams.get("appointment_id");
+    if (paymentStatus === "success" && apptId) {
+      toast({
+        title: "¡Pago recibido!",
+        description: "Tu sesión fue confirmada exitosamente.",
+      });
+      // Clean URL
+      searchParams.delete("payment");
+      searchParams.delete("appointment_id");
+      setSearchParams(searchParams, { replace: true });
+      // Reload data after short delay to let webhook process
+      setTimeout(() => {
+        if (patient && branding) {
+          reloadPatientData(patient.id, branding.id);
+        }
+      }, 2000);
+    }
+  }, [searchParams]);
 
   // Load branding
   useEffect(() => {
