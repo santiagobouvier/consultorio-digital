@@ -88,7 +88,7 @@ const Billing = () => {
     // MP OAuth callback — redirect to settings with code
     if (searchParams.get("mp_connected") === "true" && searchParams.get("code")) {
       const code = searchParams.get("code");
-      navigate(`/settings?tab=pagos&mp_code=${code}`, { replace: true });
+      navigate(`/mi-consultorio?tab=pagos&mp_code=${encodeURIComponent(code!)}`, { replace: true });
       return;
     }
     fetchBillingData();
