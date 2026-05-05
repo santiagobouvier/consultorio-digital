@@ -751,9 +751,15 @@ const SaasAdmin = () => {
                             </div>
                           </TableCell>
                           <TableCell className={`text-center ${compactMode ? 'py-2.5' : 'py-4'}`}>
-                            <Badge variant="secondary" className={`text-[10px] px-2 py-0.5 ${!business.isActive ? "bg-muted text-muted-foreground" : worstStatus === "danger" ? "bg-destructive/10 text-destructive" : worstStatus === "warning" ? "bg-warning/10 text-warning" : "bg-success/10 text-success"}`}>
-                              {!business.isActive ? "Inactivo" : worstStatus === "danger" ? "Límite" : worstStatus === "warning" ? "Cerca" : "OK"}
-                            </Badge>
+                            {(() => {
+                              if (business.isDemo) return <Badge variant="outline" className="text-[10px] px-2 py-0.5 border-amber-500/40 text-amber-500">Demo</Badge>;
+                              if (!business.isActive) return <Badge variant="secondary" className="text-[10px] px-2 py-0.5 bg-muted text-muted-foreground">Inactivo</Badge>;
+                              if (business.subscriptionStatus === "active") return <Badge variant="secondary" className="text-[10px] px-2 py-0.5 bg-success/10 text-success">Pagando</Badge>;
+                              if (business.subscriptionStatus === "trial" && business.trialDaysLeft !== null) return <Badge variant="secondary" className={`text-[10px] px-2 py-0.5 ${business.trialDaysLeft <= 2 ? "bg-destructive/10 text-destructive" : "bg-amber-500/10 text-amber-500"}`}>Prueba · {business.trialDaysLeft}d</Badge>;
+                              if (business.subscriptionStatus === "expired") return <Badge variant="secondary" className="text-[10px] px-2 py-0.5 bg-destructive/10 text-destructive">Expirado</Badge>;
+                              if (business.subscriptionStatus === "cancelled") return <Badge variant="secondary" className="text-[10px] px-2 py-0.5 bg-muted text-muted-foreground">Cancelado</Badge>;
+                              return <Badge variant="secondary" className="text-[10px] px-2 py-0.5 bg-muted text-muted-foreground">Sin plan</Badge>;
+                            })()}
                           </TableCell>
                           <TableCell className={`pr-6 text-right ${compactMode ? 'py-2.5' : 'py-4'}`}>
                             <DropdownMenu>
