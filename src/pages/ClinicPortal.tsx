@@ -549,23 +549,7 @@ const ClinicPortal = () => {
 
       if (data) {
         setPatient(data);
-        // Load appointments
-        const { data: appts } = await supabase
-          .from("appointments")
-          .select("*")
-          .eq("business_id", branding.id)
-          .eq("patient_id", data.id)
-          .order("start_at", { ascending: false });
-        setAppointments(appts || []);
-
-        // Load payments
-        const { data: pays } = await supabase
-          .from("payments")
-          .select("*")
-          .eq("business_id", branding.id)
-          .eq("patient_id", data.id)
-          .order("due_date", { ascending: false });
-        setPayments(pays || []);
+        await reloadPatientData(data.id, branding.id);
       }
       setPatientLoading(false);
       setPatientChecked(true);
