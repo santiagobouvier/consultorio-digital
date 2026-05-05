@@ -65,6 +65,8 @@ interface BusinessWithDetails {
   customSubdomain?: string | null;
   customDomain?: string | null;
   isDemo: boolean;
+  subscriptionStatus: "trial" | "active" | "expired" | "cancelled" | "none";
+  trialDaysLeft: number | null;
 }
 
 interface SaasMetrics {
