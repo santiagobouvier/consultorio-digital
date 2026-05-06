@@ -44,11 +44,11 @@ export async function notifyPatient(params: {
     if (!resolvedUrl || resolvedUrl === "/portal") {
       const { data: biz } = await supabase
         .from("businesses")
-        .select("slug")
+        .select("public_slug")
         .eq("id", data.business_id)
         .maybeSingle();
-      resolvedUrl = biz?.slug
-        ? `${APP_URL}/portal/${biz.slug}`
+      resolvedUrl = biz?.public_slug
+        ? `${APP_URL}/portal/${biz.public_slug}`
         : `${APP_URL}/portal`;
     }
 
