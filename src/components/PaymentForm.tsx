@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { PAYMENT_METHODS, RECURRENCE_TYPES, type RecurrenceType } from "@/lib/payments";
+import { notifyPatient } from "@/lib/push-notifications";
 
 import {
   Dialog,
@@ -142,6 +143,14 @@ export function PaymentForm({
           .insert(paymentData);
 
         if (error) throw error;
+
+        // Notify patient about new payment
+        notifyPatient({
+          patientId,
+          title: "Nuevo pago registrado",
+          body: `Se registró un pago de $${data.amount}.`,
+          url: "/portal",
+        });
 
         toast({
           title: "Éxito",
