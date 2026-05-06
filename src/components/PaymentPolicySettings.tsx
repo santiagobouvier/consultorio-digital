@@ -35,8 +35,6 @@ interface Props {
   businessId: string;
 }
 
-// MP App ID is public (publishable), safe to embed
-const MP_APP_ID = "3934186953498988";
 const MP_REDIRECT_URI = "https://consultoriodigital.app/billing?mp_connected=true";
 
 export const PaymentPolicySettings = ({ businessId }: Props) => {
@@ -52,9 +50,11 @@ export const PaymentPolicySettings = ({ businessId }: Props) => {
   const [chargeType, setChargeType] = useState<"full" | "deposit">("full");
   const [mpConnected, setMpConnected] = useState(false);
   const [policyId, setPolicyId] = useState<string | null>(null);
+  const [mpAppId, setMpAppId] = useState<string | null>(null);
 
   useEffect(() => {
     loadPolicy();
+    loadMpConfig();
   }, [businessId]);
 
   // Handle OAuth callback
@@ -68,6 +68,16 @@ export const PaymentPolicySettings = ({ businessId }: Props) => {
       handleMPOAuthCallback(mpCode);
     }
   }, [searchParams]);
+
+  const loadMpConfig = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke("get-mp-config");
+      if (error) throw error;
+      if (data?.app_id) setMpAppId(data.app_id);
+    } catch (err) {
+      console.error("Error loading MP config:", err);
+    }
+  };
 
   const loadPolicy = async () => {
     try {
@@ -131,12 +141,11 @@ export const PaymentPolicySettings = ({ businessId }: Props) => {
   };
 
   const handleConnectMP = () => {
-    const url = `https://auth.mercadopago.com/authorization?client_id=${MP_APP_ID}&response_type=code&platform_id=mp&redirect_uri=${encodeURIComponent(MP_REDIRECT_URI)}&state=${businessId}`;
-    console.log("[MP OAuth] URL generada:", url);
-    console.log("[MP OAuth] client_id:", MP_APP_ID);
-    console.log("[MP OAuth] redirect_uri:", MP_REDIRECT_URI);
-    console.log("[MP OAuth] response_type: code");
-    console.log("[MP OAuth] state (business_id):", businessId);
+    if (!mpAppId) {
+      toast({ title: "Error", description: "No se pudo obtener la configuración de Mercado Pago.", variant: "destructive" });
+      return;
+    }
+    const url = `https://auth.mercadopago.com/authorization?client_id=${mpAppId}&response_type=code&platform_id=mp&redirect_uri=${encodeURIComponent(MP_REDIRECT_URI)}&state=${businessId}`;
     window.open(url, "_blank");
   };
 
@@ -242,7 +251,7 @@ export const PaymentPolicySettings = ({ businessId }: Props) => {
               <p className="text-sm text-muted-foreground">
                 Conectá tu cuenta de Mercado Pago para recibir pagos de sesiones directamente.
               </p>
-              <Button onClick={handleConnectMP} className="gap-2">
+              <Button onClick={handleConnectMP} disabled={!mpAppId} className="gap-2">
                 <ExternalLink className="h-4 w-4" />
                 Conectar con Mercado Pago
               </Button>
