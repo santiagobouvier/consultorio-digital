@@ -23,6 +23,7 @@ export interface CalendarAppointment {
   professional?: Professional | null;
   paymentColor?: PaymentColor;
   patientPaymentStatus?: PaymentStatus;
+  recurrence_group_id?: string | null;
 }
 
 export type AppointmentStatus = "pending" | "confirmed" | "attended" | "cancelled" | "no_show";
