@@ -88,6 +88,7 @@ export type Database = {
           patient_id: string | null
           payment_status: string | null
           professional_id: string | null
+          recurrence_group_id: string | null
           service_id: string | null
           source: string
           start_at: string
@@ -110,6 +111,7 @@ export type Database = {
           patient_id?: string | null
           payment_status?: string | null
           professional_id?: string | null
+          recurrence_group_id?: string | null
           service_id?: string | null
           source?: string
           start_at: string
@@ -132,6 +134,7 @@ export type Database = {
           patient_id?: string | null
           payment_status?: string | null
           professional_id?: string | null
+          recurrence_group_id?: string | null
           service_id?: string | null
           source?: string
           start_at?: string
