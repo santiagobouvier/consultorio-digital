@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -74,6 +74,9 @@ export function PatientForm({
   const [avatarUrl, setAvatarUrl] = useState<string | null>(initialData?.avatar_url ?? null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Pre-generate a stable UUID for new patients so we can use it in storage paths
+  // before the DB insert. Reset each time the dialog opens for a new patient.
+  const preGeneratedId = useMemo(() => crypto.randomUUID(), [open, patientId]);
 
   const form = useForm<PatientFormData>({
     resolver: zodResolver(patientSchema),
@@ -128,11 +131,12 @@ export function PatientForm({
       if (!user) throw new Error("Usuario no autenticado");
 
       const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-      // Usar businessId del contexto cuando esté disponible (soporta super admin en modo visita
-      // y profesionales no-owners). Fallback a user.id para compatibilidad con flujos antiguos.
+      // Use businessId context when available; fallback to user folder.
+      // For new patients we use the pre-generated ID so the path is deterministic.
+      const fileId = patientId || preGeneratedId;
       const path = businessId
-        ? `business-avatars/${businessId}/${crypto.randomUUID()}.${ext}`
-        : `${user.id}/patient-avatars/${crypto.randomUUID()}.${ext}`;
+        ? `business-avatars/${businessId}/${fileId}.${ext}`
+        : `${user.id}/patient-avatars/${fileId}.${ext}`;
 
       const { error: uploadError } = await supabase.storage
         .from("avatars")
@@ -293,7 +297,7 @@ export function PatientForm({
       } else {
         const { data: newPatient, error } = await supabase
           .from("patients")
-          .insert([{ business_id: business.id, ...cleanData }])
+          .insert([{ id: preGeneratedId, business_id: business.id, ...cleanData }])
           .select("id")
           .single();
 
