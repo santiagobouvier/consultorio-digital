@@ -343,6 +343,17 @@ export function PatientForm({
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!isSubmitting) onOpenChange(v); }}>
       <DialogContent className="max-h-[85vh] overflow-y-auto">
+        {/* File input OUTSIDE the form to prevent any submit propagation */}
+        <input
+          ref={fileInputRef}
+          id="patient-avatar-input"
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleAvatarChange}
+          onClick={(e) => e.stopPropagation()}
+          disabled={uploadingAvatar || isSubmitting}
+        />
         <DialogHeader className="pb-2">
           <DialogTitle className="text-xl font-bold">
             {patientId ? "Editar paciente" : "Nuevo paciente"}
@@ -362,16 +373,6 @@ export function PatientForm({
                 </AvatarFallback>
               </Avatar>
               <div className="flex flex-col gap-2">
-                <input
-                  ref={fileInputRef}
-                  id="patient-avatar-input"
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleAvatarChange}
-                  onClick={(e) => e.stopPropagation()}
-                  disabled={uploadingAvatar || isSubmitting}
-                />
                 <Button
                   type="button"
                   variant="outline"
