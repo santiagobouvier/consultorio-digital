@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -21,6 +22,42 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { useBusinessId } from "@/hooks/use-business-id";
 import { useProfessionals } from "@/hooks/use-professionals";
+import { addDays, addWeeks, addMonths, format } from "date-fns";
+import { es } from "date-fns/locale";
+import { Repeat, CalendarIcon } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+
+type RecurrenceFrequency = "weekly" | "biweekly" | "monthly";
+type RecurrenceEndType = "count" | "date";
+
+function generateRecurrenceDates(
+  startDate: Date,
+  frequency: RecurrenceFrequency,
+  endType: RecurrenceEndType,
+  count: number,
+  endDate: Date | undefined
+): Date[] {
+  const dates: Date[] = [];
+  const maxDates = 52;
+  let current = startDate;
+
+  for (let i = 0; i < maxDates; i++) {
+    if (i > 0) {
+      if (frequency === "weekly") current = addWeeks(startDate, i);
+      else if (frequency === "biweekly") current = addWeeks(startDate, i * 2);
+      else current = addMonths(startDate, i);
+    }
+
+    if (endType === "count" && dates.length >= count) break;
+    if (endType === "date" && endDate && current > endDate) break;
+
+    dates.push(current);
+  }
+
+  return dates;
+}
 
 interface Patient {
   id: string;
@@ -58,6 +95,11 @@ export function CreateAppointmentModal({
   const [modality, setModality] = useState("presencial");
   const [location, setLocation] = useState("");
   const [notes, setNotes] = useState("");
+  const [isRecurrent, setIsRecurrent] = useState(false);
+  const [recurrenceFrequency, setRecurrenceFrequency] = useState<RecurrenceFrequency>("weekly");
+  const [recurrenceEndType, setRecurrenceEndType] = useState<RecurrenceEndType>("count");
+  const [recurrenceCount, setRecurrenceCount] = useState(4);
+  const [recurrenceEndDate, setRecurrenceEndDate] = useState<Date | undefined>();
 
   // Prefill date when modal opens with a prefilledDate
   useEffect(() => {
@@ -106,6 +148,19 @@ export function CreateAppointmentModal({
       console.error("Error fetching patients:", error);
     }
   };
+
+  const recurrenceDates = useMemo(() => {
+    if (!isRecurrent || !date) return [];
+    const startDate = new Date(`${date}T00:00:00`);
+    if (isNaN(startDate.getTime())) return [];
+    return generateRecurrenceDates(
+      startDate,
+      recurrenceFrequency,
+      recurrenceEndType,
+      recurrenceCount,
+      recurrenceEndDate
+    );
+  }, [isRecurrent, date, recurrenceFrequency, recurrenceEndType, recurrenceCount, recurrenceEndDate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -161,20 +216,44 @@ export function CreateAppointmentModal({
       const endAt = new Date(startAt);
       endAt.setMinutes(endAt.getMinutes() + parseInt(duration));
 
-      const { error } = await supabase.from("appointments").insert({
-        business_id: businessId,
-        patient_id: selectedPatientId,
-        professional_id: finalProfessionalId,
-        start_at: startAt.toISOString(),
-        end_at: endAt.toISOString(),
-        modality,
-        location: location.trim() || null,
-        notes: notes.trim() || null,
-        status: "pending",
-        payment_status: "pendiente",
-      } as any);
-
-      if (error) throw error;
+      if (isRecurrent && recurrenceDates.length > 1) {
+        const groupId = crypto.randomUUID();
+        const durationMs = parseInt(duration) * 60 * 1000;
+        const rows = recurrenceDates.map((d) => {
+          const s = new Date(d);
+          s.setHours(startAt.getHours(), startAt.getMinutes(), 0, 0);
+          const e = new Date(s.getTime() + durationMs);
+          return {
+            business_id: businessId,
+            patient_id: selectedPatientId,
+            professional_id: finalProfessionalId,
+            start_at: s.toISOString(),
+            end_at: e.toISOString(),
+            modality,
+            location: location.trim() || null,
+            notes: notes.trim() || null,
+            status: "pending" as const,
+            payment_status: "pendiente",
+            recurrence_group_id: groupId,
+          };
+        });
+        const { error } = await supabase.from("appointments").insert(rows as any);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("appointments").insert({
+          business_id: businessId,
+          patient_id: selectedPatientId,
+          professional_id: finalProfessionalId,
+          start_at: startAt.toISOString(),
+          end_at: endAt.toISOString(),
+          modality,
+          location: location.trim() || null,
+          notes: notes.trim() || null,
+          status: "pending",
+          payment_status: "pendiente",
+        } as any);
+        if (error) throw error;
+      }
 
       // Best-effort confirmation email (does not block flow)
       try {
@@ -212,7 +291,9 @@ export function CreateAppointmentModal({
 
       toast({
         title: "Éxito",
-        description: "Cita creada correctamente",
+        description: isRecurrent && recurrenceDates.length > 1
+          ? `Se crearon ${recurrenceDates.length} citas recurrentes`
+          : "Cita creada correctamente",
       });
 
       setDate("");
@@ -221,6 +302,11 @@ export function CreateAppointmentModal({
       setModality("presencial");
       setLocation("");
       setNotes("");
+      setIsRecurrent(false);
+      setRecurrenceFrequency("weekly");
+      setRecurrenceEndType("count");
+      setRecurrenceCount(4);
+      setRecurrenceEndDate(undefined);
       setSelectedPatientId(patientId || "");
 
       onOpenChange(false);
@@ -413,6 +499,117 @@ export function CreateAppointmentModal({
                 className="text-base rounded-xl resize-none"
               />
             </div>
+
+            {/* Recurrencia */}
+            <div className="space-y-3 p-4 border rounded-xl bg-muted/30">
+              <div className="flex items-center gap-3">
+                <Checkbox
+                  id="recurrent"
+                  checked={isRecurrent}
+                  onCheckedChange={(v) => setIsRecurrent(v === true)}
+                />
+                <Label htmlFor="recurrent" className="text-sm font-semibold flex items-center gap-2 cursor-pointer">
+                  <Repeat className="h-4 w-4" />
+                  Turno recurrente
+                </Label>
+              </div>
+
+              {isRecurrent && (
+                <div className="space-y-4 pt-2">
+                  {/* Frecuencia */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-semibold">Frecuencia</Label>
+                    <Select value={recurrenceFrequency} onValueChange={(v) => setRecurrenceFrequency(v as RecurrenceFrequency)}>
+                      <SelectTrigger className="h-12 text-base rounded-xl">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="weekly">Semanal</SelectItem>
+                        <SelectItem value="biweekly">Quincenal</SelectItem>
+                        <SelectItem value="monthly">Mensual</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Fin de recurrencia */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-semibold">Termina</Label>
+                    <Select value={recurrenceEndType} onValueChange={(v) => setRecurrenceEndType(v as RecurrenceEndType)}>
+                      <SelectTrigger className="h-12 text-base rounded-xl">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="count">Después de X sesiones</SelectItem>
+                        <SelectItem value="date">En una fecha límite</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {recurrenceEndType === "count" ? (
+                    <div className="space-y-2">
+                      <Label className="text-sm font-semibold">Cantidad de sesiones</Label>
+                      <Input
+                        type="number"
+                        min={2}
+                        max={52}
+                        value={recurrenceCount}
+                        onChange={(e) => setRecurrenceCount(Math.min(52, Math.max(2, parseInt(e.target.value) || 2)))}
+                        className="h-12 text-base rounded-xl"
+                      />
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <Label className="text-sm font-semibold">Fecha límite</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-full h-12 justify-start text-left text-base rounded-xl",
+                              !recurrenceEndDate && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {recurrenceEndDate
+                              ? format(recurrenceEndDate, "PPP", { locale: es })
+                              : "Elegir fecha"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={recurrenceEndDate}
+                            onSelect={setRecurrenceEndDate}
+                            disabled={(d) => d < new Date()}
+                            locale={es}
+                            className="p-3 pointer-events-auto"
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  )}
+
+                  {/* Preview de fechas */}
+                  {recurrenceDates.length > 0 && (
+                    <div className="space-y-2">
+                      <Label className="text-sm font-semibold">
+                        Vista previa ({recurrenceDates.length} sesiones)
+                      </Label>
+                      <div className="max-h-40 overflow-y-auto space-y-1 rounded-xl border p-3 bg-background">
+                        {recurrenceDates.map((d, i) => (
+                          <div key={i} className="flex items-center gap-2 text-sm">
+                            <span className="text-muted-foreground w-6 text-right">{i + 1}.</span>
+                            <span className="capitalize">
+                              {format(d, "EEEE d 'de' MMMM", { locale: es })}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="flex flex-col-reverse sm:flex-row gap-3 pt-2">
@@ -430,7 +627,11 @@ export function CreateAppointmentModal({
               disabled={loading}
               className="h-12 rounded-xl text-base font-semibold flex-1"
             >
-              {loading ? "Creando..." : "Crear cita"}
+              {loading
+                ? "Creando..."
+                : isRecurrent && recurrenceDates.length > 1
+                  ? `Crear ${recurrenceDates.length} citas`
+                  : "Crear cita"}
             </Button>
           </div>
         </form>
