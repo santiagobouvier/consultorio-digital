@@ -25,6 +25,7 @@ import { ArrowLeft, Check, X, MessageCircle } from "lucide-react";
 import LoadingPage from "@/components/LoadingPage";
 import { useBusinessId } from "@/hooks/use-business-id";
 import { ListPagination, usePagination, ITEMS_PER_PAGE } from "@/components/ListPagination";
+import { notifyPatient } from "@/lib/push-notifications";
 
 const AppointmentRequests = () => {
   const navigate = useNavigate();
@@ -128,6 +129,18 @@ const AppointmentRequests = () => {
         .eq("id", request.id);
 
       if (updateError) throw updateError;
+
+      // Notify patient about accepted appointment
+      if (patientId) {
+        const fmtDate = new Date(request.requested_datetime).toLocaleDateString("es-UY", { day: "2-digit", month: "long" });
+        const fmtTime = new Date(request.requested_datetime).toLocaleTimeString("es-UY", { hour: "2-digit", minute: "2-digit" });
+        notifyPatient({
+          patientId,
+          title: "¡Tu cita fue confirmada!",
+          body: `Tu solicitud para el ${fmtDate} a las ${fmtTime} fue aceptada.`,
+          url: "/portal",
+        });
+      }
 
       toast({
         title: "Cita creada",
