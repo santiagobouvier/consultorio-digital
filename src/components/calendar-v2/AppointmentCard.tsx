@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { format } from "date-fns";
 import { CalendarAppointment, APPOINTMENT_STATUS_MAP, getPaymentColorInfo } from "./types";
-import { Video, MapPin } from "lucide-react";
+import { Video, MapPin, Repeat } from "lucide-react";
 
 const getInitials = (name?: string | null) => {
   if (!name) return "?";
@@ -30,6 +30,8 @@ export const AppointmentCard = ({
 
   const formatTime = (datetime: string) => format(new Date(datetime), "HH:mm");
 
+  const isRecurrent = !!(appointment as any).recurrence_group_id;
+
   if (compact) {
     return (
       <button
@@ -54,6 +56,9 @@ export const AppointmentCard = ({
             {formatTime(appointment.start_at)}
           </span>
           <div className="flex items-center gap-1 ml-auto">
+            {isRecurrent && (
+              <Repeat className="h-3 w-3 text-muted-foreground shrink-0" />
+            )}
             {paymentInfo && (
               <span className={cn("w-2 h-2 rounded-full shrink-0", paymentInfo.className)} />
             )}
@@ -152,6 +157,9 @@ export const AppointmentCard = ({
 
         {/* Status badges */}
         <div className="flex flex-col items-end gap-1.5 shrink-0">
+          {isRecurrent && (
+            <Repeat className="h-3.5 w-3.5 text-muted-foreground" />
+          )}
           <Badge
             variant={statusInfo?.variant || "outline"}
             className="rounded-full"
