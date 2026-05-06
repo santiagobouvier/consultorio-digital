@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -356,19 +357,22 @@ export function PatientForm({
   const initials = (form.watch("full_name") || "").trim().split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
 
   return (
+    <>
+    {createPortal(
+      <input
+        ref={fileInputRef}
+        id="patient-avatar-input"
+        type="file"
+        accept="image/*"
+        style={{ position: "fixed", top: -9999, left: -9999, opacity: 0, pointerEvents: "none" }}
+        onChange={handleAvatarChange}
+        onClick={(e) => e.stopPropagation()}
+        disabled={uploadingAvatar || isSubmitting}
+      />,
+      document.body
+    )}
     <Dialog open={open} onOpenChange={(v) => { if (!isSubmitting) onOpenChange(v); }}>
       <DialogContent className="max-h-[85vh] overflow-y-auto">
-        {/* File input OUTSIDE the form to prevent any submit propagation */}
-        <input
-          ref={fileInputRef}
-          id="patient-avatar-input"
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={handleAvatarChange}
-          onClick={(e) => e.stopPropagation()}
-          disabled={uploadingAvatar || isSubmitting}
-        />
         <DialogHeader className="pb-2">
           <DialogTitle className="text-xl font-bold">
             {patientId ? "Editar paciente" : "Nuevo paciente"}
@@ -572,5 +576,6 @@ export function PatientForm({
         </Form>
       </DialogContent>
     </Dialog>
+    </>
   );
 }
