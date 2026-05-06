@@ -132,6 +132,11 @@ export const PaymentPolicySettings = ({ businessId }: Props) => {
 
   const handleConnectMP = () => {
     const url = `https://auth.mercadopago.com/authorization?client_id=${MP_APP_ID}&response_type=code&platform_id=mp&redirect_uri=${encodeURIComponent(MP_REDIRECT_URI)}&state=${businessId}`;
+    console.log("[MP OAuth] URL generada:", url);
+    console.log("[MP OAuth] client_id:", MP_APP_ID);
+    console.log("[MP OAuth] redirect_uri:", MP_REDIRECT_URI);
+    console.log("[MP OAuth] response_type: code");
+    console.log("[MP OAuth] state (business_id):", businessId);
     window.open(url, "_blank");
   };
 
