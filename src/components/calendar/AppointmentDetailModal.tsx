@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
   DialogContent,
@@ -11,7 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { User, Calendar, MapPin, Video, Clock, CreditCard, MessageCircle, AlertCircle, BellRing } from "lucide-react";
+import { User, Calendar, MapPin, Video, Clock, CreditCard, MessageCircle, AlertCircle, BellRing, Repeat, X } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 import { PaymentForm } from "@/components/PaymentForm";
 import { ReminderModal } from "@/components/ReminderModal";
 import { calculatePaymentStatus, type PaymentStatus } from "@/lib/payments";
@@ -26,6 +28,7 @@ interface Appointment {
   payment_status: string | null;
   patient_id: string | null;
   service_id: string | null;
+  recurrence_group_id?: string | null;
   patients: { full_name: string; whatsapp_phone?: string | null; email?: string | null; avatar_url?: string | null } | null;
   services: { name: string } | null;
   paymentColor?: string;
@@ -50,6 +53,7 @@ export const AppointmentDetailModal = ({
   const navigate = useNavigate();
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [showReminderModal, setShowReminderModal] = useState(false);
+  const [cancellingRecurrence, setCancellingRecurrence] = useState(false);
 
   if (!appointment) return null;
 
@@ -91,6 +95,45 @@ export const AppointmentDetailModal = ({
   const handlePaymentSuccess = () => {
     setShowPaymentForm(false);
     onPaymentRegistered?.();
+  };
+
+  const isRecurrent = !!appointment.recurrence_group_id;
+
+  const handleCancelSingle = async () => {
+    try {
+      const { error } = await supabase
+        .from("appointments")
+        .update({ status: "cancelled" })
+        .eq("id", appointment.id);
+      if (error) throw error;
+      toast({ title: "Turno cancelado" });
+      onPaymentRegistered?.();
+      onClose();
+    } catch {
+      toast({ title: "Error", description: "No se pudo cancelar", variant: "destructive" });
+    }
+  };
+
+  const handleCancelSeries = async () => {
+    if (!appointment.recurrence_group_id) return;
+    setCancellingRecurrence(true);
+    try {
+      const now = new Date().toISOString();
+      const { error } = await supabase
+        .from("appointments")
+        .update({ status: "cancelled" })
+        .eq("recurrence_group_id", appointment.recurrence_group_id)
+        .gte("start_at", now)
+        .in("status", ["pending", "confirmed"]);
+      if (error) throw error;
+      toast({ title: "Serie cancelada", description: "Se cancelaron todos los turnos futuros de la serie" });
+      onPaymentRegistered?.();
+      onClose();
+    } catch {
+      toast({ title: "Error", description: "No se pudo cancelar la serie", variant: "destructive" });
+    } finally {
+      setCancellingRecurrence(false);
+    }
   };
 
   const showPaymentReminder = appointment.paymentColor === "orange" || appointment.paymentColor === "red";
@@ -184,6 +227,14 @@ export const AppointmentDetailModal = ({
               </div>
             </div>
 
+            {/* Recurrence badge */}
+            {isRecurrent && (
+              <div className="flex items-center gap-2 p-3 border rounded-xl bg-primary/5">
+                <Repeat className="h-4 w-4 text-primary" />
+                <span className="text-sm font-medium text-foreground">Turno recurrente (parte de una serie)</span>
+              </div>
+            )}
+
             {/* Actions */}
             <div className="space-y-2 pt-2">
               <div className="flex flex-col sm:flex-row gap-2">
@@ -219,6 +270,29 @@ export const AppointmentDetailModal = ({
                   </Button>
                 )}
               </div>
+
+              {/* Recurrence cancel actions */}
+              {isRecurrent && appointment.status !== "cancelled" && (
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={handleCancelSingle}
+                    className="flex-1 rounded-xl text-destructive border-destructive/30 hover:bg-destructive/10"
+                  >
+                    <X className="h-4 w-4 mr-2" />
+                    Cancelar este turno
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleCancelSeries}
+                    disabled={cancellingRecurrence}
+                    className="flex-1 rounded-xl text-destructive border-destructive/30 hover:bg-destructive/10"
+                  >
+                    <Repeat className="h-4 w-4 mr-2" />
+                    {cancellingRecurrence ? "Cancelando..." : "Cancelar toda la serie"}
+                  </Button>
+                </div>
+              )}
 
               {showPaymentReminder && appointment.patient_id && (
                 <Button
