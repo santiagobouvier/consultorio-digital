@@ -132,7 +132,7 @@ export const PaymentPolicySettings = ({ businessId }: Props) => {
 
   const handleConnectMP = () => {
     const url = `https://auth.mercadopago.com/authorization?client_id=${MP_APP_ID}&response_type=code&platform_id=mp&redirect_uri=${encodeURIComponent(MP_REDIRECT_URI)}&state=${businessId}`;
-    window.location.href = url;
+    window.open(url, "_blank");
   };
 
   const handleDisconnect = async () => {
