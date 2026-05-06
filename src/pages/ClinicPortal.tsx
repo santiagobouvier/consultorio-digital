@@ -11,6 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { usePWAInstall } from "@/hooks/use-pwa-install";
 import { PortalWelcomeInstall } from "@/components/portal/PortalWelcomeInstall";
+import { NotificationActivationCard } from "@/components/NotificationActivationCard";
 import {
   User, Calendar, CreditCard, Clock, MapPin, Video,
   Phone, Mail, Building2, FileText, LayoutDashboard,
@@ -876,6 +877,9 @@ const ClinicPortal = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* Push notifications CTA */}
+      <NotificationActivationCard variant="full" />
     </div>
   );
 

@@ -17,6 +17,7 @@ import { toast } from "@/hooks/use-toast";
 import { PaymentForm } from "@/components/PaymentForm";
 import { ReminderModal } from "@/components/ReminderModal";
 import { calculatePaymentStatus, type PaymentStatus } from "@/lib/payments";
+import { notifyPatient } from "@/lib/push-notifications";
 
 interface Appointment {
   id: string;
@@ -106,6 +107,14 @@ export const AppointmentDetailModal = ({
         .update({ status: "cancelled" })
         .eq("id", appointment.id);
       if (error) throw error;
+      if (appointment.patient_id) {
+        notifyPatient({
+          patientId: appointment.patient_id,
+          title: "Cita cancelada",
+          body: `Tu cita del ${format(new Date(appointment.start_at), "d 'de' MMMM", { locale: es })} fue cancelada.`,
+          url: "/portal",
+        });
+      }
       toast({ title: "Turno cancelado" });
       onPaymentRegistered?.();
       onClose();
@@ -126,6 +135,14 @@ export const AppointmentDetailModal = ({
         .gte("start_at", now)
         .in("status", ["pending", "confirmed"]);
       if (error) throw error;
+      if (appointment.patient_id) {
+        notifyPatient({
+          patientId: appointment.patient_id,
+          title: "Serie de citas cancelada",
+          body: "Se cancelaron tus próximas citas de la serie.",
+          url: "/portal",
+        });
+      }
       toast({ title: "Serie cancelada", description: "Se cancelaron todos los turnos futuros de la serie" });
       onPaymentRegistered?.();
       onClose();

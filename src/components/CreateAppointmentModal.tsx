@@ -22,6 +22,7 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { useBusinessId } from "@/hooks/use-business-id";
 import { useProfessionals } from "@/hooks/use-professionals";
+import { notifyPatient } from "@/lib/push-notifications";
 import { addDays, addWeeks, addMonths, format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Repeat, CalendarIcon } from "lucide-react";
@@ -288,6 +289,16 @@ export function CreateAppointmentModal({
       } catch (mailErr) {
         console.warn("Confirmation email failed:", mailErr);
       }
+
+      // Best-effort push notification to patient
+      const fmtPushDate = startAt.toLocaleDateString("es-UY", { day: "2-digit", month: "long" });
+      const fmtPushTime = startAt.toLocaleTimeString("es-UY", { hour: "2-digit", minute: "2-digit" });
+      notifyPatient({
+        patientId: selectedPatientId,
+        title: "Nueva cita agendada",
+        body: `Tenés una cita el ${fmtPushDate} a las ${fmtPushTime}.`,
+        url: "/portal",
+      });
 
       toast({
         title: "Éxito",

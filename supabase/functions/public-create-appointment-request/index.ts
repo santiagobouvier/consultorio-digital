@@ -149,6 +149,26 @@ serve(async (req) => {
       // Don't fail the request if slot update fails, appointment is already created
     }
 
+    // Best-effort push notification to business owner
+    try {
+      const pushUrl = `${supabaseUrl}/functions/v1/send-push-notification`;
+      await fetch(pushUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${serviceRoleKey}`,
+        },
+        body: JSON.stringify({
+          user_id: business.owner_user_id,
+          title: "Nueva solicitud de turno",
+          body: `${name} solicitó un turno para el ${slot.date}.`,
+          url: "/solicitudes",
+        }),
+      });
+    } catch (pushErr) {
+      console.warn("Push notification to owner failed:", pushErr);
+    }
+
     return new Response(
       JSON.stringify({ success: true }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
