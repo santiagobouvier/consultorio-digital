@@ -20,7 +20,6 @@ import {
   Smartphone, LogOut, Eye, EyeOff, Loader2
 } from "lucide-react";
 import { formatCurrency } from "@/lib/payments";
-import { getUserAccessPriority } from "@/lib/post-login-routing";
 
 // ---- Theme generator ----
 const generateThemeVars = (primaryColor: string, isDark: boolean) => {
@@ -303,15 +302,9 @@ const ClinicPortal = () => {
   const [patient, setPatient] = useState<PatientData | null>(null);
   const [patientLoading, setPatientLoading] = useState(false);
   const [patientChecked, setPatientChecked] = useState(false);
-  const [wrongAudience, setWrongAudience] = useState(false);
   const [tab, setTab] = useState("resumen");
   const [isDark, setIsDark] = useState(false);
   const [welcomeSeen, setWelcomeSeen] = useState<boolean>(true);
-  // Flag local para evitar el loop infinito: una vez que detectamos que el
-  // usuario logueado es profesional/super admin y hacemos signOut(), el
-  // listener de auth re-dispara el effect. Sin este flag, volveríamos a
-  // chequear el rol, volveríamos a hacer signOut(), y así infinitamente.
-  const [blockedProfessional, setBlockedProfessional] = useState(false);
   const [payingAppointment, setPayingAppointment] = useState<string | null>(null);
 
   // Cargar flag de "bienvenida vista" desde localStorage por slug.
@@ -497,14 +490,6 @@ const ClinicPortal = () => {
   // Load patient data when session + branding available
   useEffect(() => {
     if (!authChecked) return;
-    // Si ya bloqueamos a un profesional/super admin, no re-ejecutar la
-    // verificación. El signOut() previo dispara onAuthStateChange y este
-    // effect, lo que causaría un loop infinito de signOuts.
-    if (blockedProfessional) {
-      setPatientLoading(false);
-      setPatientChecked(true);
-      return;
-    }
     if (!session?.user?.id || !branding?.id) {
       // No session or branding yet → nothing to load, mark as checked only when
       // we know there's no session to query for.
@@ -517,27 +502,6 @@ const ClinicPortal = () => {
     const loadPatient = async () => {
       setPatientLoading(true);
       setPatientChecked(false);
-
-      // GUARDIA DE AUDIENCIA: si la sesión activa pertenece a un
-      // profesional/owner/super admin, no permitirle entrar al portal del
-      // paciente. Lo deslogueamos y mostramos un mensaje con link al login
-      // profesional. Aplica tanto al login fresh como a sesiones persistidas.
-      try {
-        const priority = await getUserAccessPriority(session.user.id);
-        if (priority.hasBusinessAccess || priority.isSuperAdmin) {
-          // Setear el flag ANTES del signOut para que el re-render que dispara
-          // onAuthStateChange no vuelva a entrar en esta lógica.
-          setBlockedProfessional(true);
-          setWrongAudience(true);
-          await supabase.auth.signOut();
-          setSession(null);
-          setPatientLoading(false);
-          setPatientChecked(true);
-          return;
-        }
-      } catch {
-        /* si falla, seguimos al chequeo de patients normal */
-      }
 
       const { data } = await supabase
         .from("patients")
@@ -556,7 +520,7 @@ const ClinicPortal = () => {
       setPatientChecked(true);
     };
     loadPatient();
-  }, [session?.user?.id, branding?.id, authChecked, blockedProfessional]);
+  }, [session?.user?.id, branding?.id, authChecked]);
 
   // Theme
   const themeVars = useMemo(() => {
@@ -577,8 +541,8 @@ const ClinicPortal = () => {
     await supabase.auth.signOut();
     setSession(null);
     setPatient(null);
-    setPatientChecked(false);
     setPatientLoading(false);
+    setPatientChecked(false);
   };
 
   const handleInstall = async () => {
@@ -638,48 +602,6 @@ const ClinicPortal = () => {
 
   // Not logged in → branded login
   if (!session) {
-    // Si quien intentó entrar era profesional/super admin, mostramos un
-    // bloqueo claro con link al login profesional en lugar del login normal.
-    if (wrongAudience) {
-      return (
-        <div className="min-h-screen" style={themeStyle as any}>
-          <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-4">
-            <Card className="max-w-md w-full">
-              <CardContent className="pt-8 pb-6 text-center space-y-4">
-                <div className="mx-auto h-14 w-14 rounded-full bg-destructive/10 flex items-center justify-center">
-                  <AlertCircle className="h-7 w-7 text-destructive" />
-                </div>
-                <div className="space-y-2">
-                  <h2 className="text-xl font-bold">Portal exclusivo para pacientes</h2>
-                  <p className="text-sm text-muted-foreground">
-                    Este portal es solo para pacientes de {branding.displayName}. Si sos profesional, ingresá desde Consultorio Digital.
-                  </p>
-                </div>
-                <div className="flex flex-col sm:flex-row gap-2 justify-center">
-                  <Button
-                    onClick={() => {
-                      window.location.href = "https://consultoriodigital.app/auth";
-                    }}
-                  >
-                    Ir al login profesional
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setWrongAudience(false);
-                      setBlockedProfessional(false);
-                    }}
-                  >
-                    Volver al portal
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      );
-    }
-
     // Pantalla de bienvenida + instalación PWA (solo la primera vez por slug).
     if (!welcomeSeen) {
       return (
@@ -724,7 +646,7 @@ const ClinicPortal = () => {
               <AlertCircle className="h-12 w-12 text-destructive mx-auto" />
               <h2 className="text-xl font-bold">Acceso no disponible</h2>
               <p className="text-sm text-muted-foreground">
-                Tu cuenta no está vinculada como paciente de {branding.displayName}. Contactá al consultorio para que te agreguen.
+                No tenés una ficha de paciente en este consultorio. Contactá a {branding.displayName} para que te agreguen.
               </p>
               <div className="flex gap-2 justify-center">
                 <Button variant="outline" onClick={handleLogout}>
