@@ -201,6 +201,7 @@ const CalendarV2 = () => {
           patient_id,
           service_id,
           professional_id,
+          recurrence_group_id,
           patients (full_name, whatsapp_phone, email, avatar_url),
           services (name)
         `)

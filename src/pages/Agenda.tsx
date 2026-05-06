@@ -181,6 +181,7 @@ const Agenda = () => {
           patient_id,
           service_id,
           professional_id,
+          recurrence_group_id,
           patients (full_name),
           services (name)
         `)
