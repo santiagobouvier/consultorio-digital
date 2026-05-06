@@ -138,11 +138,22 @@ export function PatientForm({
         ? `business-avatars/${businessId}/${fileId}.${ext}`
         : `${user.id}/patient-avatars/${fileId}.${ext}`;
 
-      const { error: uploadError } = await supabase.storage
+      // DEBUG: mostrar info de upload
+      toast({
+        title: "📋 Debug Upload",
+        description: `UUID: ${fileId} | businessId: ${businessId ?? "null"} | path: ${path}`,
+      });
+
+      const { error: uploadError, data: uploadData } = await supabase.storage
         .from("avatars")
         .upload(path, file, { cacheControl: "3600", upsert: false });
 
       if (uploadError) {
+        toast({
+          title: "❌ Error Storage",
+          description: `Code: ${(uploadError as any).statusCode ?? "?"} | ${uploadError.message}`,
+          variant: "destructive",
+        });
         throw uploadError;
       }
 
