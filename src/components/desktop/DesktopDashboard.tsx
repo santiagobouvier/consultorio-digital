@@ -1,8 +1,7 @@
 // Desktop Dashboard - v2
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useBusinessId } from "@/hooks/use-business-id";
 import { useProfessionals } from "@/hooks/use-professionals";
 import { calculatePaymentStatus, formatCurrency } from "@/lib/payments";
 import { format, startOfMonth, endOfMonth, addDays, isToday, isTomorrow } from "date-fns";
@@ -71,14 +70,17 @@ interface ActiveAgendaEntry {
   isUnassigned?: boolean;
 }
 
-export const DesktopDashboard = () => {
+interface DesktopDashboardProps {
+  businessId: string;
+  userName: string;
+}
+
+export const DesktopDashboard = ({ businessId, userName: propUserName }: DesktopDashboardProps) => {
   const navigate = useNavigate();
-  const { businessId, loading: businessLoading } = useBusinessId();
   const { professionals, loading: professionalsLoading, isOwner } = useProfessionals(businessId);
 
   // Data state
   const [businessName, setBusinessName] = useState("");
-  const [userName, setUserName] = useState("");
   const [isDemo, setIsDemo] = useState(false);
   const [selectedProfessionalId, setSelectedProfessionalId] = useState<string>("all");
   
@@ -96,14 +98,13 @@ export const DesktopDashboard = () => {
   
   const [dataLoading, setDataLoading] = useState(true);
 
+  const userName = propUserName;
+
   const fetchDashboardData = useCallback(async () => {
     if (!businessId) return;
 
     try {
       setDataLoading(true);
-
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
 
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -115,7 +116,6 @@ export const DesktopDashboard = () => {
 
       // ── Parallelizar todas las consultas independientes ──
       const [
-        profileRes,
         businessRes,
         todayApptsRes,
         upcomingApptsRes,
@@ -123,7 +123,6 @@ export const DesktopDashboard = () => {
         paidPaymentsRes,
         pendingPaymentsRes,
       ] = await Promise.all([
-        supabase.from("profiles").select("name").eq("id", user.id).single(),
         supabase.from("businesses").select("name, is_demo").eq("id", businessId).single(),
         supabase.from("appointments").select(`id, start_at, status, patient_id, professional_id, patients (full_name), services (name)`, { count: 'exact' }).eq("business_id", businessId).gte("start_at", today.toISOString()).lt("start_at", tomorrow.toISOString()).not("status", "in", '("cancelled")').order("start_at", { ascending: true }),
         supabase.from("appointments").select(`id, start_at, status, patient_id, professional_id, patients (full_name), services (name)`).eq("business_id", businessId).gte("start_at", new Date().toISOString()).lt("start_at", dayAfterTomorrow.toISOString()).not("status", "in", '("cancelled","attended")').order("start_at", { ascending: true }).limit(5),
@@ -133,7 +132,6 @@ export const DesktopDashboard = () => {
       ]);
 
       // Process results
-      if (profileRes.data) setUserName(profileRes.data.name);
       if (businessRes.data) {
         setBusinessName(businessRes.data.name);
         setIsDemo(businessRes.data.is_demo || false);
@@ -251,7 +249,7 @@ export const DesktopDashboard = () => {
     return "Buenas noches";
   };
 
-  const loading = businessLoading || professionalsLoading;
+  const loading = professionalsLoading;
 
   if (loading || dataLoading) {
     return (
