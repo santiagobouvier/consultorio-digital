@@ -15,6 +15,7 @@ interface SubscriptionGuardProps {
 }
 
 const activationCache = new Map<string, boolean>(); // businessId → ya verificado
+let subscriptionVerified = false; // módulo-level: si ya pasó la verificación, no re-check
 const POLL_INTERVAL = 3000; // 3 seconds
 const MAX_POLL_TIME = 30000; // 30 seconds
 
@@ -22,6 +23,7 @@ const MAX_POLL_TIME = 30000; // 30 seconds
 supabase.auth.onAuthStateChange((event) => {
   if (event === "SIGNED_OUT") {
     activationCache.clear();
+    subscriptionVerified = false;
   }
 });
 
@@ -47,6 +49,15 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
   const { status, loading } = useSubscriptionStatus(businessId);
   const [reactivating, setReactivating] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
+
+  // Cuando la verificación completa exitosamente, marcar como verificado a nivel módulo
+  useEffect(() => {
+    if (!loading && !businessLoading && authReady && !subscriptionVerified) {
+      if (isSuperAdmin || !businessId || status === "active" || status === "trial") {
+        subscriptionVerified = true;
+      }
+    }
+  }, [loading, businessLoading, authReady, isSuperAdmin, businessId, status]);
 
   // When status resolves to "none" with a businessId, give the DB trigger time to create the subscription
   useEffect(() => {
@@ -233,6 +244,19 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
 
     return () => { cancelled = true; };
   }, [businessId, status, loading, businessLoading, isSuperAdmin]);
+
+  // Si ya verificamos la suscripción en esta sesión, saltear todo y renderizar directo
+  if (subscriptionVerified && !verifyingPayment && !paymentTimedOut && !showCelebration) {
+    // Aún necesitamos esperar auth/business en la primera carga
+    if (authReady && !businessLoading) {
+      // Re-check: si el status cambió a bloqueado, invalidar cache
+      if (!loading && businessId && status !== "active" && status !== "trial" && status !== "none" && !isSuperAdmin) {
+        subscriptionVerified = false;
+      } else {
+        return <>{children}</>;
+      }
+    }
+  }
 
   if (!authReady || businessLoading) return <LoadingPage />;
   if (isSuperAdmin) return <>{children}</>;
