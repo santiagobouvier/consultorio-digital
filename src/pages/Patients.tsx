@@ -17,7 +17,7 @@ import { PatientForm } from "@/components/PatientForm";
 import { Search, Plus, ChevronRight, Smartphone, Users, UserCheck, UserX, ShieldCheck, Download, User as UserIcon } from "lucide-react";
 import { exportCSV, todayDateString } from "@/lib/csv-export";
 import { useBusinessId } from "@/hooks/use-business-id";
-import LoadingPage from "@/components/LoadingPage";
+import { RouteSkeleton } from "@/components/RouteSkeleton";
 import { cn } from "@/lib/utils";
 import { ListPagination, usePagination, ITEMS_PER_PAGE } from "@/components/ListPagination";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -194,8 +194,8 @@ const Patients = () => {
 
   const { paginatedItems: pagePatients, totalPages } = usePagination(filteredPatients, currentPage);
 
-  if (businessLoading || dataLoading) {
-    return <LoadingPage />;
+  if (!businessId && businessLoading) {
+    return <RouteSkeleton />;
   }
 
   const getInitials = (name: string) => {
