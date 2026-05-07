@@ -221,21 +221,52 @@ const Dashboard = () => {
 
       setBusinessId(currentBusinessId);
 
-      // Check if demo business
-      const { data: bizInfo } = await supabase
-        .from("businesses").select("is_demo").eq("id", currentBusinessId).maybeSingle();
-      setIsDemo(bizInfo?.is_demo || false);
+      // ── Parallelizar todas las consultas independientes ──
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const monthStart = new Date();
+      monthStart.setDate(1);
+      monthStart.setHours(0, 0, 0, 0);
 
-      // Check trial status for banner
+      const [
+        bizInfoRes,
+        subDataRes,
+        patientsCountRes,
+        portalCountRes,
+        appointmentsCountRes,
+        appointmentsRes,
+        unpaidRes,
+        userRoleRes,
+      ] = await Promise.all([
+        // 1. Demo check
+        supabase.from("businesses").select("is_demo").eq("id", currentBusinessId).maybeSingle(),
+        // 2. Trial status
+        isAdmin
+          ? Promise.resolve({ data: null })
+          : supabase.from("subscriptions").select("status, trial_ends_at").eq("business_id", currentBusinessId).maybeSingle(),
+        // 3. Active patients count
+        supabase.from("patients").select("*", { count: "exact", head: true }).eq("business_id", currentBusinessId).eq("is_active", true),
+        // 4. Portal patients count
+        supabase.from("patients").select("*", { count: "exact", head: true }).eq("business_id", currentBusinessId).not("auth_user_id", "is", null),
+        // 5. Today appointments count
+        supabase.from("appointments").select("*", { count: "exact", head: true }).eq("business_id", currentBusinessId).gte("start_at", today.toISOString()).lt("start_at", tomorrow.toISOString()).not("status", "in", '("cancelled","no_show")'),
+        // 6. Today appointments list
+        supabase.from("appointments").select(`id, start_at, status, contact_name, patient_id, patients (full_name)`).eq("business_id", currentBusinessId).gte("start_at", today.toISOString()).lt("start_at", tomorrow.toISOString()).order("start_at", { ascending: true }).limit(5),
+        // 7. Unpaid payments
+        supabase.from("payments").select("*").eq("business_id", currentBusinessId).is("paid_at", null).not("status", "eq", "cancelled"),
+        // 8. User role
+        supabase.from("user_roles").select("role").eq("user_id", user.id).eq("business_id", currentBusinessId).maybeSingle(),
+      ]);
+
+      // Process results
+      setIsDemo(bizInfoRes.data?.is_demo || false);
+
       if (isAdmin) {
         setTrialEndsAt(null);
       } else {
-          const { data: subData } = await supabase
-          .from("subscriptions")
-          .select("status, trial_ends_at")
-          .eq("business_id", currentBusinessId)
-          .maybeSingle();
-
+        const subData = subDataRes.data as any;
         if (subData?.status === "trial" && subData.trial_ends_at) {
           setTrialEndsAt(subData.trial_ends_at);
         } else {
@@ -243,96 +274,42 @@ const Dashboard = () => {
         }
       }
 
-      const { count: patientsCount } = await supabase
-        .from("patients")
-        .select("*", { count: "exact", head: true })
-        .eq("business_id", currentBusinessId)
-        .eq("is_active", true);
+      setActivePatientsCount(patientsCountRes.count || 0);
+      setPortalPatientsCount(portalCountRes.count || 0);
+      setTodayAppointmentsCount(appointmentsCountRes.count || 0);
+      setTodayAppointments(appointmentsRes.data || []);
 
-      setActivePatientsCount(patientsCount || 0);
-
-      // Count patients with portal access
-      const { count: portalCount } = await supabase
-        .from("patients")
-        .select("*", { count: "exact", head: true })
-        .eq("business_id", currentBusinessId)
-        .not("auth_user_id", "is", null);
-
-      setPortalPatientsCount(portalCount || 0);
-
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-
-      const { count: appointmentsCount } = await supabase
-        .from("appointments")
-        .select("*", { count: "exact", head: true })
-        .eq("business_id", currentBusinessId)
-        .gte("start_at", today.toISOString())
-        .lt("start_at", tomorrow.toISOString())
-        .not("status", "in", '("cancelled","no_show")');
-
-      setTodayAppointmentsCount(appointmentsCount || 0);
-
-      const { data: appointments } = await supabase
-        .from("appointments")
-        .select(`
-          id,
-          start_at,
-          status,
-          contact_name,
-          patient_id,
-          patients (full_name)
-        `)
-        .eq("business_id", currentBusinessId)
-        .gte("start_at", today.toISOString())
-        .lt("start_at", tomorrow.toISOString())
-        .order("start_at", { ascending: true })
-        .limit(5);
-
-      setTodayAppointments(appointments || []);
-
-      // Fetch unpaid payments for alerts
-      const { data: unpaidPaymentsData } = await supabase
-        .from("payments")
-        .select("*")
-        .eq("business_id", currentBusinessId)
-        .is("paid_at", null)
-        .not("status", "eq", "cancelled");
-
+      // Process unpaid payments
+      const unpaidPaymentsData = unpaidRes.data;
       if (unpaidPaymentsData) {
-        // Calculate real-time status for each payment
-        const paymentsWithStatus = unpaidPaymentsData.map((p) => ({
+        const paymentsWithStatus = unpaidPaymentsData.map((p: any) => ({
           ...p,
           calculatedStatus: calculatePaymentStatus(p),
         }));
 
-        const overdue = paymentsWithStatus.filter((p) => p.calculatedStatus === "overdue");
-        const dueSoon = paymentsWithStatus.filter((p) => p.calculatedStatus === "due_soon");
+        const overdue = paymentsWithStatus.filter((p: any) => p.calculatedStatus === "overdue");
+        const dueSoon = paymentsWithStatus.filter((p: any) => p.calculatedStatus === "due_soon");
 
         setOverduePayments(overdue.length);
         setDueSoonPayments(dueSoon.length);
 
-        // Get 5 most urgent payments (overdue first, then due_soon, ordered by due_date)
         const urgent = [...overdue, ...dueSoon]
-          .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())
+          .sort((a: any, b: any) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())
           .slice(0, 5);
 
-        // Fetch patient names for urgent payments
         if (urgent.length > 0) {
-          const patientIds = [...new Set(urgent.map((p) => p.patient_id))];
+          const patientIds = [...new Set(urgent.map((p: any) => p.patient_id))];
           const { data: patientsForPayments } = await supabase
             .from("patients")
             .select("id, full_name")
             .in("id", patientIds);
 
           const patientsMap = new Map(
-            (patientsForPayments || []).map((p) => [p.id, p.full_name])
+            (patientsForPayments || []).map((p: any) => [p.id, p.full_name])
           );
 
           setUrgentPayments(
-            urgent.map((p) => ({
+            urgent.map((p: any) => ({
               ...p,
               patientName: patientsMap.get(p.patient_id) || "Desconocido",
             }))
@@ -340,52 +317,33 @@ const Dashboard = () => {
         }
       }
 
-      // Fetch monthly income (paid payments this month)
-      const startOfMonth = new Date();
-      startOfMonth.setDate(1);
-      startOfMonth.setHours(0, 0, 0, 0);
-
-      // Check user role to determine filtering
-      const { data: userRole } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .eq("business_id", currentBusinessId)
-        .maybeSingle();
-
+      // Monthly income (depends on userRole result)
+      const userRole = userRoleRes.data;
       const isOwnerOrAdmin = isAdmin || userRole?.role === "owner";
       const isProfessional = userRole?.role === "professional";
 
       if (isOwnerOrAdmin) {
-        // Owner/Admin: see all payments from the business
         const { data: paidPaymentsData } = await supabase
           .from("payments")
           .select("amount")
           .eq("business_id", currentBusinessId)
           .not("paid_at", "is", null)
-          .gte("paid_at", startOfMonth.toISOString());
+          .gte("paid_at", monthStart.toISOString());
 
         if (paidPaymentsData) {
-          const totalIncome = paidPaymentsData.reduce((sum, p) => sum + (p.amount || 0), 0);
-          setMonthlyIncome(totalIncome);
+          setMonthlyIncome(paidPaymentsData.reduce((sum, p) => sum + (p.amount || 0), 0));
         }
       } else if (isProfessional) {
-        // Professional: only see payments from appointments where they are the professional
         const { data: paidPaymentsData } = await supabase
           .from("payments")
           .select("amount, appointment_id")
           .eq("business_id", currentBusinessId)
           .not("paid_at", "is", null)
-          .gte("paid_at", startOfMonth.toISOString());
+          .gte("paid_at", monthStart.toISOString());
 
         if (paidPaymentsData && paidPaymentsData.length > 0) {
-          // Get appointment IDs that have payments
-          const appointmentIds = paidPaymentsData
-            .filter(p => p.appointment_id)
-            .map(p => p.appointment_id);
-
+          const appointmentIds = paidPaymentsData.filter(p => p.appointment_id).map(p => p.appointment_id);
           if (appointmentIds.length > 0) {
-            // Get appointments where this professional is assigned
             const { data: professionalAppointments } = await supabase
               .from("appointments")
               .select("id")
@@ -393,13 +351,11 @@ const Dashboard = () => {
               .eq("professional_id", user.id);
 
             const myAppointmentIds = new Set((professionalAppointments || []).map(a => a.id));
-
-            // Sum only payments from my appointments
-            const totalIncome = paidPaymentsData
-              .filter(p => p.appointment_id && myAppointmentIds.has(p.appointment_id))
-              .reduce((sum, p) => sum + (p.amount || 0), 0);
-
-            setMonthlyIncome(totalIncome);
+            setMonthlyIncome(
+              paidPaymentsData
+                .filter(p => p.appointment_id && myAppointmentIds.has(p.appointment_id))
+                .reduce((sum, p) => sum + (p.amount || 0), 0)
+            );
           } else {
             setMonthlyIncome(0);
           }
@@ -407,7 +363,6 @@ const Dashboard = () => {
           setMonthlyIncome(0);
         }
       } else {
-        // Patient or unknown role: don't show income
         setMonthlyIncome(0);
       }
     } catch (error) {
