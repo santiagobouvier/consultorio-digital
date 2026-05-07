@@ -341,13 +341,13 @@ const Landing = () => {
                       <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" />
                     </Button>
                   </a>
-                  <a href="/auth">
+                  <a href="/acceso">
                     <Button 
                       variant="outline"
                       size="lg" 
                       className="w-full sm:w-auto h-12 px-8 text-sm font-semibold rounded-xl transition-all duration-300 bg-transparent text-white border-white/20 hover:bg-white/5 hover:border-white/30"
                     >
-                      Ya tengo cuenta
+                      Ingresar
                     </Button>
                   </a>
                 </div>
@@ -1438,13 +1438,13 @@ const Landing = () => {
                   <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" />
                 </Button>
               </a>
-              <a href="/auth">
+              <a href="/acceso">
                 <Button 
                   variant="outline"
                   size="lg" 
                   className="w-full sm:w-auto h-12 sm:h-14 px-8 sm:px-12 text-sm sm:text-base font-semibold rounded-xl transition-all duration-300 bg-transparent text-white border-white/20 hover:bg-white/5"
                 >
-                  Ya tengo cuenta
+                  Ingresar
                 </Button>
               </a>
             </div>
