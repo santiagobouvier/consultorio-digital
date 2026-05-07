@@ -58,8 +58,8 @@ const SuperAdminGuard = lazy(() => import("./components/SuperAdminGuard"));
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 30_000,
-      gcTime: 300_000,
+      staleTime: 120_000,
+      gcTime: 600_000,
       refetchOnWindowFocus: true,
       retry: 1,
     },
