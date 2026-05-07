@@ -432,18 +432,13 @@ export function PatientForm({
             ) : (
               /* Create mode: placeholder avatar with dynamic initials */
               <div className="flex flex-col items-center gap-2 py-1">
-                <div className="relative">
-                  <Avatar className="h-20 w-20 border border-border/40">
-                    <AvatarFallback className="bg-muted text-muted-foreground text-xl font-semibold">
-                      {initials || <UserIcon className="h-8 w-8" />}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="absolute -bottom-1 -right-1 h-7 w-7 rounded-full bg-muted border-2 border-background flex items-center justify-center">
-                    <Camera className="h-3.5 w-3.5 text-muted-foreground" />
-                  </div>
-                </div>
-                <p className="text-xs text-muted-foreground text-center">
-                  Agregá la foto desde el perfil del paciente
+                <Avatar className="h-16 w-16 border border-border/40">
+                  <AvatarFallback className="bg-muted text-muted-foreground text-xl font-semibold">
+                    {initials || <UserIcon className="h-7 w-7" />}
+                  </AvatarFallback>
+                </Avatar>
+                <p className="text-[11px] text-muted-foreground text-center">
+                  Podrás subir la foto luego de crear el paciente
                 </p>
               </div>
             )}
