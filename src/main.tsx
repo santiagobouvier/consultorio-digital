@@ -16,7 +16,7 @@ const isPreviewHost =
   window.location.hostname.includes("id-preview--") ||
   window.location.hostname.includes("lovableproject.com");
 
-const SPLASH_MIN_DURATION_MS = 1200;
+const SPLASH_MIN_DURATION_MS = 300;
 const splashStartedAt = performance.now();
 
 const hideAppSplash = () => {
