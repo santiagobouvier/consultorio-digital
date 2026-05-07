@@ -13,7 +13,80 @@ import {
   Download,
   X,
 } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { usePWAInstall } from "@/hooks/use-pwa-install";
+
+// ============= Confetti Effect =============
+const ConfettiCanvas = () => {
+  useEffect(() => {
+    const canvas = document.createElement("canvas");
+    canvas.style.cssText =
+      "position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999";
+    document.body.appendChild(canvas);
+    const ctx = canvas.getContext("2d")!;
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const colors = ["#00a5a0", "#FFD700", "#FF6B6B", "#4FC3F7", "#AB47BC", "#66BB6A"];
+    const particles: {
+      x: number; y: number; w: number; h: number;
+      color: string; vx: number; vy: number; rotation: number; rv: number; alpha: number;
+    }[] = [];
+
+    for (let i = 0; i < 120; i++) {
+      particles.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height * -1,
+        w: Math.random() * 8 + 4,
+        h: Math.random() * 4 + 2,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        vx: (Math.random() - 0.5) * 4,
+        vy: Math.random() * 4 + 2,
+        rotation: Math.random() * 360,
+        rv: (Math.random() - 0.5) * 10,
+        alpha: 1,
+      });
+    }
+
+    let frame: number;
+    const start = Date.now();
+    const animate = () => {
+      const elapsed = Date.now() - start;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const fadeAfter = 1500;
+      for (const p of particles) {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.1;
+        p.rotation += p.rv;
+        if (elapsed > fadeAfter) p.alpha = Math.max(0, 1 - (elapsed - fadeAfter) / 500);
+
+        ctx.save();
+        ctx.globalAlpha = p.alpha;
+        ctx.translate(p.x, p.y);
+        ctx.rotate((p.rotation * Math.PI) / 180);
+        ctx.fillStyle = p.color;
+        ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+        ctx.restore();
+      }
+
+      if (elapsed < 2000) {
+        frame = requestAnimationFrame(animate);
+      } else {
+        canvas.remove();
+      }
+    };
+    frame = requestAnimationFrame(animate);
+
+    return () => {
+      cancelAnimationFrame(frame);
+      canvas.remove();
+    };
+  }, []);
+
+  return null;
+};
 
 interface PortalWelcomeInstallProps {
   branding: {
@@ -170,6 +243,7 @@ export const PortalWelcomeInstall = ({
         <div className="mx-auto flex min-h-screen w-full max-w-md flex-col items-center justify-center px-5 py-10">
           {justInstalled ? (
             <div className="w-full space-y-8 animate-in fade-in zoom-in-95 duration-500">
+              <ConfettiCanvas />
               <div className="flex flex-col items-center text-center space-y-5">
                 <div className="relative">
                   <div className="absolute inset-0 rounded-3xl bg-primary/40 blur-2xl animate-pulse" aria-hidden />
@@ -277,18 +351,36 @@ export const PortalWelcomeInstall = ({
                     Accedé a tus turnos y pagos en un toque, sin abrir el navegador.
                   </p>
 
+                  {/* Benefits row */}
+                  <div className="flex items-center justify-between gap-2 text-center">
+                    {[
+                      { emoji: "⚡", label: "Acceso instantáneo" },
+                      { emoji: "🔔", label: "Recordatorios de turnos" },
+                      { emoji: "🔒", label: "100% seguro" },
+                    ].map((b) => (
+                      <div key={b.label} className="flex-1 flex flex-col items-center gap-1">
+                        <span className="text-base">{b.emoji}</span>
+                        <span className="text-[10px] leading-tight text-muted-foreground font-medium">{b.label}</span>
+                      </div>
+                    ))}
+                  </div>
+
                   <Button
                     onClick={handleInstallClick}
                     disabled={installing}
                     className="w-full h-14 text-base font-semibold"
                     size="lg"
                     style={{ backgroundColor: 'hsl(var(--primary))' }}
-                  >n                    <Download className="mr-2 h-5 w-5" />
-                    {installing ? "Instalando..." : "Instalá la app"}
+                  >
+                    <Download className="mr-2 h-5 w-5 animate-pulse" />
+                    {installing ? "Instalando..." : "Instalar app gratis"}
                   </Button>
 
-                  {/* Skip link - small, grey, at bottom */}
-                  <div className="pt-2 text-center">
+                  <p className="text-[10px] text-muted-foreground/50 text-center leading-tight">
+                    Sin pasar por la App Store · Ocupa menos de 1MB
+                  </p>
+
+                  <div className="text-center">
                     <button
                       type="button"
                       onClick={onContinue}
@@ -324,6 +416,12 @@ export const PortalWelcomeInstall = ({
 
               <Card className="border-border/60 bg-card/80 backdrop-blur">
                 <CardContent className="p-5 space-y-4">
+                  {platform === "ios" && (
+                    <div className="flex flex-col items-center pb-2">
+                      <p className="text-xs text-primary font-medium mb-1">Buscá este ícono abajo ↓</p>
+                      <ChevronDown className="h-6 w-6 text-primary animate-bounce" />
+                    </div>
+                  )}
                   {steps.map((step, i) => {
                     const Icon = step.icon;
                     return (
