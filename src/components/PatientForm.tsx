@@ -381,52 +381,72 @@ export function PatientForm({
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-            {/* Avatar uploader */}
-            <div className="flex items-center gap-4">
-              <Avatar className="h-20 w-20 border border-border/40">
-                {avatarUrl ? (
-                  <AvatarImage src={avatarUrl} alt="Foto de perfil" />
-                ) : null}
-                <AvatarFallback className="bg-muted text-muted-foreground">
-                  {initials || <UserIcon className="h-8 w-8" />}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex flex-col gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="rounded-xl gap-2"
-                  disabled={uploadingAvatar || isSubmitting}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    fileInputRef.current?.click();
-                  }}
-                >
-                  {uploadingAvatar ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Camera className="h-4 w-4" />
-                  )}
-                  {avatarUrl ? "Cambiar foto" : "Subir foto"}
-                </Button>
-                {avatarUrl && (
+            {/* Avatar section */}
+            {patientId ? (
+              /* Edit mode: full upload functionality */
+              <div className="flex items-center gap-4">
+                <Avatar className="h-20 w-20 border border-border/40">
+                  {avatarUrl ? (
+                    <AvatarImage src={avatarUrl} alt="Foto de perfil" />
+                  ) : null}
+                  <AvatarFallback className="bg-muted text-muted-foreground">
+                    {initials || <UserIcon className="h-8 w-8" />}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex flex-col gap-2">
                   <Button
                     type="button"
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
-                    className="rounded-xl gap-2 text-destructive hover:text-destructive"
-                    onClick={removeAvatar}
+                    className="rounded-xl gap-2"
                     disabled={uploadingAvatar || isSubmitting}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      fileInputRef.current?.click();
+                    }}
                   >
-                    <X className="h-4 w-4" />
-                    Quitar foto
+                    {uploadingAvatar ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Camera className="h-4 w-4" />
+                    )}
+                    {avatarUrl ? "Cambiar foto" : "Subir foto"}
                   </Button>
-                )}
-                <p className="text-[11px] text-muted-foreground">JPG, PNG o WEBP. Máx 3 MB.</p>
+                  {avatarUrl && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="rounded-xl gap-2 text-destructive hover:text-destructive"
+                      onClick={removeAvatar}
+                      disabled={uploadingAvatar || isSubmitting}
+                    >
+                      <X className="h-4 w-4" />
+                      Quitar foto
+                    </Button>
+                  )}
+                  <p className="text-[11px] text-muted-foreground">JPG, PNG o WEBP. Máx 3 MB.</p>
+                </div>
               </div>
-            </div>
+            ) : (
+              /* Create mode: placeholder avatar with dynamic initials */
+              <div className="flex flex-col items-center gap-2 py-1">
+                <div className="relative">
+                  <Avatar className="h-20 w-20 border border-border/40">
+                    <AvatarFallback className="bg-muted text-muted-foreground text-xl font-semibold">
+                      {initials || <UserIcon className="h-8 w-8" />}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="absolute -bottom-1 -right-1 h-7 w-7 rounded-full bg-muted border-2 border-background flex items-center justify-center">
+                    <Camera className="h-3.5 w-3.5 text-muted-foreground" />
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground text-center">
+                  Agregá la foto desde el perfil del paciente
+                </p>
+              </div>
+            )}
 
             <FormField
               control={form.control}
