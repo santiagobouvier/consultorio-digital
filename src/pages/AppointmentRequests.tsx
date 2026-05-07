@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -29,44 +30,34 @@ import { notifyPatient } from "@/lib/push-notifications";
 
 const AppointmentRequests = () => {
   const navigate = useNavigate();
-  const [requests, setRequests] = useState<any[]>([]);
-  const [dataLoading, setDataLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [currentPage, setCurrentPage] = useState(1);
   
   const { businessId, loading: businessLoading } = useBusinessId();
 
-  useEffect(() => {
-    if (businessId) {
-      loadRequests();
-    }
-  }, [businessId]);
-
-  const loadRequests = async () => {
-    try {
-      setDataLoading(true);
-      if (!businessId) return;
-
+  const { data: requests = [], isLoading: dataLoading } = useQuery({
+    queryKey: ["appointment_requests", businessId],
+    queryFn: async () => {
       const { data, error } = await supabase
         .from("appointment_requests")
         .select("*")
-        .eq("business_id", businessId)
-        .order("created_at", { ascending: false });
-
+        .eq("business_id", businessId!)
+        .order("created_at", { ascending: false })
+        .limit(50);
       if (error) throw error;
-      setRequests(data || []);
-    } catch (error) {
-      console.error("Error loading requests:", error);
-      toast({
-        title: "Error",
-        description: "No se pudieron cargar las solicitudes",
-        variant: "destructive",
-      });
-    } finally {
-      setDataLoading(false);
-    }
-  };
+      return data || [];
+    },
+    enabled: !!businessId,
+    staleTime: 30_000,
+    gcTime: 300_000,
+    refetchOnWindowFocus: true,
+  });
 
   const loading = businessLoading || dataLoading;
+
+  const invalidateRequests = () => {
+    queryClient.invalidateQueries({ queryKey: ["appointment_requests", businessId] });
+  };
 
   const handleAccept = async (request: any) => {
     try {
@@ -147,7 +138,7 @@ const AppointmentRequests = () => {
         description: "La solicitud fue aceptada y la cita fue creada",
       });
 
-      loadRequests();
+      invalidateRequests();
     } catch (error) {
       console.error("Error accepting request:", error);
       toast({
@@ -172,7 +163,7 @@ const AppointmentRequests = () => {
         description: "La solicitud fue marcada como rechazada",
       });
 
-      loadRequests();
+      invalidateRequests();
     } catch (error) {
       console.error("Error rejecting request:", error);
       toast({
