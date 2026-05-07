@@ -45,7 +45,7 @@ import { PaymentWhatsAppMenu } from "@/components/PaymentWhatsAppMenu";
 import { PaymentForm } from "@/components/PaymentForm";
 import { GlobalPaymentForm } from "@/components/GlobalPaymentForm";
 import { ConfirmPaymentDialog } from "@/components/ConfirmPaymentDialog";
-import LoadingPage from "@/components/LoadingPage";
+import { RouteSkeleton } from "@/components/RouteSkeleton";
 import { PaymentDetailDrawer } from "@/components/PaymentDetailDrawer";
 import {
   calculatePaymentStatus,
@@ -157,7 +157,6 @@ const Payments = () => {
     setCurrentPage(1);
   }, [searchParams, searchQuery, statusFilter, patientFilter]);
 
-  const loading = businessLoading || paymentsLoading;
 
   const handleDeletePayment = async () => {
     if (!deletingPaymentId) return;
@@ -193,7 +192,7 @@ const Payments = () => {
 
   const { paginatedItems: pagePayments, totalPages } = usePagination(filteredPayments, currentPage);
 
-  if (loading) return <LoadingPage />;
+  if (!businessId && businessLoading) return <RouteSkeleton />;
 
   return (
     <div className="min-h-screen bg-background">

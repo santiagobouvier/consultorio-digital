@@ -23,7 +23,7 @@ import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { ArrowLeft, Check, X, MessageCircle } from "lucide-react";
-import LoadingPage from "@/components/LoadingPage";
+import { RouteSkeleton } from "@/components/RouteSkeleton";
 import { useBusinessId } from "@/hooks/use-business-id";
 import { ListPagination, usePagination, ITEMS_PER_PAGE } from "@/components/ListPagination";
 import { notifyPatient } from "@/lib/push-notifications";
@@ -53,7 +53,6 @@ const AppointmentRequests = () => {
     refetchOnWindowFocus: true,
   });
 
-  const loading = businessLoading || dataLoading;
 
   const invalidateRequests = () => {
     queryClient.invalidateQueries({ queryKey: ["appointment_requests", businessId] });
@@ -197,8 +196,8 @@ const AppointmentRequests = () => {
 
   const { paginatedItems: pageRequests, totalPages } = usePagination(requests, currentPage);
 
-  if (loading) {
-    return <LoadingPage />;
+  if (!businessId && businessLoading) {
+    return <RouteSkeleton />;
   }
 
   return (

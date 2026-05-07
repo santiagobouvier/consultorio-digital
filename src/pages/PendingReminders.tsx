@@ -38,7 +38,7 @@ import {
   Send, Trash2, Bell, Mail, MessageSquare, Check, Copy, CheckSquare,
   Search, Pencil, XCircle, Clock, BellRing, MailCheck, X, Plus,
 } from "lucide-react";
-import LoadingPage from "@/components/LoadingPage";
+import { RouteSkeleton } from "@/components/RouteSkeleton";
 import { useBusinessId } from "@/hooks/use-business-id";
 import { ListPagination, usePagination, ITEMS_PER_PAGE } from "@/components/ListPagination";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -406,7 +406,7 @@ const PendingReminders = () => {
     });
   };
 
-  if (loading) return <LoadingPage />;
+  if (!businessId) return <RouteSkeleton />;
 
   return (
     <div className="min-h-screen bg-background">
