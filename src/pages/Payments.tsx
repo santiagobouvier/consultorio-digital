@@ -1,8 +1,9 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -87,9 +88,7 @@ interface Payment {
 const Payments = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [payments, setPayments] = useState<Payment[]>([]);
-  const [patients, setPatients] = useState<Patient[]>([]);
-  const [dataLoading, setDataLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>(
     searchParams.get("status") || "all"
@@ -104,9 +103,53 @@ const Payments = () => {
 
   const { businessId, loading: businessLoading } = useBusinessId();
 
-  useEffect(() => {
-    if (businessId) fetchData();
-  }, [businessId]);
+  // Main payments query — key matches query-prefetch.ts
+  const { data: rawPayments = [], isLoading: paymentsLoading } = useQuery({
+    queryKey: ["payments", businessId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("payments")
+        .select("*, patients(full_name, whatsapp_phone)")
+        .eq("business_id", businessId!)
+        .order("due_date", { ascending: false })
+        .limit(200);
+      return data ?? [];
+    },
+    enabled: !!businessId,
+    staleTime: 30_000,
+    gcTime: 300_000,
+    refetchOnWindowFocus: true,
+  });
+
+  // Patients list for filter dropdown
+  const { data: patients = [] } = useQuery({
+    queryKey: ["patients_list_for_payments", businessId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("patients")
+        .select("id, full_name, whatsapp_phone")
+        .eq("business_id", businessId!)
+        .order("full_name");
+      return (data || []).filter((p) => p.full_name) as Patient[];
+    },
+    enabled: !!businessId,
+    staleTime: 60_000,
+  });
+
+  // Transform raw payments to include calculated status
+  const payments = useMemo(() => {
+    return rawPayments.map((payment: any) => ({
+      ...payment,
+      status: calculatePaymentStatus(payment),
+      recurrence_type: (payment.recurrence_type || "one_time") as RecurrenceType,
+      business_id: businessId!,
+      patients: payment.patients || { full_name: "Desconocido", whatsapp_phone: null },
+    })) as Payment[];
+  }, [rawPayments, businessId]);
+
+  const invalidatePayments = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["payments", businessId] });
+  }, [queryClient, businessId]);
 
   useEffect(() => {
     const status = searchParams.get("status");
@@ -114,47 +157,7 @@ const Payments = () => {
     setCurrentPage(1);
   }, [searchParams, searchQuery, statusFilter, patientFilter]);
 
-  const fetchData = async () => {
-    if (!businessId) return;
-    try {
-      setDataLoading(true);
-      const { data: paymentsData, error: paymentsError } = await supabase
-        .from("payments")
-        .select("id, business_id, patient_id, appointment_id, amount, currency, due_date, paid_at, status, method, notes, recurrence_type, anchor_day, created_at")
-        .eq("business_id", businessId)
-        .order("due_date", { ascending: true });
-
-      if (paymentsError) throw paymentsError;
-
-      const { data: patientsData } = await supabase
-        .from("patients")
-        .select("id, full_name, whatsapp_phone")
-        .eq("business_id", businessId)
-        .order("full_name");
-
-      const patientsMap = new Map(
-        (patientsData || []).map((p) => [p.id, { full_name: p.full_name, whatsapp_phone: p.whatsapp_phone }])
-      );
-
-      const paymentsWithStatus = (paymentsData || []).map((payment) => ({
-        ...payment,
-        status: calculatePaymentStatus(payment),
-        recurrence_type: (payment.recurrence_type || "one_time") as RecurrenceType,
-        business_id: businessId,
-        patients: patientsMap.get(payment.patient_id) || { full_name: "Desconocido", whatsapp_phone: null },
-      })) as Payment[];
-
-      setPayments(paymentsWithStatus);
-      setPatients((patientsData || []).filter((p) => p.full_name) as Patient[]);
-    } catch (error) {
-      console.error("Error fetching payments:", error);
-      toast({ title: "Error", description: "No se pudieron cargar los pagos", variant: "destructive" });
-    } finally {
-      setDataLoading(false);
-    }
-  };
-
-  const loading = businessLoading || dataLoading;
+  const loading = businessLoading || paymentsLoading;
 
   const handleDeletePayment = async () => {
     if (!deletingPaymentId) return;
@@ -163,7 +166,7 @@ const Payments = () => {
       if (error) throw error;
       toast({ title: "Éxito", description: "Pago eliminado correctamente" });
       setDeletingPaymentId(null);
-      fetchData();
+      invalidatePayments();
     } catch (error) {
       console.error("Error deleting payment:", error);
       toast({ title: "Error", description: "No se pudo eliminar el pago", variant: "destructive" });
@@ -475,7 +478,7 @@ const Payments = () => {
           businessId={businessId}
           onSuccess={() => {
             setShowNewPayment(false);
-            fetchData();
+            invalidatePayments();
           }}
         />
       )}
@@ -498,7 +501,7 @@ const Payments = () => {
           }}
           onSuccess={() => {
             setEditingPayment(null);
-            fetchData();
+            invalidatePayments();
           }}
         />
       )}
@@ -557,7 +560,7 @@ const Payments = () => {
               .update({ paid_at: new Date().toISOString(), status: "paid" })
               .eq("id", confirmPaymentData.id);
             if (error) throw error;
-            fetchData();
+              invalidatePayments();
           }}
         />
       )}

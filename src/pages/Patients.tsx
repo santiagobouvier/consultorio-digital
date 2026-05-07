@@ -1,6 +1,7 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -37,47 +38,33 @@ interface Patient {
 const Patients = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [patients, setPatients] = useState<Patient[]>([]);
-  const [filteredPatients, setFilteredPatients] = useState<Patient[]>([]);
-  const [dataLoading, setDataLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>(() => {
     return searchParams.get("portal") === "true" ? "portal" : "all";
   });
   const [showForm, setShowForm] = useState(false);
-  const [businessName, setBusinessName] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const { businessId, loading: businessLoading, isSuperAdmin } = useBusinessId();
 
-  useEffect(() => {
-    if (businessId) {
-      fetchPatients();
-      fetchBusinessName();
-    }
-  }, [businessId]);
+  // Main patients query — key matches query-prefetch.ts so prefetched data is used instantly
+  const { data: patients = [], isLoading: dataLoading } = useQuery({
+    queryKey: ["patients", businessId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("patients")
+        .select("*")
+        .eq("business_id", businessId!)
+        .order("full_name", { ascending: true });
+      return (data ?? []) as Patient[];
+    },
+    enabled: !!businessId,
+    staleTime: 30_000,
+    gcTime: 300_000,
+    refetchOnWindowFocus: true,
+  });
 
-  // Refrescar al volver a la pestaña / al foco / al volver a la ruta
-  useEffect(() => {
-    if (!businessId) return;
-
-    const handleVisibility = () => {
-      if (document.visibilityState === "visible") {
-        fetchPatients();
-      }
-    };
-    const handleFocus = () => fetchPatients();
-
-    document.addEventListener("visibilitychange", handleVisibility);
-    window.addEventListener("focus", handleFocus);
-
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibility);
-      window.removeEventListener("focus", handleFocus);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [businessId]);
-
-  // Realtime: cualquier cambio en patients del business actual refresca la lista
+  // Realtime: invalidate cache on changes
   useEffect(() => {
     if (!businessId) return;
 
@@ -92,7 +79,7 @@ const Patients = () => {
           filter: `business_id=eq.${businessId}`,
         },
         () => {
-          fetchPatients();
+          queryClient.invalidateQueries({ queryKey: ["patients", businessId] });
         }
       )
       .subscribe();
@@ -100,96 +87,73 @@ const Patients = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [businessId]);
 
-  const fetchBusinessName = async () => {
-    if (!businessId) return;
-    const { data } = await supabase
-      .from("businesses")
-      .select("name")
-      .eq("id", businessId)
-      .maybeSingle();
-    setBusinessName(data?.name || null);
-  };
-
-  useEffect(() => {
-    filterPatients();
-    setCurrentPage(1);
-  }, [patients, searchTerm, statusFilter]);
-
-  const fetchPatients = async () => {
-    if (!businessId) return;
-    try {
-      setDataLoading(true);
+  // Enrich with last/next appointment data
+  const { data: enrichedPatients = [] } = useQuery({
+    queryKey: ["patients_appointments", businessId],
+    queryFn: async () => {
+      if (!patients.length) return patients;
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const todayISO = today.toISOString();
+      const patientIds = patients.map(p => p.id);
 
-      const { data: patientsData } = await supabase
-        .from("patients")
-        .select("id, full_name, email, whatsapp_phone, avatar_url, is_active, reason_for_consultation, auth_user_id, created_at")
-        .eq("business_id", businessId)
-        .order("full_name", { ascending: true });
-
-      if (!patientsData || patientsData.length === 0) {
-        setPatients([]);
-        return;
-      }
-
-      const patientIds = patientsData.map(p => p.id);
-
-      const { data: lastAppts } = await supabase
-        .from("appointments")
-        .select("patient_id, start_at")
-        .in("patient_id", patientIds)
-        .eq("status", "attended")
-        .lt("start_at", todayISO)
-        .order("start_at", { ascending: false });
-
-      const { data: nextAppts } = await supabase
-        .from("appointments")
-        .select("patient_id, start_at")
-        .in("patient_id", patientIds)
-        .not("status", "in", '("cancelled","no_show")')
-        .gte("start_at", todayISO)
-        .order("start_at", { ascending: true });
+      const [{ data: lastAppts }, { data: nextAppts }] = await Promise.all([
+        supabase
+          .from("appointments")
+          .select("patient_id, start_at")
+          .in("patient_id", patientIds)
+          .eq("status", "attended")
+          .lt("start_at", todayISO)
+          .order("start_at", { ascending: false }),
+        supabase
+          .from("appointments")
+          .select("patient_id, start_at")
+          .in("patient_id", patientIds)
+          .not("status", "in", '("cancelled","no_show")')
+          .gte("start_at", todayISO)
+          .order("start_at", { ascending: true }),
+      ]);
 
       const lastMap = new Map<string, string>();
       for (const a of lastAppts || []) {
-        if (a.patient_id && !lastMap.has(a.patient_id)) {
-          lastMap.set(a.patient_id, a.start_at);
-        }
+        if (a.patient_id && !lastMap.has(a.patient_id)) lastMap.set(a.patient_id, a.start_at);
       }
-
       const nextMap = new Map<string, string>();
       for (const a of nextAppts || []) {
-        if (a.patient_id && !nextMap.has(a.patient_id)) {
-          nextMap.set(a.patient_id, a.start_at);
-        }
+        if (a.patient_id && !nextMap.has(a.patient_id)) nextMap.set(a.patient_id, a.start_at);
       }
 
-      const patientsWithAppointments: Patient[] = patientsData.map(p => ({
+      return patients.map(p => ({
         ...p,
         last_appointment: lastMap.get(p.id) || null,
         next_appointment: nextMap.get(p.id) || null,
       }));
+    },
+    enabled: !!businessId && patients.length > 0,
+    staleTime: 30_000,
+  });
 
-      setPatients(patientsWithAppointments);
-    } catch (error) {
-      console.error("Error fetching patients:", error);
-      toast({
-        title: "Error",
-        description: "No se pudo cargar la lista de pacientes",
-        variant: "destructive",
-      });
-    } finally {
-      setDataLoading(false);
-    }
-  };
+  // Use enriched data when available, fall back to basic patients
+  const displayPatients = enrichedPatients.length > 0 ? enrichedPatients : patients;
 
-  const filterPatients = () => {
-    let filtered = [...patients];
+  const { data: businessName = null } = useQuery({
+    queryKey: ["business_name", businessId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("businesses")
+        .select("name")
+        .eq("id", businessId!)
+        .maybeSingle();
+      return data?.name || null;
+    },
+    enabled: !!businessId,
+    staleTime: 300_000,
+  });
+
+  const filteredPatients = useMemo(() => {
+    let filtered = [...displayPatients];
     if (searchTerm) {
       const search = searchTerm.toLowerCase();
       filtered = filtered.filter(
@@ -205,8 +169,10 @@ const Patients = () => {
     } else if (statusFilter === "portal") {
       filtered = filtered.filter((p) => p.auth_user_id !== null);
     }
-    setFilteredPatients(filtered);
-  };
+    return filtered;
+  }, [displayPatients, searchTerm, statusFilter]);
+
+  useEffect(() => { setCurrentPage(1); }, [searchTerm, statusFilter]);
 
   const formatDate = (datetime: string | null) => {
     if (!datetime) return "-";
@@ -220,11 +186,11 @@ const Patients = () => {
 
   // Stats
   const stats = useMemo(() => ({
-    total: patients.length,
-    active: patients.filter(p => p.is_active).length,
-    inactive: patients.filter(p => !p.is_active).length,
-    portal: patients.filter(p => p.auth_user_id !== null).length,
-  }), [patients]);
+    total: displayPatients.length,
+    active: displayPatients.filter(p => p.is_active).length,
+    inactive: displayPatients.filter(p => !p.is_active).length,
+    portal: displayPatients.filter(p => p.auth_user_id !== null).length,
+  }), [displayPatients]);
 
   const { paginatedItems: pagePatients, totalPages } = usePagination(filteredPatients, currentPage);
 
@@ -512,7 +478,8 @@ const Patients = () => {
         businessId={businessId}
         onSuccess={() => {
           setShowForm(false);
-          fetchPatients();
+          queryClient.invalidateQueries({ queryKey: ["patients", businessId] });
+          queryClient.invalidateQueries({ queryKey: ["patients_appointments", businessId] });
         }}
       />
     </div>

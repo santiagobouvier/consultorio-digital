@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 import { useBusinessId } from "@/hooks/use-business-id";
 import { useProfessionals } from "@/hooks/use-professionals";
@@ -105,11 +106,8 @@ const CalendarV2 = () => {
   });
 
   // Data state
-  const [appointments, setAppointments] = useState<CalendarAppointment[]>([]);
-  const [patients, setPatients] = useState<Patient[]>([]);
-  const [allPayments, setAllPayments] = useState<Payment[]>([]);
   const [sharedCalendar, setSharedCalendar] = useState(true);
-  const [dataLoading, setDataLoading] = useState(true);
+  const queryClient = useQueryClient();
 
   // Modal state
   const [selectedAppointment, setSelectedAppointment] = useState<CalendarAppointment | null>(null);
@@ -125,37 +123,14 @@ const CalendarV2 = () => {
   useEffect(() => {
     const fetchBusinessSettings = async () => {
       if (!businessId) return;
-
       const { data } = await supabase
         .from("businesses")
         .select("shared_calendar")
         .eq("id", businessId)
         .single();
-
-      if (data) {
-        setSharedCalendar(data.shared_calendar ?? true);
-      }
+      if (data) setSharedCalendar(data.shared_calendar ?? true);
     };
-
     fetchBusinessSettings();
-  }, [businessId]);
-
-  // Fetch patients
-  useEffect(() => {
-    const fetchPatients = async () => {
-      if (!businessId) return;
-
-      const { data } = await supabase
-        .from("patients")
-        .select("id, full_name, whatsapp_phone, avatar_url")
-        .eq("business_id", businessId)
-        .eq("is_active", true)
-        .order("full_name");
-
-      setPatients(data || []);
-    };
-
-    fetchPatients();
   }, [businessId]);
 
   // Get date range based on view
@@ -180,69 +155,69 @@ const CalendarV2 = () => {
     }
   }, [viewType, currentDate]);
 
-  // Fetch appointments
-  const fetchAppointments = useCallback(async () => {
-    if (!businessId) return;
-
-    try {
-      setDataLoading(true);
+  // Appointments query — key matches query-prefetch.ts for month view
+  const appointmentQueryKey = useMemo(() => {
       const { startDate, endDate } = getDateRange();
+    if (viewType === "month") {
+      return ["appointments", businessId, "month", currentDate.getMonth()] as const;
+    }
+    return ["appointments", businessId, viewType, startDate.toISOString()] as const;
+  }, [businessId, viewType, currentDate, getDateRange]);
 
+  const { data: appointments = [], isLoading: dataLoading } = useQuery({
+    queryKey: appointmentQueryKey,
+    queryFn: async () => {
+      const { startDate, endDate } = getDateRange();
       const { data, error } = await supabase
         .from("appointments")
         .select(`
-          id,
-          start_at,
-          end_at,
-          status,
-          modality,
-          location,
-          payment_status,
-          patient_id,
-          service_id,
-          professional_id,
-          recurrence_group_id,
+          id, start_at, end_at, status, modality, location, payment_status,
+          patient_id, service_id, professional_id, recurrence_group_id,
           patients (full_name, whatsapp_phone, email, avatar_url),
           services (name)
         `)
-        .eq("business_id", businessId)
+        .eq("business_id", businessId!)
         .gte("start_at", startDate.toISOString())
         .lte("start_at", endDate.toISOString())
         .order("start_at", { ascending: true });
-
       if (error) throw error;
-      setAppointments((data as CalendarAppointment[]) || []);
-    } catch (error) {
-      console.error("Error fetching appointments:", error);
-      toast({
-        title: "Error",
-        description: "No se pudo cargar la agenda",
-        variant: "destructive",
-      });
-    } finally {
-      setDataLoading(false);
-    }
-  }, [businessId, getDateRange]);
+      return (data as CalendarAppointment[]) || [];
+    },
+    enabled: !!businessId,
+    staleTime: 30_000,
+    gcTime: 300_000,
+  });
 
-  // Fetch payments
-  const fetchPayments = useCallback(async () => {
-    if (!businessId) return;
+  // Patients for calendar
+  const { data: patients = [] } = useQuery({
+    queryKey: ["calendar_patients", businessId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("patients")
+        .select("id, full_name, whatsapp_phone, avatar_url")
+        .eq("business_id", businessId!)
+        .eq("is_active", true)
+        .order("full_name");
+      return (data || []) as Patient[];
+    },
+    enabled: !!businessId,
+    staleTime: 60_000,
+  });
 
-    const { data } = await supabase
-      .from("payments")
-      .select("id, patient_id, due_date, paid_at, status, amount, currency, method, notes")
-      .eq("business_id", businessId)
-      .neq("status", "cancelled");
-
-    setAllPayments((data as Payment[]) || []);
-  }, [businessId]);
-
-  useEffect(() => {
-    if (businessId) {
-      fetchAppointments();
-      fetchPayments();
-    }
-  }, [businessId, currentDate, viewType, fetchAppointments, fetchPayments]);
+  // Payments for calendar
+  const { data: allPayments = [] } = useQuery({
+    queryKey: ["calendar_payments", businessId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("payments")
+        .select("id, patient_id, due_date, paid_at, status, amount, currency, method, notes")
+        .eq("business_id", businessId!)
+        .neq("status", "cancelled");
+      return (data as Payment[]) || [];
+    },
+    enabled: !!businessId,
+    staleTime: 30_000,
+  });
 
   // Calculate payment status for a patient
   const getPatientPaymentStatus = useCallback(
@@ -429,8 +404,8 @@ const CalendarV2 = () => {
   };
 
   const handleRefresh = () => {
-    fetchAppointments();
-    fetchPayments();
+    queryClient.invalidateQueries({ queryKey: ["appointments", businessId] });
+    queryClient.invalidateQueries({ queryKey: ["calendar_payments", businessId] });
   };
 
   // Determine if we should show professional colors
