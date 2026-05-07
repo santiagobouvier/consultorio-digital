@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { clearServiceWorkerCaches } from "@/lib/session-recovery";
 import { SessionExpiredDialog, triggerSessionExpired } from "@/components/SessionExpiredDialog";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { BusinessIdProvider } from "@/contexts/BusinessIdContext";
 import { PWAInstalledCelebrationModal } from "@/components/PWAInstalledCelebrationModal";
 import LoadingPage from "@/components/LoadingPage";
 
@@ -58,8 +59,8 @@ const SuperAdminGuard = lazy(() => import("./components/SuperAdminGuard"));
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 30_000,
-      gcTime: 300_000,
+      staleTime: 120_000,
+      gcTime: 600_000,
       refetchOnWindowFocus: true,
       retry: 1,
     },
@@ -135,6 +136,7 @@ const App = () => {
         <PWAInstalledCelebrationModal />
         <BrowserRouter>
           <AuthProvider>
+            <BusinessIdProvider>
             <Suspense fallback={<LoadingPage />}>
               <Routes>
                 {/* Public routes */}
@@ -179,6 +181,7 @@ const App = () => {
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>
+            </BusinessIdProvider>
           </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>

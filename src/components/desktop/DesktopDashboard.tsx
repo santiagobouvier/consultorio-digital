@@ -105,105 +105,48 @@ export const DesktopDashboard = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("name")
-        .eq("id", user.id)
-        .single();
-
-      if (profile) setUserName(profile.name);
-
-      const { data: business } = await supabase
-        .from("businesses")
-        .select("name, is_demo")
-        .eq("id", businessId)
-        .single();
-
-      if (business) {
-        setBusinessName(business.name);
-        setIsDemo(business.is_demo || false);
-      }
-
-      // Today's appointments count
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
-
-      const { data: todayAppts, count: todayCount } = await supabase
-        .from("appointments")
-        .select(`
-          id,
-          start_at,
-          status,
-          patient_id,
-          professional_id,
-          patients (full_name),
-          services (name)
-        `, { count: 'exact' })
-        .eq("business_id", businessId)
-        .gte("start_at", today.toISOString())
-        .lt("start_at", tomorrow.toISOString())
-        .not("status", "in", '("cancelled")')
-        .order("start_at", { ascending: true });
-
-      setTodayAppointmentsCount(todayCount || 0);
-      setTodayAppointments(todayAppts || []);
-
-      // Upcoming appointments (today + tomorrow, max 5, not attended)
       const dayAfterTomorrow = addDays(today, 2);
-      const { data: upcomingAppts } = await supabase
-        .from("appointments")
-        .select(`
-          id,
-          start_at,
-          status,
-          patient_id,
-          professional_id,
-          patients (full_name),
-          services (name)
-        `)
-        .eq("business_id", businessId)
-        .gte("start_at", new Date().toISOString())
-        .lt("start_at", dayAfterTomorrow.toISOString())
-        .not("status", "in", '("cancelled","attended")')
-        .order("start_at", { ascending: true })
-        .limit(5);
-
-      setUpcomingAppointments(upcomingAppts || []);
-
-      // Active patients count
-      const { count: patientsCount } = await supabase
-        .from("patients")
-        .select("id", { count: 'exact', head: true })
-        .eq("business_id", businessId)
-        .eq("is_active", true);
-
-      setActivePatientsCount(patientsCount || 0);
-
-      // Collected this month
       const monthStart = startOfMonth(new Date());
       const monthEnd = endOfMonth(new Date());
 
-      const { data: paidPayments } = await supabase
-        .from("payments")
-        .select("amount")
-        .eq("business_id", businessId)
-        .not("paid_at", "is", null)
-        .gte("paid_at", monthStart.toISOString())
-        .lte("paid_at", monthEnd.toISOString());
+      // ── Parallelizar todas las consultas independientes ──
+      const [
+        profileRes,
+        businessRes,
+        todayApptsRes,
+        upcomingApptsRes,
+        patientsCountRes,
+        paidPaymentsRes,
+        pendingPaymentsRes,
+      ] = await Promise.all([
+        supabase.from("profiles").select("name").eq("id", user.id).single(),
+        supabase.from("businesses").select("name, is_demo").eq("id", businessId).single(),
+        supabase.from("appointments").select(`id, start_at, status, patient_id, professional_id, patients (full_name), services (name)`, { count: 'exact' }).eq("business_id", businessId).gte("start_at", today.toISOString()).lt("start_at", tomorrow.toISOString()).not("status", "in", '("cancelled")').order("start_at", { ascending: true }),
+        supabase.from("appointments").select(`id, start_at, status, patient_id, professional_id, patients (full_name), services (name)`).eq("business_id", businessId).gte("start_at", new Date().toISOString()).lt("start_at", dayAfterTomorrow.toISOString()).not("status", "in", '("cancelled","attended")').order("start_at", { ascending: true }).limit(5),
+        supabase.from("patients").select("id", { count: 'exact', head: true }).eq("business_id", businessId).eq("is_active", true),
+        supabase.from("payments").select("amount").eq("business_id", businessId).not("paid_at", "is", null).gte("paid_at", monthStart.toISOString()).lte("paid_at", monthEnd.toISOString()),
+        supabase.from("payments").select("id, patient_id, due_date, paid_at, status, amount").eq("business_id", businessId).neq("status", "cancelled").is("paid_at", null),
+      ]);
 
-      const totalCollected = paidPayments?.reduce((sum, p) => sum + (p.amount || 0), 0) || 0;
-      setCollectedThisMonth(totalCollected);
+      // Process results
+      if (profileRes.data) setUserName(profileRes.data.name);
+      if (businessRes.data) {
+        setBusinessName(businessRes.data.name);
+        setIsDemo(businessRes.data.is_demo || false);
+      }
 
-      // Pending/overdue payments
-      const { data: payments } = await supabase
-        .from("payments")
-        .select("id, patient_id, due_date, paid_at, status, amount")
-        .eq("business_id", businessId)
-        .neq("status", "cancelled")
-        .is("paid_at", null);
+      setTodayAppointmentsCount(todayApptsRes.count || 0);
+      setTodayAppointments(todayApptsRes.data || []);
+      setUpcomingAppointments(upcomingApptsRes.data || []);
+      setActivePatientsCount(patientsCountRes.count || 0);
+      setCollectedThisMonth(paidPaymentsRes.data?.reduce((sum, p) => sum + (p.amount || 0), 0) || 0);
 
+      // Process pending payments
+      const payments = pendingPaymentsRes.data;
       if (payments && payments.length > 0) {
         const patientIds = [...new Set(payments.map(p => p.patient_id))];
         const { data: patients } = await supabase

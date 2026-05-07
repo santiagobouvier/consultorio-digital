@@ -1,8 +1,6 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { triggerSessionExpired } from "@/components/SessionExpiredDialog";
-import { useAuth } from "@/contexts/AuthContext";
+import { useBusinessIdContext } from "@/contexts/BusinessIdContext";
 
 const SAAS_SELECTED_BUSINESS_KEY = "saas_selected_business";
 
@@ -13,126 +11,30 @@ interface UseBusinessIdResult {
   refetch: () => Promise<void>;
 }
 
-/**
- * Hook to get the current active business ID, respecting multi-tenant scoping.
- *
- * Priority order:
- * 1. SaaS selected business (stored in sessionStorage by super_admin)
- * 2. User's owned business (owner_user_id)
- * 3. User's associated business via user_roles
- *
- * @param redirectIfNoBusiness - If true, redirects to /configurar-negocio if no business found
- */
 export const useBusinessId = (redirectIfNoBusiness = true): UseBusinessIdResult => {
   const navigate = useNavigate();
-  const { user, isSuperAdmin, isReady: authReady } = useAuth();
-  const [businessId, setBusinessId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { businessId, loading, isSuperAdmin, refetch } = useBusinessIdContext();
 
-  const fetchBusinessId = async () => {
-    try {
-      setLoading(true);
-
-      if (!user) {
-        navigate("/auth");
-        return;
-      }
-
-      if (!isSuperAdmin) {
-        const { data: profile, error: profileError } = await supabase
-          .from("profiles")
-          .select("id")
-          .eq("id", user.id)
-          .maybeSingle();
-
-        if (!profile || profileError) {
-          triggerSessionExpired();
-          return;
-        }
-      }
-
-      // SaaS selected business (super admin impersonating, o cualquier selección manual)
-      const saasSelectedBusiness = sessionStorage.getItem(SAAS_SELECTED_BUSINESS_KEY);
-
-      if (saasSelectedBusiness) {
-        const { data: business } = await supabase
-          .from("businesses")
-          .select("id")
-          .eq("id", saasSelectedBusiness)
-          .maybeSingle();
-
-        if (business) {
-          setBusinessId(business.id);
-          setLoading(false);
-          return;
-        } else {
-          sessionStorage.removeItem(SAAS_SELECTED_BUSINESS_KEY);
-        }
-      }
-
-      // Super admin sin selección: NUNCA tomar un business automáticamente.
-      // El super admin está por encima de todos los consultorios y debe elegir
-      // explícitamente cuál visitar desde el panel SaaS Admin. Esto previene
-      // que se creen/modifiquen datos en el consultorio equivocado por error.
-      if (isSuperAdmin) {
-        setBusinessId(null);
-        setLoading(false);
-        if (redirectIfNoBusiness && window.location.pathname !== "/saas-admin") {
-          navigate("/saas-admin");
-        }
-        return;
-      }
-
-      // Usuario regular: buscar business propio
-      const { data: ownedBusiness } = await supabase
-        .from("businesses")
-        .select("id")
-        .eq("owner_user_id", user.id)
-        .maybeSingle();
-
-      if (ownedBusiness) {
-        setBusinessId(ownedBusiness.id);
-        setLoading(false);
-        return;
-      }
-
-      // Member via user_roles
-      const { data: userRole } = await supabase
-        .from("user_roles")
-        .select("business_id")
-        .eq("user_id", user.id)
-        .in("role", ["owner", "professional"])
-        .maybeSingle();
-
-      if (userRole?.business_id) {
-        setBusinessId(userRole.business_id);
-        setLoading(false);
-        return;
-      }
-
-      if (redirectIfNoBusiness) {
+  // Handle redirects based on context result
+  useEffect(() => {
+    if (loading) return;
+    if (!redirectIfNoBusiness) return;
+    
+    if (!businessId && isSuperAdmin && window.location.pathname !== "/saas-admin") {
+      navigate("/saas-admin");
+    } else if (!businessId && !isSuperAdmin) {
+      // Only redirect if there's truly no business (not just loading)
+      if (businessId === null) {
         navigate("/configurar-negocio");
       }
-      setBusinessId(null);
-    } catch (error) {
-      console.error("Error fetching business ID:", error);
-      setBusinessId(null);
-    } finally {
-      setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    if (!authReady) return;
-    fetchBusinessId();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authReady, user?.id, isSuperAdmin]);
+  }, [loading, businessId, isSuperAdmin, redirectIfNoBusiness, navigate]);
 
   return {
     businessId,
     loading,
     isSuperAdmin,
-    refetch: fetchBusinessId,
+    refetch,
   };
 };
 

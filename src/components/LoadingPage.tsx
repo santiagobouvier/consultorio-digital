@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 
 // Si el LoadingPage llega a montarse, lo dejamos visible al menos este tiempo
 // para que no "parpadee" cuando el contenido carga inmediatamente después.
-const MIN_VISIBLE_MS = 1000;
+const MIN_VISIBLE_MS = 300;
 
 const LoadingPage = () => {
   const [holdDone, setHoldDone] = useState(false);
