@@ -358,7 +358,7 @@ export function PatientForm({
 
   return (
     <>
-    {createPortal(
+    {patientId && createPortal(
       <input
         ref={fileInputRef}
         id="patient-avatar-input"
