@@ -481,7 +481,7 @@ const Dashboard = () => {
                         onClick={() => {
                           setSelectedBusiness(business);
                           sessionStorage.setItem("saas_selected_business", business.id);
-                          fetchDashboardData(business.id);
+                          window.location.reload();
                         }}
                         className={business.id === selectedBusiness?.id ? "bg-accent" : ""}
                       >
