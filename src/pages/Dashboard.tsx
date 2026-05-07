@@ -423,7 +423,7 @@ const Dashboard = () => {
   if (!isMobile) {
     return (
       <Suspense fallback={<LoadingPage />}>
-        <DesktopDashboard />
+        <DesktopDashboard businessId={businessId!} userName={userName} />
       </Suspense>
     );
   }
