@@ -157,15 +157,8 @@ const AccessSelector = () => {
           ))}
         </div>
 
-        {/* Bottom link */}
-        <a
-          href="/#pricing"
-          className="text-gray-500 text-sm hover:text-gray-300 transition-colors"
-          style={{ animation: "fadeSlideUp 0.7s cubic-bezier(0.16,1,0.3,1) 0.5s both" }}
-        >
-          ¿No tenés cuenta? Empezar gratis
-        </a>
       </div>
+
 
       {/* CSS Animations */}
       <style>{`
