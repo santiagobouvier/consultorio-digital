@@ -1,5 +1,6 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -97,8 +98,7 @@ const statusConfig: Record<string, { label: string; color: string }> = {
 
 const PendingReminders = () => {
   const { businessId } = useBusinessId();
-  const [reminders, setReminders] = useState<Reminder[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("pending");
   const [showSendAllConfirm, setShowSendAllConfirm] = useState(false);
   const [selectedForSent, setSelectedForSent] = useState<Set<string>>(new Set());
@@ -122,25 +122,10 @@ const PendingReminders = () => {
   const [createForm, setCreateForm] = useState({ patientId: "", appointmentId: "", channel: "whatsapp" as "whatsapp" | "email", message: "", hoursBefore: "24" });
   const [createSaving, setCreateSaving] = useState(false);
 
-  useEffect(() => {
-    if (businessId) {
-      loadReminders();
-      loadPatientsAndAppointments();
-    }
-  }, [businessId]);
-
-  const loadPatientsAndAppointments = async () => {
-    if (!businessId) return;
-    const [pRes, aRes] = await Promise.all([
-      supabase.from("patients").select("id, full_name, whatsapp_phone, email").eq("business_id", businessId).eq("is_active", true).order("full_name"),
-      supabase.from("appointments").select("id, start_at, patient_id").eq("business_id", businessId).gte("start_at", new Date().toISOString()).order("start_at", { ascending: true }).limit(100),
-    ]);
-    if (pRes.data) setPatients(pRes.data);
-    if (aRes.data) setUpcomingAppointments(aRes.data);
-  };
-
-  const loadReminders = async () => {
-    try {
+  // Main reminders query — key matches query-prefetch.ts
+  const { data: reminders = [], isLoading: loading } = useQuery({
+    queryKey: ["reminders", businessId],
+    queryFn: async () => {
       const { data, error } = await supabase
         .from("scheduled_reminders")
         .select(`
@@ -150,16 +135,48 @@ const PendingReminders = () => {
         `)
         .eq("business_id", businessId!)
         .order("scheduled_for", { ascending: true });
-
       if (error) throw error;
-      setReminders((data as unknown as Reminder[]) || []);
-    } catch (error) {
-      console.error("Error loading reminders:", error);
-      toast({ title: "Error", description: "No se pudieron cargar los recordatorios", variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
-  };
+      return (data as unknown as Reminder[]) || [];
+    },
+    enabled: !!businessId,
+    staleTime: 30_000,
+    gcTime: 300_000,
+    refetchOnWindowFocus: true,
+  });
+
+  // Patients & appointments for create modal
+  const { data: patientsAndAppts } = useQuery({
+    queryKey: ["reminders_create_data", businessId],
+    queryFn: async () => {
+      const [pRes, aRes] = await Promise.all([
+        supabase.from("patients").select("id, full_name, whatsapp_phone, email").eq("business_id", businessId!).eq("is_active", true).order("full_name"),
+        supabase.from("appointments").select("id, start_at, patient_id").eq("business_id", businessId!).gte("start_at", new Date().toISOString()).order("start_at", { ascending: true }).limit(100),
+      ]);
+      return { patients: pRes.data || [], appointments: aRes.data || [] };
+    },
+    enabled: !!businessId,
+    staleTime: 60_000,
+  });
+
+  const patients = patientsAndAppts?.patients || [];
+  const upcomingAppointments = patientsAndAppts?.appointments || [];
+
+  const invalidateReminders = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["reminders", businessId] });
+  }, [queryClient, businessId]);
+
+  // Local state updaters for optimistic UI (keep same pattern)
+  const updateReminder = useCallback((id: string, updates: Partial<Reminder>) => {
+    queryClient.setQueryData(["reminders", businessId], (old: Reminder[] | undefined) =>
+      (old || []).map(r => r.id === id ? { ...r, ...updates } : r)
+    );
+  }, [queryClient, businessId]);
+
+  const removeReminder = useCallback((id: string) => {
+    queryClient.setQueryData(["reminders", businessId], (old: Reminder[] | undefined) =>
+      (old || []).filter(r => r.id !== id)
+    );
+  }, [queryClient, businessId]);
 
   // Stats
   const stats = useMemo(() => {
@@ -237,7 +254,7 @@ const PendingReminders = () => {
 
   const markAsSent = async (reminderId: string) => {
     await supabase.from("scheduled_reminders").update({ status: "sent" }).eq("id", reminderId);
-    setReminders(prev => prev.map(r => r.id === reminderId ? { ...r, status: "sent" } : r));
+    updateReminder(reminderId, { status: "sent" });
     setSelectedForSent(prev => { const n = new Set(prev); n.delete(reminderId); return n; });
     toast({ title: "✓ Marcado como enviado" });
   };
@@ -246,14 +263,16 @@ const PendingReminders = () => {
     for (const id of ids) {
       await supabase.from("scheduled_reminders").update({ status: "sent" }).eq("id", id);
     }
-    setReminders(prev => prev.map(r => ids.includes(r.id) ? { ...r, status: "sent" } : r));
+    queryClient.setQueryData(["reminders", businessId], (old: Reminder[] | undefined) =>
+      (old || []).map(r => ids.includes(r.id) ? { ...r, status: "sent" } : r)
+    );
     setSelectedForSent(new Set());
     toast({ title: `✓ ${ids.length} recordatorios marcados como enviados` });
   };
 
   const cancelReminder = async (reminderId: string) => {
     await supabase.from("scheduled_reminders").update({ status: "cancelled" }).eq("id", reminderId);
-    setReminders(prev => prev.map(r => r.id === reminderId ? { ...r, status: "cancelled" } : r));
+    updateReminder(reminderId, { status: "cancelled" });
     setCancelTarget(null);
     toast({ title: "Recordatorio cancelado" });
   };
@@ -262,7 +281,7 @@ const PendingReminders = () => {
     try {
       const { error } = await supabase.from("scheduled_reminders").delete().eq("id", reminderId);
       if (error) throw error;
-      setReminders(prev => prev.filter(r => r.id !== reminderId));
+      removeReminder(reminderId);
       setDeleteTarget(null);
       toast({ title: "Recordatorio eliminado" });
     } catch {
@@ -279,7 +298,7 @@ const PendingReminders = () => {
         .update({ message: editMessage })
         .eq("id", editingReminder.id);
       if (error) throw error;
-      setReminders(prev => prev.map(r => r.id === editingReminder.id ? { ...r, message: editMessage } : r));
+      updateReminder(editingReminder.id, { message: editMessage });
       setEditingReminder(null);
       toast({ title: "✓ Mensaje actualizado" });
     } catch {
@@ -321,7 +340,9 @@ const PendingReminders = () => {
     if (!whatsappConfirm) return;
     const ids = whatsappConfirm.ids;
     await supabase.from("scheduled_reminders").update({ status: "sent" }).in("id", ids);
-    setReminders(prev => prev.map(r => ids.includes(r.id) ? { ...r, status: "sent" } : r));
+    queryClient.setQueryData(["reminders", businessId], (old: Reminder[] | undefined) =>
+      (old || []).map(r => ids.includes(r.id) ? { ...r, status: "sent" } : r)
+    );
     setWhatsappConfirm(null);
     toast({ title: `✓ ${ids.length === 1 ? "Marcado" : `${ids.length} marcados`} como enviado` });
   };
@@ -356,7 +377,7 @@ const PendingReminders = () => {
       });
       if (error) throw error;
 
-      await loadReminders();
+      invalidateReminders();
       setShowCreateModal(false);
       setCreateForm({ patientId: "", appointmentId: "", channel: "whatsapp", message: "", hoursBefore: "24" });
       toast({ title: "✓ Recordatorio creado" });
