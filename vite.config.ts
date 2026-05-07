@@ -28,11 +28,10 @@ export default defineConfig(({ mode }) => ({
         name: "Tu Consultorio Digital",
         short_name: "Consultorio Digital",
         description: "Sistema de gestión de consultorios - Agenda, pacientes y pagos",
-        theme_color: "#00a5a0",
+        theme_color: "#111111",
         background_color: "#111111",
         display: "standalone",
         orientation: "portrait",
-        theme_color: "#111111",
         start_url: "/auth",
         icons: [
           {
