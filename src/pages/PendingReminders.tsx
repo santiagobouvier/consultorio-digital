@@ -117,8 +117,6 @@ const PendingReminders = () => {
 
   // Create manual reminder state
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [patients, setPatients] = useState<{ id: string; full_name: string; whatsapp_phone: string | null; email: string | null }[]>([]);
-  const [upcomingAppointments, setUpcomingAppointments] = useState<{ id: string; start_at: string; patient_id: string | null }[]>([]);
   const [createForm, setCreateForm] = useState({ patientId: "", appointmentId: "", channel: "whatsapp" as "whatsapp" | "email", message: "", hoursBefore: "24" });
   const [createSaving, setCreateSaving] = useState(false);
 
