@@ -1,11 +1,10 @@
-import { ReactNode, useEffect, useRef, useState, useCallback } from "react";
+import { ReactNode, useEffect, useState, useCallback } from "react";
 import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useSubscriptionStatus } from "@/hooks/use-subscription-status";
 import LoadingPage from "@/components/LoadingPage";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, CreditCard, Loader2, Sparkles, PartyPopper, Clock } from "lucide-react";
-import { triggerSessionExpired } from "@/components/SessionExpiredDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBusinessIdContext } from "@/contexts/BusinessIdContext";
 import { toast } from "sonner";
