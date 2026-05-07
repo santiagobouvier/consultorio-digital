@@ -5,9 +5,8 @@ import { useSubscriptionStatus } from "@/hooks/use-subscription-status";
 import LoadingPage from "@/components/LoadingPage";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, CreditCard, Loader2, Sparkles, PartyPopper, Clock } from "lucide-react";
-import { triggerSessionExpired } from "@/components/SessionExpiredDialog";
 import { useAuth } from "@/contexts/AuthContext";
-import { getActiveBusinessId } from "@/hooks/use-business-id";
+import { useBusinessIdContext } from "@/contexts/BusinessIdContext";
 import { toast } from "sonner";
 import { resolveSubscriptionStatus } from "@/lib/subscription-status";
 
@@ -15,19 +14,13 @@ interface SubscriptionGuardProps {
   children: ReactNode;
 }
 
-// Caché a nivel módulo: businessId resuelto por userId.
-// Persiste entre navegaciones a rutas protegidas (cada <Protected> remonta su
-// SubscriptionGuard, pero no queremos re-ejecutar el RPC cada vez).
-// Se invalida al cambiar de userId o al hacer signOut (handler abajo).
-const businessIdCache = new Map<string, string | null>();
 const activationCache = new Map<string, boolean>(); // businessId → ya verificado
 const POLL_INTERVAL = 3000; // 3 seconds
 const MAX_POLL_TIME = 30000; // 30 seconds
 
-// Limpiar cachés al cerrar sesión (un único listener a nivel módulo).
+// Limpiar caché al cerrar sesión (un único listener a nivel módulo).
 supabase.auth.onAuthStateChange((event) => {
   if (event === "SIGNED_OUT") {
-    businessIdCache.clear();
     activationCache.clear();
   }
 });
@@ -37,13 +30,10 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const { user, isSuperAdmin, isReady: authReady } = useAuth();
-  const cachedBusinessId = user ? businessIdCache.get(user.id) : undefined;
-  const cachedActivation = cachedBusinessId ? activationCache.get(cachedBusinessId) : undefined;
-  const [businessId, setBusinessId] = useState<string | null>(cachedBusinessId ?? null);
-  const [businessLoading, setBusinessLoading] = useState(cachedBusinessId === undefined);
+  const { businessId, loading: businessLoading } = useBusinessIdContext();
+  const cachedActivation = businessId ? activationCache.get(businessId) : undefined;
   const [checkingActivation, setCheckingActivation] = useState(cachedActivation !== true);
   const [activationChecked, setActivationChecked] = useState(cachedActivation === true);
-  const lastResolvedUserId = useRef<string | null>(cachedBusinessId !== undefined && user ? user.id : null);
   
   // Grace period: when status is "none" but we have a businessId, wait before blocking
   const [noneGraceActive, setNoneGraceActive] = useState(false);
@@ -53,65 +43,6 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
   const [verifyingPayment, setVerifyingPayment] = useState(false);
   const [paymentVerified, setPaymentVerified] = useState(false);
   const [paymentTimedOut, setPaymentTimedOut] = useState(false);
-
-  // Resolver businessId una vez que la auth está lista.
-  // Super admin: si está impersonando un business (sessionStorage), lo usa;
-  // si no, redirige directo a /saas-admin sin tocar suscripciones.
-  useEffect(() => {
-    if (!authReady) return;
-
-    if (!user) {
-      navigate("/auth", { replace: true });
-      return;
-    }
-
-    if (isSuperAdmin) {
-      const impersonated = getActiveBusinessId();
-      if (impersonated) {
-        setBusinessId(impersonated);
-      } else {
-        navigate("/saas-admin", { replace: true });
-        return;
-      }
-      setBusinessLoading(false);
-      return;
-    }
-
-    // Si ya resolvimos el businessId para este usuario en una navegación previa,
-    // no volvemos a pegarle al RPC — solo restauramos el estado desde el caché.
-    if (lastResolvedUserId.current === user.id && businessIdCache.has(user.id)) {
-      const cached = businessIdCache.get(user.id) ?? null;
-      setBusinessId(cached);
-      setBusinessLoading(false);
-      return;
-    }
-
-    // Usuario regular: obtener su business via RPC
-    let cancelled = false;
-    (async () => {
-      try {
-        const { data, error } = await supabase.rpc("get_user_business_id", { _user_id: user.id });
-        if (cancelled) return;
-        if (error) {
-          console.error("SubscriptionGuard: error obteniendo business", error);
-          triggerSessionExpired();
-          return;
-        }
-        const resolved = (data as string | null) || null;
-        businessIdCache.set(user.id, resolved);
-        lastResolvedUserId.current = user.id;
-        setBusinessId(resolved);
-      } catch (err) {
-        if (cancelled) return;
-        console.error("SubscriptionGuard: excepción obteniendo business", err);
-        triggerSessionExpired();
-      } finally {
-        if (!cancelled) setBusinessLoading(false);
-      }
-    })();
-
-    return () => { cancelled = true; };
-  }, [authReady, user, isSuperAdmin, navigate]);
 
   const { status, loading } = useSubscriptionStatus(businessId);
   const [reactivating, setReactivating] = useState(false);
