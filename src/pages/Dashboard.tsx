@@ -22,7 +22,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import { isCurrentUserSuperAdmin } from "@/lib/admin-access";
+import { useAuth } from "@/contexts/AuthContext";
+import { useBusinessIdContext } from "@/contexts/BusinessIdContext";
 import { HelpTooltip } from "@/components/HelpTooltip";
 
 // Lazy load desktop dashboard (executive view)
@@ -43,8 +44,9 @@ const Dashboard = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const isMobile = useIsMobile();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { user, isSuperAdmin, isReady: authReady } = useAuth();
+  const { businessId: ctxBusinessId, loading: ctxBusinessLoading } = useBusinessIdContext();
   const [userName, setUserName] = useState("");
-  const [userId, setUserId] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [activePatientsCount, setActivePatientsCount] = useState(0);
@@ -59,7 +61,6 @@ const Dashboard = () => {
   const [showPatientForm, setShowPatientForm] = useState(false);
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
-  const [businessId, setBusinessId] = useState<string | null>(null);
   const [privacyMode, setPrivacyMode] = useState(() => {
     const saved = localStorage.getItem(PRIVACY_MODE_KEY);
     return saved === "true";
@@ -67,7 +68,6 @@ const Dashboard = () => {
   
   // Demo & Super admin state
   const [isDemo, setIsDemo] = useState(false);
-  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [allBusinesses, setAllBusinesses] = useState<Business[]>([]);
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
   const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null);
@@ -80,6 +80,9 @@ const Dashboard = () => {
     no_show: "ausencia",
   };
 
+  const businessId = ctxBusinessId;
+  const userId = user?.id ?? null;
+
   useEffect(() => {
     // Show success toast if coming from MP payment
     if (searchParams.get("subscription") === "success") {
@@ -91,135 +94,27 @@ const Dashboard = () => {
       searchParams.delete("subscription");
       setSearchParams(searchParams, { replace: true });
     }
-
-    // Check if coming from SaaS admin with selected business
-    const saasSelectedBusiness = sessionStorage.getItem("saas_selected_business");
-    if (saasSelectedBusiness) {
-      fetchDashboardData(saasSelectedBusiness);
-    } else {
-      fetchDashboardData();
-    }
   }, []);
 
-  const fetchDashboardData = async (overrideBusinessId?: string) => {
+  // Fetch data once auth + businessId are resolved
+  useEffect(() => {
+    if (!authReady || ctxBusinessLoading) return;
+    if (!user) return;
+    if (!businessId) {
+      setLoading(false);
+      return;
+    }
+    fetchDashboardData();
+  }, [authReady, ctxBusinessLoading, user?.id, businessId]);
+
+  const fetchDashboardData = async () => {
     try {
       setLoading(true);
 
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        navigate("/auth");
-        return;
-      }
+      if (!user || !businessId) return;
 
-      setUserId(user.id);
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("name, avatar_url")
-        .eq("id", user.id)
-        .single();
-
-      if (profile) {
-        setUserName(profile.name);
-        setAvatarUrl(profile.avatar_url);
-      }
-
-      // Check if user is super_admin
-      const isAdmin = await isCurrentUserSuperAdmin(user.id);
-      setIsSuperAdmin(isAdmin);
-
-      let currentBusinessId = overrideBusinessId || null;
-
-      if (isAdmin) {
-        // Super admin: cargar lista de consultorios para el selector,
-        // pero NUNCA seleccionar uno automáticamente. Si no hay un
-        // business previamente seleccionado en sessionStorage, redirigir
-        // al panel SaaS Admin para que el admin elija explícitamente.
-        const { data: businesses } = await supabase
-          .from("businesses")
-          .select("id, name, owner_user_id")
-          .order("name");
-
-        if (businesses && businesses.length > 0) {
-          setAllBusinesses(businesses);
-
-          // Resolver business actual SOLO desde override o sessionStorage
-          const sessionBusinessId =
-            currentBusinessId || sessionStorage.getItem("saas_selected_business");
-
-          const selected = sessionBusinessId
-            ? businesses.find((b) => b.id === sessionBusinessId)
-            : null;
-
-          if (!selected) {
-            // Sin selección explícita: volver al panel SaaS Admin
-            sessionStorage.removeItem("saas_selected_business");
-            navigate("/saas-admin");
-            return;
-          }
-
-          setSelectedBusiness(selected);
-          currentBusinessId = selected.id;
-          sessionStorage.setItem("saas_selected_business", currentBusinessId);
-        } else {
-          // Super admin sin consultorios en el sistema
-          navigate("/saas-admin");
-          return;
-        }
-      } else {
-        // Regular user: check for owned or member business
-        let { data: business } = await supabase
-          .from("businesses")
-          .select("id, name, owner_user_id, onboarding_completed, is_demo")
-          .eq("owner_user_id", user.id)
-          .maybeSingle();
-
-        // Check if this is the owner and onboarding is pending
-        if (business && !business.onboarding_completed && business.owner_user_id === user.id) {
-          navigate("/onboarding-consultorio");
-          return;
-        }
-
-        if (!business) {
-          // Check if member via user_roles
-          const { data: userRole } = await supabase
-            .from("user_roles")
-            .select("business_id")
-            .eq("user_id", user.id)
-            .in("role", ["owner", "professional"])
-            .maybeSingle();
-
-          if (userRole?.business_id) {
-            const { data: memberBusiness } = await supabase
-              .from("businesses")
-              .select("id, name, owner_user_id, onboarding_completed, is_demo")
-              .eq("id", userRole.business_id)
-              .single();
-            
-            business = memberBusiness;
-          }
-        }
-
-        if (!business) {
-          navigate("/configurar-negocio");
-          return;
-        }
-
-        currentBusinessId = business.id;
-        setSelectedBusiness(business);
-      }
-
-      if (!currentBusinessId && isAdmin) {
-        navigate("/saas-admin", { replace: true });
-        return;
-      }
-
-      if (!currentBusinessId) {
-        navigate("/configurar-negocio");
-        return;
-      }
-
-      setBusinessId(currentBusinessId);
+      const currentBusinessId = businessId;
+      const isAdmin = isSuperAdmin;
 
       // ── Parallelizar todas las consultas independientes ──
       const today = new Date();
@@ -231,7 +126,9 @@ const Dashboard = () => {
       monthStart.setHours(0, 0, 0, 0);
 
       const [
+        profileRes,
         bizInfoRes,
+        businessInfoRes,
         subDataRes,
         patientsCountRes,
         portalCountRes,
@@ -239,9 +136,14 @@ const Dashboard = () => {
         appointmentsRes,
         unpaidRes,
         userRoleRes,
+        allBusinessesRes,
       ] = await Promise.all([
-        // 1. Demo check
-        supabase.from("businesses").select("is_demo").eq("id", currentBusinessId).maybeSingle(),
+        // 0. Profile
+        supabase.from("profiles").select("name, avatar_url").eq("id", user.id).single(),
+        // 1. Demo check + onboarding
+        supabase.from("businesses").select("is_demo, onboarding_completed, owner_user_id, name").eq("id", currentBusinessId).maybeSingle(),
+        // 1b. Business name for selectedBusiness
+        supabase.from("businesses").select("id, name, owner_user_id").eq("id", currentBusinessId).maybeSingle(),
         // 2. Trial status
         isAdmin
           ? Promise.resolve({ data: null })
@@ -258,10 +160,37 @@ const Dashboard = () => {
         supabase.from("payments").select("*").eq("business_id", currentBusinessId).is("paid_at", null).not("status", "eq", "cancelled"),
         // 8. User role
         supabase.from("user_roles").select("role").eq("user_id", user.id).eq("business_id", currentBusinessId).maybeSingle(),
+        // 9. All businesses (for super admin selector)
+        isAdmin
+          ? supabase.from("businesses").select("id, name, owner_user_id").order("name")
+          : Promise.resolve({ data: null }),
       ]);
 
+      // Process profile
+      if (profileRes.data) {
+        setUserName(profileRes.data.name);
+        setAvatarUrl(profileRes.data.avatar_url);
+      }
+
+      // Check onboarding for owner
+      const bizInfo = bizInfoRes.data;
+      if (bizInfo && !isAdmin && !bizInfo.onboarding_completed && bizInfo.owner_user_id === user.id) {
+        navigate("/onboarding-consultorio");
+        return;
+      }
+
+      // Set selected business
+      if (businessInfoRes.data) {
+        setSelectedBusiness(businessInfoRes.data);
+      }
+
+      // Set all businesses for super admin
+      if (isAdmin && allBusinessesRes.data) {
+        setAllBusinesses(allBusinessesRes.data);
+      }
+
       // Process results
-      setIsDemo(bizInfoRes.data?.is_demo || false);
+      setIsDemo(bizInfo?.is_demo || false);
 
       if (isAdmin) {
         setTrialEndsAt(null);
