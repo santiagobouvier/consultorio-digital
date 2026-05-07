@@ -369,11 +369,11 @@ const Auth = () => {
         {/* Columna del card (incluye Volver, badges y card) */}
         <div className="w-full max-w-md lg:max-w-sm mx-auto lg:mx-0 flex flex-col items-center justify-center lg:justify-start">
         <Link
-          to="/"
+          to="/acceso"
           className="self-start inline-flex items-center gap-2 text-sm text-white/40 hover:text-white/70 mb-4 transition-colors absolute top-4 left-4 lg:static"
         >
           <ArrowLeft className="w-4 h-4" />
-          Volver al inicio
+          Volver
         </Link>
 
         {/* Plan badge */}
