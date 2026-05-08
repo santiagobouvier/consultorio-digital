@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
 import logoWhite from "@/assets/logo-consultorio-digital-white.png";
 
 const BRAND = "#00a5a0";
@@ -97,6 +98,15 @@ const AccessSelector = () => {
 
       {/* Content */}
       <div className="relative z-10 flex flex-col items-center w-full max-w-2xl">
+        {/* Back link */}
+        <Link
+          to="/"
+          className="self-start flex items-center gap-1.5 text-gray-500 hover:text-gray-300 transition-colors text-sm mb-6"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Volver
+        </Link>
+
         {/* Logo */}
         <img
           src={logoWhite}
