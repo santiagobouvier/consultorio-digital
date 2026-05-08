@@ -928,14 +928,31 @@ const ClinicPortal = () => {
         {payments.map(pay => (
           <Card key={pay.id} className="hover:shadow-sm transition-all overflow-hidden">
             <div className={`h-1 ${pay.status === "paid" ? "bg-primary" : "bg-destructive"}`} />
-            <CardContent className="p-4 flex items-center justify-between">
-              <div>
-                <p className="font-semibold text-sm">{formatCurrency(Number(pay.amount), pay.currency || "UYU")}</p>
-                <p className="text-xs text-muted-foreground">
-                  {pay.notes || (pay.status === "paid" ? `Pagado ${formatShort(pay.paid_at)}` : `Vence ${formatShort(pay.due_date)}`)}
-                </p>
+            <CardContent className="p-4 space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-semibold text-sm">{formatCurrency(Number(pay.amount), pay.currency || "UYU")}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {pay.notes || (pay.status === "paid" ? `Pagado ${formatShort(pay.paid_at)}` : `Vence ${formatShort(pay.due_date)}`)}
+                  </p>
+                </div>
+                {payBadge(pay.status)}
               </div>
-              {payBadge(pay.status)}
+              {pay.status === "pending" && pay.appointment_id && (
+                <Button
+                  size="sm"
+                  className="w-full gap-2"
+                  onClick={() => handlePaySession(pay.appointment_id)}
+                  disabled={payingAppointment === pay.appointment_id}
+                >
+                  {payingAppointment === pay.appointment_id ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <CreditCard className="h-4 w-4" />
+                  )}
+                  {payingAppointment === pay.appointment_id ? "Procesando..." : "Pagar online"}
+                </Button>
+              )}
             </CardContent>
           </Card>
         ))}
