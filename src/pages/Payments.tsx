@@ -104,21 +104,26 @@ const Payments = () => {
   const { businessId, loading: businessLoading } = useBusinessId();
 
   // Main payments query — key matches query-prefetch.ts
-  const { data: rawPayments = [], isLoading: paymentsLoading } = useQuery({
+  const { data: rawPayments = [], isLoading: paymentsLoading, error: paymentsError, refetch: refetchPayments } = useQuery({
     queryKey: ["payments", businessId],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("payments")
         .select("*, patients(full_name, whatsapp_phone)")
         .eq("business_id", businessId!)
         .order("due_date", { ascending: false })
         .limit(200);
+      if (error) {
+        console.error("Error fetching payments:", error);
+        throw error;
+      }
       return data ?? [];
     },
     enabled: !!businessId,
     staleTime: 30_000,
     gcTime: 300_000,
     refetchOnWindowFocus: true,
+    retry: 1,
   });
 
   // Patients list for filter dropdown
@@ -334,7 +339,31 @@ const Payments = () => {
         </div>
 
         {/* Payment List */}
-        {filteredPayments.length === 0 ? (
+        {paymentsError ? (
+          <Card className="border-2 border-destructive/40 bg-destructive/5">
+            <CardContent className="py-12 text-center space-y-4">
+              <div className="mx-auto w-16 h-16 rounded-2xl bg-destructive/10 flex items-center justify-center">
+                <AlertTriangle className="h-8 w-8 text-destructive" />
+              </div>
+              <div className="space-y-1">
+                <p className="text-lg font-semibold text-destructive">No se pudieron cargar los pagos</p>
+                <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                  {(paymentsError as any)?.message || "Ocurrió un error al consultar la base de datos. Verificá tu conexión y volvé a intentar."}
+                </p>
+              </div>
+              <Button variant="outline" onClick={() => refetchPayments()} className="rounded-xl gap-2">
+                <RefreshCw className="h-4 w-4" />
+                Reintentar
+              </Button>
+            </CardContent>
+          </Card>
+        ) : paymentsLoading ? (
+          <Card className="border-border/50">
+            <CardContent className="py-16 text-center">
+              <p className="text-sm text-muted-foreground">Cargando pagos...</p>
+            </CardContent>
+          </Card>
+        ) : filteredPayments.length === 0 ? (
           <Card className="border-dashed border-2 border-border/50">
             <CardContent className="py-16 text-center space-y-3">
               <div className="mx-auto w-16 h-16 rounded-2xl bg-muted flex items-center justify-center">
