@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, CalendarCheck, User } from "lucide-react";
 import logoWhite from "@/assets/logo-consultorio-digital-white.png";
 
 const BRAND = "#00a5a0";
@@ -9,7 +9,7 @@ const GREEN = "#00c78a";
 
 const cards = [
   {
-    emoji: "🩺",
+    Icon: CalendarCheck,
     title: "Soy profesional",
     description: "Accedé al sistema de gestión de tu consultorio",
     to: "/auth",
@@ -17,7 +17,7 @@ const cards = [
     glowColor: BRAND,
   },
   {
-    emoji: "👤",
+    Icon: User,
     title: "Soy paciente",
     description: "Ingresá a tu portal personal de turnos y pagos",
     to: "/acceso/paciente",
@@ -151,7 +151,15 @@ const AccessSelector = () => {
                 e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)";
               }}
             >
-              <span className="text-5xl sm:text-6xl mb-4">{card.emoji}</span>
+              <div
+                className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center mb-4 border border-white/10"
+                style={{
+                  background: `linear-gradient(135deg, ${card.glowColor}25, ${card.glowColor}08)`,
+                  boxShadow: `0 0 24px ${card.glowColor}20`,
+                }}
+              >
+                <card.Icon className="w-8 h-8 sm:w-10 sm:h-10" style={{ color: card.glowColor }} strokeWidth={1.75} />
+              </div>
               <h2 className="text-xl sm:text-2xl font-bold mb-2">{card.title}</h2>
               <p className="text-gray-400 text-sm mb-5 leading-relaxed">{card.description}</p>
               <Button
