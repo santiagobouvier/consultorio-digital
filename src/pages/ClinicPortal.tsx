@@ -555,6 +555,21 @@ const ClinicPortal = () => {
     if (!branding) return;
     try {
       setPayingAppointment(appointmentId);
+
+      // Bug 1: Reuse existing pending payment to avoid duplicates
+      const { data: existingPayment } = await supabase
+        .from("payments")
+        .select("id, mp_preference_id")
+        .eq("appointment_id", appointmentId)
+        .eq("status", "pending")
+        .not("mp_preference_id", "is", null)
+        .maybeSingle();
+
+      if (existingPayment?.mp_preference_id) {
+        window.location.href = `https://www.mercadopago.com.uy/checkout/v1/redirect?pref_id=${existingPayment.mp_preference_id}`;
+        return;
+      }
+
       const { data, error } = await supabase.functions.invoke("create-session-payment", {
         body: { appointment_id: appointmentId, business_id: branding.id },
       });
