@@ -363,6 +363,7 @@ const ClinicPortal = () => {
       searchParams.delete("payment");
       searchParams.delete("appointment_id");
       setSearchParams(searchParams, { replace: true });
+      setTab("pagos");
       // Reload data after short delay to let webhook process
       setTimeout(() => {
         if (patient && branding) {
