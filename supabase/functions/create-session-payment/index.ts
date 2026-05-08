@@ -208,6 +208,7 @@ serve(async (req) => {
         status: "pending",
         method: "mercadopago",
         notes: title,
+        mp_preference_id: mpPref.id,
       });
 
     if (payErr) {
@@ -222,6 +223,7 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({
       init_point: mpPref.init_point,
+      preference_id: mpPref.id,
       amount,
       is_deposit: isDeposit,
       deposit_percentage: policy.deposit_percentage,
