@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+import { useQueryClient } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format } from "date-fns";
@@ -80,6 +81,7 @@ export function PaymentForm({
   onSuccess,
 }: PaymentFormProps) {
   const [loading, setLoading] = useState(false);
+  const queryClient = useQueryClient();
   const isEditing = !!paymentId;
 
   const form = useForm<PaymentFormData>({
@@ -159,6 +161,8 @@ export function PaymentForm({
       }
 
       onSuccess();
+      // Invalidate global payments cache so /pagos page reflects the change
+      queryClient.invalidateQueries({ queryKey: ["payments", businessId] });
       onOpenChange(false);
       form.reset();
     } catch (error) {
