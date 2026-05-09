@@ -57,6 +57,21 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Check existing payment for this appointment
+    const { data: existingPayment } = await supabase
+      .from("payments")
+      .select("id, status, mp_preference_id")
+      .eq("appointment_id", appointmentId)
+      .in("status", ["paid", "pending"])
+      .order("created_at", { ascending: false })
+      .maybeSingle();
+
+    if (existingPayment?.status === "paid") {
+      return new Response(JSON.stringify({ error: "Este turno ya fue pagado" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Get appointment
     const { data: appointment, error: apptErr } = await supabase
       .from("appointments")
@@ -195,24 +210,34 @@ serve(async (req) => {
 
     const mpPref = await mpResponse.json();
 
-    // Create payment record
-    const { error: payErr } = await supabase
-      .from("payments")
-      .insert({
-        business_id: businessId,
-        patient_id: patient.id,
-        appointment_id: appointmentId,
-        amount,
-        currency: "UYU",
-        due_date: appointment.start_at,
-        status: "pending",
-        method: "mercadopago",
-        notes: title,
-        mp_preference_id: mpPref.id,
-      });
-
-    if (payErr) {
-      console.error("Failed to create payment record:", payErr);
+    // Create or update payment record
+    if (existingPayment?.status === "pending") {
+      const { error: updErr } = await supabase
+        .from("payments")
+        .update({
+          mp_preference_id: mpPref.id,
+          amount,
+          notes: title,
+          method: "mercadopago",
+        })
+        .eq("id", existingPayment.id);
+      if (updErr) console.error("Failed to update payment record:", updErr);
+    } else {
+      const { error: payErr } = await supabase
+        .from("payments")
+        .insert({
+          business_id: businessId,
+          patient_id: patient.id,
+          appointment_id: appointmentId,
+          amount,
+          currency: "UYU",
+          due_date: appointment.start_at,
+          status: "pending",
+          method: "mercadopago",
+          notes: title,
+          mp_preference_id: mpPref.id,
+        });
+      if (payErr) console.error("Failed to create payment record:", payErr);
     }
 
     // Update appointment payment_status
