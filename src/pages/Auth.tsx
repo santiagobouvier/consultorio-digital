@@ -669,7 +669,8 @@ const Auth = () => {
                   )}
                 </div>
 
-                {/* Login alternativo — Google secundario */}
+                {/* Login alternativo — Google secundario (solo en login, no en signup) */}
+                {!isSignUp && (
                 <div className="mt-5 pt-4 border-t border-white/5">
                   <button
                     type="button"
@@ -691,6 +692,7 @@ const Auth = () => {
                     <span className="font-medium">Google</span>
                   </button>
                 </div>
+                )}
               </>
             )}
           </div>
