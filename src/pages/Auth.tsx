@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { ArrowLeft, Building2, Mail, Eye, EyeOff, Sparkles, CheckCircle2 } from "lucide-react";
 import { useHostnameBusiness } from "@/hooks/use-hostname-business";
-import { getPlanDefinition, formatPrice } from "@/lib/plan-definitions";
+import { getPlanDefinition } from "@/lib/plan-definitions";
 import { getPostLoginDestination, getUserAccessPriority } from "@/lib/post-login-routing";
 import { useAuth } from "@/contexts/AuthContext";
 import logoWhite from "@/assets/logo-consultorio-digital-white.png";
@@ -53,7 +53,6 @@ const Auth = () => {
   const { isSuperAdmin: ctxIsSuperAdmin } = useAuth();
 
   const planDef = selectedPlan ? getPlanDefinition(selectedPlan) : null;
-  const planPrice = planDef ? (billingPeriod === "annual" ? planDef.priceAnnual : planDef.priceMonthly) : 0;
 
   useEffect(() => {
     if (sessionStatus === "expired") {
@@ -399,11 +398,11 @@ const Auth = () => {
               </div>
               <div>
                 <p className="text-sm text-white/50">Plan seleccionado</p>
-                <p className="font-semibold text-white">{planDef.name} — {formatPrice(planPrice)}/mes</p>
+                <p className="font-semibold text-white">{planDef.name}</p>
               </div>
             </div>
             <p className="text-xs text-[hsl(160,80%,50%)] mt-2 ml-13">
-              ✨ 7 días gratis, después se cobra automáticamente
+              ✨ 7 días gratis, sin tarjeta requerida
             </p>
           </div>
         )}
