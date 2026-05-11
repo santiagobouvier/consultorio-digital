@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Shield, Check, CreditCard, Loader2, MessageCircle, ArrowLeft, Sparkles } from "lucide-react";
+import { Check, Loader2, MessageCircle, Sparkles } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { getPlanDefinition, formatPrice } from "@/lib/plan-definitions";
 import LoadingPage from "@/components/LoadingPage";
@@ -101,21 +101,46 @@ const ActivateTrial = () => {
   const handleActivate = async () => {
     setActivating(true);
     try {
-      const { data, error } = await supabase.functions.invoke("create-subscription", {
-        body: {
+      if (!businessId) throw new Error("Business no encontrado");
+
+      // Check if a subscription already exists (trigger auto-creates it on business insert)
+      const { data: existing } = await supabase
+        .from("subscriptions")
+        .select("id, status")
+        .eq("business_id", businessId)
+        .maybeSingle();
+
+      const trialEnd = new Date();
+      trialEnd.setDate(trialEnd.getDate() + 7);
+
+      if (!existing) {
+        const { error: insertErr } = await supabase.from("subscriptions").insert({
+          business_id: businessId,
           plan_code: planCode,
           billing_period: billingPeriod,
-        },
-      });
-
-      if (error) throw error;
-
-      if (data?.checkout_url) {
-        window.location.href = data.checkout_url;
-      } else {
-        toast.success("¡Prueba activada!");
-        navigate("/dashboard");
+          status: "trial",
+          amount: 0,
+          currency: "UYU",
+          trial_ends_at: trialEnd.toISOString(),
+          current_period_start: new Date().toISOString(),
+          current_period_end: trialEnd.toISOString(),
+        });
+        if (insertErr) throw insertErr;
+      } else if (existing.status !== "trial" && existing.status !== "active") {
+        const { error: updateErr } = await supabase
+          .from("subscriptions")
+          .update({
+            status: "trial",
+            trial_ends_at: trialEnd.toISOString(),
+            current_period_start: new Date().toISOString(),
+            current_period_end: trialEnd.toISOString(),
+          })
+          .eq("id", existing.id);
+        if (updateErr) throw updateErr;
       }
+
+      toast.success("¡Prueba gratis activada! Tenés 7 días para probar todo.");
+      navigate("/dashboard");
     } catch (err: any) {
       console.error("Activation error:", err);
       toast.error("Error al activar la prueba. Intentá de nuevo.");
@@ -156,7 +181,7 @@ const ActivateTrial = () => {
               7 días gratis, cancelá cuando quieras
             </h2>
             <p className="text-sm text-white/50">
-              Ingresá tu tarjeta para activar tu prueba. No se te cobra nada hoy.
+              Activá tu prueba en un clic. Sin tarjeta, sin compromiso.
             </p>
           </div>
 
@@ -178,9 +203,9 @@ const ActivateTrial = () => {
             {/* Trust bullets */}
             <div className="space-y-3 mb-6">
               {[
-                { icon: Check, text: "Sin cargo durante 7 días" },
-                { icon: Check, text: "Cancelá antes del día 7 sin costo" },
-                { icon: Shield, text: "Pago seguro con Mercado Pago" },
+                { icon: Check, text: "Sin tarjeta de crédito" },
+                { icon: Check, text: "7 días para probar todas las funcionalidades" },
+                { icon: Check, text: "Al vencer, elegís un plan y pagás" },
                 { icon: Check, text: "Podés cambiar de plan cuando quieras" },
               ].map((item, i) => (
                 <div key={i} className="flex items-center gap-3">
@@ -201,11 +226,16 @@ const ActivateTrial = () => {
               style={{ backgroundColor: '#00a5a0', boxShadow: '0 4px 20px rgba(0,165,160,0.3)' }}
             >
               {activating ? (
-                <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                  Activando...
+                </>
               ) : (
-                <CreditCard className="w-5 h-5 mr-2" />
+                <>
+                  <Sparkles className="w-5 h-5 mr-2" />
+                  Empezar prueba gratis de 7 días
+                </>
               )}
-              {activating ? "Redirigiendo a Mercado Pago..." : "Activar prueba gratuita"}
             </Button>
 
             <a

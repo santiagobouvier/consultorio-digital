@@ -1,16 +1,14 @@
-import { useState, useCallback } from "react";
+import { useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { toast } from "sonner";
+import { useState } from "react";
 import {
   Check,
   Users,
   UserCheck,
   Globe,
-  Loader2,
   ArrowLeft,
   Sparkles,
 } from "lucide-react";
@@ -23,42 +21,18 @@ import {
 
 const Pricing = () => {
   const navigate = useNavigate();
-  const { user, isReady } = useAuth();
+  const { user } = useAuth();
   const [billingCycle, setBillingCycle] = useState<"monthly" | "annual">("annual");
-  const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
 
   const handleSelectPlan = useCallback(
-    async (planCode: string) => {
+    (planCode: string) => {
       if (!user) {
-        // Not logged in → redirect to auth with plan info
+        // Not logged in → go to register with plan preselected (no Mercado Pago)
         navigate(`/auth?plan=${planCode}&billing=${billingCycle}`);
         return;
       }
-
-      // Logged in → call create-subscription directly
-      setCheckoutLoading(planCode);
-      try {
-        const { data, error } = await supabase.functions.invoke("create-subscription", {
-          body: {
-            plan_code: planCode,
-            billing_period: billingCycle,
-          },
-        });
-
-        if (error) throw error;
-
-        if (data?.checkout_url) {
-          window.location.href = data.checkout_url;
-        } else {
-          toast.success("Suscripción creada. Tu trial de 7 días está activo.");
-          navigate("/dashboard");
-        }
-      } catch (err: any) {
-        console.error("Checkout error:", err);
-        toast.error(err.message || "Error al procesar. Intentá nuevamente.");
-      } finally {
-        setCheckoutLoading(null);
-      }
+      // Logged in → go to dashboard (trial is already active or user can manage from billing)
+      navigate("/dashboard");
     },
     [user, billingCycle, navigate]
   );
@@ -137,7 +111,6 @@ const Pricing = () => {
               key={plan.code}
               plan={plan}
               billingCycle={billingCycle}
-              loading={checkoutLoading === plan.code}
               onSelect={() => handleSelectPlan(plan.code)}
             />
           ))}
@@ -145,7 +118,7 @@ const Pricing = () => {
 
         {/* Footer note */}
         <p className="text-center text-white/30 text-xs mt-10">
-          Precios en pesos uruguayos (UYU). IVA incluido. Pagás con Mercado Pago.
+          Precios en pesos uruguayos (UYU). IVA incluido. Empezá gratis sin tarjeta.
         </p>
       </div>
     </div>
@@ -157,11 +130,10 @@ const Pricing = () => {
 interface PlanCardProps {
   plan: PlanDefinition;
   billingCycle: "monthly" | "annual";
-  loading: boolean;
   onSelect: () => void;
 }
 
-const PlanCard = ({ plan, billingCycle, loading, onSelect }: PlanCardProps) => {
+const PlanCard = ({ plan, billingCycle, onSelect }: PlanCardProps) => {
   const price = billingCycle === "annual" ? plan.priceAnnual : plan.priceMonthly;
   const monthlyPrice = plan.priceMonthly;
   const isAnnual = billingCycle === "annual";
@@ -263,7 +235,6 @@ const PlanCard = ({ plan, billingCycle, loading, onSelect }: PlanCardProps) => {
       {/* CTA */}
       <Button
         onClick={onSelect}
-        disabled={loading}
         className="w-full h-11 font-semibold text-sm"
         style={
           highlighted
@@ -278,10 +249,7 @@ const PlanCard = ({ plan, billingCycle, loading, onSelect }: PlanCardProps) => {
               }
         }
       >
-        {loading ? (
-          <Loader2 className="w-4 h-4 animate-spin mr-2" />
-        ) : null}
-        {loading ? "Procesando..." : "Elegir plan"}
+        Empezar 7 días gratis
       </Button>
     </div>
   );
