@@ -32,6 +32,8 @@ import { isCurrentUserSuperAdmin } from "@/lib/admin-access";
 import { useBusinessId, clearActiveBusinessId, getActiveBusinessId } from "@/hooks/use-business-id";
 import { prefetchRoute } from "@/lib/query-prefetch";
 import { usePendingRequestsCount } from "@/hooks/use-pending-requests-count";
+import { useTheme } from "@/contexts/ThemeContext";
+import { Sun, Moon } from "lucide-react";
 
 type NavItem = {
   title: string;
@@ -70,6 +72,8 @@ export function PremiumSidebar() {
   const sidebarRef = useRef<HTMLDivElement>(null);
   const { primaryColor, logoUrl, displayName } = useDashboardBranding();
   const pendingRequests = usePendingRequestsCount();
+  const { theme, toggleTheme } = useTheme();
+  const isDark = theme === "dark";
 
   // Dynamic color styles
   const brandHsl = `hsl(${primaryColor})`;
@@ -342,6 +346,56 @@ export function PremiumSidebar() {
 
           {/* User footer */}
           <div className="p-2.5 border-t border-white/[0.06]">
+            {/* Theme toggle row */}
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={toggleTheme}
+                  className={cn(
+                    "group relative flex items-center gap-3 w-full rounded-xl transition-all duration-200 mb-1.5 text-white/45 hover:text-white/85 hover:bg-white/[0.04]",
+                    expanded ? "px-3 py-2.5" : "px-0 py-2.5 justify-center",
+                  )}
+                  aria-label={isDark ? "Activar modo claro" : "Activar modo oscuro"}
+                >
+                  <div className="relative shrink-0 h-[18px] w-[18px]">
+                    <Sun
+                      className={cn(
+                        "h-[18px] w-[18px] absolute transition-all duration-300",
+                        isDark ? "opacity-0 rotate-90 scale-50" : "opacity-100 rotate-0 scale-100",
+                      )}
+                      strokeWidth={2}
+                    />
+                    <Moon
+                      className={cn(
+                        "h-[18px] w-[18px] absolute transition-all duration-300",
+                        isDark ? "opacity-100 rotate-0 scale-100" : "opacity-0 -rotate-90 scale-50",
+                      )}
+                      strokeWidth={2}
+                    />
+                  </div>
+                  <span
+                    className={cn(
+                      "text-sm font-medium whitespace-nowrap transition-all duration-200 flex-1 text-left",
+                      expanded
+                        ? "opacity-100 translate-x-0"
+                        : "opacity-0 -translate-x-2 absolute pointer-events-none",
+                    )}
+                  >
+                    {isDark ? "Modo claro" : "Modo oscuro"}
+                  </span>
+                </button>
+              </TooltipTrigger>
+              {!expanded && (
+                <TooltipContent
+                  side="right"
+                  sideOffset={12}
+                  className="bg-[#1a1a1a] text-white/90 border-white/10 text-xs font-medium"
+                >
+                  {isDark ? "Modo claro" : "Modo oscuro"}
+                </TooltipContent>
+              )}
+            </Tooltip>
+
             <div
               className={cn(
                 "flex items-center rounded-xl transition-all duration-200",
