@@ -1403,6 +1403,35 @@ const Landing = () => {
           66% { transform: translate(-60px, -30px); }
         }
       `}</style>
+
+      {/* Floating WhatsApp Button */}
+      <a
+        href="https://wa.me/59891905437?text=Hola%2C%20vine%20desde%20la%20web%20de%20Consultorio%20Digital%20y%20tengo%20una%20consulta"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="fixed bottom-6 right-6 z-50 group flex items-center gap-2"
+        aria-label="Contactar por WhatsApp"
+      >
+        <span
+          className="text-sm font-medium px-3 py-1.5 rounded-full opacity-0 -translate-x-2 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0"
+          style={{
+            backgroundColor: '#128C7E',
+            color: 'white',
+          }}
+        >
+          ¿Consultas?
+        </span>
+        <div
+          className="w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-transform duration-300 hover:scale-110"
+          style={{
+            backgroundColor: '#25d366',
+            boxShadow: '0 4px 20px rgba(37, 211, 102, 0.4)',
+            animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+          }}
+        >
+          <MessageCircle className="w-7 h-7 text-white" strokeWidth={2.2} />
+        </div>
+      </a>
     </div>
   );
 };
