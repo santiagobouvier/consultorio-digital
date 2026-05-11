@@ -18,7 +18,6 @@ import {
   ArrowRight,
   Clock,
   Eye,
-  Quote,
   Palette,
   CalendarCheck,
   Download,
