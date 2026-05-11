@@ -168,7 +168,7 @@ const Auth = () => {
     setLoading(true);
     try {
       if (isSignUp) {
-        const { error } = await supabase.auth.signUp({
+        const { data: signUpData, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -177,6 +177,20 @@ const Auth = () => {
           },
         });
         if (error) throw error;
+        // Intentar login inmediato — si la confirmación de email está
+        // deshabilitada en el backend, el usuario entra directo sin pasar
+        // por la pantalla de verificación.
+        if (signUpData.session) {
+          toast.success("¡Cuenta creada!");
+          await redirectByRole();
+          return;
+        }
+        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+        if (!signInError) {
+          toast.success("¡Cuenta creada!");
+          await redirectByRole();
+          return;
+        }
         setAwaitingVerification(true);
         return;
       } else {
