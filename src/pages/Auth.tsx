@@ -500,7 +500,7 @@ const Auth = () => {
               {showForgotPassword
                 ? "Te enviaremos un email para restablecer tu contraseña"
                 : isSignUp
-                  ? "Registrate para empezar tu prueba gratuita"
+                  ? "Ingresá tu email y te enviamos un link para activar tu cuenta"
                   : showContextualLogin
                     ? `Iniciá sesión en ${hostnameBusiness.name}`
                     : "Iniciá sesión en tu cuenta profesional"
@@ -559,7 +559,7 @@ const Auth = () => {
               <>
                 {/* Email Form — método principal */}
                 <form onSubmit={handleSubmit} className="space-y-4">
-                  {isSignUp && (
+                  {isSignUp && false && (
                     <div className="space-y-2">
                       <Label htmlFor="name" className="text-white/70">Nombre completo</Label>
                       <Input
@@ -585,7 +585,7 @@ const Auth = () => {
                       className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-[hsl(176,80%,40%)]"
                     />
                   </div>
-                  <div className="space-y-2">
+                  {!isSignUp && <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <Label htmlFor="password" className="text-white/70">Contraseña</Label>
                       {!isSignUp && (
@@ -618,7 +618,7 @@ const Auth = () => {
                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </button>
                     </div>
-                  </div>
+                  </div>}
                   {!isSignUp && (
                     <div className="flex items-center gap-2">
                       <Checkbox
@@ -641,7 +641,7 @@ const Auth = () => {
                     disabled={loading}
                     style={{ backgroundColor: '#00a5a0', boxShadow: '0 4px 20px rgba(0,165,160,0.3)' }}
                   >
-                    {loading ? "Aguardá un momento..." : isSignUp ? "Crear cuenta y empezar prueba" : "Iniciar sesión"}
+                    {loading ? "Aguardá un momento..." : isSignUp ? "Enviar link de activación" : "Iniciar sesión"}
                   </Button>
                 </form>
 
