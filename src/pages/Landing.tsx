@@ -18,7 +18,6 @@ import {
   ArrowRight,
   Clock,
   Eye,
-  Quote,
   Palette,
   CalendarCheck,
   Download,
@@ -1191,44 +1190,6 @@ const Landing = () => {
               </ScrollReveal>
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* Testimonial Section */}
-      <section className="relative px-4 sm:px-6 py-14 sm:py-24 z-10" style={{ backgroundColor: '#080808' }}>
-        <div className="max-w-3xl mx-auto">
-          <ScrollReveal>
-            <h2 className="text-xl sm:text-3xl md:text-4xl font-bold text-center mb-10 sm:mb-14 tracking-tight">
-              Lo que dicen quienes ya lo usan
-            </h2>
-          </ScrollReveal>
-
-          <ScrollReveal delay={150}>
-            <div
-              className="relative p-6 sm:p-10 rounded-xl sm:rounded-2xl border border-white/10"
-              style={{ 
-                backgroundColor: '#111111',
-                boxShadow: `0 0 40px ${GREEN_GLOW}`,
-              }}
-            >
-              <Quote className="w-8 h-8 sm:w-10 sm:h-10 mb-4" style={{ color: GREEN, opacity: 0.3 }} />
-              <p className="text-gray-300 text-sm sm:text-base md:text-lg leading-relaxed mb-6 font-light italic">
-                "Antes manejaba todo por WhatsApp y una libreta. Ahora mis pacientes reservan solos y yo recibo el recordatorio automático. Me cambió la rutina."
-              </p>
-              <div className="flex items-center gap-4">
-                <div 
-                  className="w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold"
-                  style={{ backgroundColor: GREEN_BG, color: GREEN }}
-                >
-                  MG
-                </div>
-                <div>
-                  <p className="text-white font-semibold text-sm sm:text-base">Lic. María González</p>
-                  <p className="text-gray-500 text-xs sm:text-sm">Psicóloga clínica — Montevideo</p>
-                </div>
-              </div>
-            </div>
-          </ScrollReveal>
         </div>
       </section>
 
