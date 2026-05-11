@@ -186,16 +186,6 @@ const Dashboard = () => {
       // Process results
       setIsDemo(bizInfo?.is_demo || false);
 
-      if (isAdmin) {
-        setTrialEndsAt(null);
-      } else {
-        const subData = subDataRes.data as any;
-        if (subData?.status === "trial" && subData.trial_ends_at) {
-          setTrialEndsAt(subData.trial_ends_at);
-        } else {
-          setTrialEndsAt(null);
-        }
-      }
 
       setActivePatientsCount(patientsCountRes.count || 0);
       setPortalPatientsCount(portalCountRes.count || 0);
