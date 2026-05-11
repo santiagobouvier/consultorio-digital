@@ -334,20 +334,21 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
       <main className="max-w-[1400px] mx-auto px-10 py-10 space-y-10">
         
         {/* KPIs Row - 4 Large Cards */}
-        <div className="grid grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {/* Citas hoy */}
-          <Card className="desktop-card p-6 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-110 transition-transform" />
+          <Card className="relative overflow-hidden group p-6 rounded-2xl border border-border/60 bg-card shadow-[0_1px_3px_rgba(0,0,0,0.04),0_8px_24px_-12px_rgba(0,0,0,0.08)] hover:shadow-[0_2px_6px_rgba(0,0,0,0.06),0_16px_40px_-16px_rgba(0,165,160,0.18)] hover:-translate-y-0.5 transition-all duration-300">
+            <div aria-hidden className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary/70 via-primary to-primary/70" />
+            <div className="absolute -top-10 -right-10 w-40 h-40 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/10 transition-colors" />
             <div className="relative">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
+              <div className="flex items-center justify-between mb-5">
+                <div className="h-12 w-12 rounded-2xl bg-primary/10 ring-1 ring-primary/15 flex items-center justify-center">
                   <CalendarCheck className="h-6 w-6 text-primary" />
                 </div>
               </div>
-              <p className="text-4xl font-bold text-foreground tracking-tight">
+              <p className="text-[2.5rem] leading-none font-bold text-foreground tracking-tight tabular-nums">
                 {todayAppointmentsCount}
               </p>
-              <p className="text-sm font-medium text-muted-foreground mt-1 inline-flex items-center gap-1">
+              <p className="text-sm font-medium text-muted-foreground mt-3 inline-flex items-center gap-1">
                 Citas hoy
                 <HelpTooltip id="dashboardTodayAppointments" />
               </p>
@@ -355,18 +356,19 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
           </Card>
 
           {/* Pacientes activos */}
-          <Card className="desktop-card p-6 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-secondary/50 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-110 transition-transform" />
+          <Card className="relative overflow-hidden group p-6 rounded-2xl border border-border/60 bg-card shadow-[0_1px_3px_rgba(0,0,0,0.04),0_8px_24px_-12px_rgba(0,0,0,0.08)] hover:shadow-[0_2px_6px_rgba(0,0,0,0.06),0_16px_40px_-16px_rgba(0,0,0,0.12)] hover:-translate-y-0.5 transition-all duration-300">
+            <div aria-hidden className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-secondary-foreground/30 via-secondary-foreground/50 to-secondary-foreground/30" />
+            <div className="absolute -top-10 -right-10 w-40 h-40 bg-secondary/60 rounded-full blur-2xl group-hover:bg-secondary transition-colors" />
             <div className="relative">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="h-12 w-12 rounded-xl bg-secondary flex items-center justify-center">
+              <div className="flex items-center justify-between mb-5">
+                <div className="h-12 w-12 rounded-2xl bg-secondary ring-1 ring-secondary-foreground/10 flex items-center justify-center">
                   <Users className="h-6 w-6 text-secondary-foreground" />
                 </div>
               </div>
-              <p className="text-4xl font-bold text-foreground tracking-tight">
+              <p className="text-[2.5rem] leading-none font-bold text-foreground tracking-tight tabular-nums">
                 {activePatientsCount}
               </p>
-              <p className="text-sm font-medium text-muted-foreground mt-1 inline-flex items-center gap-1">
+              <p className="text-sm font-medium text-muted-foreground mt-3 inline-flex items-center gap-1">
                 Pacientes activos
                 <HelpTooltip id="dashboardActivePatients" />
               </p>
@@ -374,18 +376,19 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
           </Card>
 
           {/* Cobrado este mes */}
-          <Card className="desktop-card p-6 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-green-500/10 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-110 transition-transform" />
+          <Card className="relative overflow-hidden group p-6 rounded-2xl border border-border/60 bg-card shadow-[0_1px_3px_rgba(0,0,0,0.04),0_8px_24px_-12px_rgba(0,0,0,0.08)] hover:shadow-[0_2px_6px_rgba(0,0,0,0.06),0_16px_40px_-16px_rgba(34,197,94,0.18)] hover:-translate-y-0.5 transition-all duration-300">
+            <div aria-hidden className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-green-500/60 via-green-500 to-green-500/60" />
+            <div className="absolute -top-10 -right-10 w-40 h-40 bg-green-500/10 rounded-full blur-2xl group-hover:bg-green-500/15 transition-colors" />
             <div className="relative">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="h-12 w-12 rounded-xl bg-green-500/10 flex items-center justify-center">
+              <div className="flex items-center justify-between mb-5">
+                <div className="h-12 w-12 rounded-2xl bg-green-500/10 ring-1 ring-green-500/20 flex items-center justify-center">
                   <TrendingUp className="h-6 w-6 text-green-600" />
                 </div>
               </div>
-              <p className="text-4xl font-bold text-foreground tracking-tight">
+              <p className="text-[2.25rem] leading-none font-bold text-foreground tracking-tight tabular-nums">
                 {formatCurrency(collectedThisMonth)}
               </p>
-              <p className="text-sm font-medium text-muted-foreground mt-1 inline-flex items-center gap-1">
+              <p className="text-sm font-medium text-muted-foreground mt-3 inline-flex items-center gap-1">
                 Cobrado este mes
                 <HelpTooltip id="dashboardMonthlyIncome" />
               </p>
@@ -393,21 +396,22 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
           </Card>
 
           {/* Pagos vencidos */}
-          <Card className={`desktop-card p-6 relative overflow-hidden group ${overduePaymentsCount > 0 ? 'border-destructive/30 bg-destructive/5' : ''}`}>
-            <div className={`absolute top-0 right-0 w-32 h-32 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:scale-110 transition-transform ${overduePaymentsCount > 0 ? 'bg-destructive/10' : 'bg-muted/50'}`} />
+          <Card className={`relative overflow-hidden group p-6 rounded-2xl border bg-card shadow-[0_1px_3px_rgba(0,0,0,0.04),0_8px_24px_-12px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 transition-all duration-300 ${overduePaymentsCount > 0 ? 'border-destructive/30 bg-destructive/[0.04] hover:shadow-[0_2px_6px_rgba(0,0,0,0.06),0_16px_40px_-16px_rgba(239,68,68,0.25)]' : 'border-border/60 hover:shadow-[0_2px_6px_rgba(0,0,0,0.06),0_16px_40px_-16px_rgba(0,0,0,0.12)]'}`}>
+            <div aria-hidden className={`absolute inset-x-0 top-0 h-1 ${overduePaymentsCount > 0 ? 'bg-gradient-to-r from-destructive/70 via-destructive to-destructive/70' : 'bg-gradient-to-r from-muted-foreground/20 via-muted-foreground/30 to-muted-foreground/20'}`} />
+            <div className={`absolute -top-10 -right-10 w-40 h-40 rounded-full blur-2xl transition-colors ${overduePaymentsCount > 0 ? 'bg-destructive/10 group-hover:bg-destructive/15' : 'bg-muted/50'}`} />
             <div className="relative">
-              <div className="flex items-center gap-3 mb-4">
-                <div className={`h-12 w-12 rounded-xl flex items-center justify-center ${overduePaymentsCount > 0 ? 'bg-destructive/10' : 'bg-muted'}`}>
+              <div className="flex items-center justify-between mb-5">
+                <div className={`h-12 w-12 rounded-2xl flex items-center justify-center ring-1 ${overduePaymentsCount > 0 ? 'bg-destructive/10 ring-destructive/20' : 'bg-muted ring-border'}`}>
                   <AlertTriangle className={`h-6 w-6 ${overduePaymentsCount > 0 ? 'text-destructive' : 'text-muted-foreground'}`} />
                 </div>
               </div>
-              <p className={`text-4xl font-bold tracking-tight ${overduePaymentsCount > 0 ? 'text-destructive' : 'text-foreground'}`}>
+              <p className={`text-[2.5rem] leading-none font-bold tracking-tight tabular-nums ${overduePaymentsCount > 0 ? 'text-destructive' : 'text-foreground'}`}>
                 {overduePaymentsCount}
               </p>
-              <p className="text-sm font-medium text-muted-foreground mt-1 inline-flex items-center gap-1 flex-wrap">
+              <p className="text-sm font-medium text-muted-foreground mt-3 inline-flex items-center gap-1 flex-wrap">
                 Pagos vencidos
                 {overduePaymentsCount > 0 && (
-                  <span className="text-destructive ml-1">
+                  <span className="text-destructive ml-1 font-semibold">
                     ({formatCurrency(overdueAmount)})
                   </span>
                 )}
@@ -418,16 +422,18 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
         </div>
 
         {/* Central Block - 2 Columns */}
-        <div className="grid grid-cols-5 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 lg:gap-8">
           {/* Left: Próximas citas */}
-          <Card className="col-span-3 desktop-card">
-            <CardHeader className="pb-4 border-b border-border/50">
+          <Card className="lg:col-span-3 rounded-2xl border border-border/60 bg-card shadow-[0_1px_3px_rgba(0,0,0,0.04),0_8px_24px_-12px_rgba(0,0,0,0.08)] overflow-hidden">
+            <CardHeader className="pb-4 border-b border-border/50 bg-gradient-to-r from-card to-muted/20">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-xl font-semibold flex items-center gap-3">
-                  <Clock className="h-5 w-5 text-primary" />
+                <CardTitle className="text-lg font-semibold flex items-center gap-3 tracking-tight">
+                  <span className="h-9 w-9 rounded-xl bg-primary/10 ring-1 ring-primary/15 flex items-center justify-center">
+                    <Clock className="h-4.5 w-4.5 text-primary" />
+                  </span>
                   Próximas citas
                 </CardTitle>
-                <Badge variant="secondary" className="text-xs">
+                <Badge variant="secondary" className="text-[11px] font-medium px-2.5 py-1 rounded-full">
                   Hoy y mañana
                 </Badge>
               </div>
@@ -442,26 +448,26 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
                   <p className="text-sm text-muted-foreground">No hay citas pendientes</p>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-2.5">
                   {upcomingAppointments.map((apt) => {
                     const professional = professionals.find(p => p.userId === apt.professional_id);
                     const dateLabel = getDateLabel(apt.start_at);
                     return (
                       <div
                         key={apt.id}
-                        className="flex items-center gap-4 p-4 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors group cursor-pointer"
+                        className="flex items-center gap-4 p-4 rounded-xl border border-border/40 bg-gradient-to-r from-muted/20 to-transparent hover:border-primary/30 hover:from-primary/[0.04] hover:to-transparent hover:shadow-sm transition-all group cursor-pointer"
                         onClick={() => navigate("/agenda")}
                       >
                         {/* Time block */}
                         <div className="flex flex-col items-center min-w-[70px]">
-                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full mb-1 ${
+                          <span className={`text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full mb-1 ${
                             dateLabel === "Hoy" 
-                              ? "bg-primary/10 text-primary" 
-                              : "bg-muted text-muted-foreground"
+                              ? "bg-primary/10 text-primary ring-1 ring-primary/20" 
+                              : "bg-muted text-muted-foreground ring-1 ring-border/60"
                           }`}>
                             {dateLabel}
                           </span>
-                          <span className="text-xl font-bold text-foreground">
+                          <span className="text-xl font-bold text-foreground tabular-nums tracking-tight">
                             {formatTime(apt.start_at)}
                           </span>
                         </div>
@@ -471,12 +477,12 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
 
                         {/* Patient info */}
                         <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-foreground text-lg truncate">
+                          <p className="font-semibold text-foreground text-base truncate">
                             {apt.patients?.full_name || "Sin paciente"}
                           </p>
                           <div className="flex items-center gap-3 mt-1">
                             {apt.services?.name && (
-                              <span className="text-sm text-muted-foreground">
+                              <span className="text-xs text-muted-foreground">
                                 {apt.services.name}
                               </span>
                             )}
@@ -485,12 +491,12 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
 
                         {/* Professional */}
                         {professional && (
-                          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-card border border-border/50">
+                          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-card border border-border/60 shadow-sm">
                             <div
                               className="w-2.5 h-2.5 rounded-full"
                               style={{ backgroundColor: professional.color || "#00b5b5" }}
                             />
-                            <span className="text-sm font-medium text-muted-foreground">
+                            <span className="text-xs font-medium text-foreground/80">
                               {professional.name.split(" ")[0]}
                             </span>
                           </div>
@@ -507,17 +513,19 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
           </Card>
 
           {/* Right: Estado del consultorio */}
-          <Card className="col-span-2 desktop-card">
-            <CardHeader className="pb-4 border-b border-border/50">
-              <CardTitle className="text-xl font-semibold flex items-center gap-3">
-                <Building2 className="h-5 w-5 text-primary" />
+          <Card className="lg:col-span-2 rounded-2xl border border-border/60 bg-card shadow-[0_1px_3px_rgba(0,0,0,0.04),0_8px_24px_-12px_rgba(0,0,0,0.08)] overflow-hidden">
+            <CardHeader className="pb-4 border-b border-border/50 bg-gradient-to-r from-card to-muted/20">
+              <CardTitle className="text-lg font-semibold flex items-center gap-3 tracking-tight">
+                <span className="h-9 w-9 rounded-xl bg-primary/10 ring-1 ring-primary/15 flex items-center justify-center">
+                  <Building2 className="h-4.5 w-4.5 text-primary" />
+                </span>
                 Estado del consultorio
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6 space-y-6">
               {/* Profesionales activos */}
               <div>
-                <p className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wider">
+                <p className="text-[11px] font-semibold text-muted-foreground/80 mb-3 uppercase tracking-wider">
                   Profesionales activos hoy
                 </p>
                 {activeProfessionalsToday.length === 0 ? (
@@ -530,12 +538,12 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
                       return (
                         <div
                           key={prof.id}
-                          className="flex items-center justify-between p-3 rounded-xl bg-muted/30"
+                          className="flex items-center justify-between p-3 rounded-xl border border-border/40 bg-muted/20 hover:bg-muted/40 transition-colors"
                         >
                           <div className="flex items-center gap-3">
-                            <Avatar className="h-9 w-9">
+                            <Avatar className="h-9 w-9 ring-2 ring-card shadow-sm">
                               <AvatarFallback 
-                                className="text-xs font-medium"
+                                className="text-xs font-semibold"
                                 style={{ 
                                   backgroundColor: prof.isUnassigned ? "hsl(var(--warning) / 0.18)" : `${prof.color}20`,
                                   color: prof.isUnassigned ? "hsl(var(--warning))" : prof.color || "#00b5b5"
@@ -544,11 +552,11 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
                                 {prof.isUnassigned ? "SA" : getInitials(prof.name)}
                               </AvatarFallback>
                             </Avatar>
-                            <span className="font-medium text-foreground">
+                            <span className="font-medium text-foreground text-sm">
                               {prof.name.split(" ")[0]}
                             </span>
                           </div>
-                          <Badge variant="secondary" className="text-xs">
+                          <Badge variant="secondary" className="text-[11px] font-medium tabular-nums">
                             {prof.attendedCount}/{prof.appointmentCount} atendidas
                           </Badge>
                         </div>
@@ -560,17 +568,17 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
 
               {/* Ocupación de agenda */}
               <div>
-                <p className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wider">
+                <p className="text-[11px] font-semibold text-muted-foreground/80 mb-3 uppercase tracking-wider">
                   Ocupación de agenda
                 </p>
-                <div className="p-4 rounded-xl bg-muted/30">
-                  <div className="flex items-center justify-between mb-2">
+                <div className="p-4 rounded-xl border border-border/40 bg-muted/20">
+                  <div className="flex items-end justify-between mb-3">
                     <span className="text-sm font-medium text-foreground">Hoy</span>
-                    <span className="text-sm font-bold text-primary">{agendaOccupation}%</span>
+                    <span className="text-2xl font-bold text-primary tabular-nums leading-none">{agendaOccupation}<span className="text-sm text-muted-foreground font-medium ml-0.5">%</span></span>
                   </div>
                   <div className="h-2 rounded-full bg-muted overflow-hidden">
                     <div 
-                      className="h-full rounded-full bg-primary transition-all duration-500"
+                      className="h-full rounded-full bg-gradient-to-r from-primary/80 to-primary transition-all duration-700"
                       style={{ width: `${agendaOccupation}%` }}
                     />
                   </div>
@@ -579,32 +587,34 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
 
               {/* Alertas */}
               <div>
-                <p className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wider">
+                <p className="text-[11px] font-semibold text-muted-foreground/80 mb-3 uppercase tracking-wider">
                   Alertas
                 </p>
                 <div className="space-y-2">
                   {overduePaymentsCount > 0 ? (
                     <div 
-                      className="flex items-center gap-3 p-3 rounded-xl bg-destructive/10 border border-destructive/20 cursor-pointer hover:bg-destructive/15 transition-colors"
+                      className="flex items-center gap-3 p-3.5 rounded-xl bg-destructive/[0.08] border border-destructive/25 cursor-pointer hover:bg-destructive/[0.12] hover:border-destructive/40 transition-all group"
                       onClick={() => navigate("/pagos")}
                     >
-                      <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0" />
+                      <div className="h-9 w-9 rounded-lg bg-destructive/15 flex items-center justify-center flex-shrink-0">
+                        <AlertCircle className="h-5 w-5 text-destructive" />
+                      </div>
                       <div className="flex-1">
-                        <p className="text-sm font-medium text-destructive">
+                        <p className="text-sm font-semibold text-destructive">
                           {overduePaymentsCount} pago{overduePaymentsCount !== 1 ? "s" : ""} vencido{overduePaymentsCount !== 1 ? "s" : ""}
                         </p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-xs text-muted-foreground mt-0.5">
                           Total: {formatCurrency(overdueAmount)}
                         </p>
                       </div>
-                      <ArrowRight className="h-4 w-4 text-destructive" />
+                      <ArrowRight className="h-4 w-4 text-destructive group-hover:translate-x-0.5 transition-transform" />
                     </div>
                   ) : (
-                    <div className="flex items-center gap-3 p-3 rounded-xl bg-green-500/10 border border-green-500/20">
-                      <div className="h-5 w-5 rounded-full bg-green-500/20 flex items-center justify-center">
-                        <div className="h-2 w-2 rounded-full bg-green-500" />
+                    <div className="flex items-center gap-3 p-3.5 rounded-xl bg-green-500/[0.08] border border-green-500/25">
+                      <div className="h-9 w-9 rounded-lg bg-green-500/15 flex items-center justify-center flex-shrink-0">
+                        <div className="h-2.5 w-2.5 rounded-full bg-green-500 shadow-[0_0_0_4px_rgba(34,197,94,0.18)]" />
                       </div>
-                      <p className="text-sm font-medium text-green-700 dark:text-green-400">
+                      <p className="text-sm font-semibold text-green-700 dark:text-green-400">
                         Sin alertas pendientes
                       </p>
                     </div>
