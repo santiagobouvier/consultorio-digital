@@ -53,7 +53,6 @@ const Auth = () => {
   const { isSuperAdmin: ctxIsSuperAdmin } = useAuth();
 
   const planDef = selectedPlan ? getPlanDefinition(selectedPlan) : null;
-  const planPrice = planDef ? (billingPeriod === "annual" ? planDef.priceAnnual : planDef.priceMonthly) : 0;
 
   useEffect(() => {
     if (sessionStatus === "expired") {
