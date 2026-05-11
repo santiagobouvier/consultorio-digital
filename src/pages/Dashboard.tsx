@@ -70,7 +70,6 @@ const Dashboard = () => {
   const [isDemo, setIsDemo] = useState(false);
   const [allBusinesses, setAllBusinesses] = useState<Business[]>([]);
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
-  const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null);
 
   const statusMap: Record<string, string> = {
     pending: "pendiente",
