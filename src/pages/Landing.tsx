@@ -47,7 +47,7 @@ const GREEN_GLOW = "rgba(0, 199, 138, 0.15)";
 const faqItems = [
   {
     question: "¿Qué incluye cada plan?",
-    answer: "Todos los planes incluyen portal del paciente, agenda, cobro online con Mercado Pago, recordatorios por WhatsApp, estadísticas y app instalable. La diferencia está en la cantidad de profesionales, pacientes activos y funcionalidades avanzadas como el calendario multi-profesional."
+    answer: "Todos los planes incluyen las mismas funcionalidades: portal del paciente, agenda, cobro online con Mercado Pago, recordatorios por WhatsApp, estadísticas, app instalable, marca blanca, calendario multi-profesional y más. La única diferencia está en la cantidad de profesionales y pacientes activos que podés manejar."
   },
   {
     question: "¿Puedo cambiar de plan en cualquier momento?",
