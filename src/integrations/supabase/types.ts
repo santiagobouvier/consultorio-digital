@@ -873,7 +873,7 @@ export type Database = {
         Row: {
           business_name: string
           created_at: string
-          created_by: string
+          created_by: string | null
           custom_max_patients: number | null
           custom_max_professionals: number | null
           expires_at: string
@@ -887,7 +887,7 @@ export type Database = {
         Insert: {
           business_name: string
           created_at?: string
-          created_by: string
+          created_by?: string | null
           custom_max_patients?: number | null
           custom_max_professionals?: number | null
           expires_at?: string
@@ -901,7 +901,7 @@ export type Database = {
         Update: {
           business_name?: string
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           custom_max_patients?: number | null
           custom_max_professionals?: number | null
           expires_at?: string
