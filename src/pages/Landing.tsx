@@ -83,7 +83,6 @@ const allFeatures = [
   "Reserva online de turnos",
   "Estadísticas y métricas",
   "Marca blanca (logo y colores)",
-  "Dominio personalizado",
   "Cobro online con Mercado Pago",
   "Calendario multi-profesional",
   "Invitación de profesionales",
