@@ -10,7 +10,6 @@ import {
   Bell, 
   UserCheck, 
   Lock, 
-  Globe,
   Sparkles,
   AlertTriangle,
   Monitor,
