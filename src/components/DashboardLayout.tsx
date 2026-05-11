@@ -40,6 +40,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         >
           <MobileHeader />
           <SuperAdminVisitBanner />
+          <TrialBanner />
           {isMobile && firstSeen && (
             <PWAInstallBanner
               variant="sticky"
