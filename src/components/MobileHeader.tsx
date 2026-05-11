@@ -23,6 +23,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useDashboardBranding } from "@/contexts/DashboardBrandingContext";
 import { usePendingRequestsCount } from "@/hooks/use-pending-requests-count";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 type NavItem = {
   title: string;
@@ -131,7 +132,9 @@ export function MobileHeader() {
           )}
         </button>
 
-        {/* Right: only the clinic logo */}
+        {/* Right: theme toggle + clinic logo */}
+        <div className="flex items-center gap-2">
+        <ThemeToggle />
         {logoUrl ? (
           <img
             src={logoUrl}
@@ -152,6 +155,7 @@ export function MobileHeader() {
             <CalendarDays className="h-4 w-4 text-white" />
           </div>
         )}
+        </div>
       </header>
 
       {/* ============================ Fullscreen Drawer ============================ */}
