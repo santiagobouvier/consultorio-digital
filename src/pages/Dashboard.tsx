@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "@/hooks/use-toast";
-import { Users, CalendarPlus, CalendarDays, UserPlus, Bell, LogOut, Camera, CreditCard, AlertTriangle, Clock, Plus, EyeOff, Eye, Smartphone, Building2, ChevronDown, Shield, Settings, ArrowRight, Palette, Sparkles } from "lucide-react";
+import { Users, CalendarPlus, CalendarDays, UserPlus, Bell, LogOut, Camera, CreditCard, AlertTriangle, Clock, Plus, EyeOff, Eye, Smartphone, Building2, ChevronDown, Shield, Settings, ArrowRight, Palette } from "lucide-react";
 import { MonthlyHighlights } from "@/components/MonthlyHighlights";
 import LoadingPage from "@/components/LoadingPage";
 import { PlanUsageCard } from "@/components/PlanUsageCard";
@@ -70,7 +70,6 @@ const Dashboard = () => {
   const [isDemo, setIsDemo] = useState(false);
   const [allBusinesses, setAllBusinesses] = useState<Business[]>([]);
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
-  const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null);
 
   const statusMap: Record<string, string> = {
     pending: "pendiente",
@@ -129,7 +128,6 @@ const Dashboard = () => {
         profileRes,
         bizInfoRes,
         businessInfoRes,
-        subDataRes,
         patientsCountRes,
         portalCountRes,
         appointmentsCountRes,
@@ -144,11 +142,7 @@ const Dashboard = () => {
         supabase.from("businesses").select("is_demo, onboarding_completed, owner_user_id, name").eq("id", currentBusinessId).maybeSingle(),
         // 1b. Business name for selectedBusiness
         supabase.from("businesses").select("id, name, owner_user_id").eq("id", currentBusinessId).maybeSingle(),
-        // 2. Trial status
-        isAdmin
-          ? Promise.resolve({ data: null })
-          : supabase.from("subscriptions").select("status, trial_ends_at").eq("business_id", currentBusinessId).maybeSingle(),
-        // 3. Active patients count
+        // 2. Active patients count
         supabase.from("patients").select("*", { count: "exact", head: true }).eq("business_id", currentBusinessId).eq("is_active", true),
         // 4. Portal patients count
         supabase.from("patients").select("*", { count: "exact", head: true }).eq("business_id", currentBusinessId).not("auth_user_id", "is", null),
@@ -192,16 +186,6 @@ const Dashboard = () => {
       // Process results
       setIsDemo(bizInfo?.is_demo || false);
 
-      if (isAdmin) {
-        setTrialEndsAt(null);
-      } else {
-        const subData = subDataRes.data as any;
-        if (subData?.status === "trial" && subData.trial_ends_at) {
-          setTrialEndsAt(subData.trial_ends_at);
-        } else {
-          setTrialEndsAt(null);
-        }
-      }
 
       setActivePatientsCount(patientsCountRes.count || 0);
       setPortalPatientsCount(portalCountRes.count || 0);
@@ -430,31 +414,8 @@ const Dashboard = () => {
 
   // Mobile: original dashboard layout
   return (
-    <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background">
       <div className="max-w-2xl mx-auto p-4 sm:p-6 space-y-6">
-        {/* Trial Banner */}
-        {!isSuperAdmin && trialEndsAt && (
-          <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-3 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-blue-400 flex-shrink-0" />
-              <p className="text-xs text-blue-300">
-                Tu prueba gratuita vence el{" "}
-                <span className="font-medium">
-                  {new Date(trialEndsAt).toLocaleDateString("es-UY", { day: "numeric", month: "long" })}
-                </span>
-                . Podés cancelar antes sin costo.
-              </p>
-            </div>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="text-blue-400 hover:text-blue-300 text-xs flex-shrink-0 h-7 px-2"
-              onClick={() => navigate("/billing")}
-            >
-              Ver plan
-            </Button>
-          </div>
-        )}
         {/* Super Admin Business Selector */}
         {isSuperAdmin && allBusinesses.length > 0 && (
           <Card className="mobile-card-compact bg-primary/5 border-primary/30">

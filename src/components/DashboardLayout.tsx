@@ -3,6 +3,7 @@ import { PremiumSidebar } from "@/components/PremiumSidebar";
 import { MobileHeader } from "@/components/MobileHeader";
 import { PWAInstallBanner } from "@/components/PWAInstallBanner";
 import { SuperAdminVisitBanner } from "@/components/SuperAdminVisitBanner";
+import { TrialBanner } from "@/components/TrialBanner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { DashboardBrandingProvider } from "@/contexts/DashboardBrandingContext";
 
@@ -39,6 +40,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         >
           <MobileHeader />
           <SuperAdminVisitBanner />
+          <TrialBanner />
           {isMobile && firstSeen && (
             <PWAInstallBanner
               variant="sticky"
