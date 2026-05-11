@@ -128,7 +128,6 @@ const Dashboard = () => {
         profileRes,
         bizInfoRes,
         businessInfoRes,
-        subDataRes,
         patientsCountRes,
         portalCountRes,
         appointmentsCountRes,
@@ -143,11 +142,7 @@ const Dashboard = () => {
         supabase.from("businesses").select("is_demo, onboarding_completed, owner_user_id, name").eq("id", currentBusinessId).maybeSingle(),
         // 1b. Business name for selectedBusiness
         supabase.from("businesses").select("id, name, owner_user_id").eq("id", currentBusinessId).maybeSingle(),
-        // 2. Trial status
-        isAdmin
-          ? Promise.resolve({ data: null })
-          : supabase.from("subscriptions").select("status, trial_ends_at").eq("business_id", currentBusinessId).maybeSingle(),
-        // 3. Active patients count
+        // 2. Active patients count
         supabase.from("patients").select("*", { count: "exact", head: true }).eq("business_id", currentBusinessId).eq("is_active", true),
         // 4. Portal patients count
         supabase.from("patients").select("*", { count: "exact", head: true }).eq("business_id", currentBusinessId).not("auth_user_id", "is", null),
