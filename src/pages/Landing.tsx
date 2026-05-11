@@ -10,7 +10,6 @@ import {
   Bell, 
   UserCheck, 
   Lock, 
-  Globe,
   Sparkles,
   AlertTriangle,
   Monitor,
@@ -50,7 +49,7 @@ const GREEN_GLOW = "rgba(0, 199, 138, 0.15)";
 const faqItems = [
   {
     question: "¿Qué incluye cada plan?",
-    answer: "Todos los planes incluyen portal del paciente, agenda, pagos, recordatorios por WhatsApp, estadísticas y app instalable. La diferencia está en la cantidad de profesionales, pacientes activos y funcionalidades avanzadas como la web pública."
+    answer: "Todos los planes incluyen portal del paciente, agenda, cobro online con Mercado Pago, recordatorios por WhatsApp, estadísticas y app instalable. La diferencia está en la cantidad de profesionales, pacientes activos y funcionalidades avanzadas como el calendario multi-profesional."
   },
   {
     question: "¿Puedo cambiar de plan en cualquier momento?",
@@ -87,7 +86,7 @@ const allFeatures = [
   "Estadísticas y métricas",
   "Marca blanca (logo y colores)",
   "Dominio personalizado",
-  "Web pública del consultorio",
+  "Cobro online con Mercado Pago",
   "Calendario multi-profesional",
   "Invitación de profesionales",
 ];
@@ -104,6 +103,7 @@ const planFeatures: Record<string, string[]> = {
     "Exportación CSV",
     "Reserva online de turnos",
     "Estadísticas y métricas",
+    "Cobro online con Mercado Pago",
   ],
   esencial: [
     "Portal del paciente",
@@ -118,6 +118,7 @@ const planFeatures: Record<string, string[]> = {
     "Estadísticas y métricas",
     "Marca blanca (logo y colores)",
     "Dominio personalizado",
+    "Cobro online con Mercado Pago",
   ],
   profesional: [
     "Portal del paciente",
@@ -132,7 +133,7 @@ const planFeatures: Record<string, string[]> = {
     "Estadísticas y métricas",
     "Marca blanca (logo y colores)",
     "Dominio personalizado",
-    "Web pública del consultorio",
+    "Cobro online con Mercado Pago",
     "Calendario multi-profesional",
     "Invitación de profesionales",
   ],
@@ -149,7 +150,7 @@ const planFeatures: Record<string, string[]> = {
     "Estadísticas y métricas",
     "Marca blanca (logo y colores)",
     "Dominio personalizado",
-    "Web pública del consultorio",
+    "Cobro online con Mercado Pago",
     "Calendario multi-profesional",
     "Invitación de profesionales",
   ],
@@ -1115,7 +1116,7 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* ── Sitio Web Público del Consultorio ── */}
+      {/* ── Cobro Online con Mercado Pago ── */}
       <section className="relative px-4 sm:px-6 py-14 sm:py-24 z-10" style={{ backgroundColor: '#080808' }}>
         <div className="max-w-5xl mx-auto">
           <div className="grid md:grid-cols-2 gap-8 md:gap-14 items-center">
@@ -1131,33 +1132,40 @@ const Landing = () => {
                     <div className="w-2 h-2 rounded-full bg-green-500/60" />
                   </div>
                   <div className="flex-1 mx-4">
-                    <div className="h-4 rounded bg-white/5 max-w-[200px] mx-auto flex items-center justify-center">
-                      <span className="text-[8px] text-gray-600">tuconsultorio.digital/consultorio/mi-clinica</span>
+                    <div className="h-4 rounded bg-white/5 max-w-[180px] mx-auto flex items-center justify-center">
+                      <span className="text-[8px] text-gray-600">tuconsultorio.digital/pagos</span>
                     </div>
                   </div>
                 </div>
                 <div className="p-4">
                   <div className="text-center mb-3">
-                    <div className="w-12 h-12 rounded-full mx-auto mb-2 flex items-center justify-center text-xl" style={{ backgroundColor: GREEN_BG }}>
-                      🏥
+                    <div className="w-12 h-12 rounded-full mx-auto mb-2 flex items-center justify-center text-xl" style={{ backgroundColor: 'rgba(0, 165, 160, 0.15)' }}>
+                      💳
                     </div>
                     <p className="text-sm font-bold text-white">Centro Bienestar</p>
-                    <p className="text-[9px] text-gray-500">Psicología clínica • Montevideo</p>
+                    <p className="text-[9px] text-gray-500">Pago de sesión — Martes 15</p>
                   </div>
                   <div className="rounded-lg p-3 mb-2" style={{ backgroundColor: '#111' }}>
-                    <p className="text-[9px] text-gray-500 mb-1">Servicios disponibles</p>
-                    {["Consulta individual", "Terapia de pareja", "Orientación familiar"].map(s => (
-                      <div key={s} className="flex items-center gap-2 py-1">
-                        <Check className="w-2.5 h-2.5" style={{ color: GREEN }} />
-                        <span className="text-[10px] text-gray-300">{s}</span>
-                      </div>
-                    ))}
+                    <p className="text-[9px] text-gray-500 mb-1">Detalle del pago</p>
+                    <div className="flex items-center justify-between py-1">
+                      <span className="text-[10px] text-gray-300">Consulta individual</span>
+                      <span className="text-[10px] text-white font-bold">$2.500</span>
+                    </div>
+                    <div className="flex items-center justify-between py-1">
+                      <span className="text-[10px] text-gray-300">Comisión MP</span>
+                      <span className="text-[10px] text-gray-400">-$175</span>
+                    </div>
+                    <div className="border-t border-white/5 mt-1 pt-1 flex items-center justify-between">
+                      <span className="text-[10px] text-gray-300 font-medium">Total a recibir</span>
+                      <span className="text-[10px] text-white font-bold">$2.325</span>
+                    </div>
                   </div>
                   <div 
-                    className="rounded-lg p-2.5 text-center text-[10px] font-medium"
-                    style={{ backgroundColor: GREEN, color: 'white' }}
+                    className="rounded-lg p-2.5 text-center text-[10px] font-medium flex items-center justify-center gap-1.5"
+                    style={{ backgroundColor: '#00a5a0', color: 'white' }}
                   >
-                    Reservar turno →
+                    <CreditCard className="w-3 h-3" />
+                    Pagar con Mercado Pago →
                   </div>
                 </div>
               </div>
@@ -1167,29 +1175,28 @@ const Landing = () => {
               <div>
                 <div 
                   className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium mb-6"
-                  style={{ backgroundColor: GREEN_BG, color: GREEN }}
+                  style={{ backgroundColor: 'rgba(0, 165, 160, 0.15)', color: '#00a5a0' }}
                 >
-                  <Globe className="w-3.5 h-3.5" />
-                  Presencia online
+                  <CreditCard className="w-3.5 h-3.5" />
+                  Cobro integrado
                 </div>
                 <h2 className="text-xl sm:text-3xl md:text-4xl font-bold mb-4 tracking-tight">
-                  Tu página web incluida
+                  Cobro online con Mercado Pago
                 </h2>
                 <p className="text-gray-400 text-sm sm:text-base leading-relaxed font-light mb-6">
-                  Cada consultorio tiene una <strong className="text-white">página pública</strong> donde nuevos pacientes pueden conocerte, 
-                  ver tus servicios y <strong className="text-white">reservar un turno directamente</strong>. 
-                  Según tu plan podés <strong className="text-white">agregar páginas extras</strong> y armar un sitio web institucional completo.
+                  Tus pacientes pueden <strong className="text-white">pagar las sesiones directamente desde su portal</strong>, 
+                  con el botón de Mercado Pago integrado. Vos recibís el dinero en tu cuenta sin complicaciones.
                 </p>
                 <ul className="space-y-3">
                   {[
-                    "Página pública con tu información",
-                    "Lista de servicios y especialidades",
-                    "Reserva de turnos para pacientes nuevos",
-                    "Páginas adicionales según tu plan",
-                    "Preparado para dominio personalizado",
+                    "Link de pago por cada sesión automáticamente",
+                    "El paciente paga con tarjeta, débito o efectivo",
+                    "El dinero va directo a tu cuenta de Mercado Pago",
+                    "Registro automático del pago en el sistema",
+                    "Sin setup complejo: se activa en un clic",
                   ].map((text, i) => (
                     <li key={i} className="flex items-center gap-3 text-gray-300 text-sm">
-                      <Check className="w-4 h-4 flex-shrink-0" style={{ color: GREEN }} />
+                      <Check className="w-4 h-4 flex-shrink-0" style={{ color: '#00a5a0' }} />
                       {text}
                     </li>
                   ))}
