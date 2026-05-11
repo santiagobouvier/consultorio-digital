@@ -400,7 +400,10 @@ const OnboardingWizard = () => {
                     <FormField control={form.control} name="contact_email" render={({ field }) => (
                       <FormItem>
                         <FormLabel>Email de contacto *</FormLabel>
-                        <FormControl><Input {...field} type="email" placeholder="consultorio@example.com" /></FormControl>
+                        <FormControl>
+                          <Input {...field} type="email" placeholder="consultorio@example.com" disabled className="bg-muted/50 cursor-not-allowed opacity-70" />
+                        </FormControl>
+                        <FormDescription>Este email está asociado a tu cuenta y no se puede modificar.</FormDescription>
                         <FormMessage />
                       </FormItem>
                     )} />
