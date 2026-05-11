@@ -221,11 +221,10 @@ const OnboardingWizard = () => {
   }, [currentStep, watchedDomain]);
 
   const handleNameChange = (value: string) => {
-    const subdomain = value
+    const slug = value
       .toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
       .replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 30);
-    if (!form.getValues("custom_subdomain")) form.setValue("custom_subdomain", subdomain);
-    if (!form.getValues("public_slug")) form.setValue("public_slug", subdomain);
+    if (!form.getValues("public_slug")) form.setValue("public_slug", slug);
   };
 
   const handleNext = async () => {
@@ -235,11 +234,8 @@ const OnboardingWizard = () => {
       if (!valid) return;
     }
     if (currentStep === 2) {
-      const valid = await form.trigger(["custom_subdomain", "public_slug"]);
-      if (!valid || subdomainAvailable === false) {
-        toast.error("Verificá que el subdominio sea válido y esté disponible");
-        return;
-      }
+      const valid = await form.trigger(["public_slug"]);
+      if (!valid) return;
     }
     setCurrentStep(prev => Math.min(prev + 1, TOTAL_STEPS));
   };
@@ -417,25 +413,11 @@ const OnboardingWizard = () => {
                       <Globe className="w-5 h-5 text-primary" />
                       <h3 className="font-semibold">Dirección web de tu consultorio</h3>
                     </div>
-                    <FormField control={form.control} name="custom_subdomain" render={({ field }) => (
+                    <FormField control={form.control} name="public_slug" render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Subdominio gratis *</FormLabel>
-                        <div className="flex items-center gap-2">
-                          <FormControl><Input {...field} placeholder="mi-consultorio" className="max-w-[200px]" /></FormControl>
-                          <span className="text-sm text-muted-foreground whitespace-nowrap">.consultoriodigital.app</span>
-                          {checkingSubdomain && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
-                          {!checkingSubdomain && subdomainAvailable === true && <CheckCircle2 className="w-5 h-5 text-emerald-500" />}
-                          {!checkingSubdomain && subdomainAvailable === false && <AlertCircle className="w-5 h-5 text-destructive" />}
-                        </div>
-                        {watchedSubdomain && watchedSubdomain.length >= 3 && subdomainAvailable === true && (
-                          <Badge variant="outline" className="text-emerald-600 border-emerald-300 bg-emerald-50 mt-2">
-                            ✓ Disponible: {getSubdomainUrl(watchedSubdomain)}
-                          </Badge>
-                        )}
-                        {watchedSubdomain && subdomainAvailable === false && (
-                          <Badge variant="outline" className="text-destructive border-destructive/30 bg-destructive/10 mt-2">✗ No disponible</Badge>
-                        )}
-                        <FormDescription>Tu dirección web gratuita.</FormDescription>
+                        <FormLabel>Slug público *</FormLabel>
+                        <FormControl><Input {...field} placeholder="dra-maria-gonzalez" /></FormControl>
+                        <FormDescription>Este es el identificador de tu consultorio. Por ejemplo, si tu slug es dra-garcia, la dirección de tu portal de pacientes será: consultoriodigital.app/portal/dra-garcia</FormDescription>
                         <FormMessage />
                       </FormItem>
                     )} />
@@ -448,15 +430,7 @@ const OnboardingWizard = () => {
                           {!checkingDomain && domainAvailable === true && <CheckCircle2 className="w-5 h-5 text-emerald-500" />}
                           {!checkingDomain && domainAvailable === false && <AlertCircle className="w-5 h-5 text-destructive" />}
                         </div>
-                        <FormDescription>Configurar después de finalizar.</FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )} />
-                    <FormField control={form.control} name="public_slug" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Slug público *</FormLabel>
-                        <FormControl><Input {...field} placeholder="dra-maria-gonzalez" /></FormControl>
-                        <FormDescription>Identificador único para URLs internas.</FormDescription>
+                        <FormDescription>Podés configurar un dominio propio más adelante desde los ajustes del consultorio.</FormDescription>
                         <FormMessage />
                       </FormItem>
                     )} />
