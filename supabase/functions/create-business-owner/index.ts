@@ -15,36 +15,36 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Verify caller is super_admin
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: "No authorization header" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const token = authHeader.replace("Bearer ", "");
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
-    if (userError || !user) {
-      return new Response(JSON.stringify({ error: "Invalid token" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const { data: superAdminRole } = await supabase
-      .from("user_roles")
-      .select("id")
-      .eq("user_id", user.id)
-      .eq("role", "super_admin")
-      .maybeSingle();
-
-    if (!superAdminRole) {
-      return new Response(JSON.stringify({ error: "Not authorized" }), {
-        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     const { businessName, ownerEmail, planCode, mode, password } = await req.json();
+
+    // Auth: invite mode is PUBLIC (used by self-signup from the landing).
+    // All other modes (test user creation, etc.) require super_admin.
+    let callerUserId: string | null = null;
+    const authHeader = req.headers.get("Authorization");
+    if (authHeader) {
+      const token = authHeader.replace("Bearer ", "");
+      const { data: { user } } = await supabase.auth.getUser(token);
+      if (user) callerUserId = user.id;
+    }
+
+    if (mode !== "invite") {
+      if (!callerUserId) {
+        return new Response(JSON.stringify({ error: "No authorization header" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { data: superAdminRole } = await supabase
+        .from("user_roles")
+        .select("id")
+        .eq("user_id", callerUserId)
+        .eq("role", "super_admin")
+        .maybeSingle();
+      if (!superAdminRole) {
+        return new Response(JSON.stringify({ error: "Not authorized" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
 
     if (!businessName || !ownerEmail) {
       return new Response(JSON.stringify({ error: "businessName and ownerEmail are required" }), {
@@ -101,7 +101,7 @@ Deno.serve(async (req) => {
           plan_code: planCode || "inicial",
           token: activationToken,
           expires_at: expiresAt,
-          created_by: user.id,
+          created_by: callerUserId,
         })
         .select()
         .single();
