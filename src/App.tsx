@@ -10,6 +10,7 @@ import { clearServiceWorkerCaches } from "@/lib/session-recovery";
 import { SessionExpiredDialog, triggerSessionExpired } from "@/components/SessionExpiredDialog";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { BusinessIdProvider } from "@/contexts/BusinessIdContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import { PWAInstalledCelebrationModal } from "@/components/PWAInstalledCelebrationModal";
 import LoadingPage from "@/components/LoadingPage";
 
@@ -131,6 +132,7 @@ const App = () => {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
       <TooltipProvider>
         <Toaster />
         <Sonner />
@@ -189,6 +191,7 @@ const App = () => {
           </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 };
