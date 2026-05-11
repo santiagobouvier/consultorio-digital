@@ -44,6 +44,7 @@ const Auth = () => {
   const [isSignUp, setIsSignUp] = useState(!!selectedPlan);
   const [awaitingVerification, setAwaitingVerification] = useState(false);
   const [emailVerified, setEmailVerified] = useState(false);
+  const [inviteSent, setInviteSent] = useState(false);
   const navigate = useNavigate();
 
   const { business: hostnameBusiness, loading: businessLoading } = useHostnameBusiness();
@@ -167,30 +168,23 @@ const Auth = () => {
     setLoading(true);
     try {
       if (isSignUp) {
-        const { data: signUpData, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: { full_name: name },
-            emailRedirectTo: `${window.location.origin}/auth/callback`,
+        // Registro público desde la landing → enviar invitación por email.
+        // Reutilizamos la edge function create-business-owner en modo "invite"
+        // (mismo flujo que SaasAdmin "Invitación real"). El usuario recibe
+        // un email con link para definir contraseña y configurar el consultorio.
+        const planForInvite = selectedPlan || "esencial";
+        const { data, error } = await supabase.functions.invoke("create-business-owner", {
+          body: {
+            businessName: "Consultorio (pendiente de configurar)",
+            ownerEmail: email.trim().toLowerCase(),
+            planCode: planForInvite,
+            mode: "invite",
           },
         });
         if (error) throw error;
-        // Intentar login inmediato — si la confirmación de email está
-        // deshabilitada en el backend, el usuario entra directo sin pasar
-        // por la pantalla de verificación.
-        if (signUpData.session) {
-          toast.success("¡Cuenta creada!");
-          await redirectByRole();
-          return;
-        }
-        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-        if (!signInError) {
-          toast.success("¡Cuenta creada!");
-          await redirectByRole();
-          return;
-        }
-        setAwaitingVerification(true);
+        if (data?.error) throw new Error(data.error);
+        setInviteSent(true);
+        toast.success("Te enviamos el link de activación por email");
         return;
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -321,6 +315,55 @@ const Auth = () => {
                 </div>
               </>
             )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Pantalla de confirmación de invitación enviada
+  if (inviteSent) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[hsl(180,15%,4%)] p-4">
+        <div
+          className="fixed inset-0 pointer-events-none"
+          style={{ background: "radial-gradient(ellipse 60% 40% at 50% 0%, hsla(176,80%,40%,0.1), transparent)" }}
+        />
+        <div className="relative z-10 w-full max-w-md">
+          <div className="flex justify-center mb-6">
+            <img
+              src={logoWhite}
+              alt="Consultorio Digital"
+              className="h-32 sm:h-40 w-auto object-contain select-none"
+              draggable={false}
+              style={{ filter: "drop-shadow(0 16px 32px rgba(0,165,160,0.18))" }}
+            />
+          </div>
+          <div
+            className="rounded-2xl border border-white/10 shadow-2xl p-8 text-center"
+            style={{ backgroundColor: '#111111' }}
+          >
+            <div className="mx-auto w-16 h-16 rounded-full bg-[hsla(160,80%,50%,0.15)] flex items-center justify-center mb-4">
+              <Mail className="w-8 h-8 text-[hsl(160,80%,50%)]" />
+            </div>
+            <h2 className="text-xl font-bold text-white mb-3">¡Revisá tu email!</h2>
+            <p className="text-sm text-white/60 mb-2">
+              Te enviamos un email a
+            </p>
+            <p className="text-sm font-semibold text-white mb-4 break-all">{email}</p>
+            <p className="text-sm text-white/60">
+              con el link para activar tu cuenta y configurar tu consultorio.
+            </p>
+            <p className="text-xs text-white/40 mt-6">
+              Si no lo ves, revisá la carpeta de spam o promociones.
+            </p>
+            <Button
+              variant="outline"
+              className="w-full mt-6 border-white/10 text-white/70 hover:bg-white/5 hover:text-white"
+              onClick={() => { setInviteSent(false); setIsSignUp(false); setEmail(""); }}
+            >
+              Volver a iniciar sesión
+            </Button>
           </div>
         </div>
       </div>
