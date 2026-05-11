@@ -18,7 +18,6 @@ import {
   ArrowRight,
   Clock,
   Eye,
-  Play,
   Quote,
   Palette,
   CalendarCheck,
@@ -427,42 +426,6 @@ const Landing = () => {
           <div className="w-6 h-10 rounded-full border-2 border-white/20 flex items-start justify-center p-1.5">
             <div className="w-1.5 h-2.5 rounded-full bg-white/40" style={{ animation: 'scrollDot 2s ease-in-out infinite' }} />
           </div>
-        </div>
-      </section>
-
-      {/* Video Placeholder Section */}
-      <section className="relative px-4 sm:px-6 py-14 sm:py-20 z-10" style={{ backgroundColor: '#050505' }}>
-        <div className="max-w-3xl mx-auto text-center">
-          <ScrollReveal>
-            <h2 className="text-xl sm:text-3xl md:text-4xl font-bold mb-6 sm:mb-10 tracking-tight">
-              Mirá cómo funciona en 2 minutos
-            </h2>
-          </ScrollReveal>
-          <ScrollReveal delay={150}>
-            <div 
-              className="relative aspect-video rounded-xl sm:rounded-2xl border border-white/10 overflow-hidden cursor-pointer group"
-              style={{ backgroundColor: '#0a0a0a' }}
-            >
-              <div 
-                className="absolute inset-0"
-                style={{ background: `radial-gradient(circle at center, rgba(0,165,160,0.08), transparent 70%)` }}
-              />
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
-                <div 
-                  className="w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center transition-transform duration-300 group-hover:scale-110"
-                  style={{ 
-                    backgroundColor: 'rgba(0, 165, 160, 0.2)',
-                    border: '2px solid rgba(0, 165, 160, 0.4)',
-                  }}
-                >
-                  <Play className="w-7 h-7 sm:w-9 sm:h-9 ml-1" style={{ color: BRAND }} />
-                </div>
-                <p className="text-gray-500 text-sm sm:text-base font-light">
-                  Tutorial disponible próximamente
-                </p>
-              </div>
-            </div>
-          </ScrollReveal>
         </div>
       </section>
 
