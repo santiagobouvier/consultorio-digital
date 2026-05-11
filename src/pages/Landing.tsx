@@ -86,7 +86,7 @@ const allFeatures = [
   "Estadísticas y métricas",
   "Marca blanca (logo y colores)",
   "Dominio personalizado",
-  "Web pública del consultorio",
+  "Cobro online con Mercado Pago",
   "Calendario multi-profesional",
   "Invitación de profesionales",
 ];
@@ -103,6 +103,7 @@ const planFeatures: Record<string, string[]> = {
     "Exportación CSV",
     "Reserva online de turnos",
     "Estadísticas y métricas",
+    "Cobro online con Mercado Pago",
   ],
   esencial: [
     "Portal del paciente",
@@ -117,6 +118,7 @@ const planFeatures: Record<string, string[]> = {
     "Estadísticas y métricas",
     "Marca blanca (logo y colores)",
     "Dominio personalizado",
+    "Cobro online con Mercado Pago",
   ],
   profesional: [
     "Portal del paciente",
@@ -131,7 +133,7 @@ const planFeatures: Record<string, string[]> = {
     "Estadísticas y métricas",
     "Marca blanca (logo y colores)",
     "Dominio personalizado",
-    "Web pública del consultorio",
+    "Cobro online con Mercado Pago",
     "Calendario multi-profesional",
     "Invitación de profesionales",
   ],
@@ -148,7 +150,7 @@ const planFeatures: Record<string, string[]> = {
     "Estadísticas y métricas",
     "Marca blanca (logo y colores)",
     "Dominio personalizado",
-    "Web pública del consultorio",
+    "Cobro online con Mercado Pago",
     "Calendario multi-profesional",
     "Invitación de profesionales",
   ],
