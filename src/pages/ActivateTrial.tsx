@@ -194,8 +194,7 @@ const ActivateTrial = () => {
                   <p className="font-semibold text-white">{plan.name}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-lg font-bold text-white">{formatPrice(price)}</p>
-                  <p className="text-xs text-white/40">/mes después del trial</p>
+                  <p className="text-sm text-white/60">Al vencer los 7 días, elegís si querés continuar</p>
                 </div>
               </div>
             </div>

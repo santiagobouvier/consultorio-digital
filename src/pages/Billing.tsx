@@ -318,9 +318,9 @@ const Billing = () => {
                           <HelpTooltip id="billingTrial" />
                         </p>
                         {!trial.expired && (
-                          <p className="text-xs text-white/60 leading-relaxed">
-                            No tenés que hacer nada: cuando termine, tu plan se activa automáticamente con el método de pago que registraste. Si querés cancelar, podés hacerlo en cualquier momento desde acá.
-                          </p>
+                        <p className="text-xs text-white/60 leading-relaxed">
+                          No tenés que hacer nada: cuando termine, podés elegir continuar con un plan pago. Si querés cancelar, podés hacerlo en cualquier momento desde acá.
+                        </p>
                         )}
                         <p className="text-xs text-white/40">
                           Tu prueba termina el {formatDate(subscription.trial_ends_at)}.
