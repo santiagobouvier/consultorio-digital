@@ -47,7 +47,7 @@ const GREEN_GLOW = "rgba(0, 199, 138, 0.15)";
 const faqItems = [
   {
     question: "¿Qué incluye cada plan?",
-    answer: "Todos los planes incluyen portal del paciente, agenda, cobro online con Mercado Pago, recordatorios por WhatsApp, estadísticas y app instalable. La diferencia está en la cantidad de profesionales, pacientes activos y funcionalidades avanzadas como el calendario multi-profesional."
+    answer: "Todos los planes incluyen las mismas funcionalidades: portal del paciente, agenda, cobro online con Mercado Pago, recordatorios por WhatsApp, estadísticas, app instalable, marca blanca, calendario multi-profesional y más. La única diferencia está en la cantidad de profesionales y pacientes activos que podés manejar."
   },
   {
     question: "¿Puedo cambiar de plan en cualquier momento?",
@@ -83,75 +83,16 @@ const allFeatures = [
   "Reserva online de turnos",
   "Estadísticas y métricas",
   "Marca blanca (logo y colores)",
-  "Dominio personalizado",
   "Cobro online con Mercado Pago",
   "Calendario multi-profesional",
   "Invitación de profesionales",
 ];
 
 const planFeatures: Record<string, string[]> = {
-  emprendedor: [
-    "Portal del paciente",
-    "Agenda privada",
-    "Gestión de pagos y alertas",
-    "Recordatorios por WhatsApp",
-    "Dashboard financiero",
-    "App instalable (PWA)",
-    "Invitación de pacientes por link",
-    "Exportación CSV",
-    "Reserva online de turnos",
-    "Estadísticas y métricas",
-    "Cobro online con Mercado Pago",
-  ],
-  esencial: [
-    "Portal del paciente",
-    "Agenda privada",
-    "Gestión de pagos y alertas",
-    "Recordatorios por WhatsApp",
-    "Dashboard financiero",
-    "App instalable (PWA)",
-    "Invitación de pacientes por link",
-    "Exportación CSV",
-    "Reserva online de turnos",
-    "Estadísticas y métricas",
-    "Marca blanca (logo y colores)",
-    "Dominio personalizado",
-    "Cobro online con Mercado Pago",
-  ],
-  profesional: [
-    "Portal del paciente",
-    "Agenda privada",
-    "Gestión de pagos y alertas",
-    "Recordatorios por WhatsApp",
-    "Dashboard financiero",
-    "App instalable (PWA)",
-    "Invitación de pacientes por link",
-    "Exportación CSV",
-    "Reserva online de turnos",
-    "Estadísticas y métricas",
-    "Marca blanca (logo y colores)",
-    "Dominio personalizado",
-    "Cobro online con Mercado Pago",
-    "Calendario multi-profesional",
-    "Invitación de profesionales",
-  ],
-  consultorio: [
-    "Portal del paciente",
-    "Agenda privada",
-    "Gestión de pagos y alertas",
-    "Recordatorios por WhatsApp",
-    "Dashboard financiero",
-    "App instalable (PWA)",
-    "Invitación de pacientes por link",
-    "Exportación CSV",
-    "Reserva online de turnos",
-    "Estadísticas y métricas",
-    "Marca blanca (logo y colores)",
-    "Dominio personalizado",
-    "Cobro online con Mercado Pago",
-    "Calendario multi-profesional",
-    "Invitación de profesionales",
-  ],
+  emprendedor: allFeatures,
+  esencial: allFeatures,
+  profesional: allFeatures,
+  consultorio: allFeatures,
 };
 const Landing = () => {
   const [isAnnual, setIsAnnual] = useState(true);
