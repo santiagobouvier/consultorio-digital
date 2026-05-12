@@ -11,6 +11,7 @@ import {
   Globe,
   ArrowLeft,
   Sparkles,
+  ShieldCheck,
 } from "lucide-react";
 import {
   PLAN_DEFINITIONS,
@@ -72,6 +73,43 @@ const Pricing = () => {
         </div>
 
         {/* Billing toggle */}
+        {/* No-card trust banner */}
+        <div className="max-w-3xl mx-auto mb-8">
+          <div
+            className="relative rounded-2xl border p-5 sm:p-6 flex items-start sm:items-center gap-4 overflow-hidden"
+            style={{
+              backgroundColor: "hsla(176,80%,40%,0.08)",
+              borderColor: "hsla(176,80%,40%,0.35)",
+              boxShadow: "0 8px 32px hsla(176,80%,40%,0.12)",
+            }}
+          >
+            <div
+              className="shrink-0 w-12 h-12 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center border"
+              style={{
+                backgroundColor: "hsla(176,80%,40%,0.15)",
+                borderColor: "hsla(176,80%,40%,0.4)",
+              }}
+            >
+              <ShieldCheck
+                className="w-6 h-6 sm:w-7 sm:h-7"
+                style={{ color: "hsl(176,80%,55%)" }}
+                strokeWidth={2}
+              />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div
+                className="text-base sm:text-lg font-bold mb-1"
+                style={{ color: "hsl(176,80%,75%)" }}
+              >
+                Importante: no pedimos tarjeta para los 7 días gratis
+              </div>
+              <p className="text-sm text-white/70 leading-snug">
+                Probá todo el sistema sin riesgo. No vas a ingresar ningún dato de pago hasta que decidas continuar. Dale sin miedo.
+              </p>
+            </div>
+          </div>
+        </div>
+
         <div className="flex items-center justify-center gap-3 mb-10">
           <button
             onClick={() => setBillingCycle("monthly")}
