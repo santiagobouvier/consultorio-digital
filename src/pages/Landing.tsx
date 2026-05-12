@@ -1149,6 +1149,45 @@ const Landing = () => {
             </div>
           </ScrollReveal>
 
+          {/* No-card trust banner */}
+          <ScrollReveal delay={50}>
+            <div className="max-w-3xl mx-auto mb-8 sm:mb-10">
+              <div
+                className="relative rounded-2xl border p-5 sm:p-6 flex items-start sm:items-center gap-4 overflow-hidden"
+                style={{
+                  backgroundColor: "rgba(0, 165, 160, 0.08)",
+                  borderColor: "rgba(0, 165, 160, 0.35)",
+                  boxShadow: "0 8px 32px rgba(0, 165, 160, 0.12)",
+                }}
+              >
+                <div
+                  className="shrink-0 w-12 h-12 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center border"
+                  style={{
+                    backgroundColor: "rgba(0, 165, 160, 0.15)",
+                    borderColor: "rgba(0, 165, 160, 0.4)",
+                  }}
+                >
+                  <ShieldCheck
+                    className="w-6 h-6 sm:w-7 sm:h-7"
+                    style={{ color: "#5ee7e2" }}
+                    strokeWidth={2}
+                  />
+                </div>
+                <div className="flex-1 min-w-0 text-left">
+                  <div
+                    className="text-base sm:text-lg font-bold mb-1"
+                    style={{ color: "#5ee7e2" }}
+                  >
+                    Importante: no pedimos tarjeta para los 7 días gratis
+                  </div>
+                  <p className="text-sm text-white/70 leading-snug">
+                    Probá todo el sistema sin riesgo. No vas a ingresar ningún dato de pago hasta que decidas continuar. Dale sin miedo.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </ScrollReveal>
+
           {/* Billing Toggle */}
           <ScrollReveal delay={100}>
             <div className="flex flex-col items-center gap-3 mb-8 sm:mb-12">
