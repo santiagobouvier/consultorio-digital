@@ -28,6 +28,7 @@ import {
   LayoutDashboard,
   MessageCircle,
   ExternalLink,
+  ShieldCheck,
 } from "lucide-react";
 import PricingCard from "@/components/PricingCard";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
