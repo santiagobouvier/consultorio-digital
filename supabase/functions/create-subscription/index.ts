@@ -166,7 +166,7 @@ serve(async (req) => {
 
     // Create Mercado Pago preapproval (subscription)
     const trialEndDate = new Date();
-    trialEndDate.setDate(trialEndDate.getDate() + 7);
+    trialEndDate.setDate(trialEndDate.getDate() + 30);
 
     // FIX: Para anual, MP cobra el precio mensual equivalente cada 12 meses.
     // Para mensual, cobra el precio mensual cada 1 mes.
@@ -184,7 +184,7 @@ serve(async (req) => {
         transaction_amount: mpTransactionAmount,
         currency_id: "UYU",
         free_trial: {
-          frequency: 7,
+          frequency: 30,
           frequency_type: "days",
         },
       },

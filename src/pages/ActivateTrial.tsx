@@ -111,7 +111,7 @@ const ActivateTrial = () => {
         .maybeSingle();
 
       const trialEnd = new Date();
-      trialEnd.setDate(trialEnd.getDate() + 7);
+      trialEnd.setDate(trialEnd.getDate() + 30);
 
       if (!existing) {
         const { error: insertErr } = await supabase.from("subscriptions").insert({
@@ -139,7 +139,7 @@ const ActivateTrial = () => {
         if (updateErr) throw updateErr;
       }
 
-      toast.success("¡Prueba gratis activada! Tenés 7 días para probar todo.");
+      toast.success("¡Prueba gratis activada! Tenés 30 días para probar todo.");
       navigate("/dashboard");
     } catch (err: any) {
       console.error("Activation error:", err);
@@ -178,7 +178,7 @@ const ActivateTrial = () => {
               <Sparkles className="w-8 h-8 text-[hsl(176,80%,40%)]" />
             </div>
             <h2 className="text-2xl font-bold text-white">
-              7 días gratis, cancelá cuando quieras
+              30 días gratis, cancelá cuando quieras
             </h2>
             <p className="text-sm text-white/50">
               Activá tu prueba en un clic. Sin tarjeta, sin compromiso.
@@ -194,7 +194,7 @@ const ActivateTrial = () => {
                   <p className="font-semibold text-white">{plan.name}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm text-white/60">Al vencer los 7 días, elegís si querés continuar</p>
+                  <p className="text-sm text-white/60">Al vencer los 30 días, elegís si querés continuar</p>
                 </div>
               </div>
             </div>
@@ -203,7 +203,7 @@ const ActivateTrial = () => {
             <div className="space-y-3 mb-6">
               {[
                 { icon: Check, text: "Sin tarjeta de crédito" },
-                { icon: Check, text: "7 días para probar todas las funcionalidades" },
+                { icon: Check, text: "30 días para probar todas las funcionalidades" },
                 { icon: Check, text: "Al vencer, elegís un plan y pagás" },
                 { icon: Check, text: "Podés cambiar de plan cuando quieras" },
               ].map((item, i) => (
@@ -232,7 +232,7 @@ const ActivateTrial = () => {
               ) : (
                 <>
                   <Sparkles className="w-5 h-5 mr-2" />
-                  Empezar prueba gratis de 7 días
+                  Empezar prueba gratis de 30 días
                 </>
               )}
             </Button>
