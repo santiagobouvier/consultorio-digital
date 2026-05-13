@@ -125,7 +125,7 @@ const Landing = () => {
         price: `${formatPrice(price)}`,
         priceNote: isAnnual ? "UYU / mes (pago anual)" : "UYU / mes",
         savingsNote: isAnnual ? "Menos de una consulta por mes" : "Menos de una consulta por mes",
-        buttonText: "Empezar 7 días gratis",
+        buttonText: "Empezar 30 días gratis",
         buttonLink: `/auth?plan=${planCode}&billing=${isAnnual ? 'annual' : 'monthly'}`,
         buyText: "Comprar ahora sin prueba",
         buyLink: `/auth?plan=${planCode}&billing=${isAnnual ? 'annual' : 'monthly'}&skip_trial=true`,
@@ -278,7 +278,7 @@ const Landing = () => {
                       className="w-full sm:w-auto h-12 px-8 text-sm font-semibold rounded-xl transition-all duration-300 hover:scale-[1.03] group"
                       style={{ backgroundColor: BRAND, boxShadow: `0 4px 30px ${BRAND_SHADOW}` }}
                     >
-                      Empezar 7 días gratis
+                      Empezar 30 días gratis
                       <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" />
                     </Button>
                   </a>
@@ -1116,7 +1116,7 @@ const Landing = () => {
         <div className="max-w-4xl mx-auto">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
             {[
-              { title: "7 días gratis", subtitle: "Sin tarjeta de crédito requerida", emoji: "🎁" },
+              { title: "30 días gratis", subtitle: "Sin tarjeta de crédito requerida", emoji: "🎁" },
               { title: "100% privado", subtitle: "Tus datos y los de tus pacientes, solo tuyos", emoji: "🔒" },
               { title: "Hecho en Uruguay", subtitle: "Para el mercado local, en pesos uruguayos", emoji: "🇺🇾" },
             ].map((stat, index) => (
@@ -1178,7 +1178,7 @@ const Landing = () => {
                     className="text-base sm:text-lg font-bold mb-1"
                     style={{ color: "#5ee7e2" }}
                   >
-                    Importante: no pedimos tarjeta para los 7 días gratis
+                    Importante: no pedimos tarjeta para los 30 días gratis
                   </div>
                   <p className="text-sm text-white/70 leading-snug">
                     Probá todo el sistema sin riesgo. No vas a ingresar ningún dato de pago hasta que decidas continuar. Dale sin miedo.
@@ -1334,7 +1334,7 @@ const Landing = () => {
         <div className="max-w-2xl mx-auto text-center">
           <ScrollReveal>
             <h2 className="text-xl sm:text-3xl md:text-4xl font-bold mb-4 sm:mb-6 tracking-tight">
-              Probalo gratis durante 7 días
+              Probalo gratis durante 30 días
             </h2>
             <p className="text-gray-500 text-sm sm:text-lg mb-8 sm:mb-10 font-light max-w-lg mx-auto">
               Sin compromiso. Elegí tu plan, registrate y empezá a usar tu consultorio digital hoy.
