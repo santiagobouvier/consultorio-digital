@@ -70,6 +70,7 @@ const ClinicSettings = () => {
 
   // Form state
   const [clinicName, setClinicName] = useState("");
+  const [ownerName, setOwnerName] = useState("");
   const [specialty, setSpecialty] = useState("");
   const [welcomeMessage, setWelcomeMessage] = useState("");
   const [reminderMessage, setReminderMessage] = useState(DEFAULT_TEMPLATES.reminder);
@@ -108,6 +109,7 @@ const ClinicSettings = () => {
   const buildSnapshot = () =>
     JSON.stringify({
       clinicName,
+      ownerName,
       specialty,
       welcomeMessage,
       reminderMessage,
@@ -220,6 +222,13 @@ const ClinicSettings = () => {
       }
 
       setClinicName(loadedClinicName);
+      // Cargar nombre personal del usuario (se muestra en "Buenos días, ...")
+      const { data: ownProfile } = await supabase
+        .from("profiles")
+        .select("name")
+        .eq("id", user.id)
+        .maybeSingle();
+      setOwnerName(ownProfile?.name || "");
       setSpecialty(loadedSpecialty);
       setWelcomeMessage(loadedWelcome);
       setReminderMessage(loadedReminder);
@@ -298,6 +307,15 @@ const ClinicSettings = () => {
         const { data, error } = await supabase.from("clinic_settings").insert([settingsData]).select().single();
         if (error) throw error;
         if (data) setSettingsId(data.id);
+      }
+
+      // Actualizar nombre personal del usuario (visible en saludo del dashboard)
+      if (ownerName.trim()) {
+        const { error: profileError } = await supabase
+          .from("profiles")
+          .update({ name: ownerName.trim() })
+          .eq("id", user.id);
+        if (profileError) console.error("Error saving profile name:", profileError);
       }
 
       if (businessId) {
