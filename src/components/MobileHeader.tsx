@@ -24,6 +24,7 @@ import { cn } from "@/lib/utils";
 import { useDashboardBranding } from "@/contexts/DashboardBrandingContext";
 import { usePendingRequestsCount } from "@/hooks/use-pending-requests-count";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import consultorioLogo from "@/assets/logo-loading.png";
 
 type NavItem = {
   title: string;
