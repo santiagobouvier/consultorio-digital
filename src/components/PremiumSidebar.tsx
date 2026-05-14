@@ -28,6 +28,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useDashboardBranding } from "@/contexts/DashboardBrandingContext";
+import consultorioLogo from "@/assets/logo-consultorio-digital-white.png";
 import { isCurrentUserSuperAdmin } from "@/lib/admin-access";
 import { useBusinessId, clearActiveBusinessId, getActiveBusinessId } from "@/hooks/use-business-id";
 import { prefetchRoute } from "@/lib/query-prefetch";
@@ -284,7 +285,11 @@ export function PremiumSidebar() {
                     boxShadow: `0 4px 12px ${brandHsla(0.2)}`,
                   }}
                 >
-                  <CalendarDays className="h-4 w-4 text-white" />
+                  <img
+                    src={consultorioLogo}
+                    alt="Consultorio Digital"
+                    className="h-5 w-5 object-contain"
+                  />
                 </div>
               )}
               <span
