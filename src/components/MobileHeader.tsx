@@ -146,15 +146,11 @@ export function MobileHeader() {
             style={{ boxShadow: `0 2px 10px ${brandHsla(0.3)}` }}
           />
         ) : (
-          <div
-            className="w-8 h-8 rounded-lg flex items-center justify-center"
-            style={{
-              background: `linear-gradient(135deg, ${brandHsl}, hsl(${primaryColor.split(" ")[0]} 100% 25%))`,
-              boxShadow: `0 2px 10px ${brandHsla(0.3)}`,
-            }}
-          >
-            <CalendarDays className="h-4 w-4 text-white" />
-          </div>
+          <img
+            src={consultorioLogo}
+            alt="Consultorio Digital"
+            className="h-11 w-11 object-contain"
+          />
         )}
         </div>
       </header>
@@ -204,15 +200,11 @@ export function MobileHeader() {
               style={{ boxShadow: `0 4px 16px ${brandHsla(0.4)}` }}
             />
           ) : (
-            <div
-              className="w-9 h-9 rounded-xl flex items-center justify-center"
-              style={{
-                background: `linear-gradient(135deg, ${brandHsl}, hsl(${primaryColor.split(" ")[0]} 100% 25%))`,
-                boxShadow: `0 4px 16px ${brandHsla(0.4)}`,
-              }}
-            >
-              <CalendarDays className="h-4 w-4 text-white" />
-            </div>
+            <img
+              src={consultorioLogo}
+              alt="Consultorio Digital"
+              className="h-11 w-11 object-contain"
+            />
           )}
 
           {/* Close X */}
