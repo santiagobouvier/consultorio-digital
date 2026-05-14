@@ -427,6 +427,16 @@ const ClinicSettings = () => {
               <CardHeader><CardTitle className="text-base">Información del consultorio</CardTitle></CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
+                  <Label htmlFor="ownerName">Tu nombre</Label>
+                  <Input
+                    id="ownerName" value={ownerName} onChange={(e) => setOwnerName(e.target.value)}
+                    placeholder="Ej: Sofía Bouvier" className="h-11"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Es el nombre que aparece en el saludo del dashboard ("Buenos días, ...").
+                  </p>
+                </div>
+                <div className="space-y-2">
                   <Label htmlFor="clinicName">Nombre del consultorio</Label>
                   <Input
                     id="clinicName" value={clinicName} onChange={(e) => setClinicName(e.target.value)}
