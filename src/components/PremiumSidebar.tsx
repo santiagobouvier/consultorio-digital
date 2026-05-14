@@ -28,7 +28,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useDashboardBranding } from "@/contexts/DashboardBrandingContext";
-import consultorioLogo from "@/assets/logo-consultorio-digital-white.png";
+import consultorioLogo from "@/assets/logo-loading.png";
 import { isCurrentUserSuperAdmin } from "@/lib/admin-access";
 import { useBusinessId, clearActiveBusinessId, getActiveBusinessId } from "@/hooks/use-business-id";
 import { prefetchRoute } from "@/lib/query-prefetch";
