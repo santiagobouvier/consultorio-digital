@@ -151,8 +151,10 @@ const PatientPortal = () => {
 
   const [tab, setTab] = useState<(typeof TABS)[number]["id"]>("resumen");
   const [isDark, setIsDark] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
-    return localStorage.getItem("portal-theme") === "dark";
+    if (typeof window === "undefined") return true;
+    const stored = localStorage.getItem("portal-theme");
+    // Default: dark mode salvo que el paciente haya elegido explícitamente "light".
+    return stored ? stored === "dark" : true;
   });
   const [showBookingModal, setShowBookingModal] = useState(false);
 
@@ -386,100 +388,99 @@ const PatientPortal = () => {
 
   // ========= Tabs =========
   const ResumenTab = () => (
-    <div className="space-y-5 lg:space-y-6">
-      {/* Welcome hero - desktop */}
-      <div className="hidden lg:block rounded-2xl border bg-gradient-to-br from-primary/5 via-card to-accent/5 p-8">
-        <div className="flex items-center gap-6">
-          <Avatar className="h-20 w-20 border-4 border-primary/20 shadow-lg">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6">
+      {/* ============ LEFT COLUMN (8/12) ============ */}
+      <div className="lg:col-span-8 flex flex-col gap-5 lg:gap-6">
+        {/* Welcome */}
+        <div className="flex items-center gap-4">
+          <Avatar className="h-14 w-14 lg:h-16 lg:w-16 border-2 border-primary/30 shadow-lg shadow-primary/10">
             {patient?.avatar_url ? <AvatarImage src={patient.avatar_url} /> : null}
-            <AvatarFallback className="text-2xl font-bold bg-primary/10 text-primary">{initials}</AvatarFallback>
+            <AvatarFallback className="text-xl font-bold bg-gradient-to-tr from-primary to-primary/70 text-primary-foreground">
+              {initials}
+            </AvatarFallback>
           </Avatar>
-          <div>
-            <h2 className="text-2xl font-bold text-foreground">Hola, {firstName} 👋</h2>
-            <p className="text-muted-foreground mt-1">Acá podés ver tu resumen, próximas citas, pagos e historial.</p>
-            <p className="text-xs text-muted-foreground mt-2">{branding.name} · {branding.specialty}</p>
+          <div className="min-w-0">
+            <h2 className="text-2xl lg:text-3xl font-bold tracking-tight text-foreground">
+              Hola, {firstName} <span className="inline-block">👋</span>
+            </h2>
+            <p className="text-sm lg:text-base text-muted-foreground">
+              Bienvenido/a a tu portal de {branding.name}.
+            </p>
           </div>
         </div>
-      </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 lg:gap-4">
-        {[
-          { icon: Calendar, value: upcomingAppointments.length, label: "Próximas citas", accent: false },
-          { icon: CalendarCheck, value: totalSessions, label: "Sesiones realizadas", accent: false },
-          { icon: AlertCircle, value: pendingCount, label: "Pagos pendientes", accent: pendingCount > 0 },
-        ].map((stat, i) => (
-          <Card key={i} className="group hover:shadow-md transition-all border-border/60">
-            <CardContent className="pt-4 pb-3 lg:pt-6 lg:pb-4 text-center">
-              <div className={`inline-flex items-center justify-center h-10 w-10 rounded-full mb-2 lg:mb-3 ${stat.accent ? "bg-destructive/10" : "bg-primary/10"}`}>
-                <stat.icon className={`h-5 w-5 ${stat.accent ? "text-destructive" : "text-primary"}`} />
-              </div>
-              <p className={`text-2xl lg:text-3xl font-bold ${stat.accent ? "text-destructive" : "text-primary"}`}>{stat.value}</p>
-              <p className="text-xs lg:text-sm text-muted-foreground mt-0.5">{stat.label}</p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Push notifications activation */}
-      <NotificationActivationCard variant="full" />
-
-      {/* Two-column */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
-        <Card className="hover:shadow-md transition-all">
-          <CardHeader className="pb-2 lg:pb-3">
-            <CardTitle className="text-base lg:text-lg flex items-center gap-2">
-              <Calendar className="h-4 w-4 lg:h-5 lg:w-5 text-primary" /> Próxima cita
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+        {/* Hero: Próxima cita */}
+        <Card className="relative overflow-hidden rounded-3xl border-border/60">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 blur-[100px] pointer-events-none" />
+          <CardContent className="relative z-10 p-6 lg:p-8">
             {upcomingAppointments.length === 0 ? (
               <div className="text-center py-6">
-                <Calendar className="h-10 w-10 text-muted-foreground/40 mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">No tenés citas próximas</p>
-                <Button variant="outline" size="sm" onClick={() => setShowBookingModal(true)} className="mt-3 gap-2">
+                <Calendar className="h-12 w-12 text-muted-foreground/40 mx-auto mb-3" />
+                <p className="text-sm text-muted-foreground mb-3">No tenés citas próximas</p>
+                <Button onClick={() => setShowBookingModal(true)} className="gap-2">
                   <Plus className="h-4 w-4" /> Reservar ahora
                 </Button>
               </div>
             ) : (
-              <div className="space-y-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="font-semibold text-sm lg:text-base capitalize">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div className="space-y-3 min-w-0">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-medium">
+                    <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                    Próxima cita
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="text-xl lg:text-2xl font-bold capitalize">
                       {formatDateLong(parseISO(upcomingAppointments[0].start_at))}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {format(parseISO(upcomingAppointments[0].start_at), "HH:mm")} - {format(parseISO(upcomingAppointments[0].end_at), "HH:mm")} hs
+                    </h3>
+                    <p className="text-muted-foreground flex items-center gap-2 text-sm">
+                      <Clock className="h-4 w-4" />
+                      {format(parseISO(upcomingAppointments[0].start_at), "HH:mm")} — {format(parseISO(upcomingAppointments[0].end_at), "HH:mm")} hs
                     </p>
                   </div>
-                  {statusBadge(upcomingAppointments[0].status)}
-                </div>
-                <Separator />
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  {upcomingAppointments[0].modality === "online" || upcomingAppointments[0].modality === "virtual"
-                    ? <Video className="h-4 w-4 text-primary shrink-0" />
-                    : <MapPin className="h-4 w-4 shrink-0" />}
-                  <span>
-                    {upcomingAppointments[0].modality === "online" || upcomingAppointments[0].modality === "virtual"
-                      ? "Sesión online"
-                      : upcomingAppointments[0].location || "Presencial"}
-                  </span>
-                </div>
-                {upcomingAppointments[0].service && (
-                  <div className="flex items-center gap-2 text-sm text-primary">
-                    <CheckCircle2 className="h-4 w-4 shrink-0" />
-                    <span>{upcomingAppointments[0].service.name}</span>
+                  <div className="flex flex-wrap items-center gap-3 text-sm">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      {upcomingAppointments[0].modality === "online" || upcomingAppointments[0].modality === "virtual"
+                        ? <Video className="h-4 w-4 text-primary shrink-0" />
+                        : <MapPin className="h-4 w-4 shrink-0" />}
+                      <span className="truncate">
+                        {upcomingAppointments[0].modality === "online" || upcomingAppointments[0].modality === "virtual"
+                          ? (upcomingAppointments[0].location || "Sesión online")
+                          : (upcomingAppointments[0].location || "Presencial")}
+                      </span>
+                    </div>
+                    {upcomingAppointments[0].service && (
+                      <div className="flex items-center gap-2 text-primary">
+                        <CheckCircle2 className="h-4 w-4 shrink-0" />
+                        <span>{upcomingAppointments[0].service.name}</span>
+                      </div>
+                    )}
                   </div>
-                )}
+                </div>
+                <div className="flex flex-col gap-2 md:w-56 shrink-0">
+                  {(upcomingAppointments[0].modality === "online" || upcomingAppointments[0].modality === "virtual") && upcomingAppointments[0].location && (
+                    <Button asChild className="gap-2 shadow-lg shadow-primary/20">
+                      <a href={upcomingAppointments[0].location} target="_blank" rel="noopener noreferrer">
+                        <Video className="h-4 w-4" /> Unirme a la sesión
+                      </a>
+                    </Button>
+                  )}
+                  <Button variant="outline" onClick={() => setShowBookingModal(true)} className="gap-2">
+                    <Plus className="h-4 w-4" /> Reservar otra cita
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => setTab("citas")} className="gap-1 text-xs">
+                    Ver todas <ChevronRight className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
               </div>
             )}
           </CardContent>
         </Card>
 
+        {/* Notas del profesional */}
         <Card className="hover:shadow-md transition-all">
-          <CardHeader className="pb-2 lg:pb-3">
+          <CardHeader className="pb-3">
             <CardTitle className="text-base lg:text-lg flex items-center gap-2">
-              <Heart className="h-4 w-4 lg:h-5 lg:w-5 text-primary" /> Notas de tu profesional
+              <Heart className="h-5 w-5 text-primary" /> Notas de tu profesional
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -499,56 +500,92 @@ const PatientPortal = () => {
         </Card>
       </div>
 
-      {/* Reservar */}
-      <Button onClick={() => setShowBookingModal(true)} className="w-full sm:w-auto gap-2">
-        <Plus className="h-4 w-4" /> Reservar una cita
-      </Button>
+      {/* ============ RIGHT COLUMN (4/12) ============ */}
+      <div className="lg:col-span-4 flex flex-col gap-4 lg:gap-5">
+        {/* Stats compactos */}
+        <div className="grid grid-cols-3 gap-2 lg:gap-3">
+          {[
+            { value: upcomingAppointments.length, label: "Próximas", accent: false },
+            { value: totalSessions, label: "Sesiones", accent: false },
+            { value: pendingCount, label: "Pendientes", accent: pendingCount > 0 },
+          ].map((stat, i) => (
+            <div
+              key={i}
+              className={`rounded-2xl border p-3 lg:p-4 text-center transition-all hover:shadow-md ${
+                stat.accent ? "border-destructive/30 bg-destructive/5" : "border-border/60 bg-card"
+              }`}
+            >
+              <p className={`text-2xl lg:text-3xl font-bold ${stat.accent ? "text-destructive" : "text-primary"}`}>
+                {stat.value}
+              </p>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mt-1">
+                {stat.label}
+              </p>
+            </div>
+          ))}
+        </div>
 
-      {/* Pending payment */}
-      {pendingCount > 0 && (
-        <Card className="border-destructive/30 bg-destructive/5 hover:shadow-md transition-all">
-          <CardContent className="p-4 lg:p-5 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 lg:gap-4">
-              <div className="h-10 w-10 lg:h-12 lg:w-12 rounded-full bg-destructive/10 flex items-center justify-center shrink-0">
-                <Clock className="h-5 w-5 lg:h-6 lg:w-6 text-destructive" />
+        {/* Pago pendiente */}
+        {pendingCount > 0 && pendingPayments[0] && (
+          <button
+            onClick={() => setTab("pagos")}
+            className="w-full text-left rounded-2xl border border-destructive/20 bg-destructive/5 p-4 lg:p-5 flex items-center justify-between gap-3 group hover:bg-destructive/10 transition-colors"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="h-10 w-10 rounded-full bg-destructive/15 flex items-center justify-center shrink-0">
+                <AlertCircle className="h-5 w-5 text-destructive" />
               </div>
-              <div>
-                <p className="font-semibold text-sm lg:text-base">
-                  Tenés {pendingCount} pago{pendingCount > 1 ? "s" : ""} pendiente{pendingCount > 1 ? "s" : ""}
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-destructive">
+                  {pendingCount === 1 ? "Pago pendiente" : `${pendingCount} pagos pendientes`}
                 </p>
-                {pendingPayments[0] && (
-                  <p className="text-xs lg:text-sm text-muted-foreground">
-                    {formatCurrency(pendingPayments[0].amount, pendingPayments[0].currency || "UYU")} — Vence {formatShort(parseISO(pendingPayments[0].due_date))}
-                  </p>
-                )}
+                <p className="text-xs text-muted-foreground truncate">
+                  Vence {formatShort(parseISO(pendingPayments[0].due_date))}
+                </p>
               </div>
             </div>
-            <Button variant="outline" size="sm" className="hidden sm:flex gap-2" onClick={() => setTab("pagos")}>
-              Ver pagos <ChevronRight className="h-4 w-4" />
-            </Button>
-          </CardContent>
-        </Card>
-      )}
+            <span className="text-sm font-bold text-foreground shrink-0">
+              {formatCurrency(pendingPayments[0].amount, pendingPayments[0].currency || "UYU")}
+            </span>
+          </button>
+        )}
 
-      {/* Install CTA */}
-      {!isInstalled && (
-        <Card className="border-primary/20 bg-primary/5 hover:shadow-md transition-all">
-          <CardContent className="p-4 lg:p-5 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 lg:gap-4">
-              <div className="h-10 w-10 lg:h-12 lg:w-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                <Smartphone className="h-5 w-5 lg:h-6 lg:w-6 text-primary" />
-              </div>
-              <div>
-                <p className="font-semibold text-sm lg:text-base">Instalá la aplicación en tu dispositivo</p>
-                <p className="text-xs lg:text-sm text-muted-foreground">Accedé rápido desde tu celular, tablet o escritorio</p>
-              </div>
-            </div>
-            <Button size="sm" className="gap-2" onClick={handleInstallApp}>
-              <Download className="h-4 w-4" /> Instalar
-            </Button>
-          </CardContent>
-        </Card>
-      )}
+        {/* Configuración rápida agrupada */}
+        {(!isInstalled || true) && (
+          <Card className="hover:shadow-md transition-all">
+            <CardContent className="p-5 flex flex-col gap-5">
+              <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                Configuración rápida
+              </h3>
+
+              {!isInstalled && (
+                <>
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 text-primary">
+                      <Smartphone className="h-5 w-5" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium">Instalar aplicación</p>
+                      <p className="text-xs text-muted-foreground">Accedé más rápido desde tu inicio</p>
+                      <Button
+                        variant="link"
+                        size="sm"
+                        onClick={handleInstallApp}
+                        className="px-0 h-auto mt-2 text-xs font-bold text-primary"
+                      >
+                        Agregar a inicio
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="h-px bg-border" />
+                </>
+              )}
+
+              <NotificationActivationCard variant="full" />
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   );
 
@@ -1105,7 +1142,7 @@ const PatientPortal = () => {
           </nav>
 
           {/* Main Content */}
-          <main className="flex-1 min-w-0 px-4 lg:px-10 xl:px-16 py-4 lg:py-8 pb-24 lg:pb-8 max-w-[1200px]">
+          <main className="flex-1 min-w-0 px-4 lg:px-8 xl:px-10 py-4 lg:py-8 pb-24 lg:pb-8 max-w-[1440px]">
             {/* Mobile welcome */}
             <div className="lg:hidden flex items-center gap-3 mb-4">
               <Avatar className="h-10 w-10">
