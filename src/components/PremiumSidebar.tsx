@@ -266,8 +266,8 @@ export function PremiumSidebar() {
         {/* Content */}
         <div className="relative flex flex-col h-full">
           {/* Logo area */}
-          <div className="flex items-center h-16 px-4">
-            <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center h-16 px-3">
+            <div className="flex items-center gap-2 min-w-0">
               {logoUrl ? (
                 <img
                   src={logoUrl}
@@ -281,7 +281,7 @@ export function PremiumSidebar() {
                 <img
                   src={consultorioLogo}
                   alt="Consultorio Digital"
-                  className="h-10 w-10 object-contain shrink-0"
+                  className="h-12 w-12 object-contain shrink-0 -my-1"
                 />
               )}
               <span
