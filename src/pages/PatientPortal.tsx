@@ -151,8 +151,10 @@ const PatientPortal = () => {
 
   const [tab, setTab] = useState<(typeof TABS)[number]["id"]>("resumen");
   const [isDark, setIsDark] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
-    return localStorage.getItem("portal-theme") === "dark";
+    if (typeof window === "undefined") return true;
+    const stored = localStorage.getItem("portal-theme");
+    // Default: dark mode salvo que el paciente haya elegido explícitamente "light".
+    return stored ? stored === "dark" : true;
   });
   const [showBookingModal, setShowBookingModal] = useState(false);
 
