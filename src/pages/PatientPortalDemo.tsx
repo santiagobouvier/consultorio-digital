@@ -128,7 +128,7 @@ const PatientPortalDemo = () => {
   const { toast } = useToast();
   const { businessId, loading: bizLoading } = useBusinessId(false);
   const [tab, setTab] = useState("resumen");
-  const [isDark, setIsDark] = useState(false);
+  const [isDark, setIsDark] = useState(true);
   const { canInstall, install, isInstalled } = usePWAInstall();
   const [branding, setBranding] = useState<PortalBranding>({
     name: "Consultorio Demo",
