@@ -28,7 +28,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useDashboardBranding } from "@/contexts/DashboardBrandingContext";
-import consultorioLogo from "@/assets/logo-consultorio-digital-white.png";
+import consultorioLogo from "@/assets/logo-loading.png";
 import { isCurrentUserSuperAdmin } from "@/lib/admin-access";
 import { useBusinessId, clearActiveBusinessId, getActiveBusinessId } from "@/hooks/use-business-id";
 import { prefetchRoute } from "@/lib/query-prefetch";
@@ -278,19 +278,11 @@ export function PremiumSidebar() {
                   style={{ boxShadow: `0 4px 12px ${brandHsla(0.2)}` }}
                 />
               ) : (
-                <div
-                  className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                  style={{
-                    background: `linear-gradient(135deg, ${brandHsl}, hsl(${primaryColor.split(' ')[0]} 100% 25%))`,
-                    boxShadow: `0 4px 12px ${brandHsla(0.2)}`,
-                  }}
-                >
-                  <img
-                    src={consultorioLogo}
-                    alt="Consultorio Digital"
-                    className="h-5 w-5 object-contain"
-                  />
-                </div>
+                <img
+                  src={consultorioLogo}
+                  alt="Consultorio Digital"
+                  className="h-10 w-10 object-contain shrink-0"
+                />
               )}
               <span
                 className={cn(
