@@ -1142,7 +1142,7 @@ const PatientPortal = () => {
           </nav>
 
           {/* Main Content */}
-          <main className="flex-1 min-w-0 px-4 lg:px-10 xl:px-16 py-4 lg:py-8 pb-24 lg:pb-8 max-w-[1200px]">
+          <main className="flex-1 min-w-0 px-4 lg:px-8 xl:px-10 py-4 lg:py-8 pb-24 lg:pb-8 max-w-[1440px]">
             {/* Mobile welcome */}
             <div className="lg:hidden flex items-center gap-3 mb-4">
               <Avatar className="h-10 w-10">
