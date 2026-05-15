@@ -1,0 +1,501 @@
+import { useState, useEffect, useCallback } from "react";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { useToast } from "@/hooks/use-toast";
+import { usePWAInstall } from "@/hooks/use-pwa-install";
+import { PortalWelcomeInstall } from "@/components/portal/PortalWelcomeInstall";
+import { Building2, Sun, Moon, Eye, EyeOff, Loader2, AlertCircle, LogOut } from "lucide-react";
+import {
+  PatientPortalView,
+  type PortalBranding,
+  type PortalPatient,
+  type PortalAppointment,
+  type PortalPayment,
+  type ProfileEditData,
+} from "@/components/portal/PatientPortalView";
+import { getRecurrenceTypeLabel, RecurrenceType } from "@/lib/payments";
+
+interface ClinicBrandingFull extends PortalBranding {
+  id: string;
+  displayName: string;
+  slug: string;
+}
+
+// Theme generator (light variant for the BrandedLogin screen)
+const generateThemeVars = (primaryColor: string, isDark: boolean) => {
+  const vars: Record<string, string> = {};
+  if (isDark) {
+    vars["--background"] = "220 15% 8%";
+    vars["--foreground"] = "220 10% 98%";
+    vars["--card"] = "220 12% 11%";
+    vars["--card-foreground"] = "220 10% 98%";
+    vars["--primary"] = primaryColor;
+    vars["--primary-foreground"] = "0 0% 100%";
+    vars["--muted"] = "220 10% 15%";
+    vars["--muted-foreground"] = "220 8% 55%";
+    vars["--border"] = "220 10% 18%";
+    vars["--input"] = "220 10% 18%";
+    vars["--ring"] = primaryColor;
+  } else {
+    vars["--background"] = "0 0% 100%";
+    vars["--foreground"] = "220 15% 10%";
+    vars["--card"] = "0 0% 100%";
+    vars["--card-foreground"] = "220 15% 10%";
+    vars["--primary"] = primaryColor;
+    vars["--primary-foreground"] = "0 0% 100%";
+    vars["--muted"] = "220 15% 96%";
+    vars["--muted-foreground"] = "220 8% 46%";
+    vars["--border"] = "220 10% 90%";
+    vars["--input"] = "220 10% 90%";
+    vars["--ring"] = primaryColor;
+  }
+  return vars;
+};
+
+const BrandedLogin = ({
+  branding, isDark, setIsDark, themeStyle,
+}: {
+  branding: ClinicBrandingFull;
+  isDark: boolean;
+  setIsDark: (v: boolean) => void;
+  themeStyle: Record<string, string>;
+}) => {
+  const { toast } = useToast();
+  const [isLogin, setIsLogin] = useState(true);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      if (isLogin) {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.auth.signUp({
+          email, password,
+          options: {
+            data: { name },
+            emailRedirectTo: `${window.location.origin}/portal/${branding.slug}`,
+          },
+        });
+        if (error) throw error;
+        toast({ title: "Cuenta creada", description: "Revisá tu email para verificar tu cuenta." });
+      }
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message || "Ocurrió un error", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen" style={themeStyle as any}>
+      <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center p-4 transition-colors duration-300">
+        <Button variant="ghost" size="icon" onClick={() => setIsDark(!isDark)} className="absolute top-4 right-4 h-9 w-9 rounded-full">
+          {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+        </Button>
+        <div className="w-full max-w-sm space-y-8">
+          <div className="text-center space-y-4">
+            {branding.logoUrl ? (
+              <img src={branding.logoUrl} alt={branding.displayName} className="h-20 w-20 rounded-2xl object-cover mx-auto shadow-lg" />
+            ) : (
+              <div className="h-20 w-20 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto shadow-lg">
+                <Building2 className="h-10 w-10 text-primary" />
+              </div>
+            )}
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">{branding.displayName}</h1>
+              {branding.specialty && <p className="text-sm text-muted-foreground mt-1">{branding.specialty}</p>}
+            </div>
+          </div>
+          <Card className="border-border/60 shadow-xl">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg text-center">{isLogin ? "Iniciar sesión" : "Crear cuenta"}</CardTitle>
+              <p className="text-sm text-muted-foreground text-center">
+                {isLogin ? "Ingresá con tu cuenta de paciente" : "Registrate para acceder a tu portal"}
+              </p>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {!isLogin && (
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Nombre completo</Label>
+                    <Input id="name" type="text" placeholder="Tu nombre" value={name} onChange={e => setName(e.target.value)} required={!isLogin} />
+                  </div>
+                )}
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input id="email" type="email" placeholder="tu@email.com" value={email} onChange={e => setEmail(e.target.value)} required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Contraseña</Label>
+                  <div className="relative">
+                    <Input id="password" type={showPassword ? "text" : "password"} placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} required minLength={6} />
+                    <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setShowPassword(!showPassword)}>
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                </div>
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  {isLogin ? "Ingresar" : "Crear cuenta"}
+                </Button>
+              </form>
+              <Separator className="my-4" />
+              <p className="text-sm text-center text-muted-foreground">
+                {isLogin ? "¿No tenés cuenta?" : "¿Ya tenés cuenta?"}{" "}
+                <button onClick={() => setIsLogin(!isLogin)} className="text-primary font-medium hover:underline">
+                  {isLogin ? "Registrate" : "Iniciá sesión"}
+                </button>
+              </p>
+            </CardContent>
+          </Card>
+          <div className="text-center">
+            <p className="text-xs text-muted-foreground">Powered by Tu Consultorio Digital</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ClinicPortal = () => {
+  const { slug } = useParams<{ slug: string }>();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { toast } = useToast();
+  const { canInstall, install, isInstalled } = usePWAInstall();
+
+  const [loading, setLoading] = useState(true);
+  const [branding, setBranding] = useState<ClinicBrandingFull | null>(null);
+  const [notFound, setNotFound] = useState(false);
+  const [session, setSession] = useState<any>(null);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [patient, setPatient] = useState<PortalPatient | null>(null);
+  const [patientLoading, setPatientLoading] = useState(false);
+  const [patientChecked, setPatientChecked] = useState(false);
+  const [isDark, setIsDark] = useState(true);
+  const [welcomeSeen, setWelcomeSeen] = useState<boolean>(true);
+  const [payingAppointment, setPayingAppointment] = useState<string | null>(null);
+
+  const [upcomingAppointments, setUpcomingAppointments] = useState<PortalAppointment[]>([]);
+  const [pastAppointments, setPastAppointments] = useState<PortalAppointment[]>([]);
+  const [payments, setPayments] = useState<PortalPayment[]>([]);
+
+  useEffect(() => {
+    if (!slug) return;
+    try {
+      setWelcomeSeen(localStorage.getItem(`portal-welcome-seen:${slug}`) === "1");
+    } catch { setWelcomeSeen(true); }
+  }, [slug]);
+
+  const markWelcomeSeen = useCallback(() => {
+    if (!slug) return;
+    try { localStorage.setItem(`portal-welcome-seen:${slug}`, "1"); } catch {}
+    setWelcomeSeen(true);
+  }, [slug]);
+
+  const reloadPatientData = useCallback(async (patientId: string, bizId: string) => {
+    const nowIso = new Date().toISOString();
+    const { data: appts } = await supabase
+      .from("appointments")
+      .select("id, start_at, end_at, status, modality, location, notes, payment_status, services(name)")
+      .eq("business_id", bizId)
+      .eq("patient_id", patientId)
+      .order("start_at", { ascending: false });
+
+    const all = (appts || []).map((a: any): PortalAppointment => ({
+      id: a.id, start_at: a.start_at, end_at: a.end_at, status: a.status,
+      modality: a.modality, location: a.location, notes: a.notes,
+      service_name: a.services?.name ?? null, payment_status: a.payment_status,
+    }));
+    setUpcomingAppointments(all.filter(a => a.start_at >= nowIso && a.status !== "cancelled").reverse());
+    setPastAppointments(all.filter(a => a.start_at < nowIso || a.status === "completed"));
+
+    const { data: pays } = await supabase
+      .from("payments")
+      .select("id, amount, currency, due_date, status, paid_at, recurrence_type, notes, appointment_id")
+      .eq("business_id", bizId)
+      .eq("patient_id", patientId)
+      .order("due_date", { ascending: false });
+    setPayments((pays || []).map((p: any): PortalPayment => ({
+      id: p.id, amount: Number(p.amount), currency: p.currency || "UYU",
+      due_date: p.due_date, status: p.status, paid_at: p.paid_at,
+      recurrence_label: getRecurrenceTypeLabel(p.recurrence_type as RecurrenceType),
+      notes: p.notes, appointment_id: p.appointment_id,
+    })));
+  }, []);
+
+  // Payment success callback
+  useEffect(() => {
+    const paymentStatus = searchParams.get("payment");
+    const apptId = searchParams.get("appointment_id");
+    if (paymentStatus === "success" && apptId) {
+      toast({ title: "¡Pago recibido!", description: "Tu sesión fue confirmada exitosamente." });
+      searchParams.delete("payment");
+      searchParams.delete("appointment_id");
+      setSearchParams(searchParams, { replace: true });
+      setTimeout(() => {
+        if (patient && branding) reloadPatientData(patient.id, branding.id);
+      }, 2000);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  // Load branding
+  useEffect(() => {
+    if (!slug) return;
+    (async () => {
+      const { data, error } = await supabase
+        .from("businesses")
+        .select("id, name, specialty, contact_email, portal_logo_url, portal_clinic_display_name, portal_primary_color, portal_dark_primary_color, public_slug, custom_subdomain")
+        .or(`public_slug.eq.${slug},custom_subdomain.eq.${slug}`)
+        .limit(1).maybeSingle();
+      if (error || !data) {
+        setNotFound(true); setLoading(false); return;
+      }
+      setBranding({
+        id: data.id,
+        name: (data as any).portal_clinic_display_name || data.name,
+        displayName: (data as any).portal_clinic_display_name || data.name,
+        specialty: data.specialty || "",
+        contactEmail: data.contact_email,
+        logoUrl: (data as any).portal_logo_url || "",
+        lightColor: (data as any).portal_primary_color || "176 100% 32%",
+        darkColor: (data as any).portal_dark_primary_color || "176 85% 42%",
+        slug: data.public_slug,
+      });
+      setLoading(false);
+    })();
+  }, [slug]);
+
+  // Inject dynamic manifest
+  useEffect(() => {
+    if (!slug) return;
+    const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+    if (!projectId) return;
+    const origin = window.location.origin;
+    const manifestUrl = `https://${projectId}.supabase.co/functions/v1/get-clinic-manifest?slug=${encodeURIComponent(slug)}&origin=${encodeURIComponent(origin)}`;
+
+    const previousManifestLinks = Array.from(
+      document.querySelectorAll<HTMLLinkElement>('link[rel="manifest"]'),
+    ).map(el => ({ href: el.href, crossOrigin: el.crossOrigin }));
+    document.querySelectorAll('link[rel="manifest"]').forEach(el => el.remove());
+
+    const link = document.createElement("link");
+    link.rel = "manifest";
+    link.href = manifestUrl;
+    link.crossOrigin = "anonymous";
+    document.head.appendChild(link);
+
+    let appleIcon = document.querySelector<HTMLLinkElement>('link[rel="apple-touch-icon"]');
+    const previousAppleHref = appleIcon?.href;
+    if (branding?.logoUrl) {
+      if (!appleIcon) {
+        appleIcon = document.createElement("link");
+        appleIcon.rel = "apple-touch-icon";
+        document.head.appendChild(appleIcon);
+      }
+      appleIcon.href = branding.logoUrl;
+    }
+
+    return () => {
+      link.remove();
+      previousManifestLinks.forEach(({ href, crossOrigin }) => {
+        const restored = document.createElement("link");
+        restored.rel = "manifest";
+        restored.href = href;
+        if (crossOrigin) restored.crossOrigin = crossOrigin;
+        document.head.appendChild(restored);
+      });
+      if (appleIcon && previousAppleHref) appleIcon.href = previousAppleHref;
+    };
+  }, [slug, branding?.logoUrl]);
+
+  // Auth listener
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, sess) => {
+      setSession(sess); setAuthChecked(true);
+    });
+    supabase.auth.getSession().then(({ data: { session: sess } }) => {
+      setSession(sess); setAuthChecked(true);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Load patient
+  useEffect(() => {
+    if (!authChecked) return;
+    if (!session?.user?.id || !branding?.id) {
+      if (authChecked && !session?.user?.id) setPatientChecked(true);
+      return;
+    }
+    (async () => {
+      setPatientLoading(true); setPatientChecked(false);
+      const { data } = await supabase
+        .from("patients")
+        .select("id, full_name, email, whatsapp_phone, avatar_url, reason_for_consultation, private_notes, created_at")
+        .eq("business_id", branding.id)
+        .eq("auth_user_id", session.user.id)
+        .eq("is_active", true)
+        .limit(1).maybeSingle();
+      if (data) {
+        setPatient(data as PortalPatient);
+        await reloadPatientData(data.id, branding.id);
+      }
+      setPatientLoading(false); setPatientChecked(true);
+    })();
+  }, [session?.user?.id, branding?.id, authChecked, reloadPatientData]);
+
+  const themeStyleLogin = (() => {
+    if (!branding) return {};
+    const color = isDark ? branding.darkColor : branding.lightColor;
+    return generateThemeVars(color, isDark);
+  })();
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setSession(null); setPatient(null);
+    setPatientLoading(false); setPatientChecked(false);
+  };
+
+  const handlePaySession = async (appointmentId: string) => {
+    if (!branding) return;
+    try {
+      setPayingAppointment(appointmentId);
+      const { data: existingPayment } = await supabase
+        .from("payments")
+        .select("id, mp_preference_id")
+        .eq("appointment_id", appointmentId)
+        .eq("status", "pending")
+        .not("mp_preference_id", "is", null)
+        .maybeSingle();
+      if (existingPayment?.mp_preference_id) {
+        window.location.href = `https://www.mercadopago.com.uy/checkout/v1/redirect?pref_id=${existingPayment.mp_preference_id}`;
+        return;
+      }
+      const { data, error } = await supabase.functions.invoke("create-session-payment", {
+        body: { appointment_id: appointmentId, business_id: branding.id },
+      });
+      if (error) throw error;
+      if (data?.init_point) window.location.href = data.init_point;
+      else throw new Error("No checkout URL received");
+    } catch (err: any) {
+      console.error("Payment error:", err);
+      toast({ title: "Error", description: "No se pudo iniciar el pago. Intentá de nuevo.", variant: "destructive" });
+      setPayingAppointment(null);
+    }
+  };
+
+  const handleSaveProfile = async (data: ProfileEditData, avatarFile: File | null) => {
+    if (!patient) return;
+    try {
+      let avatar_url = patient.avatar_url;
+      if (avatarFile) {
+        const ext = avatarFile.name.split(".").pop();
+        const path = `patient-avatars/${patient.id}-${Date.now()}.${ext}`;
+        const { error: uploadError } = await supabase.storage
+          .from("avatars").upload(path, avatarFile, { upsert: true });
+        if (uploadError) throw uploadError;
+        const { data: pub } = supabase.storage.from("avatars").getPublicUrl(path);
+        avatar_url = pub.publicUrl;
+      }
+      const { error } = await supabase.from("patients").update({
+        full_name: data.full_name,
+        email: data.email || null,
+        whatsapp_phone: data.whatsapp_phone || null,
+        reason_for_consultation: data.reason_for_consultation || null,
+        avatar_url,
+      }).eq("id", patient.id);
+      if (error) throw error;
+      setPatient({ ...patient, ...data, email: data.email || null, whatsapp_phone: data.whatsapp_phone || null, reason_for_consultation: data.reason_for_consultation || null, avatar_url });
+      toast({ title: "Perfil actualizado", description: "Tus datos se guardaron correctamente." });
+    } catch (err: any) {
+      console.error(err);
+      toast({ title: "Error", description: "No se pudo guardar. Intentá de nuevo.", variant: "destructive" });
+    }
+  };
+
+  if (loading || !authChecked) {
+    return <div className="min-h-screen flex items-center justify-center bg-background"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
+  }
+  if (notFound || !branding) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background text-foreground p-4">
+        <Card className="max-w-sm w-full">
+          <CardContent className="pt-8 pb-6 text-center space-y-3">
+            <Building2 className="h-12 w-12 text-muted-foreground mx-auto" />
+            <h2 className="text-xl font-bold">Este portal no está disponible</h2>
+            <p className="text-sm text-muted-foreground">Verificá el link que te envió tu profesional. Si el problema persiste, contactá directamente al consultorio.</p>
+            <Button variant="outline" onClick={() => navigate("/")}>Ir al inicio</Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+  if (!session) {
+    if (!welcomeSeen) {
+      return (
+        <PortalWelcomeInstall
+          branding={{ displayName: branding.displayName, specialty: branding.specialty, logoUrl: branding.logoUrl, slug: branding.slug }}
+          themeStyle={themeStyleLogin}
+          onContinue={markWelcomeSeen}
+        />
+      );
+    }
+    return <BrandedLogin branding={branding} isDark={isDark} setIsDark={setIsDark} themeStyle={themeStyleLogin} />;
+  }
+  if (session && (!patientChecked || patientLoading)) {
+    return <div className="min-h-screen flex items-center justify-center bg-background"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
+  }
+  if (!patient) {
+    return (
+      <div className="min-h-screen" style={themeStyleLogin as any}>
+        <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-4">
+          <Card className="max-w-sm w-full">
+            <CardContent className="pt-8 pb-6 text-center space-y-3">
+              <AlertCircle className="h-12 w-12 text-destructive mx-auto" />
+              <h2 className="text-xl font-bold">Acceso no disponible</h2>
+              <p className="text-sm text-muted-foreground">No tenés una ficha de paciente en este consultorio. Contactá a {branding.displayName} para que te agreguen.</p>
+              <div className="flex gap-2 justify-center">
+                <Button variant="outline" onClick={handleLogout}><LogOut className="h-4 w-4 mr-2" /> Cerrar sesión</Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <PatientPortalView
+      branding={branding}
+      patient={patient}
+      upcomingAppointments={upcomingAppointments}
+      pastAppointments={pastAppointments}
+      payments={payments}
+      isDark={isDark}
+      onToggleDark={() => setIsDark(d => !d)}
+      canInstall={canInstall}
+      isInstalled={isInstalled}
+      onInstallApp={() => { if (canInstall) install(); }}
+      headerAction="logout"
+      onLogout={handleLogout}
+      onSaveProfile={handleSaveProfile}
+      onPaySession={handlePaySession}
+      payingAppointmentId={payingAppointment}
+    />
+  );
+};
+
+export default ClinicPortal;
