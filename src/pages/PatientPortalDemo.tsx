@@ -115,7 +115,7 @@ const PAYMENTS: PortalPayment[] = [
 export default function PatientPortalDemo() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { canInstall, isInstalled, promptInstall } = usePWAInstall();
+  const { canInstall, isInstalled, install } = usePWAInstall();
   const [isDark, setIsDark] = useState(true);
 
   useEffect(() => {
@@ -138,7 +138,7 @@ export default function PatientPortalDemo() {
       isDemo
       canInstall={canInstall}
       isInstalled={isInstalled}
-      onInstallApp={promptInstall}
+      onInstallApp={() => { install(); }}
       headerAction="back"
       onBack={() => navigate("/")}
       onBookAppointment={() => noop("Reserva de citas deshabilitada en la demo.")}
