@@ -6,6 +6,14 @@ import { useAuth } from "@/contexts/AuthContext";
 
 const SAAS_SELECTED_BUSINESS_KEY = "saas_selected_business";
 
+const PATIENT_PORTAL_PREFIXES = ["/portal/", "/portal-paciente"];
+
+const isOnPatientPortalRoute = () => {
+  if (typeof window === "undefined") return false;
+  const path = window.location.pathname;
+  return PATIENT_PORTAL_PREFIXES.some((prefix) => path.startsWith(prefix));
+};
+
 interface BusinessIdContextValue {
   businessId: string | null;
   loading: boolean;
@@ -26,6 +34,15 @@ export const BusinessIdProvider = ({ children }: { children: ReactNode }) => {
       setLoading(true);
 
       if (!user) {
+        setBusinessId(null);
+        setLoading(false);
+        return;
+      }
+
+      // Patient portal routes manage their own auth/branded login.
+      // No profile is expected for patients here, so we must NOT trigger
+      // the global "session expired" dialog or try to resolve a business.
+      if (isOnPatientPortalRoute()) {
         setBusinessId(null);
         setLoading(false);
         return;
