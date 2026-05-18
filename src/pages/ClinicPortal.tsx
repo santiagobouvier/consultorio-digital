@@ -240,7 +240,7 @@ const ClinicPortal = () => {
 
     const { data: pays } = await supabase
       .from("payments")
-      .select("id, amount, currency, due_date, status, paid_at, recurrence_type, notes, appointment_id")
+      .select("id, amount, currency, due_date, status, paid_at, recurrence_type, notes, appointment_id, method")
       .eq("business_id", bizId)
       .eq("patient_id", patientId)
       .order("due_date", { ascending: false });
@@ -248,7 +248,7 @@ const ClinicPortal = () => {
       id: p.id, amount: Number(p.amount), currency: p.currency || "UYU",
       due_date: p.due_date, status: p.status, paid_at: p.paid_at,
       recurrence_label: getRecurrenceTypeLabel(p.recurrence_type as RecurrenceType),
-      notes: p.notes, appointment_id: p.appointment_id,
+      notes: p.notes, appointment_id: p.appointment_id, method: p.method,
     })));
   }, []);
 
@@ -257,19 +257,37 @@ const ClinicPortal = () => {
     const paymentStatus = searchParams.get("payment");
     const apptId = searchParams.get("appointment_id");
     const isBatch = searchParams.get("batch");
-    if (paymentStatus === "success" && (apptId || isBatch)) {
+    if (!paymentStatus) return;
+    if (paymentStatus === "success") {
       toast({
-        title: "¡Pago recibido!",
-        description: isBatch ? "Tus pagos fueron registrados exitosamente." : "Tu sesión fue confirmada exitosamente.",
+        title: "¡Pago confirmado! 🎉",
+        description: isBatch ? "Tus pagos fueron registrados exitosamente." : "Tu pago se procesó correctamente.",
       });
-      searchParams.delete("payment");
-      searchParams.delete("appointment_id");
-      searchParams.delete("batch");
-      setSearchParams(searchParams, { replace: true });
       setTimeout(() => {
         if (patient && branding) reloadPatientData(patient.id, branding.id);
       }, 2000);
+    } else if (paymentStatus === "pending") {
+      toast({
+        title: "Pago en proceso",
+        description: "Tu pago está siendo procesado. Te avisamos cuando se confirme.",
+      });
+    } else if (paymentStatus === "failure") {
+      toast({
+        title: "No pudimos procesar el pago",
+        description: "Intentá de nuevo o contactá a tu profesional si el problema persiste.",
+        variant: "destructive",
+      });
+    } else if (paymentStatus === "cancelled") {
+      toast({
+        title: "Pago cancelado",
+        description: "Podés intentarlo de nuevo cuando quieras.",
+      });
     }
+    searchParams.delete("payment");
+    searchParams.delete("appointment_id");
+    searchParams.delete("payment_id");
+    searchParams.delete("batch");
+    setSearchParams(searchParams, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
