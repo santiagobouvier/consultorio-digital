@@ -1025,15 +1025,15 @@ export function PatientPortalView(props: PatientPortalViewProps) {
                   </span>
                 </div>
               </div>
-              {mpConnected && (
+              {(onPayPayments || onPaySession) && (
                 <Button
                   variant={toneStyles.btnVariant}
-                  className="gap-2 min-h-11 w-full sm:w-auto sm:min-w-[140px]"
+                  className={`gap-2 min-h-11 w-full sm:w-auto sm:min-w-[140px] ${tone === "pending" ? "bg-amber-500 text-white hover:bg-amber-500/90" : ""}`}
                   onClick={() => paySinglePayment(p)}
                   disabled={isProcessing || payingAny}
                 >
                   {isProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
-                  {isProcessing ? "Procesando..." : "Pagar"}
+                  {isProcessing ? "Procesando..." : (p.appointment_id ? "Pagar sesión" : "Pagar online")}
                 </Button>
               )}
             </div>
@@ -1067,7 +1067,7 @@ export function PatientPortalView(props: PatientPortalViewProps) {
                 Total: <span className="font-bold text-foreground">{formatCurrency(overdueTotal, overdueCurrency)}</span>
               </p>
             </div>
-            {overdueCount >= 2 && mpConnected && onPayPayments && (
+            {overdueCount >= 2 && onPayPayments && (
               <Button
                 variant="destructive"
                 className="w-full sm:w-auto gap-2 min-h-11"
@@ -1096,7 +1096,7 @@ export function PatientPortalView(props: PatientPortalViewProps) {
                 </Badge>
               </h2>
             </div>
-            {nonOverdueCount >= 2 && mpConnected && onPayPayments && (
+            {nonOverdueCount >= 2 && onPayPayments && (
               <Button
                 className="w-full sm:w-auto gap-2 min-h-11 bg-amber-500 text-white hover:bg-amber-500/90"
                 onClick={() => onPayPayments(sortedPending.map(p => p.id))}
