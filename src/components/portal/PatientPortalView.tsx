@@ -29,6 +29,8 @@ import {
   Loader2, Star, ArrowLeft, RefreshCw, XCircle,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/payments";
+import { downloadReceiptPdf, buildReceiptNumber } from "@/lib/receipt-pdf";
+import { toast as sonnerToast } from "sonner";
 
 // =============================================
 // TYPES
@@ -78,6 +80,7 @@ export interface PortalPayment {
   recurrence_label: string;
   notes: string | null;
   appointment_id?: string | null;
+  method?: string | null;
 }
 
 export interface ProfileEditData {
