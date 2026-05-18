@@ -663,51 +663,11 @@ const Landing = () => {
         <div className="max-w-5xl mx-auto">
           <div className="grid md:grid-cols-2 gap-8 md:gap-14 items-center">
             <ScrollReveal direction="left">
-              <div 
-                className="rounded-xl sm:rounded-2xl border border-white/10 overflow-hidden"
-                style={{ backgroundColor: '#111111' }}
-              >
-                <div className="p-4 sm:p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <p className="text-xs font-medium text-white">Pagos — Abril 2025</p>
-                    <span className="text-[9px] px-2 py-1 rounded-md" style={{ backgroundColor: GREEN_BG, color: GREEN }}>
-                      Exportar CSV
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2 mb-4">
-                    {[
-                      { label: "Cobrado", value: "$48.500", color: GREEN },
-                      { label: "Pendiente", value: "$12.800", color: "#f59e0b" },
-                      { label: "Vencido", value: "$3.200", color: "#ef4444" },
-                    ].map((s) => (
-                      <div key={s.label} className="rounded-lg p-2 text-center" style={{ backgroundColor: '#1a1a1a' }}>
-                        <p className="text-[8px] text-gray-500">{s.label}</p>
-                        <p className="text-xs font-bold" style={{ color: s.color }}>{s.value}</p>
-                      </div>
-                    ))}
-                  </div>
-                  {[
-                    { name: "María L.", amount: "$2.500", status: "Pagado", statusColor: GREEN },
-                    { name: "Juan P.", amount: "$2.500", status: "Pendiente", statusColor: "#f59e0b" },
-                    { name: "Ana R.", amount: "$2.500", status: "Vencido", statusColor: "#ef4444" },
-                  ].map((p, i) => (
-                    <div key={i} className="flex items-center justify-between py-2.5 border-t border-white/5">
-                      <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full flex items-center justify-center text-[8px] font-bold" style={{ backgroundColor: GREEN_BG, color: GREEN }}>
-                          {p.name[0]}
-                        </div>
-                        <span className="text-xs text-white">{p.name}</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs text-gray-400">{p.amount}</span>
-                        <span className="text-[9px] px-2 py-0.5 rounded-full font-medium" style={{ color: p.statusColor, backgroundColor: `${p.statusColor}15` }}>
-                          {p.status}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <BrowserMockup
+                src="/videos/pacientes.mp4"
+                url="app.consultoriodigital.app/pacientes"
+                accent="#f59e0b"
+              />
             </ScrollReveal>
 
             <ScrollReveal direction="right" delay={200}>
