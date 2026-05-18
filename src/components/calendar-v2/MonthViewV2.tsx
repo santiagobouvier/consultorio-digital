@@ -11,13 +11,19 @@ import {
   isToday,
 } from "date-fns";
 import { es } from "date-fns/locale";
-import { CalendarAppointment, DayPayment } from "./types";
+import { CalendarAppointment, DayPayment, getStatusColor, abbreviatePatientName } from "./types";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MonthDayDrawer } from "./MonthDayDrawer";
 import { Plus, AlertCircle, Clock, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { calculatePaymentStatus } from "@/lib/payments";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface DayIndicator {
   count: number;
@@ -179,17 +185,26 @@ export const MonthViewV2 = ({
 
                   {/* Desktop: Payment indicators */}
                   {!isMobile && (indicator || hasPayments) && (
-                    <div className="flex items-center gap-1">
-                      {indicator?.hasOverdue && (
-                        <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
-                      )}
-                      {indicator?.hasPending && !indicator?.hasOverdue && (
-                        <div className="w-2 h-2 rounded-full bg-amber-500" />
-                      )}
+                    <div className="flex items-center gap-1.5">
                       {totalEvents > 0 && (
-                        <span className="text-xs text-muted-foreground font-medium">
+                        <span className="text-[11px] text-muted-foreground font-medium tabular-nums">
                           {totalEvents}
                         </span>
+                      )}
+                      {indicator?.hasOverdue && (
+                        <TooltipProvider delayDuration={150}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span
+                                className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"
+                                aria-label="Pagos vencidos"
+                              />
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="text-xs">
+                              Pagos vencidos este día
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       )}
                     </div>
                   )}
@@ -246,39 +261,41 @@ export const MonthViewV2 = ({
                 {/* Desktop: appointment + payment previews */}
                 {!isMobile && (hasAppointments || hasPayments) && (
                   <div className="space-y-0.5 overflow-hidden">
-                    {dayAppointments.slice(0, 2).map((apt) => (
-                      <div
-                        key={apt.id}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onAppointmentClick(apt);
-                        }}
-                        className={cn(
-                          "text-xs p-1.5 rounded-lg truncate cursor-pointer transition-all",
-                          "hover:scale-[1.02] hover:shadow-sm",
-                          apt.paymentColor === "red"
-                            ? "bg-rose-50 dark:bg-rose-500/10 border-l-2 border-l-rose-500"
-                            : apt.paymentColor === "orange"
-                              ? "bg-amber-50 dark:bg-amber-500/10 border-l-2 border-l-amber-500"
-                              : "bg-primary/10 border-l-2 border-l-primary"
-                        )}
-                        style={{
-                          borderLeftColor:
-                            showProfessionalColors && apt.professional
-                              ? apt.professional.color
-                              : undefined,
-                        }}
-                      >
-                        <div className="flex items-center gap-1">
-                          <span className="font-medium">
-                            {format(new Date(apt.start_at), "HH:mm")}
-                          </span>
-                          <span className="text-muted-foreground truncate">
-                            {apt.patients?.full_name?.split(" ")[0] || "Sin nombre"}
-                          </span>
+                    {dayAppointments.slice(0, 2).map((apt) => {
+                      const sc = getStatusColor(apt.status);
+                      const label = abbreviatePatientName(apt.patients?.full_name);
+                      return (
+                        <div
+                          key={apt.id}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onAppointmentClick(apt);
+                          }}
+                          className={cn(
+                            "text-xs px-1.5 py-1 rounded-md cursor-pointer transition-all",
+                            "hover:shadow-sm border-l-[3px] overflow-hidden",
+                            sc.bgTint,
+                            sc.border
+                          )}
+                          style={{
+                            borderLeftColor:
+                              showProfessionalColors && apt.professional
+                                ? apt.professional.color
+                                : undefined,
+                          }}
+                          title={`${format(new Date(apt.start_at), "HH:mm")} · ${apt.patients?.full_name ?? ""}`}
+                        >
+                          <div className="flex items-center gap-1 whitespace-nowrap overflow-hidden">
+                            <span className="font-semibold tabular-nums shrink-0">
+                              {format(new Date(apt.start_at), "HH:mm")}
+                            </span>
+                            <span className="text-foreground/80 overflow-hidden">
+                              {label}
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
 
                     {dayPayments.slice(0, Math.max(0, 3 - Math.min(dayAppointments.length, 2))).map((p) => {
                       const st = calculatePaymentStatus(p);
@@ -310,9 +327,9 @@ export const MonthViewV2 = ({
                       );
                     })}
 
-                    {totalEvents > 3 && (
-                      <p className="text-[10px] text-muted-foreground text-center py-0.5">
-                        +{totalEvents - 3} más
+                    {dayAppointments.length > 2 && (
+                      <p className="text-[10px] text-muted-foreground text-center py-0.5 font-medium">
+                        + {dayAppointments.length - 2} más
                       </p>
                     )}
                   </div>
