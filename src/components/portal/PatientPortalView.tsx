@@ -1255,23 +1255,25 @@ export function PatientPortalView(props: PatientPortalViewProps) {
           </div>
         )}
 
-        {/* Persistent overdue banner — visible on all tabs */}
-        {overdueCount > 0 && (
-          <div className="px-4 lg:px-8 pt-3">
-            <div className="rounded-xl border border-destructive/30 bg-destructive/10 text-destructive px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-              <div className="flex items-start sm:items-center gap-2 flex-1 min-w-0">
-                <AlertCircle className="h-5 w-5 shrink-0 mt-0.5 sm:mt-0" />
-                <p className="text-sm font-medium leading-snug">
+        {/* Overdue banner — solo en tabs donde no hay otra señal (oculto en Resumen y Pagos) */}
+        {overdueCount > 0 && tab !== "resumen" && tab !== "pagos" && (
+          <div className="bg-destructive/[0.06] border-b border-destructive/30">
+            <div className="px-4 lg:px-8 py-4 lg:py-5 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5">
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                <div className="h-10 w-10 rounded-full bg-destructive/15 flex items-center justify-center shrink-0">
+                  <AlertCircle className="h-5 w-5 text-destructive" />
+                </div>
+                <p className="text-sm lg:text-base text-foreground leading-snug">
                   {overdueCount === 1
-                    ? <>Tenés <strong>1 pago vencido</strong> por <strong>{formatCurrency(overdueTotal, overdueCurrency)}</strong>.</>
-                    : <>Tenés <strong>{overdueCount} pagos vencidos</strong> por un total de <strong>{formatCurrency(overdueTotal, overdueCurrency)}</strong>.</>}
+                    ? <>Tenés 1 pago vencido por <span className="font-bold text-destructive">{formatCurrency(overdueTotal, overdueCurrency)}</span></>
+                    : <>Tenés {overdueCount} pagos vencidos por un total de <span className="font-bold text-destructive">{formatCurrency(overdueTotal, overdueCurrency)}</span></>}
                 </p>
               </div>
               {mpConnected && onPayPayments && (
                 <Button
                   size="sm"
                   variant="destructive"
-                  className="gap-2 min-h-11 sm:min-h-9 sm:w-auto w-full shrink-0"
+                  className="gap-2 min-h-11 w-full sm:w-auto shrink-0"
                   onClick={handleBannerPay}
                   disabled={payingAny}
                 >
