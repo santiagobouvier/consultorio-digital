@@ -6,6 +6,16 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { PWAInstallBanner } from "@/components/PWAInstallBanner";
 import { NotificationActivationCard } from "@/components/NotificationActivationCard";
 import { format, parseISO } from "date-fns";
@@ -16,7 +26,7 @@ import {
   LayoutDashboard, Heart, TrendingUp, CalendarCheck,
   ChevronRight, CheckCircle2, AlertCircle, Sun, Moon,
   Download, Smartphone, Camera, Save, Edit2, X, LogOut, Plus,
-  Loader2, Star, ArrowLeft,
+  Loader2, Star, ArrowLeft, RefreshCw, XCircle,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/payments";
 
@@ -31,6 +41,8 @@ export interface PortalBranding {
   logoUrl: string;
   lightColor: string; // HSL string e.g. "176 100% 32%"
   darkColor: string;
+  cancellationHoursNotice?: number;
+  lateCancellationMessage?: string | null;
 }
 
 export interface PortalPatient {
@@ -97,6 +109,10 @@ export interface PatientPortalViewProps {
   onBack?: () => void;
   // Booking
   onBookAppointment?: () => void;
+  /** Patient cancels their own appointment. */
+  onCancelAppointment?: (appointmentId: string, reason: string) => Promise<void> | void;
+  /** Patient opens reschedule flow for a given appointment. */
+  onRescheduleAppointment?: (appointment: PortalAppointment) => void;
   // Profile
   onSaveProfile?: (data: ProfileEditData, avatarFile: File | null) => Promise<void> | void;
   // Pay
@@ -174,8 +190,11 @@ const statusBadge = (status: string) => {
     pending: { variant: "secondary", label: "Pendiente" },
     pending_payment: { variant: "secondary", label: "Pago pendiente" },
     confirmed: { variant: "default", label: "Confirmada" },
+    scheduled: { variant: "default", label: "Confirmada" },
     completed: { variant: "outline", label: "Completada" },
     cancelled: { variant: "destructive", label: "Cancelada" },
+    cancelled_by_patient: { variant: "destructive", label: "Cancelada" },
+    reschedule_requested: { variant: "outline", label: "Reprogramación pedida" },
     no_show: { variant: "destructive", label: "Ausente" },
   };
   const c = map[status] || { variant: "secondary" as const, label: status };
@@ -200,7 +219,8 @@ export function PatientPortalView(props: PatientPortalViewProps) {
     canInstall = false, isInstalled = false, onInstallApp,
     showPwaBannerTop = false,
     headerAction = "none", onLogout, onBack,
-    onBookAppointment, onSaveProfile, onPaySession,
+    onBookAppointment, onCancelAppointment, onRescheduleAppointment,
+    onSaveProfile, onPaySession,
     payingAppointmentId = null, extras,
   } = props;
 
@@ -215,6 +235,35 @@ export function PatientPortalView(props: PatientPortalViewProps) {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [savingProfile, setSavingProfile] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Cancellation flow
+  const [cancelTarget, setCancelTarget] = useState<PortalAppointment | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancelSubmitting, setCancelSubmitting] = useState(false);
+
+  const cancellationHoursNotice = branding.cancellationHoursNotice ?? 24;
+
+  const isLateCancellation = (apt: PortalAppointment) => {
+    const hoursUntil = (parseISO(apt.start_at).getTime() - Date.now()) / (1000 * 60 * 60);
+    return hoursUntil < cancellationHoursNotice;
+  };
+
+  const openCancelDialog = (apt: PortalAppointment) => {
+    setCancelTarget(apt);
+    setCancelReason("");
+  };
+
+  const confirmCancel = async () => {
+    if (!cancelTarget || !onCancelAppointment) return;
+    setCancelSubmitting(true);
+    try {
+      await onCancelAppointment(cancelTarget.id, cancelReason.trim());
+      setCancelTarget(null);
+      setCancelReason("");
+    } finally {
+      setCancelSubmitting(false);
+    }
+  };
 
   // Theme
   const themeStyle = useMemo(() => {
@@ -356,6 +405,20 @@ export function PatientPortalView(props: PatientPortalViewProps) {
                     <Button variant="outline" onClick={onBookAppointment} className="gap-2">
                       <Plus className="h-4 w-4" /> Reservar otra cita
                     </Button>
+                  )}
+                  {upcomingAppointments[0].status !== "reschedule_requested" && (onRescheduleAppointment || onCancelAppointment) && (
+                    <div className="grid grid-cols-2 gap-2">
+                      {onRescheduleAppointment && (
+                        <Button variant="outline" size="sm" onClick={() => onRescheduleAppointment(upcomingAppointments[0])} className="gap-1.5">
+                          <RefreshCw className="h-3.5 w-3.5" /> Reprogramar
+                        </Button>
+                      )}
+                      {onCancelAppointment && (
+                        <Button variant="outline" size="sm" onClick={() => openCancelDialog(upcomingAppointments[0])} className="gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive">
+                          <XCircle className="h-3.5 w-3.5" /> Cancelar
+                        </Button>
+                      )}
+                    </div>
                   )}
                   <Button variant="ghost" size="sm" onClick={() => setTab("citas")} className="gap-1 text-xs">
                     Ver todas <ChevronRight className="h-3.5 w-3.5" />
