@@ -813,46 +813,11 @@ const Landing = () => {
             </ScrollReveal>
 
             <ScrollReveal direction="right" delay={200}>
-              <div 
-                className="rounded-xl sm:rounded-2xl border border-white/10 overflow-hidden p-4 sm:p-6"
-                style={{ backgroundColor: '#111111' }}
-              >
-                <p className="text-xs font-medium text-white mb-4">Centro de Control</p>
-                <div className="grid grid-cols-2 gap-3 mb-4">
-                  {[
-                    { label: "Citas hoy", value: "5", icon: "📅" },
-                    { label: "Pacientes activos", value: "24", icon: "👥" },
-                    { label: "Cobros pendientes", value: "3", icon: "💰" },
-                    { label: "Recordatorios", value: "2", icon: "🔔" },
-                  ].map((s) => (
-                    <div key={s.label} className="rounded-lg p-3 flex items-center gap-3" style={{ backgroundColor: '#1a1a1a' }}>
-                      <span className="text-lg">{s.icon}</span>
-                      <div>
-                        <p className="text-[9px] text-gray-500">{s.label}</p>
-                        <p className="text-sm font-bold text-white">{s.value}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <p className="text-[10px] text-gray-500 mb-2">Citas por semana</p>
-                <div className="flex items-end gap-1.5 h-16">
-                  {[40, 65, 50, 80, 60, 90, 75].map((h, i) => (
-                    <div 
-                      key={i}
-                      className="flex-1 rounded-t-sm transition-all"
-                      style={{ 
-                        height: `${h}%`, 
-                        backgroundColor: i === 5 ? GREEN : 'rgba(0,199,138,0.2)',
-                      }}
-                    />
-                  ))}
-                </div>
-                <div className="flex justify-between mt-1">
-                  {["L","M","M","J","V","S","D"].map(d => (
-                    <span key={d} className="text-[8px] text-gray-600 flex-1 text-center">{d}</span>
-                  ))}
-                </div>
-              </div>
+              <BrowserMockup
+                src="/videos/sistema.mp4"
+                url="app.consultoriodigital.app/dashboard"
+                accent="#60a5fa"
+              />
             </ScrollReveal>
           </div>
         </div>
