@@ -36,7 +36,7 @@ import { PLAN_DEFINITIONS, PLAN_ORDER, formatPrice } from "@/lib/plan-definition
 import logoWhite from "@/assets/logo-consultorio-digital-white.png";
 import { InstallAppButton } from "@/components/InstallAppButton";
 import { ScrollReveal } from "@/components/landing/ScrollReveal";
-import { BrowserMockup } from "@/components/landing/BrowserMockup";
+import { ScreenshotPlaceholder } from "@/components/landing/ScreenshotPlaceholder";
 
 // Brand colors
 const BRAND = "#00a5a0";
@@ -504,11 +504,7 @@ const Landing = () => {
             </ScrollReveal>
 
             <ScrollReveal direction="right" delay={200}>
-              <BrowserMockup
-                src="/videos/portal.mp4"
-                url="centrobienestar.consultoriodigital.app"
-                accent="#a78bfa"
-              />
+              <ScreenshotPlaceholder accent="#a78bfa" />
             </ScrollReveal>
           </div>
         </div>
@@ -519,11 +515,7 @@ const Landing = () => {
         <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-2 gap-8 md:gap-14 items-center">
             <ScrollReveal direction="left">
-              <BrowserMockup
-                src="/videos/booking.mp4"
-                url="centrobienestar.consultoriodigital.app/reservar"
-                accent="#00c78a"
-              />
+              <ScreenshotPlaceholder accent="#00c78a" />
             </ScrollReveal>
 
             <ScrollReveal direction="right" delay={200}>
@@ -648,11 +640,7 @@ const Landing = () => {
             </ScrollReveal>
 
             <ScrollReveal direction="right" delay={200}>
-              <BrowserMockup
-                src="/videos/agenda.mp4"
-                url="app.consultoriodigital.app/agenda"
-                accent="#00c78a"
-              />
+              <ScreenshotPlaceholder accent="#00c78a" />
             </ScrollReveal>
           </div>
         </div>
@@ -663,11 +651,7 @@ const Landing = () => {
         <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-2 gap-8 md:gap-14 items-center">
             <ScrollReveal direction="left">
-              <BrowserMockup
-                src="/videos/pacientes.mp4"
-                url="app.consultoriodigital.app/pacientes"
-                accent="#f59e0b"
-              />
+              <ScreenshotPlaceholder accent="#f59e0b" />
             </ScrollReveal>
 
             <ScrollReveal direction="right" delay={200}>
@@ -813,11 +797,7 @@ const Landing = () => {
             </ScrollReveal>
 
             <ScrollReveal direction="right" delay={200}>
-              <BrowserMockup
-                src="/videos/sistema.mp4"
-                url="app.consultoriodigital.app/dashboard"
-                accent="#60a5fa"
-              />
+              <ScreenshotPlaceholder accent="#60a5fa" />
             </ScrollReveal>
           </div>
         </div>
