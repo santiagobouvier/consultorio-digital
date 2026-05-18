@@ -199,7 +199,8 @@ const ClinicPortal = () => {
   const [payingPaymentIds, setPayingPaymentIds] = useState<string[]>([]);
   const [mpConnected, setMpConnected] = useState(false);
   const [confirmBatch, setConfirmBatch] = useState<{ ids: string[]; total: number; currency: string; items: { id: string; label: string; amount: number }[] } | null>(null);
-  const [focusOverdueTick, setFocusOverdueTick] = useState(0);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [focusOverdueTick, _setFocusOverdueTick] = useState(0);
 
   const [upcomingAppointments, setUpcomingAppointments] = useState<PortalAppointment[]>([]);
   const [pastAppointments, setPastAppointments] = useState<PortalAppointment[]>([]);
