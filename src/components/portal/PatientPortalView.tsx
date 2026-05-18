@@ -29,6 +29,8 @@ import {
   Loader2, Star, ArrowLeft, RefreshCw, XCircle,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/payments";
+import { downloadReceiptPdf, buildReceiptNumber } from "@/lib/receipt-pdf";
+import { toast as sonnerToast } from "sonner";
 
 // =============================================
 // TYPES
@@ -78,6 +80,7 @@ export interface PortalPayment {
   recurrence_label: string;
   notes: string | null;
   appointment_id?: string | null;
+  method?: string | null;
 }
 
 export interface ProfileEditData {
@@ -296,6 +299,99 @@ export function PatientPortalView(props: PatientPortalViewProps) {
 
   const isPayablePayment = (status: string) =>
     status === "pending" || status === "due_soon" || status === "overdue";
+
+  // Group payments by appointment for inline actions in Historial
+  const paymentByAppointment = useMemo(() => {
+    const map = new Map<string, PortalPayment>();
+    // Prefer paid > overdue > pending > due_soon order for the most relevant one
+    const priority = (s: string) => s === "paid" ? 3 : s === "overdue" ? 2 : s === "pending" || s === "due_soon" ? 1 : 0;
+    for (const p of payments) {
+      if (!p.appointment_id) continue;
+      const existing = map.get(p.appointment_id);
+      if (!existing || priority(p.status) > priority(existing.status)) {
+        map.set(p.appointment_id, p);
+      }
+    }
+    return map;
+  }, [payments]);
+
+  // Sort helpers
+  const sortedOverdue = useMemo(
+    () => [...overduePayments].sort((a, b) => +parseISO(a.due_date) - +parseISO(b.due_date)),
+    [overduePayments],
+  );
+  const sortedPending = useMemo(
+    () => [...nonOverduePending].sort((a, b) => +parseISO(a.due_date) - +parseISO(b.due_date)),
+    [nonOverduePending],
+  );
+  const paidPayments = useMemo(
+    () => payments
+      .filter(p => p.status === "paid")
+      .sort((a, b) => +parseISO(b.paid_at || b.due_date) - +parseISO(a.paid_at || a.due_date)),
+    [payments],
+  );
+
+  const [paidHistoryLimit, setPaidHistoryLimit] = useState(10);
+
+  // Days helpers
+  const daysDelta = (iso: string) => {
+    const diff = parseISO(iso).getTime() - Date.now();
+    return Math.round(diff / (1000 * 60 * 60 * 24));
+  };
+  const overdueText = (iso: string) => {
+    const d = -daysDelta(iso);
+    if (d <= 0) return "Vencido hoy";
+    if (d === 1) return "Venció hace 1 día";
+    return `Venció hace ${d} días`;
+  };
+  const pendingText = (iso: string) => {
+    const d = daysDelta(iso);
+    if (d < 0) return overdueText(iso);
+    if (d === 0) return "Vence hoy";
+    if (d === 1) return "Vence mañana";
+    if (d <= 7) return `Vence en ${d} días`;
+    return `Vence el ${formatShort(parseISO(iso))}`;
+  };
+
+  // Trigger single payment from a PortalPayment row
+  const paySinglePayment = (p: PortalPayment) => {
+    if (p.appointment_id && onPaySession) {
+      onPaySession(p.appointment_id);
+    } else if (onPayPayments) {
+      onPayPayments([p.id]);
+    }
+  };
+
+  const isPaymentProcessing = (p: PortalPayment) =>
+    p.appointment_id
+      ? payingAppointmentId === p.appointment_id
+      : payingPaymentIds.includes(p.id);
+
+  const handleDownloadReceipt = async (p: PortalPayment) => {
+    try {
+      await downloadReceiptPdf({
+        payment: {
+          id: p.id,
+          amount: Number(p.amount),
+          currency: p.currency || "UYU",
+          paid_at: p.paid_at,
+          due_date: p.due_date,
+          method: p.method ?? null,
+          notes: p.notes,
+        },
+        patient: { full_name: patient.full_name, email: patient.email },
+        clinic: {
+          name: branding.name,
+          specialty: branding.specialty,
+          logoUrl: branding.logoUrl || undefined,
+          contactEmail: branding.contactEmail,
+        },
+      });
+    } catch (err) {
+      console.error("Receipt PDF error:", err);
+      sonnerToast.error("No pudimos generar el comprobante. Intentá de nuevo.");
+    }
+  };
 
   const handleBannerPay = () => {
     if (!onPayPayments || overdueCount === 0) return;
@@ -788,7 +884,10 @@ export function PatientPortalView(props: PatientPortalViewProps) {
         </Card>
       ) : (
         <div className="relative space-y-0">
-          {pastAppointments.map((apt, idx) => (
+          {pastAppointments.map((apt, idx) => {
+            const linkedPayment = paymentByAppointment.get(apt.id);
+            const isProcessing = linkedPayment ? isPaymentProcessing(linkedPayment) : false;
+            return (
             <div key={apt.id} className="relative flex gap-4 lg:gap-6">
               <div className="flex flex-col items-center">
                 <div className={`h-3 w-3 rounded-full shrink-0 mt-5 ${
@@ -816,6 +915,19 @@ export function PatientPortalView(props: PatientPortalViewProps) {
                               : <><MapPin className="h-2.5 w-2.5" /> Presencial</>}
                           </Badge>
                         )}
+                        {linkedPayment && linkedPayment.status === "paid" && (
+                          <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px]">
+                            Pagada
+                          </Badge>
+                        )}
+                        {linkedPayment && linkedPayment.status === "overdue" && (
+                          <Badge variant="destructive" className="text-[10px]">Pago vencido</Badge>
+                        )}
+                        {linkedPayment && (linkedPayment.status === "pending" || linkedPayment.status === "due_soon") && (
+                          <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[10px]">
+                            Pendiente de pago
+                          </Badge>
+                        )}
                       </div>
                     </div>
                     <div className="flex-1 min-w-0">
@@ -827,176 +939,247 @@ export function PatientPortalView(props: PatientPortalViewProps) {
                       ) : (
                         <p className="text-xs text-muted-foreground italic">Sin notas para esta sesión</p>
                       )}
+                      {linkedPayment && (
+                        <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                          <span className="text-xs text-muted-foreground">
+                            {formatCurrency(Number(linkedPayment.amount), linkedPayment.currency || "UYU")}
+                          </span>
+                          {linkedPayment.status === "paid" ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-1.5 min-h-11 sm:min-h-9 w-full sm:w-auto"
+                              onClick={() => handleDownloadReceipt(linkedPayment)}
+                            >
+                              <Download className="h-3.5 w-3.5" /> Comprobante
+                            </Button>
+                          ) : mpConnected && isPayablePayment(linkedPayment.status) ? (
+                            <Button
+                              size="sm"
+                              variant={linkedPayment.status === "overdue" ? "destructive" : "default"}
+                              className="gap-1.5 min-h-11 sm:min-h-9 w-full sm:w-auto"
+                              onClick={() => paySinglePayment(linkedPayment)}
+                              disabled={isProcessing || payingAny}
+                            >
+                              {isProcessing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CreditCard className="h-3.5 w-3.5" />}
+                              {isProcessing ? "Procesando..." : "Pagar"}
+                            </Button>
+                          ) : null}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </CardContent>
               </Card>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
   );
 
   // ========= PagosTab =========
-  const PagosTab = () => (
-    <div className="space-y-4 lg:space-y-6">
-      {/* Sección de vencidos */}
-      {overdueCount > 0 && mpConnected && onPayPayments && (
-        <div ref={overdueSectionRef}>
-          <Card className="border-destructive/30 bg-destructive/5 rounded-2xl">
-            <CardContent className="p-4 lg:p-5">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="h-10 w-10 rounded-full bg-destructive/15 flex items-center justify-center shrink-0">
-                    <AlertCircle className="h-5 w-5 text-destructive" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm lg:text-base font-bold text-destructive">
-                      Pagos vencidos ({overdueCount})
-                    </p>
-                    <p className="text-xs lg:text-sm text-muted-foreground">
-                      Total: <span className="font-bold text-foreground">{formatCurrency(overdueTotal, overdueCurrency)}</span>
-                    </p>
-                  </div>
-                </div>
-                <Button
-                  onClick={() => onPayPayments(overduePayments.map(p => p.id))}
-                  disabled={payingAny}
-                  className="gap-2 min-h-11 sm:w-auto w-full"
-                >
-                  {payingAny ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
-                  {payingAny ? "Procesando..." : (overdueCount === 1 ? "Pagar ahora" : "Pagar todos")}
-                </Button>
-              </div>
-              <ul className="text-xs lg:text-sm text-muted-foreground space-y-1 pl-1">
-                {overduePayments.map(p => (
-                  <li key={p.id} className="flex items-center justify-between gap-2">
-                    <span className="truncate">{p.notes || p.recurrence_label} · vence {formatShort(parseISO(p.due_date))}</span>
-                    <span className="font-semibold text-foreground shrink-0">{formatCurrency(Number(p.amount), p.currency || "UYU")}</span>
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+  const PagosTab = () => {
+    const empty = payments.length === 0;
+    const paidToShow = paidPayments.slice(0, paidHistoryLimit);
+    const linkedAppt = (paymentId: string) => {
+      const p = payments.find(pp => pp.id === paymentId);
+      if (!p?.appointment_id) return null;
+      return [...upcomingAppointments, ...pastAppointments].find(a => a.id === p.appointment_id) || null;
+    };
 
-      {payments.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <CreditCard className="h-12 w-12 text-muted-foreground/40 mx-auto mb-3" />
-            <p className="text-muted-foreground font-medium">No hay pagos registrados</p>
-            <p className="text-xs text-muted-foreground mt-1">Tu historial de pagos aparecerá acá.</p>
+    const renderPayableCard = (p: PortalPayment, tone: "overdue" | "pending") => {
+      const isProcessing = isPaymentProcessing(p);
+      const apt = linkedAppt(p.id);
+      const toneStyles = tone === "overdue"
+        ? { border: "border-destructive/30", bg: "bg-destructive/5", amount: "text-destructive", subtext: "text-destructive/80", btnVariant: "destructive" as const }
+        : { border: "border-amber-500/30", bg: "bg-amber-500/5", amount: "text-amber-600 dark:text-amber-400", subtext: "text-amber-700 dark:text-amber-400", btnVariant: "default" as const };
+      return (
+        <Card key={p.id} className={`rounded-2xl ${toneStyles.border} ${toneStyles.bg}`}>
+          <CardContent className="p-4 lg:p-5">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm lg:text-base font-semibold text-foreground truncate">
+                  {p.notes?.trim() || (apt ? "Sesión" : p.recurrence_label || "Pago")}
+                </p>
+                {apt && (
+                  <p className="text-xs text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
+                    <Calendar className="h-3.5 w-3.5 shrink-0" />
+                    {formatShort(parseISO(apt.start_at))} · {format(parseISO(apt.start_at), "HH:mm")} hs
+                    {apt.modality && (
+                      <span className="inline-flex items-center gap-1 ml-1">
+                        {apt.modality === "online" || apt.modality === "virtual"
+                          ? <><Video className="h-3 w-3" />Online</>
+                          : <><MapPin className="h-3 w-3" />Presencial</>}
+                      </span>
+                    )}
+                  </p>
+                )}
+                <div className="mt-2 flex items-baseline gap-3 flex-wrap">
+                  <span className={`text-xl lg:text-2xl font-bold ${toneStyles.amount}`}>
+                    {formatCurrency(Number(p.amount), p.currency || "UYU")}
+                  </span>
+                  <span className={`text-xs font-medium ${toneStyles.subtext}`}>
+                    {tone === "overdue" ? overdueText(p.due_date) : pendingText(p.due_date)}
+                  </span>
+                </div>
+              </div>
+              {mpConnected && (
+                <Button
+                  variant={toneStyles.btnVariant}
+                  className="gap-2 min-h-11 w-full sm:w-auto sm:min-w-[140px]"
+                  onClick={() => paySinglePayment(p)}
+                  disabled={isProcessing || payingAny}
+                >
+                  {isProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
+                  {isProcessing ? "Procesando..." : "Pagar"}
+                </Button>
+              )}
+            </div>
           </CardContent>
         </Card>
-      ) : (
-        <>
-          {/* Desktop table */}
-          <div className="hidden lg:block">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <CreditCard className="h-5 w-5 text-primary" /> Detalle de pagos
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="border rounded-xl overflow-hidden">
-                  <div className="grid grid-cols-5 gap-4 px-5 py-3 bg-muted/50 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    <span>Concepto</span><span>Monto</span><span>Vencimiento</span><span>Estado</span><span>Fecha de pago</span>
-                  </div>
-                  {payments.map((p, i) => {
-                    const hasAppt = !!p.appointment_id;
-                    const isProcessing = hasAppt
-                      ? payingAppointmentId === p.appointment_id
-                      : payingPaymentIds.includes(p.id);
-                    const showPay = mpConnected && isPayablePayment(p.status)
-                      && (hasAppt ? !!onPaySession : !!onPayPayments);
-                    const handleClick = () => {
-                      if (hasAppt && onPaySession) onPaySession(p.appointment_id!);
-                      else if (onPayPayments) onPayPayments([p.id]);
-                    };
-                    return (
-                      <div key={p.id} className={`grid grid-cols-5 gap-4 px-5 py-4 items-center text-sm ${i !== payments.length - 1 ? "border-b" : ""} hover:bg-muted/30 transition-colors`}>
-                        <span className="font-medium">{p.notes || p.recurrence_label}</span>
-                        <span className="font-semibold">{formatCurrency(Number(p.amount), p.currency || "UYU")}</span>
-                        <span className="text-muted-foreground">{formatShort(parseISO(p.due_date))}</span>
-                        <span className="flex items-center gap-2">
-                          {payBadge(p.status)}
-                          {showPay && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-8 px-3 gap-1.5"
-                              onClick={handleClick}
-                              disabled={isProcessing || payingAny}
-                            >
-                              {isProcessing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CreditCard className="h-3.5 w-3.5" />}
-                              {isProcessing ? "..." : (hasAppt ? "Pagar sesión" : "Pagar online")}
-                            </Button>
-                          )}
-                        </span>
-                        <span className="text-muted-foreground">{p.paid_at ? formatShort(parseISO(p.paid_at)) : "—"}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+      );
+    };
 
-          {/* Mobile cards */}
-          <div className="lg:hidden space-y-3">
-            <h3 className="text-base font-bold flex items-center gap-2">
-              <CreditCard className="h-4 w-4 text-primary" /> Detalle de pagos
-            </h3>
-            {payments.map(p => (
-              <Card key={p.id} className="hover:shadow-md transition-all overflow-hidden">
-                <div className={`h-0.5 ${p.status === "paid" ? "bg-primary" : p.status === "overdue" ? "bg-destructive" : "bg-muted-foreground"}`} />
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <div>
-                      <p className="font-bold text-base">{formatCurrency(Number(p.amount), p.currency || "UYU")}</p>
-                      <p className="text-xs font-medium text-foreground/80 mt-0.5">{p.notes || p.recurrence_label}</p>
-                    </div>
-                    {payBadge(p.status)}
-                  </div>
-                  <Separator className="my-2" />
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>Vence: {formatShort(parseISO(p.due_date))}</span>
-                    {p.paid_at && <span className="text-primary">✓ Pagado: {formatShort(parseISO(p.paid_at))}</span>}
-                  </div>
-                  {mpConnected && isPayablePayment(p.status) && (() => {
-                    const hasAppt = !!p.appointment_id;
-                    const isProcessing = hasAppt
-                      ? payingAppointmentId === p.appointment_id
-                      : payingPaymentIds.includes(p.id);
-                    const disabled = isProcessing || payingAny;
-                    const handleClick = () => {
-                      if (hasAppt && onPaySession) onPaySession(p.appointment_id!);
-                      else if (onPayPayments) onPayPayments([p.id]);
-                    };
-                    if (hasAppt ? !onPaySession : !onPayPayments) return null;
-                    return (
-                      <Button
-                        size="sm"
-                        className="w-full gap-2 mt-3 min-h-11"
-                        onClick={handleClick}
-                        disabled={disabled}
-                      >
-                        {isProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
-                        {isProcessing ? "Procesando..." : (hasAppt ? "Pagar sesión" : "Pagar online")}
-                      </Button>
-                    );
-                  })()}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </>
-      )}
-    </div>
-  );
+    return (
+      <div className="space-y-6 lg:space-y-8">
+        {empty && (
+          <Card>
+            <CardContent className="py-14 text-center">
+              <CreditCard className="h-12 w-12 text-muted-foreground/40 mx-auto mb-3" />
+              <p className="text-muted-foreground font-medium">Todavía no tenés pagos registrados</p>
+              <p className="text-xs text-muted-foreground mt-1">Acá vas a ver pagos pendientes, vencidos y tu historial.</p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Vencidos */}
+        {overdueCount > 0 && (
+          <section ref={overdueSectionRef} className="space-y-3">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <h2 className="text-base lg:text-lg font-bold flex items-center gap-2 text-destructive">
+                <AlertCircle className="h-5 w-5" />
+                Pagos vencidos
+                <Badge variant="destructive" className="ml-1">{overdueCount}</Badge>
+              </h2>
+              <p className="text-xs lg:text-sm text-muted-foreground">
+                Total: <span className="font-bold text-foreground">{formatCurrency(overdueTotal, overdueCurrency)}</span>
+              </p>
+            </div>
+            {overdueCount >= 2 && mpConnected && onPayPayments && (
+              <Button
+                variant="destructive"
+                className="w-full sm:w-auto gap-2 min-h-11"
+                onClick={() => onPayPayments(sortedOverdue.map(p => p.id))}
+                disabled={payingAny}
+              >
+                {payingAny ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
+                Pagar todos los vencidos
+              </Button>
+            )}
+            <div className="space-y-3">
+              {sortedOverdue.map(p => renderPayableCard(p, "overdue"))}
+            </div>
+          </section>
+        )}
+
+        {/* Pendientes */}
+        {nonOverdueCount > 0 && (
+          <section className="space-y-3">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <h2 className="text-base lg:text-lg font-bold flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                <Clock className="h-5 w-5" />
+                Pagos pendientes
+                <Badge className="ml-1 bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 hover:bg-amber-500/20">
+                  {nonOverdueCount}
+                </Badge>
+              </h2>
+            </div>
+            {nonOverdueCount >= 2 && mpConnected && onPayPayments && (
+              <Button
+                className="w-full sm:w-auto gap-2 min-h-11 bg-amber-500 text-white hover:bg-amber-500/90"
+                onClick={() => onPayPayments(sortedPending.map(p => p.id))}
+                disabled={payingAny}
+              >
+                {payingAny ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
+                Pagar todos los pendientes
+              </Button>
+            )}
+            <div className="space-y-3">
+              {sortedPending.map(p => renderPayableCard(p, "pending"))}
+            </div>
+          </section>
+        )}
+
+        {/* Historial */}
+        {paidPayments.length > 0 && (
+          <section className="space-y-3">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <h2 className="text-base lg:text-lg font-bold flex items-center gap-2 text-foreground">
+                <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                Historial
+                <Badge variant="secondary" className="ml-1">{paidPayments.length}</Badge>
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                Total pagado: <span className="font-bold text-foreground">{formatCurrency(totalPaid, paidPayments[0]?.currency || "UYU")}</span>
+              </p>
+            </div>
+            <div className="space-y-2">
+              {paidToShow.map(p => {
+                const apt = linkedAppt(p.id);
+                return (
+                  <Card key={p.id} className="rounded-xl hover:shadow-sm transition-shadow">
+                    <CardContent className="p-3 lg:p-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-semibold text-foreground truncate">
+                              {p.notes?.trim() || (apt ? "Sesión" : p.recurrence_label || "Pago")}
+                            </span>
+                            <span className="font-bold text-sm text-foreground shrink-0">
+                              {formatCurrency(Number(p.amount), p.currency || "UYU")}
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {apt && (<>Cita {formatShort(parseISO(apt.start_at))} · </>)}
+                            Pagado el {p.paid_at ? formatShort(parseISO(p.paid_at)) : "—"}
+                            {" · "}
+                            {(() => {
+                              const m = p.method ? (p.method === "mercadopago" ? "mercado_pago" : p.method) : null;
+                              const found = m ? [{value:"efectivo",label:"Efectivo"},{value:"transferencia",label:"Transferencia"},{value:"mercado_pago",label:"Mercado Pago"},{value:"tarjeta",label:"Tarjeta"},{value:"otro",label:"Otro"}].find(x=>x.value===m) : null;
+                              return found?.label || "Sin método";
+                            })()}
+                            {" · "}
+                            <span className="font-mono">{buildReceiptNumber(p.id)}</span>
+                          </p>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1.5 min-h-11 sm:min-h-9 w-full sm:w-auto"
+                          onClick={() => handleDownloadReceipt(p)}
+                        >
+                          <Download className="h-3.5 w-3.5" /> Comprobante
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+            {paidPayments.length > paidHistoryLimit && (
+              <div className="flex justify-center pt-2">
+                <Button variant="ghost" size="sm" onClick={() => setPaidHistoryLimit(l => l + 10)}>
+                  Ver más
+                </Button>
+              </div>
+            )}
+          </section>
+        )}
+      </div>
+    );
+  };
 
   // ========= PerfilTab =========
   const PerfilTab = () => (
