@@ -690,12 +690,12 @@ export function PatientPortalView(props: PatientPortalViewProps) {
                     <span>{apt.notes}</span>
                   </div>
                 )}
-                {onPaySession && (apt.payment_status === "pendiente" || apt.status === "pending_payment") && (
+                {mpConnected && onPaySession && (apt.payment_status === "pendiente" || apt.status === "pending_payment") && (
                   <>
                     <Separator />
                     <Button
                       size="sm"
-                      className="w-full gap-2"
+                      className="w-full gap-2 min-h-11"
                       onClick={() => onPaySession(apt.id)}
                       disabled={payingAppointmentId === apt.id}
                     >
