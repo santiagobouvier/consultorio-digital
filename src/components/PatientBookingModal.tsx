@@ -121,25 +121,27 @@ export const PatientBookingModal = ({
       });
       if (error) throw error;
 
-      const mapped: AvailabilitySlot[] = (data || []).map((row: any) => {
+      const pad = (n: number) => String(n).padStart(2, "0");
+      const mapped: AvailabilitySlot[] = (data || []).flatMap((row: any) => {
         const start = new Date(row.slot_start_at);
         const end = new Date(row.slot_end_at);
-        const spaceId: string = (row.available_space_ids?.[0]) ?? "";
-        const spaceType = spaceTypeById.get(spaceId) ?? "physical";
-        const modality = spaceType === "virtual" ? "online" : "presencial";
-        const pad = (n: number) => String(n).padStart(2, "0");
-        return {
-          id: `${row.slot_start_at}-${row.professional_id}`,
-          date: row.slot_date,
-          start_time: `${pad(start.getHours())}:${pad(start.getMinutes())}:00`,
-          end_time: `${pad(end.getHours())}:${pad(end.getMinutes())}:00`,
-          modality,
-          price: null,
-          start_at: row.slot_start_at,
-          end_at: row.slot_end_at,
-          space_id: spaceId,
-          professional_id: row.professional_id,
-        };
+        const spaceIds: string[] = Array.isArray(row.available_space_ids) ? row.available_space_ids : [];
+        return spaceIds.map((spaceId: string) => {
+          const spaceType = spaceTypeById.get(spaceId) ?? "physical";
+          const modality = spaceType === "virtual" ? "online" : "presencial";
+          return {
+            id: `${row.slot_start_at}-${row.professional_id}-${spaceId}`,
+            date: row.slot_date,
+            start_time: `${pad(start.getHours())}:${pad(start.getMinutes())}:00`,
+            end_time: `${pad(end.getHours())}:${pad(end.getMinutes())}:00`,
+            modality,
+            price: null,
+            start_at: row.slot_start_at,
+            end_at: row.slot_end_at,
+            space_id: spaceId,
+            professional_id: row.professional_id,
+          };
+        });
       });
       setSlots(mapped);
     } catch (error) {
