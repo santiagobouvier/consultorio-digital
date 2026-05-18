@@ -196,6 +196,10 @@ const ClinicPortal = () => {
   const [isDark, setIsDark] = useState(true);
   const [welcomeSeen, setWelcomeSeen] = useState<boolean>(true);
   const [payingAppointment, setPayingAppointment] = useState<string | null>(null);
+  const [payingPaymentIds, setPayingPaymentIds] = useState<string[]>([]);
+  const [mpConnected, setMpConnected] = useState(false);
+  const [confirmBatch, setConfirmBatch] = useState<{ ids: string[]; total: number; currency: string; items: { id: string; label: string; amount: number }[] } | null>(null);
+  const [focusOverdueTick, setFocusOverdueTick] = useState(0);
 
   const [upcomingAppointments, setUpcomingAppointments] = useState<PortalAppointment[]>([]);
   const [pastAppointments, setPastAppointments] = useState<PortalAppointment[]>([]);
