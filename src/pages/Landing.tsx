@@ -519,54 +519,11 @@ const Landing = () => {
         <div className="max-w-5xl mx-auto">
           <div className="grid md:grid-cols-2 gap-8 md:gap-14 items-center">
             <ScrollReveal direction="left">
-              <div 
-                className="rounded-xl sm:rounded-2xl border border-white/10 overflow-hidden"
-                style={{ backgroundColor: '#111111' }}
-              >
-                <div className="p-4 sm:p-6">
-                  <p className="text-xs text-gray-500 mb-3 font-medium">Seleccioná un horario</p>
-                  <div className="grid grid-cols-7 gap-1 mb-4">
-                    {["L","M","M","J","V","S","D"].map((d) => (
-                      <div key={d} className="text-[9px] text-gray-600 text-center py-1">{d}</div>
-                    ))}
-                    {Array.from({length: 14}, (_, i) => {
-                      const day = i + 10;
-                      const available = [11, 13, 15, 18, 20, 22].includes(day);
-                      const selected = day === 15;
-                      return (
-                        <div
-                          key={i}
-                          className="text-[10px] text-center py-1.5 rounded-md transition-colors"
-                          style={{
-                            backgroundColor: selected ? GREEN : available ? 'rgba(0,199,138,0.1)' : 'transparent',
-                            color: selected ? 'white' : available ? GREEN : '#444',
-                            fontWeight: selected || available ? 600 : 400,
-                          }}
-                        >
-                          {day}
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <p className="text-[10px] text-gray-500 mb-2">Horarios para Mar 15</p>
-                  <div className="grid grid-cols-3 gap-2">
-                    {["09:00", "10:30", "14:00", "15:30", "17:00"].map((time, i) => (
-                      <div
-                        key={time}
-                        className="text-center text-[10px] py-2 rounded-lg border transition-all"
-                        style={{
-                          backgroundColor: i === 2 ? GREEN : '#1a1a1a',
-                          borderColor: i === 2 ? GREEN : 'rgba(255,255,255,0.08)',
-                          color: i === 2 ? 'white' : '#aaa',
-                          fontWeight: i === 2 ? 600 : 400,
-                        }}
-                      >
-                        {time}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
+              <BrowserMockup
+                src="/videos/booking.mp4"
+                url="centrobienestar.consultoriodigital.app/reservar"
+                accent="#00c78a"
+              />
             </ScrollReveal>
 
             <ScrollReveal direction="right" delay={200}>
