@@ -6,6 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { usePWAInstall } from "@/hooks/use-pwa-install";
 import { PortalWelcomeInstall } from "@/components/portal/PortalWelcomeInstall";
@@ -19,7 +27,7 @@ import {
   type PortalPayment,
   type ProfileEditData,
 } from "@/components/portal/PatientPortalView";
-import { getRecurrenceTypeLabel, RecurrenceType } from "@/lib/payments";
+import { getRecurrenceTypeLabel, RecurrenceType, formatCurrency } from "@/lib/payments";
 
 interface ClinicBrandingFull extends PortalBranding {
   id: string;
