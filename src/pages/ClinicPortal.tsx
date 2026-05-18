@@ -432,6 +432,48 @@ const ClinicPortal = () => {
     }
   };
 
+  const startBatchCheckout = async (paymentIds: string[]) => {
+    if (!branding) return;
+    try {
+      setPayingPaymentIds(paymentIds);
+      const { data, error } = await supabase.functions.invoke("create-patient-payment", {
+        body: { business_id: branding.id, payment_ids: paymentIds },
+      });
+      if (error) throw error;
+      if (data?.init_point) {
+        window.location.href = data.init_point;
+      } else {
+        throw new Error("No checkout URL received");
+      }
+    } catch (err: any) {
+      console.error("Batch payment error:", err);
+      toast({ title: "Error", description: "No se pudo iniciar el pago. Intentá de nuevo.", variant: "destructive" });
+      setPayingPaymentIds([]);
+    }
+  };
+
+  const handlePayPayments = async (paymentIds: string[]) => {
+    if (paymentIds.length === 0) return;
+    if (paymentIds.length === 1) {
+      await startBatchCheckout(paymentIds);
+      return;
+    }
+    // Show confirmation modal for batch
+    const selected = payments.filter(p => paymentIds.includes(p.id));
+    const total = selected.reduce((s, p) => s + Number(p.amount), 0);
+    const currency = selected[0]?.currency || "UYU";
+    setConfirmBatch({
+      ids: paymentIds,
+      total,
+      currency,
+      items: selected.map(p => ({
+        id: p.id,
+        label: p.notes || p.recurrence_label || "Pago",
+        amount: Number(p.amount),
+      })),
+    });
+  };
+
   const handleSaveProfile = async (data: ProfileEditData, avatarFile: File | null) => {
     if (!patient) return;
     try {
