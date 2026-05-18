@@ -31,7 +31,8 @@ export function buildReceiptNumber(paymentId: string): string {
 
 function methodLabel(method: string | null): string {
   if (!method) return "—";
-  const found = PAYMENT_METHODS.find((m) => m.value === method);
+  const normalized = method === "mercadopago" ? "mercado_pago" : method;
+  const found = PAYMENT_METHODS.find((m) => m.value === normalized);
   return found?.label || method;
 }
 
