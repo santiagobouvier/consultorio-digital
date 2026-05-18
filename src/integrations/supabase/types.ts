@@ -142,6 +142,7 @@ export type Database = {
           recurrence_group_id: string | null
           service_id: string | null
           source: string
+          space_id: string | null
           start_at: string
           status: string
           updated_at: string
@@ -168,6 +169,7 @@ export type Database = {
           recurrence_group_id?: string | null
           service_id?: string | null
           source?: string
+          space_id?: string | null
           start_at: string
           status?: string
           updated_at?: string
@@ -194,6 +196,7 @@ export type Database = {
           recurrence_group_id?: string | null
           service_id?: string | null
           source?: string
+          space_id?: string | null
           start_at?: string
           status?: string
           updated_at?: string
@@ -235,6 +238,87 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      availability_exceptions: {
+        Row: {
+          business_id: string
+          created_at: string
+          end_at: string
+          id: string
+          notes: string | null
+          professional_id: string | null
+          reason: string | null
+          scope: string
+          space_id: string | null
+          start_at: string
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          end_at: string
+          id?: string
+          notes?: string | null
+          professional_id?: string | null
+          reason?: string | null
+          scope: string
+          space_id?: string | null
+          start_at: string
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          end_at?: string
+          id?: string
+          notes?: string | null
+          professional_id?: string | null
+          reason?: string | null
+          scope?: string
+          space_id?: string | null
+          start_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      availability_rules: {
+        Row: {
+          business_id: string
+          created_at: string
+          day_of_week: number
+          end_time: string
+          id: string
+          is_active: boolean
+          professional_id: string
+          slot_duration_minutes: number
+          start_time: string
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          day_of_week: number
+          end_time: string
+          id?: string
+          is_active?: boolean
+          professional_id: string
+          slot_duration_minutes?: number
+          start_time: string
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          day_of_week?: number
+          end_time?: string
+          id?: string
+          is_active?: boolean
+          professional_id?: string
+          slot_duration_minutes?: number
+          start_time?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       availability_slots: {
         Row: {
@@ -1028,6 +1112,24 @@ export type Database = {
           },
         ]
       }
+      professional_spaces: {
+        Row: {
+          created_at: string
+          professional_id: string
+          space_id: string
+        }
+        Insert: {
+          created_at?: string
+          professional_id: string
+          space_id: string
+        }
+        Update: {
+          created_at?: string
+          professional_id?: string
+          space_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -1279,6 +1381,45 @@ export type Database = {
           },
         ]
       }
+      spaces: {
+        Row: {
+          business_id: string
+          capacity: number
+          color: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          notes: string | null
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          capacity?: number
+          color?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          notes?: string | null
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          capacity?: number
+          color?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          notes?: string | null
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       subscriptions: {
         Row: {
           amount: number
@@ -1479,6 +1620,23 @@ export type Database = {
           created: number
           replaced: number
           skipped: number
+        }[]
+      }
+      get_available_slots: {
+        Args: {
+          p_business_id: string
+          p_date_from: string
+          p_date_to: string
+          p_professional_id: string
+          p_service_duration_minutes?: number
+        }
+        Returns: {
+          available_space_ids: string[]
+          professional_id: string
+          slot_date: string
+          slot_end_at: string
+          slot_start_at: string
+          total_capacity: number
         }[]
       }
       get_plan_limits: {
