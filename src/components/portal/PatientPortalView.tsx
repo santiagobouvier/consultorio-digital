@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -118,6 +118,14 @@ export interface PatientPortalViewProps {
   // Pay
   onPaySession?: (appointmentId: string) => Promise<void> | void;
   payingAppointmentId?: string | null;
+  /** Pay one or more payment rows in a single MP preference. */
+  onPayPayments?: (paymentIds: string[]) => Promise<void> | void;
+  /** IDs currently being processed. */
+  payingPaymentIds?: string[];
+  /** Whether the clinic has Mercado Pago connected. Controls visibility of "pay online" buttons. */
+  mpConnected?: boolean;
+  /** When set, switch to the "pagos" tab and scroll to the overdue section. The wrapper resets it. */
+  focusOverdueTick?: number;
   // Extras rendered by wrapper (e.g. PatientBookingModal)
   extras?: React.ReactNode;
 }
@@ -221,10 +229,13 @@ export function PatientPortalView(props: PatientPortalViewProps) {
     headerAction = "none", onLogout, onBack,
     onBookAppointment, onCancelAppointment, onRescheduleAppointment,
     onSaveProfile, onPaySession,
-    payingAppointmentId = null, extras,
+    payingAppointmentId = null,
+    onPayPayments, payingPaymentIds = [], mpConnected = false, focusOverdueTick = 0,
+    extras,
   } = props;
 
   const [tab, setTab] = useState<TabId>("resumen");
+  const overdueSectionRef = useRef<HTMLDivElement>(null);
 
   // Profile editing
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -276,6 +287,36 @@ export function PatientPortalView(props: PatientPortalViewProps) {
   const overduePayments = pendingPayments.filter(p => p.status === "overdue");
   const pendingCount = pendingPayments.length;
   const totalPaid = payments.filter(p => p.status === "paid").reduce((s, p) => s + Number(p.amount), 0);
+  const overdueCount = overduePayments.length;
+  const overdueTotal = overduePayments.reduce((s, p) => s + Number(p.amount), 0);
+  const overdueCurrency = overduePayments[0]?.currency || "UYU";
+  const payingAny = payingPaymentIds.length > 0;
+
+  const isPayablePayment = (status: string) =>
+    status === "pending" || status === "due_soon" || status === "overdue";
+
+  const handleBannerPay = () => {
+    if (!onPayPayments || overdueCount === 0) return;
+    if (overdueCount === 1) {
+      onPayPayments([overduePayments[0].id]);
+    } else {
+      setTab("pagos");
+      setTimeout(() => {
+        overdueSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 80);
+    }
+  };
+
+  // External request from wrapper to focus overdue section
+  useEffect(() => {
+    if (focusOverdueTick && overdueCount > 0) {
+      setTab("pagos");
+      setTimeout(() => {
+        overdueSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 80);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusOverdueTick]);
 
   const initials = (patient.full_name || "?")
     .split(" ").map(w => w[0]).join("").substring(0, 2).toUpperCase();
@@ -326,6 +367,39 @@ export function PatientPortalView(props: PatientPortalViewProps) {
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6">
       {/* LEFT (8/12) */}
       <div className="lg:col-span-8 flex flex-col gap-5 lg:gap-6">
+        {/* Alerta de pagos vencidos */}
+        {overdueCount > 0 && (
+          <Card className="rounded-2xl border-destructive/30 bg-destructive/5">
+            <CardContent className="p-4 lg:p-5 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+              <div className="flex items-start gap-3 min-w-0 flex-1">
+                <div className="h-10 w-10 rounded-full bg-destructive/15 flex items-center justify-center shrink-0">
+                  <AlertCircle className="h-5 w-5 text-destructive" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm lg:text-base font-semibold text-destructive">
+                    {overdueCount === 1
+                      ? "Tenés 1 pago vencido"
+                      : `Tenés ${overdueCount} pagos vencidos`}
+                  </p>
+                  <p className="text-xs lg:text-sm text-muted-foreground mt-0.5">
+                    Total: <span className="font-bold text-foreground">{formatCurrency(overdueTotal, overdueCurrency)}</span>
+                  </p>
+                </div>
+              </div>
+              {mpConnected && onPayPayments && (
+                <Button
+                  onClick={handleBannerPay}
+                  disabled={payingAny}
+                  className="gap-2 min-h-11 sm:w-auto w-full"
+                >
+                  {payingAny ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
+                  {payingAny ? "Procesando..." : (overdueCount === 1 ? "Pagar ahora" : "Pagar todos")}
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Welcome (desktop, inline) */}
         <div className="flex items-center gap-4">
           <Avatar className="h-14 w-14 lg:h-16 lg:w-16 border-2 border-primary/30 shadow-lg shadow-primary/10">
@@ -616,12 +690,12 @@ export function PatientPortalView(props: PatientPortalViewProps) {
                     <span>{apt.notes}</span>
                   </div>
                 )}
-                {onPaySession && (apt.payment_status === "pendiente" || apt.status === "pending_payment") && (
+                {mpConnected && onPaySession && (apt.payment_status === "pendiente" || apt.status === "pending_payment") && (
                   <>
                     <Separator />
                     <Button
                       size="sm"
-                      className="w-full gap-2"
+                      className="w-full gap-2 min-h-11"
                       onClick={() => onPaySession(apt.id)}
                       disabled={payingAppointmentId === apt.id}
                     >
@@ -750,6 +824,47 @@ export function PatientPortalView(props: PatientPortalViewProps) {
   // ========= PagosTab =========
   const PagosTab = () => (
     <div className="space-y-4 lg:space-y-6">
+      {/* Sección de vencidos */}
+      {overdueCount > 0 && mpConnected && onPayPayments && (
+        <div ref={overdueSectionRef}>
+          <Card className="border-destructive/30 bg-destructive/5 rounded-2xl">
+            <CardContent className="p-4 lg:p-5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="h-10 w-10 rounded-full bg-destructive/15 flex items-center justify-center shrink-0">
+                    <AlertCircle className="h-5 w-5 text-destructive" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm lg:text-base font-bold text-destructive">
+                      Pagos vencidos ({overdueCount})
+                    </p>
+                    <p className="text-xs lg:text-sm text-muted-foreground">
+                      Total: <span className="font-bold text-foreground">{formatCurrency(overdueTotal, overdueCurrency)}</span>
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  onClick={() => onPayPayments(overduePayments.map(p => p.id))}
+                  disabled={payingAny}
+                  className="gap-2 min-h-11 sm:w-auto w-full"
+                >
+                  {payingAny ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
+                  {payingAny ? "Procesando..." : (overdueCount === 1 ? "Pagar ahora" : "Pagar todos")}
+                </Button>
+              </div>
+              <ul className="text-xs lg:text-sm text-muted-foreground space-y-1 pl-1">
+                {overduePayments.map(p => (
+                  <li key={p.id} className="flex items-center justify-between gap-2">
+                    <span className="truncate">{p.notes || p.recurrence_label} · vence {formatShort(parseISO(p.due_date))}</span>
+                    <span className="font-semibold text-foreground shrink-0">{formatCurrency(Number(p.amount), p.currency || "UYU")}</span>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {payments.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
@@ -773,15 +888,41 @@ export function PatientPortalView(props: PatientPortalViewProps) {
                   <div className="grid grid-cols-5 gap-4 px-5 py-3 bg-muted/50 text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     <span>Concepto</span><span>Monto</span><span>Vencimiento</span><span>Estado</span><span>Fecha de pago</span>
                   </div>
-                  {payments.map((p, i) => (
-                    <div key={p.id} className={`grid grid-cols-5 gap-4 px-5 py-4 items-center text-sm ${i !== payments.length - 1 ? "border-b" : ""} hover:bg-muted/30 transition-colors`}>
-                      <span className="font-medium">{p.notes || p.recurrence_label}</span>
-                      <span className="font-semibold">{formatCurrency(Number(p.amount), p.currency || "UYU")}</span>
-                      <span className="text-muted-foreground">{formatShort(parseISO(p.due_date))}</span>
-                      <span>{payBadge(p.status)}</span>
-                      <span className="text-muted-foreground">{p.paid_at ? formatShort(parseISO(p.paid_at)) : "—"}</span>
-                    </div>
-                  ))}
+                  {payments.map((p, i) => {
+                    const hasAppt = !!p.appointment_id;
+                    const isProcessing = hasAppt
+                      ? payingAppointmentId === p.appointment_id
+                      : payingPaymentIds.includes(p.id);
+                    const showPay = mpConnected && isPayablePayment(p.status)
+                      && (hasAppt ? !!onPaySession : !!onPayPayments);
+                    const handleClick = () => {
+                      if (hasAppt && onPaySession) onPaySession(p.appointment_id!);
+                      else if (onPayPayments) onPayPayments([p.id]);
+                    };
+                    return (
+                      <div key={p.id} className={`grid grid-cols-5 gap-4 px-5 py-4 items-center text-sm ${i !== payments.length - 1 ? "border-b" : ""} hover:bg-muted/30 transition-colors`}>
+                        <span className="font-medium">{p.notes || p.recurrence_label}</span>
+                        <span className="font-semibold">{formatCurrency(Number(p.amount), p.currency || "UYU")}</span>
+                        <span className="text-muted-foreground">{formatShort(parseISO(p.due_date))}</span>
+                        <span className="flex items-center gap-2">
+                          {payBadge(p.status)}
+                          {showPay && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-8 px-3 gap-1.5"
+                              onClick={handleClick}
+                              disabled={isProcessing || payingAny}
+                            >
+                              {isProcessing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CreditCard className="h-3.5 w-3.5" />}
+                              {isProcessing ? "..." : (hasAppt ? "Pagar sesión" : "Pagar online")}
+                            </Button>
+                          )}
+                        </span>
+                        <span className="text-muted-foreground">{p.paid_at ? formatShort(parseISO(p.paid_at)) : "—"}</span>
+                      </div>
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
@@ -808,21 +949,29 @@ export function PatientPortalView(props: PatientPortalViewProps) {
                     <span>Vence: {formatShort(parseISO(p.due_date))}</span>
                     {p.paid_at && <span className="text-primary">✓ Pagado: {formatShort(parseISO(p.paid_at))}</span>}
                   </div>
-                  {onPaySession && p.status !== "paid" && p.status !== "cancelled" && p.appointment_id && (
-                    <Button
-                      size="sm"
-                      className="w-full gap-2 mt-3"
-                      onClick={() => onPaySession(p.appointment_id!)}
-                      disabled={payingAppointmentId === p.appointment_id}
-                    >
-                      {payingAppointmentId === p.appointment_id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <CreditCard className="h-4 w-4" />
-                      )}
-                      {payingAppointmentId === p.appointment_id ? "Procesando..." : "Pagar online"}
-                    </Button>
-                  )}
+                  {mpConnected && isPayablePayment(p.status) && (() => {
+                    const hasAppt = !!p.appointment_id;
+                    const isProcessing = hasAppt
+                      ? payingAppointmentId === p.appointment_id
+                      : payingPaymentIds.includes(p.id);
+                    const disabled = isProcessing || payingAny;
+                    const handleClick = () => {
+                      if (hasAppt && onPaySession) onPaySession(p.appointment_id!);
+                      else if (onPayPayments) onPayPayments([p.id]);
+                    };
+                    if (hasAppt ? !onPaySession : !onPayPayments) return null;
+                    return (
+                      <Button
+                        size="sm"
+                        className="w-full gap-2 mt-3 min-h-11"
+                        onClick={handleClick}
+                        disabled={disabled}
+                      >
+                        {isProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
+                        {isProcessing ? "Procesando..." : (hasAppt ? "Pagar sesión" : "Pagar online")}
+                      </Button>
+                    );
+                  })()}
                 </CardContent>
               </Card>
             ))}
@@ -1086,6 +1235,34 @@ export function PatientPortalView(props: PatientPortalViewProps) {
               storageKey="pwa_install_banner_dismissed_patient"
               autoOpenIOS
             />
+          </div>
+        )}
+
+        {/* Persistent overdue banner — visible on all tabs */}
+        {overdueCount > 0 && (
+          <div className="px-4 lg:px-8 pt-3">
+            <div className="rounded-xl border border-destructive/30 bg-destructive/10 text-destructive px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+              <div className="flex items-start sm:items-center gap-2 flex-1 min-w-0">
+                <AlertCircle className="h-5 w-5 shrink-0 mt-0.5 sm:mt-0" />
+                <p className="text-sm font-medium leading-snug">
+                  {overdueCount === 1
+                    ? <>Tenés <strong>1 pago vencido</strong> por <strong>{formatCurrency(overdueTotal, overdueCurrency)}</strong>.</>
+                    : <>Tenés <strong>{overdueCount} pagos vencidos</strong> por un total de <strong>{formatCurrency(overdueTotal, overdueCurrency)}</strong>.</>}
+                </p>
+              </div>
+              {mpConnected && onPayPayments && (
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  className="gap-2 min-h-11 sm:min-h-9 sm:w-auto w-full shrink-0"
+                  onClick={handleBannerPay}
+                  disabled={payingAny}
+                >
+                  {payingAny ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
+                  {payingAny ? "Procesando..." : "Pagar ahora"}
+                </Button>
+              )}
+            </div>
           </div>
         )}
 

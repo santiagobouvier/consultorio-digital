@@ -6,6 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { usePWAInstall } from "@/hooks/use-pwa-install";
 import { PortalWelcomeInstall } from "@/components/portal/PortalWelcomeInstall";
@@ -19,7 +27,7 @@ import {
   type PortalPayment,
   type ProfileEditData,
 } from "@/components/portal/PatientPortalView";
-import { getRecurrenceTypeLabel, RecurrenceType } from "@/lib/payments";
+import { getRecurrenceTypeLabel, RecurrenceType, formatCurrency } from "@/lib/payments";
 
 interface ClinicBrandingFull extends PortalBranding {
   id: string;
@@ -188,6 +196,11 @@ const ClinicPortal = () => {
   const [isDark, setIsDark] = useState(true);
   const [welcomeSeen, setWelcomeSeen] = useState<boolean>(true);
   const [payingAppointment, setPayingAppointment] = useState<string | null>(null);
+  const [payingPaymentIds, setPayingPaymentIds] = useState<string[]>([]);
+  const [mpConnected, setMpConnected] = useState(false);
+  const [confirmBatch, setConfirmBatch] = useState<{ ids: string[]; total: number; currency: string; items: { id: string; label: string; amount: number }[] } | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [focusOverdueTick, _setFocusOverdueTick] = useState(0);
 
   const [upcomingAppointments, setUpcomingAppointments] = useState<PortalAppointment[]>([]);
   const [pastAppointments, setPastAppointments] = useState<PortalAppointment[]>([]);
@@ -243,10 +256,15 @@ const ClinicPortal = () => {
   useEffect(() => {
     const paymentStatus = searchParams.get("payment");
     const apptId = searchParams.get("appointment_id");
-    if (paymentStatus === "success" && apptId) {
-      toast({ title: "¡Pago recibido!", description: "Tu sesión fue confirmada exitosamente." });
+    const isBatch = searchParams.get("batch");
+    if (paymentStatus === "success" && (apptId || isBatch)) {
+      toast({
+        title: "¡Pago recibido!",
+        description: isBatch ? "Tus pagos fueron registrados exitosamente." : "Tu sesión fue confirmada exitosamente.",
+      });
       searchParams.delete("payment");
       searchParams.delete("appointment_id");
+      searchParams.delete("batch");
       setSearchParams(searchParams, { replace: true });
       setTimeout(() => {
         if (patient && branding) reloadPatientData(patient.id, branding.id);
@@ -283,6 +301,19 @@ const ClinicPortal = () => {
       setLoading(false);
     })();
   }, [slug]);
+
+  // Check if clinic has MP connected
+  useEffect(() => {
+    if (!branding?.id) return;
+    (async () => {
+      const { data } = await supabase
+        .from("payment_policies")
+        .select("mp_access_token")
+        .eq("business_id", branding.id)
+        .maybeSingle();
+      setMpConnected(!!data?.mp_access_token);
+    })();
+  }, [branding?.id]);
 
   // Inject dynamic manifest
   useEffect(() => {
@@ -400,6 +431,48 @@ const ClinicPortal = () => {
       toast({ title: "Error", description: "No se pudo iniciar el pago. Intentá de nuevo.", variant: "destructive" });
       setPayingAppointment(null);
     }
+  };
+
+  const startBatchCheckout = async (paymentIds: string[]) => {
+    if (!branding) return;
+    try {
+      setPayingPaymentIds(paymentIds);
+      const { data, error } = await supabase.functions.invoke("create-patient-payment", {
+        body: { business_id: branding.id, payment_ids: paymentIds },
+      });
+      if (error) throw error;
+      if (data?.init_point) {
+        window.location.href = data.init_point;
+      } else {
+        throw new Error("No checkout URL received");
+      }
+    } catch (err: any) {
+      console.error("Batch payment error:", err);
+      toast({ title: "Error", description: "No se pudo iniciar el pago. Intentá de nuevo.", variant: "destructive" });
+      setPayingPaymentIds([]);
+    }
+  };
+
+  const handlePayPayments = async (paymentIds: string[]) => {
+    if (paymentIds.length === 0) return;
+    if (paymentIds.length === 1) {
+      await startBatchCheckout(paymentIds);
+      return;
+    }
+    // Show confirmation modal for batch
+    const selected = payments.filter(p => paymentIds.includes(p.id));
+    const total = selected.reduce((s, p) => s + Number(p.amount), 0);
+    const currency = selected[0]?.currency || "UYU";
+    setConfirmBatch({
+      ids: paymentIds,
+      total,
+      currency,
+      items: selected.map(p => ({
+        id: p.id,
+        label: p.notes || p.recurrence_label || "Pago",
+        amount: Number(p.amount),
+      })),
+    });
   };
 
   const handleSaveProfile = async (data: ProfileEditData, avatarFile: File | null) => {
@@ -532,18 +605,62 @@ const ClinicPortal = () => {
       onSaveProfile={handleSaveProfile}
       onPaySession={handlePaySession}
       payingAppointmentId={payingAppointment}
+      onPayPayments={handlePayPayments}
+      payingPaymentIds={payingPaymentIds}
+      mpConnected={mpConnected}
+      focusOverdueTick={focusOverdueTick}
       onBookAppointment={() => { setRescheduleTarget(null); setShowBookingModal(true); }}
       onCancelAppointment={handleCancelAppointment}
       onRescheduleAppointment={handleRescheduleAppointment}
       extras={branding && patient && (
-        <PatientBookingModal
-          open={showBookingModal}
-          onOpenChange={(o) => { setShowBookingModal(o); if (!o) setRescheduleTarget(null); }}
-          businessId={branding.id}
-          patientId={patient.id}
-          rescheduleAppointment={rescheduleTarget ? { id: rescheduleTarget.id, start_at: rescheduleTarget.start_at, end_at: rescheduleTarget.end_at } : null}
-          onSuccess={() => { if (patient && branding) reloadPatientData(patient.id, branding.id); }}
-        />
+        <>
+          <PatientBookingModal
+            open={showBookingModal}
+            onOpenChange={(o) => { setShowBookingModal(o); if (!o) setRescheduleTarget(null); }}
+            businessId={branding.id}
+            patientId={patient.id}
+            rescheduleAppointment={rescheduleTarget ? { id: rescheduleTarget.id, start_at: rescheduleTarget.start_at, end_at: rescheduleTarget.end_at } : null}
+            onSuccess={() => { if (patient && branding) reloadPatientData(patient.id, branding.id); }}
+          />
+          <Dialog open={!!confirmBatch} onOpenChange={(o) => { if (!o) setConfirmBatch(null); }}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Confirmar pago</DialogTitle>
+                <DialogDescription>
+                  Vas a pagar {confirmBatch?.items.length} pagos en una sola transacción.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-2 max-h-60 overflow-y-auto py-2">
+                {confirmBatch?.items.map(item => (
+                  <div key={item.id} className="flex items-center justify-between text-sm border-b last:border-b-0 pb-2 last:pb-0">
+                    <span className="truncate pr-2">{item.label}</span>
+                    <span className="font-semibold shrink-0">{formatCurrency(item.amount, confirmBatch.currency)}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center justify-between border-t pt-3">
+                <span className="text-sm font-medium">Total</span>
+                <span className="text-lg font-bold">{confirmBatch && formatCurrency(confirmBatch.total, confirmBatch.currency)}</span>
+              </div>
+              <DialogFooter className="gap-2 sm:gap-2">
+                <Button variant="outline" onClick={() => setConfirmBatch(null)} disabled={payingPaymentIds.length > 0}>
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={async () => {
+                    if (!confirmBatch) return;
+                    const ids = confirmBatch.ids;
+                    setConfirmBatch(null);
+                    await startBatchCheckout(ids);
+                  }}
+                  disabled={payingPaymentIds.length > 0}
+                >
+                  Confirmar y pagar
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </>
       )}
     />
   );
