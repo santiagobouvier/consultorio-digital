@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -9,10 +9,11 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { User, Calendar, MapPin, Video, Clock, CreditCard, MessageCircle, AlertCircle, BellRing, Repeat, X } from "lucide-react";
+import { User, Calendar, MapPin, Video, Clock, CreditCard, MessageCircle, AlertCircle, BellRing, Repeat, X, RefreshCw, Check, XCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { PaymentForm } from "@/components/PaymentForm";
 import { ReminderModal } from "@/components/ReminderModal";
@@ -55,15 +56,52 @@ export const AppointmentDetailModal = ({
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [showReminderModal, setShowReminderModal] = useState(false);
   const [cancellingRecurrence, setCancellingRecurrence] = useState(false);
+  const [rescheduleRequest, setRescheduleRequest] = useState<any | null>(null);
+  const [resolvingRequest, setResolvingRequest] = useState(false);
+  const [rejectMode, setRejectMode] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [cancellationDetails, setCancellationDetails] = useState<{ reason: string | null; cancelled_at: string | null } | null>(null);
+
+  useEffect(() => {
+    if (!appointment || !open) {
+      setRescheduleRequest(null);
+      setCancellationDetails(null);
+      setRejectMode(false);
+      setRejectionReason("");
+      return;
+    }
+    if (appointment.status === "reschedule_requested") {
+      supabase
+        .from("appointment_reschedule_requests")
+        .select("id, requested_start_at, requested_end_at, reason, status")
+        .eq("original_appointment_id", appointment.id)
+        .eq("status", "pending")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+        .then(({ data }) => setRescheduleRequest(data || null));
+    }
+    if (appointment.status === "cancelled_by_patient" || appointment.status === "cancelled") {
+      supabase
+        .from("appointments")
+        .select("cancellation_reason, cancelled_at")
+        .eq("id", appointment.id)
+        .maybeSingle()
+        .then(({ data }) => setCancellationDetails(data || null));
+    }
+  }, [appointment?.id, appointment?.status, open]);
 
   if (!appointment) return null;
 
   const getStatusInfo = (status: string) => {
-    const statusMap: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+    const statusMap: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; className?: string }> = {
       pending: { label: "Programada", variant: "default" },
+      scheduled: { label: "Confirmada", variant: "default" },
       confirmed: { label: "Confirmada", variant: "default" },
       attended: { label: "Realizada", variant: "secondary" },
-      cancelled: { label: "Cancelada", variant: "destructive" },
+      cancelled: { label: "Cancelada por el profesional", variant: "secondary" },
+      cancelled_by_patient: { label: "Cancelada por paciente", variant: "destructive" },
+      reschedule_requested: { label: "Reprogramación solicitada", variant: "outline", className: "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800" },
       no_show: { label: "Ausente", variant: "destructive" },
     };
     return statusMap[status] || { label: status, variant: "outline" as const };
@@ -80,6 +118,45 @@ export const AppointmentDetailModal = ({
 
   const statusInfo = getStatusInfo(appointment.status);
   const paymentInfo = getPaymentStatusInfo(appointment.paymentColor);
+
+  const handleApproveReschedule = async () => {
+    if (!rescheduleRequest) return;
+    setResolvingRequest(true);
+    try {
+      const { data, error } = await supabase.rpc("approve_reschedule_request", { p_request_id: rescheduleRequest.id });
+      if (error) throw error;
+      if (data && (data as any).ok === false) {
+        toast({ title: "No se pudo aprobar", description: (data as any).message || "El horario ya no está disponible.", variant: "destructive" });
+        return;
+      }
+      toast({ title: "Reprogramación aprobada", description: "La cita fue actualizada." });
+      onPaymentRegistered?.();
+      onClose();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message || "No se pudo aprobar la solicitud.", variant: "destructive" });
+    } finally {
+      setResolvingRequest(false);
+    }
+  };
+
+  const handleRejectReschedule = async () => {
+    if (!rescheduleRequest) return;
+    setResolvingRequest(true);
+    try {
+      const { error } = await supabase.rpc("reject_reschedule_request", {
+        p_request_id: rescheduleRequest.id,
+        p_rejection_reason: rejectionReason.trim() || null,
+      });
+      if (error) throw error;
+      toast({ title: "Solicitud rechazada", description: "Le avisamos al paciente." });
+      onPaymentRegistered?.();
+      onClose();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message || "No se pudo rechazar la solicitud.", variant: "destructive" });
+    } finally {
+      setResolvingRequest(false);
+    }
+  };
 
   const handleViewPatient = () => {
     if (appointment.patient_id) {
@@ -184,7 +261,7 @@ export const AppointmentDetailModal = ({
                 )}
               </div>
               <div className="flex flex-col items-end gap-1 shrink-0">
-                <Badge variant={statusInfo.variant} className="rounded-full">{statusInfo.label}</Badge>
+                <Badge variant={statusInfo.variant} className={`rounded-full ${statusInfo.className || ""}`}>{statusInfo.label}</Badge>
                 {paymentInfo && (
                   <Badge variant="outline" className="rounded-full text-xs flex items-center gap-1">
                     <span className={`w-1.5 h-1.5 rounded-full ${paymentInfo.bgColor}`} />
@@ -193,6 +270,67 @@ export const AppointmentDetailModal = ({
                 )}
               </div>
             </div>
+
+            {/* Reschedule request panel */}
+            {appointment.status === "reschedule_requested" && rescheduleRequest && (
+              <div className="rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-900 p-3 space-y-3">
+                <div className="flex items-start gap-2">
+                  <RefreshCw className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+                  <div className="text-sm">
+                    <p className="font-semibold text-amber-800 dark:text-amber-300">El paciente pide reprogramar a:</p>
+                    <p className="capitalize text-foreground mt-0.5">
+                      {format(new Date(rescheduleRequest.requested_start_at), "EEEE d 'de' MMMM, HH:mm", { locale: es })} hs
+                    </p>
+                    {rescheduleRequest.reason && (
+                      <p className="text-xs text-muted-foreground mt-1 italic">"{rescheduleRequest.reason}"</p>
+                    )}
+                  </div>
+                </div>
+                {!rejectMode ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button size="sm" onClick={handleApproveReschedule} disabled={resolvingRequest} className="gap-1.5">
+                      <Check className="h-4 w-4" /> Aprobar
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => setRejectMode(true)} disabled={resolvingRequest} className="gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive">
+                      <XCircle className="h-4 w-4" /> Rechazar
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Textarea
+                      placeholder="Motivo del rechazo (opcional) — se lo enviaremos al paciente."
+                      value={rejectionReason}
+                      onChange={(e) => setRejectionReason(e.target.value)}
+                      rows={3}
+                      className="resize-none text-sm"
+                    />
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button size="sm" variant="outline" onClick={() => { setRejectMode(false); setRejectionReason(""); }} disabled={resolvingRequest}>
+                        Volver
+                      </Button>
+                      <Button size="sm" variant="destructive" onClick={handleRejectReschedule} disabled={resolvingRequest}>
+                        Confirmar rechazo
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Patient cancellation details */}
+            {appointment.status === "cancelled_by_patient" && (
+              <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-sm space-y-1">
+                <p className="font-semibold text-destructive">Cancelada por el paciente</p>
+                {cancellationDetails?.cancelled_at && (
+                  <p className="text-xs text-muted-foreground">
+                    {format(new Date(cancellationDetails.cancelled_at), "d 'de' MMMM, HH:mm", { locale: es })} hs
+                  </p>
+                )}
+                {cancellationDetails?.reason && (
+                  <p className="text-xs italic text-foreground mt-1">"{cancellationDetails.reason}"</p>
+                )}
+              </div>
+            )}
 
             {/* Payment Warning */}
             {showPaymentReminder && (
