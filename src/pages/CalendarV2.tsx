@@ -560,6 +560,13 @@ const CalendarV2 = () => {
         {/* Professional color legend */}
         {showProfessionalColors && <ProfessionalColorLegend professionals={professionals} />}
 
+        {/* Hint: vista mensual en mobile vertical */}
+        {isMobile && viewType === "month" && (
+          <div className="rounded-lg border border-dashed border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground text-center">
+            Tip: la vista mensual se ve mejor en horizontal o cambiando a vista día.
+          </div>
+        )}
+
         {/* Calendar views with transition */}
         <div
           className={cn(
