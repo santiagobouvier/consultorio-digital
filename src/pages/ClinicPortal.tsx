@@ -604,18 +604,62 @@ const ClinicPortal = () => {
       onSaveProfile={handleSaveProfile}
       onPaySession={handlePaySession}
       payingAppointmentId={payingAppointment}
+      onPayPayments={handlePayPayments}
+      payingPaymentIds={payingPaymentIds}
+      mpConnected={mpConnected}
+      focusOverdueTick={focusOverdueTick}
       onBookAppointment={() => { setRescheduleTarget(null); setShowBookingModal(true); }}
       onCancelAppointment={handleCancelAppointment}
       onRescheduleAppointment={handleRescheduleAppointment}
       extras={branding && patient && (
-        <PatientBookingModal
-          open={showBookingModal}
-          onOpenChange={(o) => { setShowBookingModal(o); if (!o) setRescheduleTarget(null); }}
-          businessId={branding.id}
-          patientId={patient.id}
-          rescheduleAppointment={rescheduleTarget ? { id: rescheduleTarget.id, start_at: rescheduleTarget.start_at, end_at: rescheduleTarget.end_at } : null}
-          onSuccess={() => { if (patient && branding) reloadPatientData(patient.id, branding.id); }}
-        />
+        <>
+          <PatientBookingModal
+            open={showBookingModal}
+            onOpenChange={(o) => { setShowBookingModal(o); if (!o) setRescheduleTarget(null); }}
+            businessId={branding.id}
+            patientId={patient.id}
+            rescheduleAppointment={rescheduleTarget ? { id: rescheduleTarget.id, start_at: rescheduleTarget.start_at, end_at: rescheduleTarget.end_at } : null}
+            onSuccess={() => { if (patient && branding) reloadPatientData(patient.id, branding.id); }}
+          />
+          <Dialog open={!!confirmBatch} onOpenChange={(o) => { if (!o) setConfirmBatch(null); }}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Confirmar pago</DialogTitle>
+                <DialogDescription>
+                  Vas a pagar {confirmBatch?.items.length} pagos en una sola transacción.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-2 max-h-60 overflow-y-auto py-2">
+                {confirmBatch?.items.map(item => (
+                  <div key={item.id} className="flex items-center justify-between text-sm border-b last:border-b-0 pb-2 last:pb-0">
+                    <span className="truncate pr-2">{item.label}</span>
+                    <span className="font-semibold shrink-0">{formatCurrency(item.amount, confirmBatch.currency)}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center justify-between border-t pt-3">
+                <span className="text-sm font-medium">Total</span>
+                <span className="text-lg font-bold">{confirmBatch && formatCurrency(confirmBatch.total, confirmBatch.currency)}</span>
+              </div>
+              <DialogFooter className="gap-2 sm:gap-2">
+                <Button variant="outline" onClick={() => setConfirmBatch(null)} disabled={payingPaymentIds.length > 0}>
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={async () => {
+                    if (!confirmBatch) return;
+                    const ids = confirmBatch.ids;
+                    setConfirmBatch(null);
+                    await startBatchCheckout(ids);
+                  }}
+                  disabled={payingPaymentIds.length > 0}
+                >
+                  Confirmar y pagar
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </>
       )}
     />
   );
