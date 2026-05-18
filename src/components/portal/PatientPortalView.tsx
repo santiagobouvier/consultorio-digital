@@ -824,6 +824,47 @@ export function PatientPortalView(props: PatientPortalViewProps) {
   // ========= PagosTab =========
   const PagosTab = () => (
     <div className="space-y-4 lg:space-y-6">
+      {/* Sección de vencidos */}
+      {overdueCount > 0 && mpConnected && onPayPayments && (
+        <div ref={overdueSectionRef}>
+          <Card className="border-destructive/30 bg-destructive/5 rounded-2xl">
+            <CardContent className="p-4 lg:p-5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="h-10 w-10 rounded-full bg-destructive/15 flex items-center justify-center shrink-0">
+                    <AlertCircle className="h-5 w-5 text-destructive" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm lg:text-base font-bold text-destructive">
+                      Pagos vencidos ({overdueCount})
+                    </p>
+                    <p className="text-xs lg:text-sm text-muted-foreground">
+                      Total: <span className="font-bold text-foreground">{formatCurrency(overdueTotal, overdueCurrency)}</span>
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  onClick={() => onPayPayments(overduePayments.map(p => p.id))}
+                  disabled={payingAny}
+                  className="gap-2 min-h-11 sm:w-auto w-full"
+                >
+                  {payingAny ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
+                  {payingAny ? "Procesando..." : (overdueCount === 1 ? "Pagar ahora" : "Pagar todos")}
+                </Button>
+              </div>
+              <ul className="text-xs lg:text-sm text-muted-foreground space-y-1 pl-1">
+                {overduePayments.map(p => (
+                  <li key={p.id} className="flex items-center justify-between gap-2">
+                    <span className="truncate">{p.notes || p.recurrence_label} · vence {formatShort(parseISO(p.due_date))}</span>
+                    <span className="font-semibold text-foreground shrink-0">{formatCurrency(Number(p.amount), p.currency || "UYU")}</span>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {payments.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
