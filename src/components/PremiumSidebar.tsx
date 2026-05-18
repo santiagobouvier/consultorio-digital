@@ -45,7 +45,7 @@ type NavItem = {
 
 const mainItems: NavItem[] = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "Solicitudes", url: "/solicitudes", icon: FileText, highlight: true },
+  { title: "Pendientes", url: "/solicitudes", icon: FileText, highlight: true },
   { title: "Pacientes", url: "/patients", icon: Users },
   { title: "Agenda", url: "/agenda", icon: CalendarDays },
   { title: "Pagos", url: "/pagos", icon: Receipt },
@@ -193,7 +193,7 @@ export function PremiumSidebar() {
           {showBadge && !expanded && (
             <span
               className="absolute -top-1 -right-1 inline-flex items-center justify-center min-w-[14px] h-[14px] px-1 rounded-full bg-red-500 text-white text-[9px] font-bold animate-badge-pulse ring-2 ring-[#0a0a0a]"
-              aria-label={`${pendingRequests} solicitudes pendientes`}
+          aria-label={`${pendingRequests} pendientes`}
             >
               {pendingRequests > 9 ? "9+" : pendingRequests}
             </span>
@@ -215,7 +215,7 @@ export function PremiumSidebar() {
         {showBadge && expanded && (
           <span
             className="ml-auto inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-[10px] font-semibold animate-badge-pulse"
-            aria-label={`${pendingRequests} solicitudes pendientes`}
+          aria-label={`${pendingRequests} pendientes`}
           >
             {pendingRequests > 99 ? "99+" : pendingRequests}
           </span>
