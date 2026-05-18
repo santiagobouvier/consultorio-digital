@@ -26,7 +26,15 @@ export interface CalendarAppointment {
   recurrence_group_id?: string | null;
 }
 
-export type AppointmentStatus = "pending" | "confirmed" | "attended" | "cancelled" | "no_show";
+export type AppointmentStatus =
+  | "pending"
+  | "confirmed"
+  | "attended"
+  | "cancelled"
+  | "cancelled_by_patient"
+  | "reschedule_requested"
+  | "scheduled"
+  | "no_show";
 export type PaymentColor = "green" | "orange" | "red" | "gray";
 export type ViewType = "day" | "week" | "month";
 
@@ -57,6 +65,9 @@ export const APPOINTMENT_STATUS_MAP: Record<AppointmentStatus, { label: string; 
   confirmed: { label: "Confirmada", variant: "default" },
   attended: { label: "Realizada", variant: "secondary" },
   cancelled: { label: "Cancelada", variant: "destructive" },
+  cancelled_by_patient: { label: "Cancelada por paciente", variant: "destructive" },
+  reschedule_requested: { label: "Reprogramación pedida", variant: "outline" },
+  scheduled: { label: "Confirmada", variant: "default" },
   no_show: { label: "Ausente", variant: "destructive" },
 };
 

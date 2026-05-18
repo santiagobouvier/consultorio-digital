@@ -26,6 +26,12 @@ interface PatientBookingModalProps {
   businessId: string;
   patientId: string;
   onSuccess?: () => void;
+  /** When provided, the modal opens in "reschedule" mode and creates a reschedule request instead of a new appointment. */
+  rescheduleAppointment?: {
+    id: string;
+    start_at: string;
+    end_at: string;
+  } | null;
 }
 
 type Step = "date" | "slot" | "confirm";
@@ -36,6 +42,7 @@ export const PatientBookingModal = ({
   businessId,
   patientId,
   onSuccess,
+  rescheduleAppointment,
 }: PatientBookingModalProps) => {
   const [loading, setLoading] = useState(true);
   const [slots, setSlots] = useState<AvailabilitySlot[]>([]);
@@ -45,12 +52,14 @@ export const PatientBookingModal = ({
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  const isReschedule = !!rescheduleAppointment;
+
   useEffect(() => {
     if (open) {
       loadAvailableSlots();
       resetState();
     }
-  }, [open, businessId]);
+  }, [open, businessId, rescheduleAppointment?.id]);
 
   const resetState = () => {
     setStep("date");
@@ -118,39 +127,68 @@ export const PatientBookingModal = ({
       const startAt = `${selectedSlot.date}T${selectedSlot.start_time}`;
       const endAt = `${selectedSlot.date}T${selectedSlot.end_time}`;
 
-      const { error: appointmentError } = await supabase
-        .from("appointments")
-        .insert({
-          business_id: businessId,
-          patient_id: patientId,
-          availability_slot_id: selectedSlot.id,
-          start_at: startAt,
-          end_at: endAt,
-          modality: selectedSlot.modality,
-          notes: notes || null,
-          status: "pending",
-          source: "patient_portal",
+      if (isReschedule && rescheduleAppointment) {
+        // Create reschedule request, mark original appointment as reschedule_requested.
+        // We do NOT touch slots here — the slot swap happens server-side when the professional approves.
+        const { data: { user } } = await supabase.auth.getUser();
+        const { error: reqError } = await supabase
+          .from("appointment_reschedule_requests")
+          .insert({
+            business_id: businessId,
+            original_appointment_id: rescheduleAppointment.id,
+            requested_slot_id: selectedSlot.id,
+            requested_start_at: startAt,
+            requested_end_at: endAt,
+            reason: notes || null,
+            requested_by: user?.id || null,
+          });
+        if (reqError) throw reqError;
+
+        const { error: updError } = await supabase
+          .from("appointments")
+          .update({ status: "reschedule_requested" })
+          .eq("id", rescheduleAppointment.id);
+        if (updError) throw updError;
+
+        toast({
+          title: "Solicitud enviada",
+          description: "Tu profesional la confirmará pronto.",
         });
+      } else {
+        const { error: appointmentError } = await supabase
+          .from("appointments")
+          .insert({
+            business_id: businessId,
+            patient_id: patientId,
+            availability_slot_id: selectedSlot.id,
+            start_at: startAt,
+            end_at: endAt,
+            modality: selectedSlot.modality,
+            notes: notes || null,
+            status: "pending",
+            source: "patient_portal",
+          });
 
-      if (appointmentError) throw appointmentError;
+        if (appointmentError) throw appointmentError;
 
-      const { error: slotError } = await supabase
-        .from("availability_slots")
-        .update({ status: "booked" })
-        .eq("id", selectedSlot.id);
+        const { error: slotError } = await supabase
+          .from("availability_slots")
+          .update({ status: "booked" })
+          .eq("id", selectedSlot.id);
 
-      if (slotError) console.error("Error updating slot status:", slotError);
+        if (slotError) console.error("Error updating slot status:", slotError);
 
-      toast({
-        title: "✅ Cita solicitada",
-        description: "Tu cita fue solicitada. El profesional la confirmará pronto.",
-      });
+        toast({
+          title: "✅ Cita solicitada",
+          description: "Tu cita fue solicitada. El profesional la confirmará pronto.",
+        });
+      }
 
       onOpenChange(false);
       onSuccess?.();
     } catch (error: any) {
       console.error("Error booking appointment:", error);
-      toast({ title: "Error", description: error.message || "No se pudo reservar la cita", variant: "destructive" });
+      toast({ title: "Error", description: error.message || "No se pudo procesar la solicitud", variant: "destructive" });
     } finally {
       setSubmitting(false);
     }
@@ -175,14 +213,14 @@ export const PatientBookingModal = ({
   };
 
   const stepTitle: Record<Step, string> = {
-    date: "Elegí una fecha",
-    slot: "Elegí un horario",
-    confirm: "Confirmá tu reserva",
+    date: isReschedule ? "Elegí una nueva fecha" : "Elegí una fecha",
+    slot: isReschedule ? "Elegí un nuevo horario" : "Elegí un horario",
+    confirm: isReschedule ? "Confirmá la reprogramación" : "Confirmá tu reserva",
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto p-0">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto p-0 w-[calc(100%-1rem)] sm:w-full">
         <DialogHeader className="p-6 pb-2">
           <DialogTitle className="flex items-center gap-2">
             {step !== "date" && (
@@ -198,12 +236,22 @@ export const PatientBookingModal = ({
                 <ArrowLeft className="h-4 w-4" />
               </Button>
             )}
-            Reservar una cita
+            {isReschedule ? "Reprogramar cita" : "Reservar una cita"}
           </DialogTitle>
           <DialogDescription>{stepTitle[step]}</DialogDescription>
         </DialogHeader>
 
         <div className="px-6 pb-6">
+          {isReschedule && rescheduleAppointment && (
+            <div className="mb-4 p-3 rounded-xl bg-muted/60 border border-border text-sm">
+              <p className="text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-1">
+                Cita actual
+              </p>
+              <p className="font-medium capitalize">
+                {format(new Date(rescheduleAppointment.start_at), "EEEE d 'de' MMMM, HH:mm", { locale: es })} hs
+              </p>
+            </div>
+          )}
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />

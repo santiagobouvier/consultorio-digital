@@ -71,10 +71,61 @@ export type Database = {
           },
         ]
       }
+      appointment_reschedule_requests: {
+        Row: {
+          business_id: string
+          created_at: string
+          id: string
+          original_appointment_id: string
+          reason: string | null
+          rejection_reason: string | null
+          requested_by: string | null
+          requested_end_at: string
+          requested_slot_id: string | null
+          requested_start_at: string
+          resolved_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          id?: string
+          original_appointment_id: string
+          reason?: string | null
+          rejection_reason?: string | null
+          requested_by?: string | null
+          requested_end_at: string
+          requested_slot_id?: string | null
+          requested_start_at: string
+          resolved_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          id?: string
+          original_appointment_id?: string
+          reason?: string | null
+          rejection_reason?: string | null
+          requested_by?: string | null
+          requested_end_at?: string
+          requested_slot_id?: string | null
+          requested_start_at?: string
+          resolved_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       appointments: {
         Row: {
           availability_slot_id: string | null
           business_id: string
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
           contact_email: string | null
           contact_name: string | null
           contact_phone: string | null
@@ -98,6 +149,9 @@ export type Database = {
         Insert: {
           availability_slot_id?: string | null
           business_id: string
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
           contact_email?: string | null
           contact_name?: string | null
           contact_phone?: string | null
@@ -121,6 +175,9 @@ export type Database = {
         Update: {
           availability_slot_id?: string | null
           business_id?: string
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
           contact_email?: string | null
           contact_name?: string | null
           contact_phone?: string | null
@@ -411,6 +468,7 @@ export type Database = {
       businesses: {
         Row: {
           billing_period: string
+          cancellation_hours_notice: number
           contact_email: string
           created_at: string
           custom_domain: string | null
@@ -424,6 +482,7 @@ export type Database = {
           is_active: boolean
           is_demo: boolean
           is_private_clinic: boolean
+          late_cancellation_message: string | null
           name: string
           onboarding_completed: boolean
           owner_user_id: string
@@ -443,6 +502,7 @@ export type Database = {
         }
         Insert: {
           billing_period?: string
+          cancellation_hours_notice?: number
           contact_email: string
           created_at?: string
           custom_domain?: string | null
@@ -456,6 +516,7 @@ export type Database = {
           is_active?: boolean
           is_demo?: boolean
           is_private_clinic?: boolean
+          late_cancellation_message?: string | null
           name: string
           onboarding_completed?: boolean
           owner_user_id: string
@@ -475,6 +536,7 @@ export type Database = {
         }
         Update: {
           billing_period?: string
+          cancellation_hours_notice?: number
           contact_email?: string
           created_at?: string
           custom_domain?: string | null
@@ -488,6 +550,7 @@ export type Database = {
           is_active?: boolean
           is_demo?: boolean
           is_private_clinic?: boolean
+          late_cancellation_message?: string | null
           name?: string
           onboarding_completed?: boolean
           owner_user_id?: string
@@ -1388,6 +1451,10 @@ export type Database = {
       }
     }
     Functions: {
+      approve_reschedule_request: {
+        Args: { p_request_id: string }
+        Returns: Json
+      }
       can_add_patient: { Args: { p_business_id: string }; Returns: boolean }
       can_add_professional: {
         Args: { p_business_id: string }
@@ -1438,6 +1505,10 @@ export type Database = {
           days_with_slots: number
           total_slots: number
         }[]
+      }
+      reject_reschedule_request: {
+        Args: { p_rejection_reason?: string; p_request_id: string }
+        Returns: Json
       }
       user_belongs_to_business: {
         Args: { _business_id: string; _user_id: string }
