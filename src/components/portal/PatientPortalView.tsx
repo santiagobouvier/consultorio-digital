@@ -923,21 +923,29 @@ export function PatientPortalView(props: PatientPortalViewProps) {
                     <span>Vence: {formatShort(parseISO(p.due_date))}</span>
                     {p.paid_at && <span className="text-primary">✓ Pagado: {formatShort(parseISO(p.paid_at))}</span>}
                   </div>
-                  {onPaySession && p.status !== "paid" && p.status !== "cancelled" && p.appointment_id && (
-                    <Button
-                      size="sm"
-                      className="w-full gap-2 mt-3"
-                      onClick={() => onPaySession(p.appointment_id!)}
-                      disabled={payingAppointmentId === p.appointment_id}
-                    >
-                      {payingAppointmentId === p.appointment_id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <CreditCard className="h-4 w-4" />
-                      )}
-                      {payingAppointmentId === p.appointment_id ? "Procesando..." : "Pagar online"}
-                    </Button>
-                  )}
+                  {mpConnected && isPayablePayment(p.status) && (() => {
+                    const hasAppt = !!p.appointment_id;
+                    const isProcessing = hasAppt
+                      ? payingAppointmentId === p.appointment_id
+                      : payingPaymentIds.includes(p.id);
+                    const disabled = isProcessing || payingAny;
+                    const handleClick = () => {
+                      if (hasAppt && onPaySession) onPaySession(p.appointment_id!);
+                      else if (onPayPayments) onPayPayments([p.id]);
+                    };
+                    if (hasAppt ? !onPaySession : !onPayPayments) return null;
+                    return (
+                      <Button
+                        size="sm"
+                        className="w-full gap-2 mt-3 min-h-11"
+                        onClick={handleClick}
+                        disabled={disabled}
+                      >
+                        {isProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
+                        {isProcessing ? "Procesando..." : (hasAppt ? "Pagar sesión" : "Pagar online")}
+                      </Button>
+                    );
+                  })()}
                 </CardContent>
               </Card>
             ))}
