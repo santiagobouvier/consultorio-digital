@@ -214,7 +214,7 @@ const payBadge = (status: string) => {
   if (status === "overdue") return <Badge variant="destructive">Vencido</Badge>;
   if (status === "due_soon") return <Badge className="bg-orange-500 text-white hover:bg-orange-500">Por vencer</Badge>;
   if (status === "cancelled") return <Badge variant="outline">Cancelado</Badge>;
-  return <Badge variant="secondary">Pendiente</Badge>;
+  return <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 hover:bg-amber-500/20">Pendiente</Badge>;
 };
 
 // =============================================
