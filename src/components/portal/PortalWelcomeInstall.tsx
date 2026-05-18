@@ -247,7 +247,7 @@ export const PortalWelcomeInstall = ({
           <ThemeToggle variant="ghost" />
         </div>
 
-        <div className="mx-auto flex min-h-screen w-full max-w-md flex-col items-center justify-center px-5 py-10">
+        <div className="mx-auto flex min-h-screen w-full max-w-md md:max-w-2xl flex-col items-center justify-center px-6 py-10 md:py-14">
           {justInstalled ? (
             <div className="w-full space-y-8 animate-in fade-in zoom-in-95 duration-500">
               <ConfettiCanvas />
