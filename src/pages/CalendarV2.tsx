@@ -96,6 +96,13 @@ const CalendarV2 = () => {
 
   // Calendar state - default to month on desktop
   const [viewType, setViewType] = useState<ViewType>("month");
+  const initializedViewRef = useRef(false);
+  useEffect(() => {
+    if (initializedViewRef.current) return;
+    if (isMobile === undefined || isMobile === null) return;
+    if (isMobile) setViewType("day");
+    initializedViewRef.current = true;
+  }, [isMobile]);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<CalendarFilters>({
