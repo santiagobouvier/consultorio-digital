@@ -469,7 +469,7 @@ const Landing = () => {
 
       {/* ── Portal del Paciente con Marca Blanca ── */}
       <section className="relative px-4 sm:px-6 py-14 sm:py-24 z-10 bg-black">
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-2 gap-8 md:gap-14 items-center">
             <ScrollReveal direction="left">
               <div>
@@ -516,7 +516,7 @@ const Landing = () => {
 
       {/* ── Reserva Online de Turnos ── */}
       <section className="relative px-4 sm:px-6 py-14 sm:py-24 z-10" style={{ backgroundColor: '#080808' }}>
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-2 gap-8 md:gap-14 items-center">
             <ScrollReveal direction="left">
               <BrowserMockup
@@ -612,7 +612,7 @@ const Landing = () => {
 
       {/* ── Calendario Multi-profesional ── */}
       <section className="relative px-4 sm:px-6 py-14 sm:py-24 z-10" style={{ backgroundColor: '#080808' }}>
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-2 gap-8 md:gap-14 items-center">
             <ScrollReveal direction="left">
               <div>
@@ -660,7 +660,7 @@ const Landing = () => {
 
       {/* ── Gestión de Pagos ── */}
       <section className="relative px-4 sm:px-6 py-14 sm:py-24 z-10 bg-black">
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-2 gap-8 md:gap-14 items-center">
             <ScrollReveal direction="left">
               <BrowserMockup
@@ -779,7 +779,7 @@ const Landing = () => {
 
       {/* ── Estadísticas y Centro de Control ── */}
       <section className="relative px-4 sm:px-6 py-14 sm:py-24 z-10 bg-black">
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-2 gap-8 md:gap-14 items-center">
             <ScrollReveal direction="left">
               <div>
