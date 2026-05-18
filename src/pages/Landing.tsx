@@ -36,7 +36,7 @@ import { PLAN_DEFINITIONS, PLAN_ORDER, formatPrice } from "@/lib/plan-definition
 import logoWhite from "@/assets/logo-consultorio-digital-white.png";
 import { InstallAppButton } from "@/components/InstallAppButton";
 import { ScrollReveal } from "@/components/landing/ScrollReveal";
-import { BrowserMockup } from "@/components/landing/BrowserMockup";
+import { ScreenshotPlaceholder } from "@/components/landing/ScreenshotPlaceholder";
 
 // Brand colors
 const BRAND = "#00a5a0";
@@ -49,7 +49,7 @@ const GREEN_GLOW = "rgba(0, 199, 138, 0.15)";
 const faqItems = [
   {
     question: "¿Qué incluye cada plan?",
-    answer: "Todos los planes incluyen las mismas funcionalidades: portal del paciente, agenda, cobro online con Mercado Pago, recordatorios por WhatsApp, estadísticas, app instalable, marca blanca, calendario multi-profesional y más. La única diferencia está en la cantidad de profesionales y pacientes activos que podés manejar."
+    answer: "Todos los planes incluyen las mismas funcionalidades: portal del paciente, agenda, cobro online con Mercado Pago, recordatorios con un click por WhatsApp, estadísticas, app instalable, marca blanca, calendario multi-profesional y más. La única diferencia está en la cantidad de profesionales y pacientes activos que podés manejar."
   },
   {
     question: "¿Puedo cambiar de plan en cualquier momento?",
@@ -77,7 +77,7 @@ const allFeatures = [
   "Portal del paciente",
   "Agenda privada",
   "Gestión de pagos y alertas",
-  "Recordatorios por WhatsApp",
+  "Recordatorios con un click por WhatsApp",
   "Dashboard financiero",
   "App instalable (PWA)",
   "Invitación de pacientes por link",
@@ -407,7 +407,7 @@ const Landing = () => {
                     "Un sistema privado para tu consultorio",
                     "Todo centralizado y claro",
                     "Acceso para vos, tu equipo y tus pacientes",
-                    "Alertas de pagos y recordatorios por WhatsApp",
+                    "Alertas de pagos y recordatorios con un click por WhatsApp",
                   ].map((text, i) => (
                     <li key={i} className="flex items-start gap-3">
                       <Check className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: GREEN }} />
@@ -504,11 +504,7 @@ const Landing = () => {
             </ScrollReveal>
 
             <ScrollReveal direction="right" delay={200}>
-              <BrowserMockup
-                src="/videos/portal.mp4"
-                url="centrobienestar.consultoriodigital.app"
-                accent="#a78bfa"
-              />
+              <ScreenshotPlaceholder accent="#a78bfa" />
             </ScrollReveal>
           </div>
         </div>
@@ -519,11 +515,7 @@ const Landing = () => {
         <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-2 gap-8 md:gap-14 items-center">
             <ScrollReveal direction="left">
-              <BrowserMockup
-                src="/videos/booking.mp4"
-                url="centrobienestar.consultoriodigital.app/reservar"
-                accent="#00c78a"
-              />
+              <ScreenshotPlaceholder accent="#00c78a" />
             </ScrollReveal>
 
             <ScrollReveal direction="right" delay={200}>
@@ -648,11 +640,7 @@ const Landing = () => {
             </ScrollReveal>
 
             <ScrollReveal direction="right" delay={200}>
-              <BrowserMockup
-                src="/videos/agenda.mp4"
-                url="app.consultoriodigital.app/agenda"
-                accent="#00c78a"
-              />
+              <ScreenshotPlaceholder accent="#00c78a" />
             </ScrollReveal>
           </div>
         </div>
@@ -663,11 +651,7 @@ const Landing = () => {
         <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-2 gap-8 md:gap-14 items-center">
             <ScrollReveal direction="left">
-              <BrowserMockup
-                src="/videos/pacientes.mp4"
-                url="app.consultoriodigital.app/pacientes"
-                accent="#f59e0b"
-              />
+              <ScreenshotPlaceholder accent="#f59e0b" />
             </ScrollReveal>
 
             <ScrollReveal direction="right" delay={200}>
@@ -813,11 +797,7 @@ const Landing = () => {
             </ScrollReveal>
 
             <ScrollReveal direction="right" delay={200}>
-              <BrowserMockup
-                src="/videos/sistema.mp4"
-                url="app.consultoriodigital.app/dashboard"
-                accent="#60a5fa"
-              />
+              <ScreenshotPlaceholder accent="#60a5fa" />
             </ScrollReveal>
           </div>
         </div>
