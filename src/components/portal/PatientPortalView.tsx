@@ -1181,6 +1181,52 @@ export function PatientPortalView(props: PatientPortalViewProps) {
         </div>
 
         {extras}
+
+        {/* Cancel confirmation dialog */}
+        <AlertDialog open={!!cancelTarget} onOpenChange={(o) => !o && setCancelTarget(null)}>
+          <AlertDialogContent className="max-w-md">
+            <AlertDialogHeader>
+              <AlertDialogTitle>¿Cancelar esta cita?</AlertDialogTitle>
+              <AlertDialogDescription asChild>
+                <div className="space-y-3">
+                  <p>
+                    Si necesitás reprogramarla, podés usar el botón "Reprogramar" en lugar de cancelar.
+                  </p>
+                  {cancelTarget && isLateCancellation(cancelTarget) && (
+                    <div className="rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60 p-3 text-sm text-amber-700 dark:text-amber-300">
+                      {branding.lateCancellationMessage?.trim() ||
+                        `Faltan menos de ${cancellationHoursNotice} horas para tu cita. La cancelación tardía puede tener cargo según la política del consultorio.`}
+                    </div>
+                  )}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-foreground">
+                      ¿Querés contarle al profesional el motivo? (opcional)
+                    </label>
+                    <Textarea
+                      value={cancelReason}
+                      onChange={(e) => setCancelReason(e.target.value)}
+                      placeholder="Motivo de la cancelación..."
+                      rows={3}
+                      className="resize-none text-sm"
+                    />
+                  </div>
+                </div>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="gap-2 sm:gap-2">
+              <AlertDialogCancel disabled={cancelSubmitting} className="mt-0">
+                Volver
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={(e) => { e.preventDefault(); confirmCancel(); }}
+                disabled={cancelSubmitting}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {cancelSubmitting ? "Cancelando..." : "Confirmar cancelación"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );
