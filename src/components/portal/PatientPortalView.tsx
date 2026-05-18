@@ -285,7 +285,9 @@ export function PatientPortalView(props: PatientPortalViewProps) {
   const totalSessions = pastAppointments.filter(a => a.status === "completed").length;
   const pendingPayments = payments.filter(p => p.status !== "paid" && p.status !== "cancelled");
   const overduePayments = pendingPayments.filter(p => p.status === "overdue");
+  const nonOverduePending = pendingPayments.filter(p => p.status !== "overdue");
   const pendingCount = pendingPayments.length;
+  const nonOverdueCount = nonOverduePending.length;
   const totalPaid = payments.filter(p => p.status === "paid").reduce((s, p) => s + Number(p.amount), 0);
   const overdueCount = overduePayments.length;
   const overdueTotal = overduePayments.reduce((s, p) => s + Number(p.amount), 0);
@@ -529,20 +531,28 @@ export function PatientPortalView(props: PatientPortalViewProps) {
 
       {/* RIGHT (4/12) */}
       <div className="lg:col-span-4 flex flex-col gap-4 lg:gap-5">
-        {/* Stats compactos */}
+        {/* Stats compactos — "Pendientes" cuenta solo los no vencidos (los vencidos los muestra la card alerta grande) */}
         <div className="grid grid-cols-3 gap-2 lg:gap-3">
           {[
-            { value: upcomingAppointments.length, label: "Próximas", accent: false },
-            { value: totalSessions, label: "Sesiones", accent: false },
-            { value: pendingCount, label: "Pendientes", accent: pendingCount > 0 },
+            { value: upcomingAppointments.length, label: "Próximas", tone: "neutral" as const },
+            { value: totalSessions, label: "Sesiones", tone: "neutral" as const },
+            {
+              value: nonOverdueCount,
+              label: "Pendientes",
+              tone: (nonOverdueCount > 0 ? "warning" : "neutral") as "warning" | "neutral",
+            },
           ].map((stat, i) => (
             <div
               key={i}
               className={`rounded-2xl border p-3 lg:p-4 text-center transition-all hover:shadow-md ${
-                stat.accent ? "border-destructive/30 bg-destructive/5" : "border-border/60 bg-card"
+                stat.tone === "warning"
+                  ? "border-amber-500/30 bg-amber-500/5"
+                  : "border-border/60 bg-card"
               }`}
             >
-              <p className={`text-2xl lg:text-3xl font-bold ${stat.accent ? "text-destructive" : "text-primary"}`}>
+              <p className={`text-2xl lg:text-3xl font-bold ${
+                stat.tone === "warning" ? "text-amber-600 dark:text-amber-400" : "text-primary"
+              }`}>
                 {stat.value}
               </p>
               <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mt-1">
@@ -552,29 +562,36 @@ export function PatientPortalView(props: PatientPortalViewProps) {
           ))}
         </div>
 
-        {/* Pago pendiente */}
-        {pendingCount > 0 && pendingPayments[0] && (
+        {/* Pago pendiente (no vencido) — los vencidos los muestra la card alerta grande arriba */}
+        {nonOverdueCount > 0 && nonOverduePending[0] ? (
           <button
             onClick={() => setTab("pagos")}
-            className="w-full text-left rounded-2xl border border-destructive/20 bg-destructive/5 p-4 lg:p-5 flex items-center justify-between gap-3 group hover:bg-destructive/10 transition-colors"
+            className="w-full text-left rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 lg:p-5 flex items-center justify-between gap-3 group hover:bg-amber-500/10 transition-colors"
           >
             <div className="flex items-center gap-3 min-w-0">
-              <div className="h-10 w-10 rounded-full bg-destructive/15 flex items-center justify-center shrink-0">
-                <AlertCircle className="h-5 w-5 text-destructive" />
+              <div className="h-10 w-10 rounded-full bg-amber-500/15 flex items-center justify-center shrink-0">
+                <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-semibold text-destructive">
-                  {pendingCount === 1 ? "Pago pendiente" : `${pendingCount} pagos pendientes`}
+                <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">
+                  {nonOverdueCount === 1 ? "Pago pendiente" : `${nonOverdueCount} pagos pendientes`}
                 </p>
                 <p className="text-xs text-muted-foreground truncate">
-                  Vence {formatShort(parseISO(pendingPayments[0].due_date))}
+                  Vence {formatShort(parseISO(nonOverduePending[0].due_date))}
                 </p>
               </div>
             </div>
             <span className="text-sm font-bold text-foreground shrink-0">
-              {formatCurrency(Number(pendingPayments[0].amount), pendingPayments[0].currency || "UYU")}
+              {formatCurrency(Number(nonOverduePending[0].amount), nonOverduePending[0].currency || "UYU")}
             </span>
           </button>
+        ) : overdueCount === 0 && (
+          <div className="w-full rounded-2xl border border-border/60 bg-card p-4 lg:p-5 flex items-center gap-3 text-muted-foreground">
+            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+              <Heart className="h-5 w-5 text-primary" />
+            </div>
+            <p className="text-sm font-medium">Al día ✓</p>
+          </div>
         )}
 
         {/* Configuración rápida agrupada */}
