@@ -36,6 +36,7 @@ import { PLAN_DEFINITIONS, PLAN_ORDER, formatPrice } from "@/lib/plan-definition
 import logoWhite from "@/assets/logo-consultorio-digital-white.png";
 import { InstallAppButton } from "@/components/InstallAppButton";
 import { ScrollReveal } from "@/components/landing/ScrollReveal";
+import { BrowserMockup } from "@/components/landing/BrowserMockup";
 
 // Brand colors
 const BRAND = "#00a5a0";
@@ -503,46 +504,11 @@ const Landing = () => {
             </ScrollReveal>
 
             <ScrollReveal direction="right" delay={200}>
-              <div className="flex justify-center">
-                <div 
-                  className="relative w-56 sm:w-64 rounded-[2rem] border-2 p-3 overflow-hidden"
-                  style={{ borderColor: 'rgba(147, 51, 234, 0.3)', backgroundColor: '#0a0a0a' }}
-                >
-                  <div className="w-20 h-5 rounded-b-xl mx-auto mb-3" style={{ backgroundColor: '#0a0a0a', border: '1px solid rgba(255,255,255,0.1)', borderTop: 'none' }} />
-                  <div className="rounded-xl overflow-hidden" style={{ backgroundColor: '#f8f9fa' }}>
-                    <div className="p-3 text-center" style={{ backgroundColor: '#a78bfa' }}>
-                      <div className="w-8 h-8 rounded-full bg-white/20 mx-auto mb-1" />
-                      <p className="text-white text-[10px] font-bold">Tu Consultorio</p>
-                    </div>
-                    <div className="flex border-b border-gray-200">
-                      {["Resumen", "Citas", "Pagos"].map((tab, i) => (
-                        <div key={tab} className={`flex-1 text-center py-1.5 text-[8px] font-medium ${i === 0 ? 'text-purple-600 border-b-2 border-purple-500' : 'text-gray-400'}`}>
-                          {tab}
-                        </div>
-                      ))}
-                    </div>
-                    <div className="p-2.5 space-y-2">
-                      <div className="rounded-lg bg-white p-2 shadow-sm border border-gray-100">
-                        <p className="text-[8px] text-gray-500">Próxima cita</p>
-                        <p className="text-[9px] font-bold text-gray-800">Martes 15, 10:00</p>
-                      </div>
-                      <div className="rounded-lg bg-white p-2 shadow-sm border border-gray-100">
-                        <p className="text-[8px] text-gray-500">Estado de pagos</p>
-                        <div className="flex items-center gap-1 mt-0.5">
-                          <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                          <p className="text-[9px] text-green-600 font-medium">Al día</p>
-                        </div>
-                      </div>
-                      <div className="rounded-lg bg-purple-50 p-2 border border-purple-100">
-                        <p className="text-[8px] text-purple-600 font-medium">Reservar nuevo turno →</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex justify-center py-2 mt-1">
-                    <div className="w-16 h-1 rounded-full bg-white/20" />
-                  </div>
-                </div>
-              </div>
+              <BrowserMockup
+                src="/videos/portal.mp4"
+                url="centrobienestar.consultoriodigital.app"
+                accent="#a78bfa"
+              />
             </ScrollReveal>
           </div>
         </div>
@@ -553,54 +519,11 @@ const Landing = () => {
         <div className="max-w-5xl mx-auto">
           <div className="grid md:grid-cols-2 gap-8 md:gap-14 items-center">
             <ScrollReveal direction="left">
-              <div 
-                className="rounded-xl sm:rounded-2xl border border-white/10 overflow-hidden"
-                style={{ backgroundColor: '#111111' }}
-              >
-                <div className="p-4 sm:p-6">
-                  <p className="text-xs text-gray-500 mb-3 font-medium">Seleccioná un horario</p>
-                  <div className="grid grid-cols-7 gap-1 mb-4">
-                    {["L","M","M","J","V","S","D"].map((d) => (
-                      <div key={d} className="text-[9px] text-gray-600 text-center py-1">{d}</div>
-                    ))}
-                    {Array.from({length: 14}, (_, i) => {
-                      const day = i + 10;
-                      const available = [11, 13, 15, 18, 20, 22].includes(day);
-                      const selected = day === 15;
-                      return (
-                        <div
-                          key={i}
-                          className="text-[10px] text-center py-1.5 rounded-md transition-colors"
-                          style={{
-                            backgroundColor: selected ? GREEN : available ? 'rgba(0,199,138,0.1)' : 'transparent',
-                            color: selected ? 'white' : available ? GREEN : '#444',
-                            fontWeight: selected || available ? 600 : 400,
-                          }}
-                        >
-                          {day}
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <p className="text-[10px] text-gray-500 mb-2">Horarios para Mar 15</p>
-                  <div className="grid grid-cols-3 gap-2">
-                    {["09:00", "10:30", "14:00", "15:30", "17:00"].map((time, i) => (
-                      <div
-                        key={time}
-                        className="text-center text-[10px] py-2 rounded-lg border transition-all"
-                        style={{
-                          backgroundColor: i === 2 ? GREEN : '#1a1a1a',
-                          borderColor: i === 2 ? GREEN : 'rgba(255,255,255,0.08)',
-                          color: i === 2 ? 'white' : '#aaa',
-                          fontWeight: i === 2 ? 600 : 400,
-                        }}
-                      >
-                        {time}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
+              <BrowserMockup
+                src="/videos/booking.mp4"
+                url="centrobienestar.consultoriodigital.app/reservar"
+                accent="#00c78a"
+              />
             </ScrollReveal>
 
             <ScrollReveal direction="right" delay={200}>
@@ -725,56 +648,11 @@ const Landing = () => {
             </ScrollReveal>
 
             <ScrollReveal direction="right" delay={200}>
-              <div 
-                className="rounded-xl sm:rounded-2xl border border-white/10 overflow-hidden"
-                style={{ backgroundColor: '#111111' }}
-              >
-                <div className="flex items-center justify-between p-3 border-b border-white/5">
-                  <p className="text-xs font-medium text-white">Martes 15 de Abril</p>
-                  <div className="flex gap-1">
-                    {["Día", "Sem", "Mes"].map((v, i) => (
-                      <span 
-                        key={v} 
-                        className="text-[9px] px-2 py-1 rounded-md"
-                        style={{ 
-                          backgroundColor: i === 0 ? 'rgba(0,199,138,0.15)' : 'transparent',
-                          color: i === 0 ? GREEN : '#666',
-                        }}
-                      >
-                        {v}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-                <div className="p-3 space-y-2">
-                  {[
-                    { time: "09:00", name: "María López", color: "#60a5fa", duration: "50 min" },
-                    { time: "10:00", name: "Juan Pérez", color: "#a78bfa", duration: "50 min" },
-                    { time: "10:00", name: "Ana Rodríguez", color: "#60a5fa", duration: "50 min" },
-                    { time: "11:00", name: "Carlos Fernández", color: "#a78bfa", duration: "50 min" },
-                    { time: "14:00", name: "Laura García", color: "#60a5fa", duration: "50 min" },
-                  ].map((appt, i) => (
-                    <div key={i} className="flex items-center gap-3 p-2 rounded-lg" style={{ backgroundColor: '#1a1a1a' }}>
-                      <div className="w-1 h-8 rounded-full" style={{ backgroundColor: appt.color }} />
-                      <div className="flex-1">
-                        <p className="text-[10px] text-gray-500">{appt.time}</p>
-                        <p className="text-xs text-white font-medium">{appt.name}</p>
-                      </div>
-                      <span className="text-[9px] text-gray-600">{appt.duration}</span>
-                    </div>
-                  ))}
-                </div>
-                <div className="flex gap-4 px-3 pb-3">
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#60a5fa' }} />
-                    <span className="text-[9px] text-gray-500">Dra. Martínez</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#a78bfa' }} />
-                    <span className="text-[9px] text-gray-500">Lic. Gómez</span>
-                  </div>
-                </div>
-              </div>
+              <BrowserMockup
+                src="/videos/agenda.mp4"
+                url="app.consultoriodigital.app/agenda"
+                accent="#00c78a"
+              />
             </ScrollReveal>
           </div>
         </div>
@@ -785,51 +663,11 @@ const Landing = () => {
         <div className="max-w-5xl mx-auto">
           <div className="grid md:grid-cols-2 gap-8 md:gap-14 items-center">
             <ScrollReveal direction="left">
-              <div 
-                className="rounded-xl sm:rounded-2xl border border-white/10 overflow-hidden"
-                style={{ backgroundColor: '#111111' }}
-              >
-                <div className="p-4 sm:p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <p className="text-xs font-medium text-white">Pagos — Abril 2025</p>
-                    <span className="text-[9px] px-2 py-1 rounded-md" style={{ backgroundColor: GREEN_BG, color: GREEN }}>
-                      Exportar CSV
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2 mb-4">
-                    {[
-                      { label: "Cobrado", value: "$48.500", color: GREEN },
-                      { label: "Pendiente", value: "$12.800", color: "#f59e0b" },
-                      { label: "Vencido", value: "$3.200", color: "#ef4444" },
-                    ].map((s) => (
-                      <div key={s.label} className="rounded-lg p-2 text-center" style={{ backgroundColor: '#1a1a1a' }}>
-                        <p className="text-[8px] text-gray-500">{s.label}</p>
-                        <p className="text-xs font-bold" style={{ color: s.color }}>{s.value}</p>
-                      </div>
-                    ))}
-                  </div>
-                  {[
-                    { name: "María L.", amount: "$2.500", status: "Pagado", statusColor: GREEN },
-                    { name: "Juan P.", amount: "$2.500", status: "Pendiente", statusColor: "#f59e0b" },
-                    { name: "Ana R.", amount: "$2.500", status: "Vencido", statusColor: "#ef4444" },
-                  ].map((p, i) => (
-                    <div key={i} className="flex items-center justify-between py-2.5 border-t border-white/5">
-                      <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full flex items-center justify-center text-[8px] font-bold" style={{ backgroundColor: GREEN_BG, color: GREEN }}>
-                          {p.name[0]}
-                        </div>
-                        <span className="text-xs text-white">{p.name}</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs text-gray-400">{p.amount}</span>
-                        <span className="text-[9px] px-2 py-0.5 rounded-full font-medium" style={{ color: p.statusColor, backgroundColor: `${p.statusColor}15` }}>
-                          {p.status}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <BrowserMockup
+                src="/videos/pacientes.mp4"
+                url="app.consultoriodigital.app/pacientes"
+                accent="#f59e0b"
+              />
             </ScrollReveal>
 
             <ScrollReveal direction="right" delay={200}>
@@ -975,46 +813,11 @@ const Landing = () => {
             </ScrollReveal>
 
             <ScrollReveal direction="right" delay={200}>
-              <div 
-                className="rounded-xl sm:rounded-2xl border border-white/10 overflow-hidden p-4 sm:p-6"
-                style={{ backgroundColor: '#111111' }}
-              >
-                <p className="text-xs font-medium text-white mb-4">Centro de Control</p>
-                <div className="grid grid-cols-2 gap-3 mb-4">
-                  {[
-                    { label: "Citas hoy", value: "5", icon: "📅" },
-                    { label: "Pacientes activos", value: "24", icon: "👥" },
-                    { label: "Cobros pendientes", value: "3", icon: "💰" },
-                    { label: "Recordatorios", value: "2", icon: "🔔" },
-                  ].map((s) => (
-                    <div key={s.label} className="rounded-lg p-3 flex items-center gap-3" style={{ backgroundColor: '#1a1a1a' }}>
-                      <span className="text-lg">{s.icon}</span>
-                      <div>
-                        <p className="text-[9px] text-gray-500">{s.label}</p>
-                        <p className="text-sm font-bold text-white">{s.value}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <p className="text-[10px] text-gray-500 mb-2">Citas por semana</p>
-                <div className="flex items-end gap-1.5 h-16">
-                  {[40, 65, 50, 80, 60, 90, 75].map((h, i) => (
-                    <div 
-                      key={i}
-                      className="flex-1 rounded-t-sm transition-all"
-                      style={{ 
-                        height: `${h}%`, 
-                        backgroundColor: i === 5 ? GREEN : 'rgba(0,199,138,0.2)',
-                      }}
-                    />
-                  ))}
-                </div>
-                <div className="flex justify-between mt-1">
-                  {["L","M","M","J","V","S","D"].map(d => (
-                    <span key={d} className="text-[8px] text-gray-600 flex-1 text-center">{d}</span>
-                  ))}
-                </div>
-              </div>
+              <BrowserMockup
+                src="/videos/sistema.mp4"
+                url="app.consultoriodigital.app/dashboard"
+                accent="#60a5fa"
+              />
             </ScrollReveal>
           </div>
         </div>
