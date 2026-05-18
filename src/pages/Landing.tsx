@@ -36,6 +36,7 @@ import { PLAN_DEFINITIONS, PLAN_ORDER, formatPrice } from "@/lib/plan-definition
 import logoWhite from "@/assets/logo-consultorio-digital-white.png";
 import { InstallAppButton } from "@/components/InstallAppButton";
 import { ScrollReveal } from "@/components/landing/ScrollReveal";
+import { BrowserMockup } from "@/components/landing/BrowserMockup";
 
 // Brand colors
 const BRAND = "#00a5a0";
