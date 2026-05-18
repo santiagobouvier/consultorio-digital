@@ -118,6 +118,14 @@ export interface PatientPortalViewProps {
   // Pay
   onPaySession?: (appointmentId: string) => Promise<void> | void;
   payingAppointmentId?: string | null;
+  /** Pay one or more payment rows in a single MP preference. */
+  onPayPayments?: (paymentIds: string[]) => Promise<void> | void;
+  /** IDs currently being processed. */
+  payingPaymentIds?: string[];
+  /** Whether the clinic has Mercado Pago connected. Controls visibility of "pay online" buttons. */
+  mpConnected?: boolean;
+  /** When set, switch to the "pagos" tab and scroll to the overdue section. The wrapper resets it. */
+  focusOverdueTick?: number;
   // Extras rendered by wrapper (e.g. PatientBookingModal)
   extras?: React.ReactNode;
 }
