@@ -300,6 +300,99 @@ export function PatientPortalView(props: PatientPortalViewProps) {
   const isPayablePayment = (status: string) =>
     status === "pending" || status === "due_soon" || status === "overdue";
 
+  // Group payments by appointment for inline actions in Historial
+  const paymentByAppointment = useMemo(() => {
+    const map = new Map<string, PortalPayment>();
+    // Prefer paid > overdue > pending > due_soon order for the most relevant one
+    const priority = (s: string) => s === "paid" ? 3 : s === "overdue" ? 2 : s === "pending" || s === "due_soon" ? 1 : 0;
+    for (const p of payments) {
+      if (!p.appointment_id) continue;
+      const existing = map.get(p.appointment_id);
+      if (!existing || priority(p.status) > priority(existing.status)) {
+        map.set(p.appointment_id, p);
+      }
+    }
+    return map;
+  }, [payments]);
+
+  // Sort helpers
+  const sortedOverdue = useMemo(
+    () => [...overduePayments].sort((a, b) => +parseISO(a.due_date) - +parseISO(b.due_date)),
+    [overduePayments],
+  );
+  const sortedPending = useMemo(
+    () => [...nonOverduePending].sort((a, b) => +parseISO(a.due_date) - +parseISO(b.due_date)),
+    [nonOverduePending],
+  );
+  const paidPayments = useMemo(
+    () => payments
+      .filter(p => p.status === "paid")
+      .sort((a, b) => +parseISO(b.paid_at || b.due_date) - +parseISO(a.paid_at || a.due_date)),
+    [payments],
+  );
+
+  const [paidHistoryLimit, setPaidHistoryLimit] = useState(10);
+
+  // Days helpers
+  const daysDelta = (iso: string) => {
+    const diff = parseISO(iso).getTime() - Date.now();
+    return Math.round(diff / (1000 * 60 * 60 * 24));
+  };
+  const overdueText = (iso: string) => {
+    const d = -daysDelta(iso);
+    if (d <= 0) return "Vencido hoy";
+    if (d === 1) return "Venció hace 1 día";
+    return `Venció hace ${d} días`;
+  };
+  const pendingText = (iso: string) => {
+    const d = daysDelta(iso);
+    if (d < 0) return overdueText(iso);
+    if (d === 0) return "Vence hoy";
+    if (d === 1) return "Vence mañana";
+    if (d <= 7) return `Vence en ${d} días`;
+    return `Vence el ${formatShort(parseISO(iso))}`;
+  };
+
+  // Trigger single payment from a PortalPayment row
+  const paySinglePayment = (p: PortalPayment) => {
+    if (p.appointment_id && onPaySession) {
+      onPaySession(p.appointment_id);
+    } else if (onPayPayments) {
+      onPayPayments([p.id]);
+    }
+  };
+
+  const isPaymentProcessing = (p: PortalPayment) =>
+    p.appointment_id
+      ? payingAppointmentId === p.appointment_id
+      : payingPaymentIds.includes(p.id);
+
+  const handleDownloadReceipt = async (p: PortalPayment) => {
+    try {
+      await downloadReceiptPdf({
+        payment: {
+          id: p.id,
+          amount: Number(p.amount),
+          currency: p.currency || "UYU",
+          paid_at: p.paid_at,
+          due_date: p.due_date,
+          method: p.method ?? null,
+          notes: p.notes,
+        },
+        patient: { full_name: patient.full_name, email: patient.email },
+        clinic: {
+          name: branding.name,
+          specialty: branding.specialty,
+          logoUrl: branding.logoUrl || undefined,
+          contactEmail: branding.contactEmail,
+        },
+      });
+    } catch (err) {
+      console.error("Receipt PDF error:", err);
+      sonnerToast.error("No pudimos generar el comprobante. Intentá de nuevo.");
+    }
+  };
+
   const handleBannerPay = () => {
     if (!onPayPayments || overdueCount === 0) return;
     if (overdueCount === 1) {
