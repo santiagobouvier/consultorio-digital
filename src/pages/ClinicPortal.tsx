@@ -255,10 +255,15 @@ const ClinicPortal = () => {
   useEffect(() => {
     const paymentStatus = searchParams.get("payment");
     const apptId = searchParams.get("appointment_id");
-    if (paymentStatus === "success" && apptId) {
-      toast({ title: "¡Pago recibido!", description: "Tu sesión fue confirmada exitosamente." });
+    const isBatch = searchParams.get("batch");
+    if (paymentStatus === "success" && (apptId || isBatch)) {
+      toast({
+        title: "¡Pago recibido!",
+        description: isBatch ? "Tus pagos fueron registrados exitosamente." : "Tu sesión fue confirmada exitosamente.",
+      });
       searchParams.delete("payment");
       searchParams.delete("appointment_id");
+      searchParams.delete("batch");
       setSearchParams(searchParams, { replace: true });
       setTimeout(() => {
         if (patient && branding) reloadPatientData(patient.id, branding.id);
