@@ -296,6 +296,19 @@ const ClinicPortal = () => {
     })();
   }, [slug]);
 
+  // Check if clinic has MP connected
+  useEffect(() => {
+    if (!branding?.id) return;
+    (async () => {
+      const { data } = await supabase
+        .from("payment_policies")
+        .select("mp_access_token")
+        .eq("business_id", branding.id)
+        .maybeSingle();
+      setMpConnected(!!data?.mp_access_token);
+    })();
+  }, [branding?.id]);
+
   // Inject dynamic manifest
   useEffect(() => {
     if (!slug) return;
