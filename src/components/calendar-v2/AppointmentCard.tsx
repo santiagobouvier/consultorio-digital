@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { format } from "date-fns";
-import { CalendarAppointment, APPOINTMENT_STATUS_MAP, getPaymentColorInfo } from "./types";
+import { CalendarAppointment, APPOINTMENT_STATUS_MAP, getPaymentColorInfo, getStatusColor } from "./types";
 import { Video, MapPin, Repeat } from "lucide-react";
 
 const getInitials = (name?: string | null) => {
@@ -27,6 +27,7 @@ export const AppointmentCard = ({
   const statusInfo = APPOINTMENT_STATUS_MAP[appointment.status];
   const paymentInfo = getPaymentColorInfo(appointment.paymentColor);
   const professionalColor = appointment.professional?.color || "#00b5b5";
+  const statusColor = getStatusColor(appointment.status);
 
   const formatTime = (datetime: string) => format(new Date(datetime), "HH:mm");
 
@@ -39,7 +40,8 @@ export const AppointmentCard = ({
         className={cn(
           "w-full text-left p-2.5 rounded-xl bg-card border transition-all duration-200",
           "hover:shadow-md hover:-translate-y-0.5 active:scale-[0.97]",
-          showProfessionalColor && "border-l-4"
+          "border-l-4",
+          !showProfessionalColor && statusColor.border
         )}
         style={{
           borderLeftColor: showProfessionalColor ? professionalColor : undefined,
@@ -88,7 +90,8 @@ export const AppointmentCard = ({
       className={cn(
         "w-full text-left p-4 rounded-2xl bg-card border transition-all duration-200",
         "hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.97] active:shadow-sm",
-        showProfessionalColor && "border-l-4"
+        "border-l-4",
+        !showProfessionalColor && statusColor.border
       )}
       style={{
         borderLeftColor: showProfessionalColor ? professionalColor : undefined,

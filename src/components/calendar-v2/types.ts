@@ -98,3 +98,43 @@ export const getPaymentColorInfo = (color?: PaymentColor) => {
       return null;
   }
 };
+
+/**
+ * Color por status de la cita, usado como borde lateral / acento.
+ * Independiente del color de pago (que va como dot informativo).
+ */
+export const getStatusColor = (status: AppointmentStatus): {
+  border: string;        // tailwind class for border-l color
+  bgTint: string;        // soft background tint
+  swatch: string;        // solid bg color for dots/badges
+} => {
+  switch (status) {
+    case "pending":
+      return { border: "border-l-amber-500", bgTint: "bg-amber-50 dark:bg-amber-500/10", swatch: "bg-amber-500" };
+    case "reschedule_requested":
+      return { border: "border-l-yellow-400", bgTint: "bg-yellow-50 dark:bg-yellow-500/10", swatch: "bg-yellow-400" };
+    case "cancelled_by_patient":
+      return { border: "border-l-rose-500", bgTint: "bg-rose-50 dark:bg-rose-500/10", swatch: "bg-rose-500" };
+    case "cancelled":
+    case "attended":
+    case "no_show":
+      return { border: "border-l-muted-foreground/40", bgTint: "bg-muted/40", swatch: "bg-muted-foreground/40" };
+    case "scheduled":
+    case "confirmed":
+    default:
+      return { border: "border-l-primary", bgTint: "bg-primary/10", swatch: "bg-primary" };
+  }
+};
+
+/**
+ * Abrevia un nombre completo a "Nombre I." para que entre en celdas estrechas.
+ * No usa ellipsis: corta de forma legible.
+ */
+export const abbreviatePatientName = (fullName?: string | null): string => {
+  if (!fullName) return "Sin nombre";
+  const parts = fullName.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0];
+  const first = parts[0];
+  const lastInitial = parts[parts.length - 1][0]?.toUpperCase();
+  return lastInitial ? `${first} ${lastInitial}.` : first;
+};

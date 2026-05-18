@@ -96,6 +96,13 @@ const CalendarV2 = () => {
 
   // Calendar state - default to month on desktop
   const [viewType, setViewType] = useState<ViewType>("month");
+  // Mobile default: vista día (más legible que mensual en pantallas chicas).
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.innerWidth < 768) {
+      setViewType("day");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<CalendarFilters>({
@@ -552,6 +559,13 @@ const CalendarV2 = () => {
 
         {/* Professional color legend */}
         {showProfessionalColors && <ProfessionalColorLegend professionals={professionals} />}
+
+        {/* Hint: vista mensual en mobile vertical */}
+        {isMobile && viewType === "month" && (
+          <div className="rounded-lg border border-dashed border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground text-center">
+            Tip: la vista mensual se ve mejor en horizontal o cambiando a vista día.
+          </div>
+        )}
 
         {/* Calendar views with transition */}
         <div

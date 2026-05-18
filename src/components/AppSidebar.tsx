@@ -39,7 +39,7 @@ const mainItems = [
   { title: "Pagos", url: "/pagos", icon: Receipt },
   { title: "Recordatorios", url: "/recordatorios-pendientes", icon: Clock },
   { title: "Horarios", url: "/horarios-disponibles", icon: AlarmClock },
-  { title: "Solicitudes", url: "/solicitudes", icon: FileText },
+  { title: "Pendientes", url: "/solicitudes", icon: FileText },
   { title: "Estadísticas", url: "/estadisticas", icon: BarChart3 },
 ];
 

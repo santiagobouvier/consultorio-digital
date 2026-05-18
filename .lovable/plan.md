@@ -1,48 +1,85 @@
-## Resumen
-Rediseño profundo de la experiencia de pagos en el portal del paciente: tab Pagos con 3 secciones jerarquizadas, botón individual de pago por cada item, pagos inline en Historial, comprobantes PDF descargables (client-side con jsPDF) y flujo MP en misma pestaña con feedback claro.
+## Plan — Pendientes unificados + UX agenda
 
-## Archivos a tocar
+### Problema 1 — Unificar "Solicitudes" → "Pendientes"
 
-### Frontend
-- `src/components/portal/PatientPortalView.tsx` — pieza central
-  - Rediseño completo de la tab "Pagos": secciones Vencidos (rojo) / Pendientes (ámbar) / Historial (neutro) con cards individuales
-  - Botón "Pagar" por item (single payment, no batch)
-  - Botón "Pagar todos los vencidos/pendientes" solo si hay 2+
-  - Tab "Historial" (citas pasadas): badge + botón inline ("Pagar" / "Comprobante") según estado del pago asociado
-  - Loading spinner por botón (no full screen)
-  - Detección de `?payment=success` y `?payment=cancelled` con toasts (sonner) grandes + `history.replaceState`
-  - Mobile: padding 16-20px, botones full-width min-h-11, sticky bottom bar opcional con "Pagar vencidos"
-- `src/pages/ClinicPortal.tsx` — wiring de los handlers
-  - `handlePaySingle(payment)` → invoca `create-session-payment` (si tiene appointment_id) o `create-patient-payment` (genérico con 1 id)
-  - `handlePayAllOverdue` / `handlePayAllPending` → batch existente
-  - Manejo de query params al volver de MP
-- `src/lib/receipt-pdf.ts` (nuevo) — generación client-side del comprobante con `jsPDF`
-  - Recibe: payment, patient, business (logo/nombre), professional opcional
-  - Genera PDF con número correlativo derivado del `payment.id` (últimos 8 chars upper) — sin tocar DB
-  - Descarga con `comprobante-{numero}.pdf`
+**URL y naming**
+- Mantener URL `/solicitudes` (evita romper links/bookmarks). Cambiar:
+  - Título de página: "Pendientes de aprobar"
+  - Label del sidebar: "Pendientes"
+  - Texto del breadcrumb/botón "Volver"
 
-### Dependencias
-- Agregar `jspdf` (~50KB gz) vía `bun add jspdf`
+**Query unificada (frontend, sin RPC)**
+Dos `useQuery` en paralelo dentro de `AppointmentRequests.tsx`, merge en memoria. Razón: las tablas tienen RLS distintas y schemas distintos; una RPC agregaría complejidad sin beneficio. El volumen es bajo (límite 50 c/u).
 
-### Backend
-- **Sin cambios en edge functions ni schema.** Reusamos `create-session-payment` y `create-patient-payment` existentes.
-- **Sin columna `receipt_number`**: derivamos el número del `payment.id` (ej: `CD-{primeros 8 chars del uuid en mayúsculas}`). Es estable, único y no requiere migración. Si en el futuro se quiere correlativo secuencial, se agrega como columna aparte.
-
-## Decisiones técnicas confirmadas
-
-1. **PDF**: client-side con jsPDF. Más rápido de implementar, sin costo de edge function, sin latencia de red. El paciente solo descarga comprobantes de sus propios pagos (los datos ya vienen del query RLS-protegido).
-2. **receipt_number**: derivado del id, sin migración. Formato `CD-XXXXXXXX`.
-3. **No tocar**: modelo de payments, banner global, card alerta del Resumen, panel del profesional, lógica de creación de pagos.
-
-## Flujo de pago unificado
 ```
-click "Pagar" → setLoading(paymentId) → invoke edge function
-              → window.location.href = init_point (misma pestaña)
-              → MP redirige a /portal/:slug?payment=success&payment_id=X
-              → useEffect detecta param → toast success → replaceState → refetch
+Q1: appointment_requests where status='pending'
+Q2: appointments where status='pending' AND source='patient_portal'
+     join patients(full_name, email, whatsapp_phone)
 ```
 
-## Criterios de aceptación que cubre
-Todos los del brief excepto: no se implementa generación server-side de PDF (se hace client-side, equivalente funcional confirmado en el brief como alternativa válida).
+Normalizar a un tipo común `PendingItem`:
+```ts
+{ kind: 'portal_booking' | 'public_request',
+  id, datetime, name, email, phone, notes, modality,
+  patient_id?, appointment_id?, request_id? }
+```
 
-¿OK para codear?
+Ordenar por `datetime` ascendente. Render con borde lateral:
+- `portal_booking` → `border-l-primary` (azul) + badge "Paciente registrado"
+- `public_request` → `border-l-violet-500` + badge "Primera consulta"
+
+**Acciones**
+- Confirmar portal booking: `update appointments set status='scheduled'` + `notifyPatient` (push, ya existe) + toast "Cita confirmada. {Paciente} fue notificado."
+- Rechazar portal booking: `update appointments set status='cancelled', cancellation_reason, cancelled_at=now()` + notifyPatient
+- Aceptar/Rechazar public request: lógica actual intacta
+
+**Reprogramaciones**: NO unificar en este pass (queda donde está, en detalle de cita). Riesgo/scope mayor sin pedido explícito firme.
+
+**Contador sidebar**
+Modificar `use-pending-requests-count.ts` para sumar:
+- `appointment_requests` count where status='pending'
+- `appointments` count where status='pending' AND source='patient_portal'
+
+### Problema 2 — UX vista mensual de agenda
+
+Tocar **solo** `MonthViewV2.tsx` (y `MonthDayDrawer.tsx` si hace falta para colores). No tocar la lógica de datos.
+
+**Cards en celdas de día**
+- Replace text-overflow ellipsis con lógica de abreviación: si nombre no entra, usar `Nombre I.` (inicial apellido). Si sigue sin entrar, solo nombre.
+- Mostrar máx 2 citas + `+N más` si hay 3+. Click en `+N` abre el `MonthDayDrawer` (ya existe).
+
+**Código de colores unificado** (helper en `calendar-v2/types.ts`)
+```
+scheduled/confirmed → primary (azul)
+pending (portal)    → amber-500
+reschedule_requested → yellow-400
+cancelled_by_patient → red-500
+cancelled / attended → gray-400
+```
+Aplicar en Month/Week/Day views (border-left de la card).
+
+**Indicadores día**
+- Total de citas: número pequeño gris top-right (info, no alerta)
+- Punto rojo SOLO si: hay pagos vencidos del día O hay reservas pending del portal. Tooltip al hover explicando.
+
+**Mobile**
+- En `CalendarV2.tsx`, si `useIsMobile()` y no hay viewType en URL → default `day`.
+- Banner sutil al cambiar a `month` en mobile: "Se ve mejor en horizontal."
+
+### Archivos a tocar
+
+- `src/pages/AppointmentRequests.tsx` — rediseño completo (query unificada, render dual)
+- `src/components/AppSidebar.tsx` / `PremiumSidebar.tsx` — label "Pendientes"
+- `src/hooks/use-pending-requests-count.ts` — sumar ambos counts
+- `src/components/calendar-v2/MonthViewV2.tsx` — cards, abreviación, indicadores
+- `src/components/calendar-v2/types.ts` — helper de colores unificado por status
+- `src/components/calendar-v2/DayViewV2.tsx`, `WeekViewV2.tsx` — aplicar colores
+- `src/pages/CalendarV2.tsx` — default mobile a day, banner month-mobile
+
+### Preguntas que me hiciste
+
+1. **URL**: mantener `/solicitudes`, solo cambia título y sidebar label.
+2. **Query**: 2 queries en frontend con merge. Sin RPC.
+3. **Cards de agenda**: cambios estructurales (no solo CSS) — necesito ajustar lógica de truncado y agregar helper de colores en `types.ts`.
+
+¿OK para ejecutar?
