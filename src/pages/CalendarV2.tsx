@@ -96,13 +96,13 @@ const CalendarV2 = () => {
 
   // Calendar state - default to month on desktop
   const [viewType, setViewType] = useState<ViewType>("month");
-  const initializedViewRef = useRef(false);
+  // Mobile default: vista día (más legible que mensual en pantallas chicas).
   useEffect(() => {
-    if (initializedViewRef.current) return;
-    if (isMobile === undefined || isMobile === null) return;
-    if (isMobile) setViewType("day");
-    initializedViewRef.current = true;
-  }, [isMobile]);
+    if (typeof window !== "undefined" && window.innerWidth < 768) {
+      setViewType("day");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<CalendarFilters>({
