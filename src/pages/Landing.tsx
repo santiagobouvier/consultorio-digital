@@ -504,46 +504,11 @@ const Landing = () => {
             </ScrollReveal>
 
             <ScrollReveal direction="right" delay={200}>
-              <div className="flex justify-center">
-                <div 
-                  className="relative w-56 sm:w-64 rounded-[2rem] border-2 p-3 overflow-hidden"
-                  style={{ borderColor: 'rgba(147, 51, 234, 0.3)', backgroundColor: '#0a0a0a' }}
-                >
-                  <div className="w-20 h-5 rounded-b-xl mx-auto mb-3" style={{ backgroundColor: '#0a0a0a', border: '1px solid rgba(255,255,255,0.1)', borderTop: 'none' }} />
-                  <div className="rounded-xl overflow-hidden" style={{ backgroundColor: '#f8f9fa' }}>
-                    <div className="p-3 text-center" style={{ backgroundColor: '#a78bfa' }}>
-                      <div className="w-8 h-8 rounded-full bg-white/20 mx-auto mb-1" />
-                      <p className="text-white text-[10px] font-bold">Tu Consultorio</p>
-                    </div>
-                    <div className="flex border-b border-gray-200">
-                      {["Resumen", "Citas", "Pagos"].map((tab, i) => (
-                        <div key={tab} className={`flex-1 text-center py-1.5 text-[8px] font-medium ${i === 0 ? 'text-purple-600 border-b-2 border-purple-500' : 'text-gray-400'}`}>
-                          {tab}
-                        </div>
-                      ))}
-                    </div>
-                    <div className="p-2.5 space-y-2">
-                      <div className="rounded-lg bg-white p-2 shadow-sm border border-gray-100">
-                        <p className="text-[8px] text-gray-500">Próxima cita</p>
-                        <p className="text-[9px] font-bold text-gray-800">Martes 15, 10:00</p>
-                      </div>
-                      <div className="rounded-lg bg-white p-2 shadow-sm border border-gray-100">
-                        <p className="text-[8px] text-gray-500">Estado de pagos</p>
-                        <div className="flex items-center gap-1 mt-0.5">
-                          <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                          <p className="text-[9px] text-green-600 font-medium">Al día</p>
-                        </div>
-                      </div>
-                      <div className="rounded-lg bg-purple-50 p-2 border border-purple-100">
-                        <p className="text-[8px] text-purple-600 font-medium">Reservar nuevo turno →</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex justify-center py-2 mt-1">
-                    <div className="w-16 h-1 rounded-full bg-white/20" />
-                  </div>
-                </div>
-              </div>
+              <BrowserMockup
+                src="/videos/portal.mp4"
+                url="centrobienestar.consultoriodigital.app"
+                accent="#a78bfa"
+              />
             </ScrollReveal>
           </div>
         </div>
