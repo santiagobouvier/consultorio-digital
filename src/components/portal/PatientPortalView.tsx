@@ -634,6 +634,41 @@ export function PatientPortalView(props: PatientPortalViewProps) {
                     </Button>
                   </>
                 )}
+                {apt.status !== "reschedule_requested" && (onRescheduleAppointment || onCancelAppointment) && (
+                  <>
+                    <Separator />
+                    <div className="grid grid-cols-2 gap-2">
+                      {onRescheduleAppointment && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onRescheduleAppointment(apt)}
+                          className="gap-1.5 h-10"
+                        >
+                          <RefreshCw className="h-3.5 w-3.5" /> Reprogramar
+                        </Button>
+                      )}
+                      {onCancelAppointment && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openCancelDialog(apt)}
+                          className="gap-1.5 h-10 text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
+                        >
+                          <XCircle className="h-3.5 w-3.5" /> Cancelar
+                        </Button>
+                      )}
+                    </div>
+                  </>
+                )}
+                {apt.status === "reschedule_requested" && (
+                  <div className="rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60 p-3 text-xs flex items-start gap-2">
+                    <RefreshCw className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                    <span className="text-amber-700 dark:text-amber-300">
+                      Tu pedido de reprogramación está esperando confirmación del profesional.
+                    </span>
+                  </div>
+                )}
               </CardContent>
             </Card>
           ))}
