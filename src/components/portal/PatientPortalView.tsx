@@ -229,10 +229,13 @@ export function PatientPortalView(props: PatientPortalViewProps) {
     headerAction = "none", onLogout, onBack,
     onBookAppointment, onCancelAppointment, onRescheduleAppointment,
     onSaveProfile, onPaySession,
-    payingAppointmentId = null, extras,
+    payingAppointmentId = null,
+    onPayPayments, payingPaymentIds = [], mpConnected = false, focusOverdueTick = 0,
+    extras,
   } = props;
 
   const [tab, setTab] = useState<TabId>("resumen");
+  const overdueSectionRef = useRef<HTMLDivElement>(null);
 
   // Profile editing
   const [isEditingProfile, setIsEditingProfile] = useState(false);
