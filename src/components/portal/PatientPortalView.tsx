@@ -888,15 +888,41 @@ export function PatientPortalView(props: PatientPortalViewProps) {
                   <div className="grid grid-cols-5 gap-4 px-5 py-3 bg-muted/50 text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     <span>Concepto</span><span>Monto</span><span>Vencimiento</span><span>Estado</span><span>Fecha de pago</span>
                   </div>
-                  {payments.map((p, i) => (
-                    <div key={p.id} className={`grid grid-cols-5 gap-4 px-5 py-4 items-center text-sm ${i !== payments.length - 1 ? "border-b" : ""} hover:bg-muted/30 transition-colors`}>
-                      <span className="font-medium">{p.notes || p.recurrence_label}</span>
-                      <span className="font-semibold">{formatCurrency(Number(p.amount), p.currency || "UYU")}</span>
-                      <span className="text-muted-foreground">{formatShort(parseISO(p.due_date))}</span>
-                      <span>{payBadge(p.status)}</span>
-                      <span className="text-muted-foreground">{p.paid_at ? formatShort(parseISO(p.paid_at)) : "—"}</span>
-                    </div>
-                  ))}
+                  {payments.map((p, i) => {
+                    const hasAppt = !!p.appointment_id;
+                    const isProcessing = hasAppt
+                      ? payingAppointmentId === p.appointment_id
+                      : payingPaymentIds.includes(p.id);
+                    const showPay = mpConnected && isPayablePayment(p.status)
+                      && (hasAppt ? !!onPaySession : !!onPayPayments);
+                    const handleClick = () => {
+                      if (hasAppt && onPaySession) onPaySession(p.appointment_id!);
+                      else if (onPayPayments) onPayPayments([p.id]);
+                    };
+                    return (
+                      <div key={p.id} className={`grid grid-cols-5 gap-4 px-5 py-4 items-center text-sm ${i !== payments.length - 1 ? "border-b" : ""} hover:bg-muted/30 transition-colors`}>
+                        <span className="font-medium">{p.notes || p.recurrence_label}</span>
+                        <span className="font-semibold">{formatCurrency(Number(p.amount), p.currency || "UYU")}</span>
+                        <span className="text-muted-foreground">{formatShort(parseISO(p.due_date))}</span>
+                        <span className="flex items-center gap-2">
+                          {payBadge(p.status)}
+                          {showPay && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-8 px-3 gap-1.5"
+                              onClick={handleClick}
+                              disabled={isProcessing || payingAny}
+                            >
+                              {isProcessing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CreditCard className="h-3.5 w-3.5" />}
+                              {isProcessing ? "..." : (hasAppt ? "Pagar sesión" : "Pagar online")}
+                            </Button>
+                          )}
+                        </span>
+                        <span className="text-muted-foreground">{p.paid_at ? formatShort(parseISO(p.paid_at)) : "—"}</span>
+                      </div>
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
