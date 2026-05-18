@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { usePWAInstall } from "@/hooks/use-pwa-install";
 import { PortalWelcomeInstall } from "@/components/portal/PortalWelcomeInstall";
+import { PatientBookingModal } from "@/components/PatientBookingModal";
 import { Building2, Sun, Moon, Eye, EyeOff, Loader2, AlertCircle, LogOut } from "lucide-react";
 import {
   PatientPortalView,
@@ -191,6 +192,8 @@ const ClinicPortal = () => {
   const [upcomingAppointments, setUpcomingAppointments] = useState<PortalAppointment[]>([]);
   const [pastAppointments, setPastAppointments] = useState<PortalAppointment[]>([]);
   const [payments, setPayments] = useState<PortalPayment[]>([]);
+  const [showBookingModal, setShowBookingModal] = useState(false);
+  const [rescheduleTarget, setRescheduleTarget] = useState<PortalAppointment | null>(null);
 
   useEffect(() => {
     if (!slug) return;
@@ -258,7 +261,7 @@ const ClinicPortal = () => {
     (async () => {
       const { data, error } = await supabase
         .from("businesses")
-        .select("id, name, specialty, contact_email, portal_logo_url, portal_clinic_display_name, portal_primary_color, portal_dark_primary_color, public_slug, custom_subdomain")
+        .select("id, name, specialty, contact_email, portal_logo_url, portal_clinic_display_name, portal_primary_color, portal_dark_primary_color, public_slug, custom_subdomain, cancellation_hours_notice, late_cancellation_message")
         .or(`public_slug.eq.${slug},custom_subdomain.eq.${slug}`)
         .limit(1).maybeSingle();
       if (error || !data) {
@@ -274,6 +277,8 @@ const ClinicPortal = () => {
         lightColor: (data as any).portal_primary_color || "176 100% 32%",
         darkColor: (data as any).portal_dark_primary_color || "176 85% 42%",
         slug: data.public_slug,
+        cancellationHoursNotice: (data as any).cancellation_hours_notice ?? 24,
+        lateCancellationMessage: (data as any).late_cancellation_message ?? null,
       });
       setLoading(false);
     })();
@@ -426,6 +431,39 @@ const ClinicPortal = () => {
     }
   };
 
+  const handleCancelAppointment = async (appointmentId: string, reason: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: aptRow } = await supabase
+        .from("appointments")
+        .select("availability_slot_id")
+        .eq("id", appointmentId)
+        .maybeSingle();
+      const { error } = await supabase.from("appointments").update({
+        status: "cancelled_by_patient",
+        cancelled_at: new Date().toISOString(),
+        cancelled_by: user?.id || null,
+        cancellation_reason: reason || null,
+      }).eq("id", appointmentId);
+      if (error) throw error;
+      if (aptRow?.availability_slot_id) {
+        await supabase.from("availability_slots")
+          .update({ status: "available" })
+          .eq("id", aptRow.availability_slot_id);
+      }
+      toast({ title: "Cita cancelada", description: "Avisamos al profesional." });
+      if (patient && branding) await reloadPatientData(patient.id, branding.id);
+    } catch (err: any) {
+      console.error(err);
+      toast({ title: "Error", description: "No se pudo cancelar la cita.", variant: "destructive" });
+    }
+  };
+
+  const handleRescheduleAppointment = (apt: PortalAppointment) => {
+    setRescheduleTarget(apt);
+    setShowBookingModal(true);
+  };
+
   if (loading || !authChecked) {
     return <div className="min-h-screen flex items-center justify-center bg-background"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
   }
@@ -494,6 +532,19 @@ const ClinicPortal = () => {
       onSaveProfile={handleSaveProfile}
       onPaySession={handlePaySession}
       payingAppointmentId={payingAppointment}
+      onBookAppointment={() => { setRescheduleTarget(null); setShowBookingModal(true); }}
+      onCancelAppointment={handleCancelAppointment}
+      onRescheduleAppointment={handleRescheduleAppointment}
+      extras={branding && patient && (
+        <PatientBookingModal
+          open={showBookingModal}
+          onOpenChange={(o) => { setShowBookingModal(o); if (!o) setRescheduleTarget(null); }}
+          businessId={branding.id}
+          patientId={patient.id}
+          rescheduleAppointment={rescheduleTarget ? { id: rescheduleTarget.id, start_at: rescheduleTarget.start_at, end_at: rescheduleTarget.end_at } : null}
+          onSuccess={() => { if (patient && branding) reloadPatientData(patient.id, branding.id); }}
+        />
+      )}
     />
   );
 };

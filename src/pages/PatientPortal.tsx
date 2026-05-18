@@ -41,6 +41,7 @@ const PatientPortal = () => {
     return stored ? stored === "dark" : true;
   });
   const [showBookingModal, setShowBookingModal] = useState(false);
+  const [rescheduleTarget, setRescheduleTarget] = useState<PortalAppointment | null>(null);
 
   useEffect(() => {
     localStorage.setItem("portal-theme", isDark ? "dark" : "light");
@@ -69,7 +70,7 @@ const PatientPortal = () => {
 
       const { data: businessData } = await supabase
         .from("businesses")
-        .select("id, name, specialty, contact_email, portal_logo_url, portal_clinic_display_name, portal_primary_color, portal_dark_primary_color, public_slug")
+        .select("id, name, specialty, contact_email, portal_logo_url, portal_clinic_display_name, portal_primary_color, portal_dark_primary_color, public_slug, cancellation_hours_notice, late_cancellation_message")
         .eq("id", patientData.business_id).maybeSingle();
       if (businessData) {
         setBusinessSlug((businessData as any).public_slug || null);
@@ -80,6 +81,8 @@ const PatientPortal = () => {
           logoUrl: (businessData as any).portal_logo_url || "",
           lightColor: (businessData as any).portal_primary_color || "176 100% 32%",
           darkColor: (businessData as any).portal_dark_primary_color || "176 85% 42%",
+          cancellationHoursNotice: (businessData as any).cancellation_hours_notice ?? 24,
+          lateCancellationMessage: (businessData as any).late_cancellation_message ?? null,
         });
       }
 
@@ -168,6 +171,41 @@ const PatientPortal = () => {
     }
   };
 
+  const handleCancelAppointment = async (appointmentId: string, reason: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const apt = [...upcomingAppointments, ...pastAppointments].find(a => a.id === appointmentId);
+      // Free associated slot if it exists
+      const { data: aptRow } = await supabase
+        .from("appointments")
+        .select("availability_slot_id")
+        .eq("id", appointmentId)
+        .maybeSingle();
+      const { error } = await supabase.from("appointments").update({
+        status: "cancelled_by_patient",
+        cancelled_at: new Date().toISOString(),
+        cancelled_by: user?.id || null,
+        cancellation_reason: reason || null,
+      }).eq("id", appointmentId);
+      if (error) throw error;
+      if (aptRow?.availability_slot_id) {
+        await supabase.from("availability_slots")
+          .update({ status: "available" })
+          .eq("id", aptRow.availability_slot_id);
+      }
+      toast({ title: "Cita cancelada", description: "Avisamos al profesional." });
+      await loadData();
+    } catch (err: any) {
+      console.error(err);
+      toast({ title: "Error", description: "No se pudo cancelar la cita.", variant: "destructive" });
+    }
+  };
+
+  const handleRescheduleAppointment = (apt: PortalAppointment) => {
+    setRescheduleTarget(apt);
+    setShowBookingModal(true);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background p-4 space-y-4">
@@ -211,12 +249,15 @@ const PatientPortal = () => {
       onLogout={handleLogout}
       onBookAppointment={() => setShowBookingModal(true)}
       onSaveProfile={handleSaveProfile}
+      onCancelAppointment={handleCancelAppointment}
+      onRescheduleAppointment={handleRescheduleAppointment}
       extras={businessId && (
         <PatientBookingModal
           open={showBookingModal}
-          onOpenChange={setShowBookingModal}
+          onOpenChange={(o) => { setShowBookingModal(o); if (!o) setRescheduleTarget(null); }}
           businessId={businessId}
           patientId={patient.id}
+          rescheduleAppointment={rescheduleTarget ? { id: rescheduleTarget.id, start_at: rescheduleTarget.start_at, end_at: rescheduleTarget.end_at } : null}
           onSuccess={() => loadData()}
         />
       )}

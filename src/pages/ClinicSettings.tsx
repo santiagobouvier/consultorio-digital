@@ -79,6 +79,8 @@ const ClinicSettings = () => {
   const [autoAcceptBookings, setAutoAcceptBookings] = useState(false);
   const [publicSlug, setPublicSlug] = useState("");
   const [isPrivateClinic, setIsPrivateClinic] = useState(false);
+  const [cancellationHoursNotice, setCancellationHoursNotice] = useState<number>(24);
+  const [lateCancellationMessage, setLateCancellationMessage] = useState<string>("");
 
   // Initial snapshot to detect dirty state
   const [initialSnapshot, setInitialSnapshot] = useState<string>("");
@@ -117,6 +119,8 @@ const ClinicSettings = () => {
       postsessionMessage,
       autoAcceptBookings,
       isPrivateClinic,
+      cancellationHoursNotice,
+      lateCancellationMessage,
     });
 
   const isDirty = !loading && initialSnapshot !== "" && buildSnapshot() !== initialSnapshot;
@@ -146,7 +150,7 @@ const ClinicSettings = () => {
 
       let { data: business } = await supabase
         .from("businesses")
-        .select("id, public_slug, owner_user_id, is_private_clinic")
+        .select("id, public_slug, owner_user_id, is_private_clinic, cancellation_hours_notice, late_cancellation_message")
         .eq("owner_user_id", user.id)
         .maybeSingle();
 
@@ -161,7 +165,7 @@ const ClinicSettings = () => {
         if (userRole?.business_id) {
           const { data: memberBusiness } = await supabase
             .from("businesses")
-            .select("id, public_slug, owner_user_id, is_private_clinic")
+            .select("id, public_slug, owner_user_id, is_private_clinic, cancellation_hours_notice, late_cancellation_message")
             .eq("id", userRole.business_id)
             .single();
           business = memberBusiness;
@@ -202,6 +206,8 @@ const ClinicSettings = () => {
         setBusinessId(business.id);
         setIsOwner(business.owner_user_id === user.id);
         setIsPrivateClinic((business as any).is_private_clinic || false);
+        setCancellationHoursNotice((business as any).cancellation_hours_notice ?? 24);
+        setLateCancellationMessage((business as any).late_cancellation_message ?? "");
       }
 
       const { data: settings } = await supabase
@@ -322,6 +328,8 @@ const ClinicSettings = () => {
         const businessUpdate: Record<string, any> = {
           specialty: specialty || null,
           is_private_clinic: isPrivateClinic,
+          cancellation_hours_notice: Number.isFinite(cancellationHoursNotice) ? cancellationHoursNotice : 24,
+          late_cancellation_message: lateCancellationMessage.trim() || null,
         };
         if (clinicName && clinicName.trim()) {
           businessUpdate.name = clinicName.trim();
@@ -481,6 +489,43 @@ const ClinicSettings = () => {
                   </p>
                 </div>
                 <Switch checked={autoAcceptBookings} onCheckedChange={setAutoAcceptBookings} />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Política de cancelación</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="cancellationHours">Horas mínimas de antelación</Label>
+                  <Input
+                    id="cancellationHours"
+                    type="number"
+                    min={0}
+                    max={720}
+                    value={cancellationHoursNotice}
+                    onChange={(e) => setCancellationHoursNotice(parseInt(e.target.value || "0", 10))}
+                    className="h-11 max-w-[120px]"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Horas mínimas de antelación para que tus pacientes puedan cancelar o reprogramar sin aviso de cancelación tardía. Default: 24.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lateCancellationMsg">Mensaje de cancelación tardía (opcional)</Label>
+                  <Textarea
+                    id="lateCancellationMsg"
+                    value={lateCancellationMessage}
+                    onChange={(e) => setLateCancellationMessage(e.target.value)}
+                    placeholder="Ej: Las cancelaciones con menos de 24hs pueden generar cargo de la sesión."
+                    rows={3}
+                    className="resize-none"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Mensaje que se mostrará a los pacientes cuando intenten cancelar fuera del plazo.
+                  </p>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
