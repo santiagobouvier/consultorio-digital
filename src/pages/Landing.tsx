@@ -648,56 +648,11 @@ const Landing = () => {
             </ScrollReveal>
 
             <ScrollReveal direction="right" delay={200}>
-              <div 
-                className="rounded-xl sm:rounded-2xl border border-white/10 overflow-hidden"
-                style={{ backgroundColor: '#111111' }}
-              >
-                <div className="flex items-center justify-between p-3 border-b border-white/5">
-                  <p className="text-xs font-medium text-white">Martes 15 de Abril</p>
-                  <div className="flex gap-1">
-                    {["Día", "Sem", "Mes"].map((v, i) => (
-                      <span 
-                        key={v} 
-                        className="text-[9px] px-2 py-1 rounded-md"
-                        style={{ 
-                          backgroundColor: i === 0 ? 'rgba(0,199,138,0.15)' : 'transparent',
-                          color: i === 0 ? GREEN : '#666',
-                        }}
-                      >
-                        {v}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-                <div className="p-3 space-y-2">
-                  {[
-                    { time: "09:00", name: "María López", color: "#60a5fa", duration: "50 min" },
-                    { time: "10:00", name: "Juan Pérez", color: "#a78bfa", duration: "50 min" },
-                    { time: "10:00", name: "Ana Rodríguez", color: "#60a5fa", duration: "50 min" },
-                    { time: "11:00", name: "Carlos Fernández", color: "#a78bfa", duration: "50 min" },
-                    { time: "14:00", name: "Laura García", color: "#60a5fa", duration: "50 min" },
-                  ].map((appt, i) => (
-                    <div key={i} className="flex items-center gap-3 p-2 rounded-lg" style={{ backgroundColor: '#1a1a1a' }}>
-                      <div className="w-1 h-8 rounded-full" style={{ backgroundColor: appt.color }} />
-                      <div className="flex-1">
-                        <p className="text-[10px] text-gray-500">{appt.time}</p>
-                        <p className="text-xs text-white font-medium">{appt.name}</p>
-                      </div>
-                      <span className="text-[9px] text-gray-600">{appt.duration}</span>
-                    </div>
-                  ))}
-                </div>
-                <div className="flex gap-4 px-3 pb-3">
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#60a5fa' }} />
-                    <span className="text-[9px] text-gray-500">Dra. Martínez</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#a78bfa' }} />
-                    <span className="text-[9px] text-gray-500">Lic. Gómez</span>
-                  </div>
-                </div>
-              </div>
+              <BrowserMockup
+                src="/videos/agenda.mp4"
+                url="app.consultoriodigital.app/agenda"
+                accent="#00c78a"
+              />
             </ScrollReveal>
           </div>
         </div>
