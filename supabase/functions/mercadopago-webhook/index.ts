@@ -212,6 +212,48 @@ serve(async (req) => {
           console.log(`Session payment confirmed for appointment ${sessionRef.appointment_id}`);
         }
       }
+      // PATIENT PAYMENT BATCH: external_reference has type "payment_batch"
+      else if (extRef && (extRef as any).type === "payment_batch" && payment.status === "approved") {
+        const batchRef = extRef as {
+          type: string;
+          payment_ids?: string[];
+          business_id?: string;
+          patient_id?: string;
+        };
+
+        console.log("Payment batch approved:", batchRef);
+
+        if (Array.isArray(batchRef.payment_ids) && batchRef.payment_ids.length > 0) {
+          // Mark all payments in batch as paid
+          const { data: updatedPayments, error: updErr } = await supabase
+            .from("payments")
+            .update({
+              status: "paid",
+              paid_at: new Date().toISOString(),
+              method: "mercadopago",
+            })
+            .in("id", batchRef.payment_ids)
+            .neq("status", "paid")
+            .select("id, appointment_id");
+
+          if (updErr) {
+            console.error("Failed to mark batch payments as paid:", updErr);
+          } else {
+            console.log(`Batch marked paid: ${updatedPayments?.length || 0} payments`);
+
+            // For any payment linked to an appointment, also confirm appointment payment_status
+            const apptIds = (updatedPayments || [])
+              .map((p) => p.appointment_id)
+              .filter((id): id is string => !!id);
+            if (apptIds.length > 0) {
+              await supabase
+                .from("appointments")
+                .update({ payment_status: "pagado" })
+                .in("id", apptIds);
+            }
+          }
+        }
+      }
       // SUBSCRIPTION PAYMENT: has preapproval_id in metadata
       else if (payment.status === "approved" && payment.metadata?.preapproval_id) {
         const { data: subscription } = await supabase
