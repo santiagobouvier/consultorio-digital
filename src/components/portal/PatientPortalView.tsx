@@ -287,6 +287,36 @@ export function PatientPortalView(props: PatientPortalViewProps) {
   const overduePayments = pendingPayments.filter(p => p.status === "overdue");
   const pendingCount = pendingPayments.length;
   const totalPaid = payments.filter(p => p.status === "paid").reduce((s, p) => s + Number(p.amount), 0);
+  const overdueCount = overduePayments.length;
+  const overdueTotal = overduePayments.reduce((s, p) => s + Number(p.amount), 0);
+  const overdueCurrency = overduePayments[0]?.currency || "UYU";
+  const payingAny = payingPaymentIds.length > 0;
+
+  const isPayablePayment = (status: string) =>
+    status === "pending" || status === "due_soon" || status === "overdue";
+
+  const handleBannerPay = () => {
+    if (!onPayPayments || overdueCount === 0) return;
+    if (overdueCount === 1) {
+      onPayPayments([overduePayments[0].id]);
+    } else {
+      setTab("pagos");
+      setTimeout(() => {
+        overdueSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 80);
+    }
+  };
+
+  // External request from wrapper to focus overdue section
+  useEffect(() => {
+    if (focusOverdueTick && overdueCount > 0) {
+      setTab("pagos");
+      setTimeout(() => {
+        overdueSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 80);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusOverdueTick]);
 
   const initials = (patient.full_name || "?")
     .split(" ").map(w => w[0]).join("").substring(0, 2).toUpperCase();
