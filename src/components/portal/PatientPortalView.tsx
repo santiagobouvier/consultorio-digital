@@ -1238,6 +1238,34 @@ export function PatientPortalView(props: PatientPortalViewProps) {
           </div>
         )}
 
+        {/* Persistent overdue banner — visible on all tabs */}
+        {overdueCount > 0 && (
+          <div className="px-4 lg:px-8 pt-3">
+            <div className="rounded-xl border border-destructive/30 bg-destructive/10 text-destructive px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+              <div className="flex items-start sm:items-center gap-2 flex-1 min-w-0">
+                <AlertCircle className="h-5 w-5 shrink-0 mt-0.5 sm:mt-0" />
+                <p className="text-sm font-medium leading-snug">
+                  {overdueCount === 1
+                    ? <>Tenés <strong>1 pago vencido</strong> por <strong>{formatCurrency(overdueTotal, overdueCurrency)}</strong>.</>
+                    : <>Tenés <strong>{overdueCount} pagos vencidos</strong> por un total de <strong>{formatCurrency(overdueTotal, overdueCurrency)}</strong>.</>}
+                </p>
+              </div>
+              {mpConnected && onPayPayments && (
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  className="gap-2 min-h-11 sm:min-h-9 sm:w-auto w-full shrink-0"
+                  onClick={handleBannerPay}
+                  disabled={payingAny}
+                >
+                  {payingAny ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
+                  {payingAny ? "Procesando..." : "Pagar ahora"}
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+
         <div className="lg:flex lg:gap-0 min-h-[calc(100vh-6rem)]">
           {/* Desktop Sidebar */}
           <aside className="hidden lg:flex lg:flex-col w-72 shrink-0 border-r border-border bg-card/80 backdrop-blur-sm sticky top-16 self-start h-[calc(100vh-4rem)]">
