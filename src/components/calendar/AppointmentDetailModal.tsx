@@ -87,7 +87,7 @@ export const AppointmentDetailModal = ({
         .select("cancellation_reason, cancelled_at")
         .eq("id", appointment.id)
         .maybeSingle()
-        .then(({ data }) => setCancellationDetails(data || null));
+        .then(({ data }) => setCancellationDetails(data ? { reason: data.cancellation_reason, cancelled_at: data.cancelled_at } : null));
     }
   }, [appointment?.id, appointment?.status, open]);
 
