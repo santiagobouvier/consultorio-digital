@@ -367,6 +367,39 @@ export function PatientPortalView(props: PatientPortalViewProps) {
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6">
       {/* LEFT (8/12) */}
       <div className="lg:col-span-8 flex flex-col gap-5 lg:gap-6">
+        {/* Alerta de pagos vencidos */}
+        {overdueCount > 0 && (
+          <Card className="rounded-2xl border-destructive/30 bg-destructive/5">
+            <CardContent className="p-4 lg:p-5 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+              <div className="flex items-start gap-3 min-w-0 flex-1">
+                <div className="h-10 w-10 rounded-full bg-destructive/15 flex items-center justify-center shrink-0">
+                  <AlertCircle className="h-5 w-5 text-destructive" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm lg:text-base font-semibold text-destructive">
+                    {overdueCount === 1
+                      ? "Tenés 1 pago vencido"
+                      : `Tenés ${overdueCount} pagos vencidos`}
+                  </p>
+                  <p className="text-xs lg:text-sm text-muted-foreground mt-0.5">
+                    Total: <span className="font-bold text-foreground">{formatCurrency(overdueTotal, overdueCurrency)}</span>
+                  </p>
+                </div>
+              </div>
+              {mpConnected && onPayPayments && (
+                <Button
+                  onClick={handleBannerPay}
+                  disabled={payingAny}
+                  className="gap-2 min-h-11 sm:w-auto w-full"
+                >
+                  {payingAny ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
+                  {payingAny ? "Procesando..." : (overdueCount === 1 ? "Pagar ahora" : "Pagar todos")}
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Welcome (desktop, inline) */}
         <div className="flex items-center gap-4">
           <Avatar className="h-14 w-14 lg:h-16 lg:w-16 border-2 border-primary/30 shadow-lg shadow-primary/10">
