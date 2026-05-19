@@ -13,7 +13,7 @@ export const usePendingRequestsCount = () => {
   const { businessId } = useBusinessId(false);
 
   const fetchCounts = async (id: string) => {
-    const [{ count: reqCount }, { count: aptCount }] = await Promise.all([
+    const [{ count: reqCount }, { count: aptCount }, { count: rescheduleCount }] = await Promise.all([
       supabase
         .from("appointment_requests")
         .select("id", { count: "exact", head: true })
@@ -25,8 +25,13 @@ export const usePendingRequestsCount = () => {
         .eq("business_id", id)
         .eq("status", "pending")
         .eq("source", "patient_portal"),
+      supabase
+        .from("appointment_reschedule_requests")
+        .select("id", { count: "exact", head: true })
+        .eq("business_id", id)
+        .eq("status", "pending"),
     ]);
-    return (reqCount ?? 0) + (aptCount ?? 0);
+    return (reqCount ?? 0) + (aptCount ?? 0) + (rescheduleCount ?? 0);
   };
 
   useEffect(() => {
@@ -60,6 +65,11 @@ export const usePendingRequestsCount = () => {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "appointments", filter: `business_id=eq.${businessId}` },
+        refresh
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "appointment_reschedule_requests", filter: `business_id=eq.${businessId}` },
         refresh
       )
       .subscribe();

@@ -123,6 +123,7 @@ export type Database = {
         Row: {
           availability_slot_id: string | null
           business_id: string
+          cancellation_acknowledged_at: string | null
           cancellation_reason: string | null
           cancelled_at: string | null
           cancelled_by: string | null
@@ -150,6 +151,7 @@ export type Database = {
         Insert: {
           availability_slot_id?: string | null
           business_id: string
+          cancellation_acknowledged_at?: string | null
           cancellation_reason?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
@@ -177,6 +179,7 @@ export type Database = {
         Update: {
           availability_slot_id?: string | null
           business_id?: string
+          cancellation_acknowledged_at?: string | null
           cancellation_reason?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
