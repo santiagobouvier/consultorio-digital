@@ -1,23 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   Building2,
-  Smartphone,
-  Share,
-  PlusSquare,
   CheckCircle2,
   ArrowRight,
   Sparkles,
-  MoreVertical,
   Download,
   Calendar,
   CreditCard,
   ShieldCheck,
 } from "lucide-react";
-import { ChevronDown } from "lucide-react";
 import { usePWAInstall } from "@/hooks/use-pwa-install";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { IOSInstallTutorial } from "@/components/pwa/IOSInstallTutorial";
+import { DesktopSafariTutorial } from "@/components/pwa/DesktopSafariTutorial";
+import { UnsupportedBrowserModal } from "@/components/pwa/UnsupportedBrowserModal";
 
 // ============= Confetti Effect =============
 const ConfettiCanvas = () => {
@@ -102,18 +99,6 @@ interface PortalWelcomeInstallProps {
   onContinue: () => void;
 }
 
-type Platform = "ios" | "android" | "desktop";
-
-const detectPlatform = (): Platform => {
-  if (typeof window === "undefined") return "desktop";
-  const ua = window.navigator.userAgent;
-  const iPadOS =
-    ua.includes("Macintosh") && (window.navigator.maxTouchPoints || 0) > 1;
-  if (/iPhone|iPad|iPod/.test(ua) || iPadOS) return "ios";
-  if (/Android/.test(ua)) return "android";
-  return "desktop";
-};
-
 /**
  * Pantalla de bienvenida + instalación de PWA para pacientes.
  * Se muestra antes del login del Portal del Paciente la primera vez
@@ -125,15 +110,12 @@ export const PortalWelcomeInstall = ({
   themeStyle,
   onContinue,
 }: PortalWelcomeInstallProps) => {
-  const { canInstall, install, isInstalled } = usePWAInstall();
-  const [platform, setPlatform] = useState<Platform>("desktop");
-  const [showInstructions, setShowInstructions] = useState(false);
+  const { isInstalled, triggerInstall } = usePWAInstall();
+  const [showIOS, setShowIOS] = useState(false);
+  const [showSafari, setShowSafari] = useState(false);
+  const [showUnsupported, setShowUnsupported] = useState(false);
   const [installing, setInstalling] = useState(false);
   const [justInstalled, setJustInstalled] = useState(false);
-
-  useEffect(() => {
-    setPlatform(detectPlatform());
-  }, []);
 
   // Si ya está instalado al cargar (display-mode standalone), saltamos directo al login.
   // Si la instalación ocurre en vivo (evento appinstalled), mostramos celebración.
@@ -145,7 +127,6 @@ export const PortalWelcomeInstall = ({
   useEffect(() => {
     const handleAppInstalled = () => {
       setInstalling(false);
-      setShowInstructions(false);
       setJustInstalled(true);
     };
     window.addEventListener("appinstalled", handleAppInstalled);
@@ -159,17 +140,29 @@ export const PortalWelcomeInstall = ({
   };
 
   const handleInstallClick = async () => {
-    if (canInstall) {
-      setInstalling(true);
-      try {
-        await install();
-      } finally {
-        setInstalling(false);
+    setInstalling(true);
+    try {
+      const result = await triggerInstall();
+      switch (result) {
+        case "accepted":
+          setJustInstalled(true);
+          break;
+        case "ios":
+          setShowIOS(true);
+          break;
+        case "desktop-safari":
+          setShowSafari(true);
+          break;
+        case "unsupported":
+          setShowUnsupported(true);
+          break;
+        case "dismissed":
+        default:
+          break;
       }
-      return;
+    } finally {
+      setInstalling(false);
     }
-    // iOS o Android sin prompt nativo → mostramos pasos manuales.
-    setShowInstructions(true);
   };
 
   const initials = useMemo(
@@ -182,44 +175,6 @@ export const PortalWelcomeInstall = ({
         .toUpperCase(),
     [branding.displayName],
   );
-
-  const iosSteps = [
-    {
-      icon: Share,
-      title: "Tocá el botón Compartir",
-      description: "Está en la barra inferior de Safari (cuadrado con flecha hacia arriba).",
-    },
-    {
-      icon: PlusSquare,
-      title: "Elegí 'Agregar a inicio'",
-      description: "Bajá en el menú hasta encontrar 'Agregar a pantalla de inicio'.",
-    },
-    {
-      icon: CheckCircle2,
-      title: "Confirmá y abrí la app",
-      description: "Vas a verla como una app independiente en tu pantalla de inicio.",
-    },
-  ];
-
-  const androidSteps = [
-    {
-      icon: MoreVertical,
-      title: "Abrí el menú del navegador",
-      description: "Tocá los tres puntos arriba a la derecha en Chrome.",
-    },
-    {
-      icon: Download,
-      title: "Elegí 'Instalar app' o 'Agregar a inicio'",
-      description: "Según tu versión de Android puede aparecer con uno u otro nombre.",
-    },
-    {
-      icon: CheckCircle2,
-      title: "Confirmá y abrí la app",
-      description: "Aparece como una app más en tu cajón de aplicaciones.",
-    },
-  ];
-
-  const steps = platform === "ios" ? iosSteps : androidSteps;
 
   return (
     <div className="min-h-screen" style={themeStyle as React.CSSProperties}>
