@@ -24,6 +24,7 @@ import { cn } from "@/lib/utils";
 import { useDashboardBranding } from "@/contexts/DashboardBrandingContext";
 import { usePendingRequestsCount } from "@/hooks/use-pending-requests-count";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { InstallAppButton } from "@/components/pwa/InstallAppButton";
 import consultorioLogo from "@/assets/logo-loading.png";
 
 type NavItem = {
@@ -136,6 +137,7 @@ export function MobileHeader() {
         {/* Right: theme toggle + clinic logo */}
         <div className="flex items-center gap-2">
         <ThemeToggle />
+        <InstallAppButton variant="icon-only" />
         {logoUrl ? (
           <img
             src={logoUrl}
