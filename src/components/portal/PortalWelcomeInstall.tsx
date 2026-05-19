@@ -263,7 +263,7 @@ export const PortalWelcomeInstall = ({
                 </button>
               </div>
             </div>
-          ) : !showInstructions ? (
+          ) : (
             <div className="w-full space-y-8 md:space-y-10">
               {/* Hero branding */}
               <div className="flex flex-col items-center text-center space-y-5 md:space-y-6">
@@ -390,72 +390,12 @@ export const PortalWelcomeInstall = ({
                 Tu información está protegida y solo el consultorio puede acceder.
               </p>
             </div>
-          ) : (
-            <div className="w-full space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
-              <div className="text-center space-y-2">
-                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/15 text-primary">
-                  <Smartphone className="h-7 w-7" />
-                </div>
-                <h2 className="text-xl font-bold">
-                  {platform === "ios"
-                    ? "Instalación en iPhone"
-                    : platform === "android"
-                      ? "Instalación en Android"
-                      : "Instalación manual"}
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  Seguí estos pasos para agregar la app a tu dispositivo.
-                </p>
-              </div>
-
-              <Card className="border-border/60 bg-card/80 backdrop-blur">
-                <CardContent className="p-5 space-y-4">
-                  {platform === "ios" && (
-                    <div className="flex flex-col items-center pb-2">
-                      <p className="text-xs text-primary font-medium mb-1">Buscá este ícono abajo ↓</p>
-                      <ChevronDown className="h-6 w-6 text-primary animate-bounce" />
-                    </div>
-                  )}
-                  {steps.map((step, i) => {
-                    const Icon = step.icon;
-                    return (
-                      <div key={i} className="flex items-start gap-4">
-                        <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                          <Icon className="h-5 w-5" />
-                          <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
-                            {i + 1}
-                          </span>
-                        </div>
-                        <div className="flex-1 pt-0.5">
-                          <p className="text-sm font-semibold leading-tight">{step.title}</p>
-                          <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                            {step.description}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </CardContent>
-              </Card>
-
-              <div className="space-y-2">
-                <Button onClick={onContinue} className="w-full h-11" size="lg">
-                  Listo, continuar
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowInstructions(false)}
-                  className="w-full text-xs text-muted-foreground"
-                >
-                  Volver
-                </Button>
-              </div>
-            </div>
           )}
         </div>
       </div>
+      <IOSInstallTutorial open={showIOS} onClose={() => setShowIOS(false)} clinicName={branding.displayName} />
+      <DesktopSafariTutorial open={showSafari} onClose={() => setShowSafari(false)} clinicName={branding.displayName} />
+      <UnsupportedBrowserModal open={showUnsupported} onClose={() => setShowUnsupported(false)} />
     </div>
   );
 };
