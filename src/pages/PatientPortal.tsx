@@ -259,6 +259,7 @@ const PatientPortal = () => {
           patientId={patient.id}
           rescheduleAppointment={rescheduleTarget ? { id: rescheduleTarget.id, start_at: rescheduleTarget.start_at, end_at: rescheduleTarget.end_at } : null}
           onSuccess={() => loadData()}
+          branding={{ name: branding.name, logoUrl: branding.logoUrl, cancellationHoursNotice: branding.cancellationHoursNotice }}
         />
       )}
     />

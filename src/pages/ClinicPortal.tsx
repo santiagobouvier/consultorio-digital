@@ -639,6 +639,7 @@ const ClinicPortal = () => {
             patientId={patient.id}
             rescheduleAppointment={rescheduleTarget ? { id: rescheduleTarget.id, start_at: rescheduleTarget.start_at, end_at: rescheduleTarget.end_at } : null}
             onSuccess={() => { if (patient && branding) reloadPatientData(patient.id, branding.id); }}
+            branding={{ name: branding.displayName || branding.name, logoUrl: branding.logoUrl, cancellationHoursNotice: branding.cancellationHoursNotice }}
           />
           <Dialog open={!!confirmBatch} onOpenChange={(o) => { if (!o) setConfirmBatch(null); }}>
             <DialogContent className="max-w-md">
