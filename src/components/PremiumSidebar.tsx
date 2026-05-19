@@ -35,6 +35,7 @@ import { prefetchRoute } from "@/lib/query-prefetch";
 import { usePendingRequestsCount } from "@/hooks/use-pending-requests-count";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Sun, Moon } from "lucide-react";
+import { InstallAppButton } from "@/components/pwa/InstallAppButton";
 
 type NavItem = {
   title: string;
@@ -343,6 +344,11 @@ export function PremiumSidebar() {
 
           {/* User footer */}
           <div className="p-2.5 border-t border-white/[0.06]">
+            {expanded && (
+              <div className="px-1 pb-2">
+                <InstallAppButton variant="icon-text" className="w-full justify-start text-white/55 hover:text-white hover:bg-white/[0.04]" />
+              </div>
+            )}
             {/* Theme toggle row */}
             <Tooltip delayDuration={0}>
               <TooltipTrigger asChild>
