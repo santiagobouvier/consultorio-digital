@@ -86,6 +86,7 @@ serve(async (req) => {
       start_url: `/portal/${slug}`,
       scope: `/portal/${slug}`,
       display: "standalone",
+      orientation: "any",
       background_color: "#ffffff",
       theme_color: themeColor,
       icons,

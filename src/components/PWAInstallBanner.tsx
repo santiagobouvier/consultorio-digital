@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Smartphone, X } from "lucide-react";
 import { usePWAInstall } from "@/hooks/use-pwa-install";
-import { IOSInstallGuideModal } from "@/components/IOSInstallGuideModal";
+import { IOSInstallTutorial } from "@/components/pwa/IOSInstallTutorial";
 
 const DEFAULT_DISMISSED_KEY = "pwa_install_banner_dismissed";
 const IOS_AUTO_SHOWN_KEY = "pwa_install_ios_auto_shown";
@@ -152,7 +152,7 @@ export const PWAInstallBanner = ({
           </button>
         </div>
       </div>
-      <IOSInstallGuideModal
+      <IOSInstallTutorial
         open={iosModalOpen}
         onClose={() => setIosModalOpen(false)}
       />

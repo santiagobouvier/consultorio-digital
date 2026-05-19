@@ -1,7 +1,7 @@
 import { Bell, BellOff, CheckCircle2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePushNotifications } from "@/hooks/use-push-notifications";
-import { IOSInstallGuideModal } from "@/components/IOSInstallGuideModal";
+import { IOSInstallTutorial } from "@/components/pwa/IOSInstallTutorial";
 import { toast } from "@/hooks/use-toast";
 
 interface NotificationActivationCardProps {
@@ -76,7 +76,7 @@ export function NotificationActivationCard({ variant = "compact" }: Notification
           {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Bell className="h-3.5 w-3.5" />}
           Activar notificaciones
         </Button>
-        <IOSInstallGuideModal open={needsIOSInstall} onClose={dismissIOSGuide} />
+        <IOSInstallTutorial open={needsIOSInstall} onClose={dismissIOSGuide} />
       </>
     );
   }
@@ -105,7 +105,7 @@ export function NotificationActivationCard({ variant = "compact" }: Notification
           Activar notificaciones
         </Button>
       </div>
-      <IOSInstallGuideModal open={needsIOSInstall} onClose={dismissIOSGuide} />
+      <IOSInstallTutorial open={needsIOSInstall} onClose={dismissIOSGuide} />
     </>
   );
 }

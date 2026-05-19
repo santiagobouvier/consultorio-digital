@@ -1,85 +1,103 @@
-## Plan — Pendientes unificados + UX agenda
+# Plan: Sistema PWA install impecable
 
-### Problema 1 — Unificar "Solicitudes" → "Pendientes"
+## 1. Estado actual
 
-**URL y naming**
-- Mantener URL `/solicitudes` (evita romper links/bookmarks). Cambiar:
-  - Título de página: "Pendientes de aprobar"
-  - Label del sidebar: "Pendientes"
-  - Texto del breadcrumb/botón "Volver"
+- **`usePWAInstall`** ya existe (`src/hooks/use-pwa-install.ts`) pero su API es mínima: solo `canInstall`, `install`, `isInstalled`, `isPreview`, `isIOS`. Hay que extenderla.
+- **Manifest dinámico**: ya implementado en `ClinicPortal.tsx` (líneas ~336-370) vía edge function `get-clinic-manifest` — recibe `slug` y `origin`, devuelve manifest con `name`, `short_name`, `theme_color`, `start_url=/portal/{slug}`, `icons`. **No hay que tocarlo**, solo verificar que tenga `display: standalone`, `scope`, `orientation: any`, `description`.
+- **`PortalWelcomeInstall`** ya tiene flujo welcome, detecta plataforma manualmente con `detectPlatform()` propio (duplicado de lo que va al hook). Hay que refactorizar para usar el hook centralizado y abrir el tutorial nuevo en lugar del bloque inline `showInstructions`.
+- **`IOSInstallGuideModal`** existe pero es estático con iconos lucide. Lo reemplazamos por `IOSInstallTutorial` con SVG animados.
+- **`PWAInstallBanner`** sticky/inline ya existe para el portal del paciente (`PatientPortalView`). Lo dejamos como está pero sumamos un `InstallAppButton` en el header.
+- Panel profesional: no hay header propio centralizado; el sidebar (`AppSidebar` / `PremiumSidebar`) y `MobileHeader` son los puntos de inserción. La card dismissible va en `Dashboard.tsx`.
 
-**Query unificada (frontend, sin RPC)**
-Dos `useQuery` en paralelo dentro de `AppointmentRequests.tsx`, merge en memoria. Razón: las tablas tienen RLS distintas y schemas distintos; una RPC agregaría complejidad sin beneficio. El volumen es bajo (límite 50 c/u).
+## 2. Decisiones técnicas
 
-```
-Q1: appointment_requests where status='pending'
-Q2: appointments where status='pending' AND source='patient_portal'
-     join patients(full_name, email, whatsapp_phone)
-```
+**Centralización**: toda la lógica (detección + dispatch) vive en `usePWAInstall`. Los componentes UI (botón, tutoriales) consumen el hook. Cero duplicación.
 
-Normalizar a un tipo común `PendingItem`:
+**API extendida del hook**:
 ```ts
-{ kind: 'portal_booking' | 'public_request',
-  id, datetime, name, email, phone, notes, modality,
-  patient_id?, appointment_id?, request_id? }
+{
+  canInstall, isInstalled, isIOS, isAndroid, isDesktop,
+  isUnsupported,            // Firefox + otros sin beforeinstallprompt y no iOS/desktop-safari
+  isDesktopSafari,
+  triggerInstall: () => Promise<'accepted' | 'dismissed' | 'ios' | 'desktop-safari' | 'unsupported'>,
+}
+```
+`triggerInstall` no abre modales — devuelve un discriminador y el componente caller decide qué modal abrir. Esto mantiene el hook sin acoplamiento a UI.
+
+**Animaciones SVG**: **CSS keyframes** (no SMIL). Razón: SMIL está deprecado en Chromium hace años, CSS keyframes funcionan en todos los browsers, son trivialmente debuggeables y permiten `prefers-reduced-motion`. Cada ilustración es un componente React con `<style>` scoped por clase única.
+
+**No agregamos dependencias**. Animaciones puras CSS, SVG inline.
+
+**Toast**: `sonner` (ya está integrado en el proyecto).
+
+## 3. Archivos a crear
+
+```text
+src/hooks/use-pwa-install.ts                          (REFACTOR — extender API)
+src/components/pwa/InstallAppButton.tsx               (NUEVO — reemplaza al existente)
+src/components/pwa/IOSInstallTutorial.tsx             (NUEVO — modal con 3 pasos animados)
+src/components/pwa/DesktopSafariTutorial.tsx          (NUEVO)
+src/components/pwa/UnsupportedBrowserModal.tsx        (NUEVO)
+src/components/pwa/illustrations/IOSShareStep.tsx     (NUEVO — SVG animado paso 1)
+src/components/pwa/illustrations/IOSAddToHomeStep.tsx (NUEVO — SVG animado paso 2)
+src/components/pwa/illustrations/IOSConfirmStep.tsx   (NUEVO — SVG animado paso 3)
+src/components/pwa/illustrations/SafariMenuStep.tsx   (NUEVO — para desktop Safari)
+src/components/pwa/InstallPromptCard.tsx              (NUEVO — card dismissible para dashboard)
 ```
 
-Ordenar por `datetime` ascendente. Render con borde lateral:
-- `portal_booking` → `border-l-primary` (azul) + badge "Paciente registrado"
-- `public_request` → `border-l-violet-500` + badge "Primera consulta"
+## 4. Archivos a modificar
 
-**Acciones**
-- Confirmar portal booking: `update appointments set status='scheduled'` + `notifyPatient` (push, ya existe) + toast "Cita confirmada. {Paciente} fue notificado."
-- Rechazar portal booking: `update appointments set status='cancelled', cancellation_reason, cancelled_at=now()` + notifyPatient
-- Aceptar/Rechazar public request: lógica actual intacta
+- **`src/components/InstallAppButton.tsx`** (existente, viejo): borrar. El nuevo vive en `src/components/pwa/`. Actualizar el único import en `src/pages/Landing.tsx` si existe.
+- **`src/components/portal/PortalWelcomeInstall.tsx`**: borrar `detectPlatform` local, `showInstructions`, bloques de pasos inline (`iosSteps`/`androidSteps`). Reemplazar handler `handleInstallClick` por `const result = await triggerInstall()` y abrir el modal apropiado (`IOSInstallTutorial`, `DesktopSafariTutorial`, `UnsupportedBrowserModal`). Conservar confetti, branding hero, features grid, justInstalled state.
+- **`src/components/portal/PatientPortalView.tsx`**: insertar `<InstallAppButton variant="icon-text" />` (desktop) / `variant="icon-only"` (mobile) en el header entre theme toggle y logout. Decidir variant por breakpoint con clases responsive (renderizar ambos, ocultar con `hidden md:inline-flex`).
+- **`src/components/IOSInstallGuideModal.tsx`**: deprecar (queda sin imports tras refactor de `PWAInstallBanner`). Actualizar `PWAInstallBanner` para usar `IOSInstallTutorial` nuevo en su lugar y borrar `IOSInstallGuideModal`.
+- **`src/components/MobileHeader.tsx`**: agregar `<InstallAppButton variant="icon-only" />`.
+- **`src/components/AppSidebar.tsx`** y/o **`src/components/PremiumSidebar.tsx`**: agregar `<InstallAppButton variant="icon-text" label="Instalar app" />` en el footer del sidebar (encima del logout o brand footer).
+- **`src/pages/Dashboard.tsx`**: insertar `<InstallPromptCard />` (dismissible con localStorage key `pwa_install_card_dismissed_pro`).
+- **`supabase/functions/get-clinic-manifest/index.ts`**: verificar y, si falta, asegurar `display: "standalone"`, `scope: "/"` (o `/portal/{slug}`), `orientation: "any"`, `description` cálida.
 
-**Reprogramaciones**: NO unificar en este pass (queda donde está, en detalle de cita). Riesgo/scope mayor sin pedido explícito firme.
+## 5. Comportamiento por plataforma
 
-**Contador sidebar**
-Modificar `use-pending-requests-count.ts` para sumar:
-- `appointment_requests` count where status='pending'
-- `appointments` count where status='pending' AND source='patient_portal'
+| Plataforma | `triggerInstall()` | UI resultante |
+|---|---|---|
+| Android Chrome/Edge con `beforeinstallprompt` | `prompt()` nativo | Toast éxito + reload (si accepted) |
+| Desktop Chrome/Edge con `beforeinstallprompt` | `prompt()` nativo | Toast éxito + reload |
+| iOS Safari | retorna `'ios'` | Abre `IOSInstallTutorial` |
+| Desktop Safari | retorna `'desktop-safari'` | Abre `DesktopSafariTutorial` |
+| Firefox / otros sin soporte | retorna `'unsupported'` | Abre `UnsupportedBrowserModal` |
+| Android Chrome SIN `beforeinstallprompt` (ya rechazado, etc.) | retorna `'unsupported'` con mensaje específico "Buscá 'Instalar app' en el menú del navegador" | Modal informativo |
+| Ya instalado | botón no renderiza | — |
 
-### Problema 2 — UX vista mensual de agenda
+Reload post-install: `setTimeout(() => window.location.reload(), 2000)` solo si `outcome === 'accepted'`.
 
-Tocar **solo** `MonthViewV2.tsx` (y `MonthDayDrawer.tsx` si hace falta para colores). No tocar la lógica de datos.
+## 6. Detalle ilustraciones SVG iOS
 
-**Cards en celdas de día**
-- Replace text-overflow ellipsis con lógica de abreviación: si nombre no entra, usar `Nombre I.` (inicial apellido). Si sigue sin entrar, solo nombre.
-- Mostrar máx 2 citas + `+N más` si hay 3+. Click en `+N` abre el `MonthDayDrawer` (ya existe).
+Cada ilustración: viewBox `0 0 200 360` (proporción iPhone), línea fina `stroke-width="1.5"` con `currentColor`, fills suaves con opacity. Un `<circle>` "dedo" animado con `@keyframes` que:
 
-**Código de colores unificado** (helper en `calendar-v2/types.ts`)
-```
-scheduled/confirmed → primary (azul)
-pending (portal)    → amber-500
-reschedule_requested → yellow-400
-cancelled_by_patient → red-500
-cancelled / attended → gray-400
-```
-Aplicar en Month/Week/Day views (border-left de la card).
+1. `opacity: 0 → 1` (300ms fade-in)
+2. `transform: translate(...)` hacia el target (600ms)
+3. Pulso `scale(1) → scale(0.85) → scale(1)` (200ms tap)
+4. `opacity: 1 → 0` (400ms fade-out)
+5. Pausa 500ms, loop.
 
-**Indicadores día**
-- Total de citas: número pequeño gris top-right (info, no alerta)
-- Punto rojo SOLO si: hay pagos vencidos del día O hay reservas pending del portal. Tooltip al hover explicando.
+Total ciclo ~2.5s. Respeta `@media (prefers-reduced-motion: reduce)` → desactiva animación.
 
-**Mobile**
-- En `CalendarV2.tsx`, si `useIsMobile()` y no hay viewType en URL → default `day`.
-- Banner sutil al cambiar a `month` en mobile: "Se ve mejor en horizontal."
+## 7. Criterios de aceptación cubiertos
 
-### Archivos a tocar
+✅ Botón sutil en header (portal + profesional), oculto si instalado
+✅ Android/Desktop Chrome: 1 tap → prompt nativo
+✅ iOS: 1 tap → tutorial animado SVG
+✅ Desktop Safari: 1 tap → tutorial Dock
+✅ Firefox: 1 tap → modal explicativo
+✅ Toast + reload tras instalar
+✅ Manifest dinámico verificado
+✅ Mobile 375px responsive
+✅ Sin dependencias nuevas, sin GIFs
 
-- `src/pages/AppointmentRequests.tsx` — rediseño completo (query unificada, render dual)
-- `src/components/AppSidebar.tsx` / `PremiumSidebar.tsx` — label "Pendientes"
-- `src/hooks/use-pending-requests-count.ts` — sumar ambos counts
-- `src/components/calendar-v2/MonthViewV2.tsx` — cards, abreviación, indicadores
-- `src/components/calendar-v2/types.ts` — helper de colores unificado por status
-- `src/components/calendar-v2/DayViewV2.tsx`, `WeekViewV2.tsx` — aplicar colores
-- `src/pages/CalendarV2.tsx` — default mobile a day, banner month-mobile
+## 8. Fuera de scope
 
-### Preguntas que me hiciste
+- No tocar service workers, cache strategies, ni `vite.config.ts` (workbox)
+- No agregar pop-ups intrusivos fuera del welcome screen del paciente y la card dismissible del dashboard profesional
+- No cambiar la lógica de `PortalWelcomeInstall.tsx` para decidir cuándo aparece (la flag `portal_welcomed_{slug}` ya está manejada en `ClinicPortal.tsx`)
 
-1. **URL**: mantener `/solicitudes`, solo cambia título y sidebar label.
-2. **Query**: 2 queries en frontend con merge. Sin RPC.
-3. **Cards de agenda**: cambios estructurales (no solo CSS) — necesito ajustar lógica de truncado y agregar helper de colores en `types.ts`.
-
-¿OK para ejecutar?
+Aprobá y arranco.

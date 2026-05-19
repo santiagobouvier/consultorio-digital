@@ -17,6 +17,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { PWAInstallBanner } from "@/components/PWAInstallBanner";
+import { InstallAppButton } from "@/components/pwa/InstallAppButton";
 import { NotificationActivationCard } from "@/components/NotificationActivationCard";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
@@ -1411,6 +1412,8 @@ export function PatientPortalView(props: PatientPortalViewProps) {
               >
                 {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
               </Button>
+              <InstallAppButton variant="icon-only" className="md:hidden" clinicName={branding.name} />
+              <InstallAppButton variant="icon-text" className="hidden md:inline-flex" clinicName={branding.name} />
               {headerAction === "logout" && onLogout && (
                 <Button variant="outline" size="sm" onClick={onLogout} className="gap-2">
                   <LogOut className="h-4 w-4" />
