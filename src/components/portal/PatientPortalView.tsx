@@ -19,6 +19,8 @@ import {
 import { PWAInstallBanner } from "@/components/PWAInstallBanner";
 import { InstallAppButton } from "@/components/pwa/InstallAppButton";
 import { NotificationActivationCard } from "@/components/NotificationActivationCard";
+import { NotificationBell } from "@/components/portal/NotificationBell";
+import { NotificationsSummaryCard } from "@/components/portal/NotificationsSummaryCard";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import {
@@ -466,6 +468,9 @@ export function PatientPortalView(props: PatientPortalViewProps) {
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6">
       {/* LEFT (8/12) */}
       <div className="lg:col-span-8 flex flex-col gap-5 lg:gap-6">
+        {/* Notificaciones no leídas */}
+        <NotificationsSummaryCard patientId={patient.id} />
+
         {/* Alerta de pagos vencidos */}
         {overdueCount > 0 && (
           <Card className="rounded-2xl border-destructive/30 bg-destructive/5">
@@ -1414,6 +1419,7 @@ export function PatientPortalView(props: PatientPortalViewProps) {
               </Button>
               <InstallAppButton variant="icon-only" className="md:hidden" clinicName={branding.name} />
               <InstallAppButton variant="icon-text" className="hidden md:inline-flex" clinicName={branding.name} />
+              <NotificationBell patientId={patient.id} />
               {headerAction === "logout" && onLogout && (
                 <Button variant="outline" size="sm" onClick={onLogout} className="gap-2">
                   <LogOut className="h-4 w-4" />
