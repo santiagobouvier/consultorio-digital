@@ -810,6 +810,70 @@ export type Database = {
           },
         ]
       }
+      patient_notifications: {
+        Row: {
+          body: string
+          business_id: string
+          created_at: string
+          id: string
+          metadata: Json
+          patient_id: string
+          read_at: string | null
+          related_appointment_id: string | null
+          related_payment_id: string | null
+          title: string
+          type: string
+        }
+        Insert: {
+          body: string
+          business_id: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          patient_id: string
+          read_at?: string | null
+          related_appointment_id?: string | null
+          related_payment_id?: string | null
+          title: string
+          type: string
+        }
+        Update: {
+          body?: string
+          business_id?: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          patient_id?: string
+          read_at?: string | null
+          related_appointment_id?: string | null
+          related_payment_id?: string | null
+          title?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_notifications_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_notifications_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public_branding"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_notifications_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       patient_portal_invites: {
         Row: {
           auth_user_id: string
