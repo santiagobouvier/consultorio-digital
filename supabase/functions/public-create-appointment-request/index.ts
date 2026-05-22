@@ -118,6 +118,7 @@ serve(async (req) => {
       .insert({
         business_id: business.id,
         patient_id: patientId,
+        professional_id: slot.professional_user_id ?? business.owner_user_id,
         availability_slot_id: slotId,
         start_at: startDatetime.toISOString(),
         end_at: endDatetime.toISOString(),
