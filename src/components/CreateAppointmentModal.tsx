@@ -112,17 +112,12 @@ export function CreateAppointmentModal({
     }
   }, [open, prefilledDate]);
 
-  // Set default professional
+  // Cada profesional crea SOLO sus propias citas.
+  // Forzamos professional_id = auth.uid() siempre.
   useEffect(() => {
     if (!open) return;
-    if (!isOwner && currentUserId) {
-      setSelectedProfessionalId(currentUserId);
-    } else if (professionals.length === 1) {
-      setSelectedProfessionalId(professionals[0].userId);
-    } else if (!selectedProfessionalId && currentUserId) {
-      setSelectedProfessionalId(currentUserId);
-    }
-  }, [open, professionals, currentUserId, isOwner]);
+    if (currentUserId) setSelectedProfessionalId(currentUserId);
+  }, [open, currentUserId]);
 
   useEffect(() => {
     if (open && !patientId) {
@@ -184,20 +179,8 @@ export function CreateAppointmentModal({
       return;
     }
 
-    // Validación: si hay más de 1 profesional, es obligatorio elegir uno
-    if (professionals.length > 1 && !selectedProfessionalId) {
-      toast({
-        title: "Falta el profesional",
-        description: "Elegí qué profesional atenderá esta cita",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Si hay un solo profesional, asegurar que quede asignado
-    const finalProfessionalId =
-      selectedProfessionalId ||
-      (professionals.length === 1 ? professionals[0].userId : null);
+    // Cada profesional solo puede crear citas para sí mismo
+    const finalProfessionalId = currentUserId;
 
     if (!finalProfessionalId) {
       toast({
@@ -335,9 +318,8 @@ export function CreateAppointmentModal({
     }
   };
 
-  const showProfessionalSelector = professionals.length > 1;
-  const isProfessionalLocked = !isOwner;
-  const singleProfessional = professionals.length === 1 ? professionals[0] : null;
+  const showProfessionalSelector = false;
+  const singleProfessional = professionals.find((p) => p.userId === currentUserId) ?? null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -367,42 +349,8 @@ export function CreateAppointmentModal({
               </div>
             )}
 
-            {/* Profesional */}
-            {showProfessionalSelector && (
-              <div className="space-y-2">
-                <Label htmlFor="professional" className="text-sm font-semibold">Profesional *</Label>
-                <Select
-                  value={selectedProfessionalId}
-                  onValueChange={setSelectedProfessionalId}
-                  disabled={isProfessionalLocked}
-                >
-                  <SelectTrigger id="professional" className="h-12 text-base rounded-xl">
-                    <SelectValue placeholder="Selecciona un profesional" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {professionals.map((prof) => (
-                      <SelectItem key={prof.userId} value={prof.userId}>
-                        <div className="flex items-center gap-2">
-                          <span
-                            className="w-3 h-3 rounded-full shrink-0"
-                            style={{ backgroundColor: prof.color }}
-                          />
-                          {prof.name}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {isProfessionalLocked && (
-                  <p className="text-xs text-muted-foreground">
-                    Solo puedes crear citas para tu agenda
-                  </p>
-                )}
-              </div>
-            )}
-
-            {/* Asignación automática cuando hay un solo profesional */}
-            {!showProfessionalSelector && singleProfessional && (
+            {/* Asignación automática: cada profesional crea solo sus propias citas */}
+            {singleProfessional && (
               <div className="flex items-center gap-3 rounded-xl border border-dashed border-border bg-muted/30 px-3 py-2.5">
                 <span
                   className="w-3 h-3 rounded-full shrink-0"

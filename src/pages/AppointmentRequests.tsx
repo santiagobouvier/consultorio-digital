@@ -373,9 +373,13 @@ const AppointmentRequests = () => {
       const endDt = new Date(request.requested_datetime);
       endDt.setHours(endDt.getHours() + 1);
 
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (!currentUser) throw new Error("Sesión no válida");
+
       const { error: aptError } = await supabase.from("appointments").insert({
         business_id: businessId,
         patient_id: patientId,
+        professional_id: currentUser.id,
         start_at: request.requested_datetime,
         end_at: endDt.toISOString(),
         contact_name: request.name,
