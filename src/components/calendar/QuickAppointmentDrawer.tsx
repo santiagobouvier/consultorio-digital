@@ -54,7 +54,7 @@ export const QuickAppointmentDrawer = ({
   const [patients, setPatients] = useState<Patient[]>([]);
   const [loadingPatients, setLoadingPatients] = useState(false);
 
-  const { professionals, currentUserId, isOwner } = useProfessionals(businessId);
+  const { professionals, currentUserId } = useProfessionals(businessId);
 
   // Form state
   const [appointmentDate, setAppointmentDate] = useState<Date>(selectedDate);
@@ -74,18 +74,10 @@ export const QuickAppointmentDrawer = ({
     }
   }, [open, businessId]);
 
-  // Set default professional when professionals load
+  // Cada profesional crea SOLO sus propias citas.
   useEffect(() => {
-    if (professionals.length > 0 && currentUserId && !selectedProfessionalId) {
-      // Default to current user if they're a professional
-      const currentProfessional = professionals.find(p => p.userId === currentUserId);
-      if (currentProfessional) {
-        setSelectedProfessionalId(currentProfessional.userId);
-      } else if (professionals.length === 1) {
-        setSelectedProfessionalId(professionals[0].userId);
-      }
-    }
-  }, [professionals, currentUserId, selectedProfessionalId]);
+    if (currentUserId) setSelectedProfessionalId(currentUserId);
+  }, [currentUserId]);
 
   // Reset form when drawer opens with new date
   useEffect(() => {
@@ -302,33 +294,7 @@ export const QuickAppointmentDrawer = ({
             </Select>
           </div>
 
-          {/* Professional selector (only show if multiple professionals or is owner) */}
-          {(professionals.length > 1 || isOwner) && (
-            <div className="space-y-2">
-              <Label className="text-sm font-semibold flex items-center gap-2">
-                <UserCircle className="w-4 h-4" />
-                Profesional *
-              </Label>
-              <Select value={selectedProfessionalId} onValueChange={setSelectedProfessionalId}>
-                <SelectTrigger className="h-12 rounded-xl text-base">
-                  <SelectValue placeholder="Seleccionar profesional" />
-                </SelectTrigger>
-                <SelectContent>
-                  {professionals.map((professional) => (
-                    <SelectItem key={professional.userId} value={professional.userId}>
-                      <div className="flex items-center gap-2">
-                        <span 
-                          className="w-3 h-3 rounded-full" 
-                          style={{ backgroundColor: professional.color }}
-                        />
-                        {professional.name}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+          {/* Cada profesional crea solo sus propias citas (sin selector) */}
 
           {/* Time */}
           <div className="space-y-2">
