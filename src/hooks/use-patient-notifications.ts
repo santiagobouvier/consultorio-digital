@@ -6,7 +6,9 @@ export type PatientNotificationType =
   | "appointment_cancelled_by_professional"
   | "reschedule_approved"
   | "reschedule_rejected"
-  | "payment_received";
+  | "payment_received"
+  | "appointment_created_by_professional"
+  | "payment_due_soon";
 
 export interface PatientNotification {
   id: string;
