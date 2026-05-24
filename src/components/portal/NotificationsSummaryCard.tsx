@@ -1,4 +1,4 @@
-import { Bell, CalendarCheck, CalendarX, RefreshCw, XCircle, CreditCard } from "lucide-react";
+import { Bell, CalendarCheck, CalendarX, RefreshCw, XCircle, CreditCard, CalendarPlus, Clock } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { formatDistanceToNow, parseISO } from "date-fns";
@@ -17,6 +17,10 @@ const typeIcon = (type: string) => {
       return <XCircle className="h-4 w-4 text-destructive" />;
     case "payment_received":
       return <CreditCard className="h-4 w-4 text-primary" />;
+    case "appointment_created_by_professional":
+      return <CalendarPlus className="h-4 w-4 text-primary" />;
+    case "payment_due_soon":
+      return <Clock className="h-4 w-4 text-orange-500" />;
     default:
       return <Bell className="h-4 w-4 text-muted-foreground" />;
   }
