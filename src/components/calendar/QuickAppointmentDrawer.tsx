@@ -67,11 +67,31 @@ export const QuickAppointmentDrawer = ({
   // Payment state
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentStatus, setPaymentStatus] = useState<"paid" | "pending">("pending");
+  const [defaultPrice, setDefaultPrice] = useState<number | null>(null);
 
   useEffect(() => {
     if (open && businessId) {
       fetchPatients();
     }
+  }, [open, businessId]);
+
+  // Precargar tarifa default del consultorio
+  useEffect(() => {
+    if (!open || !businessId) return;
+    (async () => {
+      const { data } = await supabase
+        .from("businesses")
+        .select("default_session_price")
+        .eq("id", businessId)
+        .maybeSingle();
+      const v = (data as any)?.default_session_price;
+      if (v != null) {
+        setDefaultPrice(Number(v));
+        setPaymentAmount(String(v));
+      } else {
+        setDefaultPrice(null);
+      }
+    })();
   }, [open, businessId]);
 
   // Cada profesional crea SOLO sus propias citas.
@@ -167,38 +187,21 @@ export const QuickAppointmentDrawer = ({
           source: "panel",
           payment_status: appointmentPaymentStatus,
           notes: notes.trim() || null,
-        })
+          session_price: paymentAmount ? parseFloat(paymentAmount) : null,
+        } as any)
         .select()
         .single();
 
       if (aptError) throw aptError;
 
-      // Create payment if amount was specified
-      if (paymentAmount && parseFloat(paymentAmount) > 0) {
-        const paymentData = {
-          business_id: businessId,
-          patient_id: selectedPatientId,
-          appointment_id: appointment.id,
-          amount: parseFloat(paymentAmount),
-          currency: "UYU",
-          due_date: startAt.toISOString(),
-          status: paymentStatus,
-          paid_at: paymentStatus === "paid" ? new Date().toISOString() : null,
-          recurrence_type: "one_time",
-        };
-
-        const { error: paymentError } = await supabase
+      // El trigger auto-crea un pago pendiente. Si el usuario marcó "Pagado", actualizamos el pago.
+      if (paymentAmount && parseFloat(paymentAmount) > 0 && paymentStatus === "paid") {
+        const { error: payErr } = await supabase
           .from("payments")
-          .insert(paymentData);
-
-        if (paymentError) {
-          console.error("Error creating payment:", paymentError);
-          // Don't fail the whole operation, just warn
-          toast({
-            title: "Cita creada",
-            description: "La cita se creó pero hubo un error al registrar el pago",
-            variant: "default",
-          });
+          .update({ status: "paid", paid_at: new Date().toISOString() })
+          .eq("appointment_id", appointment.id);
+        if (payErr) {
+          console.error("Error marking payment paid:", payErr);
         }
       }
 
@@ -343,8 +346,11 @@ export const QuickAppointmentDrawer = ({
           <div className="space-y-3 pt-2 border-t">
             <Label className="text-sm font-semibold flex items-center gap-2">
               <CreditCard className="w-4 h-4" />
-              Pago (opcional)
+              Monto de la sesión
             </Label>
+            <p className="text-xs text-muted-foreground -mt-1">
+              Se genera un pago pendiente vinculado. Marcalo como pagado si ya cobraste.
+            </p>
             
             <div className="space-y-3">
               {/* Amount */}

@@ -171,6 +171,7 @@ export type Database = {
           professional_id: string | null
           recurrence_group_id: string | null
           service_id: string | null
+          session_price: number | null
           source: string
           space_id: string | null
           start_at: string
@@ -199,6 +200,7 @@ export type Database = {
           professional_id?: string | null
           recurrence_group_id?: string | null
           service_id?: string | null
+          session_price?: number | null
           source?: string
           space_id?: string | null
           start_at: string
@@ -227,6 +229,7 @@ export type Database = {
           professional_id?: string | null
           recurrence_group_id?: string | null
           service_id?: string | null
+          session_price?: number | null
           source?: string
           space_id?: string | null
           start_at?: string
@@ -594,6 +597,7 @@ export type Database = {
           dashboard_display_name: string | null
           dashboard_logo_url: string | null
           dashboard_primary_color: string | null
+          default_session_price: number | null
           id: string
           is_active: boolean
           is_demo: boolean
@@ -628,6 +632,7 @@ export type Database = {
           dashboard_display_name?: string | null
           dashboard_logo_url?: string | null
           dashboard_primary_color?: string | null
+          default_session_price?: number | null
           id?: string
           is_active?: boolean
           is_demo?: boolean
@@ -662,6 +667,7 @@ export type Database = {
           dashboard_display_name?: string | null
           dashboard_logo_url?: string | null
           dashboard_primary_color?: string | null
+          default_session_price?: number | null
           id?: string
           is_active?: boolean
           is_demo?: boolean

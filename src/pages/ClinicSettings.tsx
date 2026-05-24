@@ -81,6 +81,7 @@ const ClinicSettings = () => {
   const [isPrivateClinic, setIsPrivateClinic] = useState(false);
   const [cancellationHoursNotice, setCancellationHoursNotice] = useState<number>(24);
   const [lateCancellationMessage, setLateCancellationMessage] = useState<string>("");
+  const [defaultSessionPrice, setDefaultSessionPrice] = useState<string>("");
 
   // Initial snapshot to detect dirty state
   const [initialSnapshot, setInitialSnapshot] = useState<string>("");
@@ -121,6 +122,7 @@ const ClinicSettings = () => {
       isPrivateClinic,
       cancellationHoursNotice,
       lateCancellationMessage,
+      defaultSessionPrice,
     });
 
   const isDirty = !loading && initialSnapshot !== "" && buildSnapshot() !== initialSnapshot;
@@ -150,7 +152,7 @@ const ClinicSettings = () => {
 
       let { data: business } = await supabase
         .from("businesses")
-        .select("id, public_slug, owner_user_id, is_private_clinic, cancellation_hours_notice, late_cancellation_message")
+        .select("id, public_slug, owner_user_id, is_private_clinic, cancellation_hours_notice, late_cancellation_message, default_session_price")
         .eq("owner_user_id", user.id)
         .maybeSingle();
 
@@ -165,7 +167,7 @@ const ClinicSettings = () => {
         if (userRole?.business_id) {
           const { data: memberBusiness } = await supabase
             .from("businesses")
-            .select("id, public_slug, owner_user_id, is_private_clinic, cancellation_hours_notice, late_cancellation_message")
+            .select("id, public_slug, owner_user_id, is_private_clinic, cancellation_hours_notice, late_cancellation_message, default_session_price")
             .eq("id", userRole.business_id)
             .single();
           business = memberBusiness;
@@ -208,6 +210,8 @@ const ClinicSettings = () => {
         setIsPrivateClinic((business as any).is_private_clinic || false);
         setCancellationHoursNotice((business as any).cancellation_hours_notice ?? 24);
         setLateCancellationMessage((business as any).late_cancellation_message ?? "");
+        const dsp = (business as any).default_session_price;
+        setDefaultSessionPrice(dsp != null ? String(dsp) : "");
       }
 
       const { data: settings } = await supabase
@@ -330,6 +334,7 @@ const ClinicSettings = () => {
           is_private_clinic: isPrivateClinic,
           cancellation_hours_notice: Number.isFinite(cancellationHoursNotice) ? cancellationHoursNotice : 24,
           late_cancellation_message: lateCancellationMessage.trim() || null,
+          default_session_price: defaultSessionPrice.trim() === "" ? null : Number(defaultSessionPrice),
         };
         if (clinicName && clinicName.trim()) {
           businessUpdate.name = clinicName.trim();
@@ -464,6 +469,25 @@ const ClinicSettings = () => {
                     id="welcomeMessage" value={welcomeMessage} onChange={(e) => setWelcomeMessage(e.target.value)}
                     placeholder="Descripción opcional del consultorio que verán los pacientes." rows={3} className="resize-none"
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="defaultSessionPrice">Tarifa default por sesión (UYU)</Label>
+                  <div className="relative max-w-[200px]">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                    <Input
+                      id="defaultSessionPrice"
+                      type="number"
+                      min={0}
+                      step={1}
+                      value={defaultSessionPrice}
+                      onChange={(e) => setDefaultSessionPrice(e.target.value)}
+                      placeholder="0"
+                      className="h-11 pl-7"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Monto sugerido al crear una nueva cita desde el panel. Genera automáticamente un pago pendiente vinculado.
+                  </p>
                 </div>
               </CardContent>
             </Card>
