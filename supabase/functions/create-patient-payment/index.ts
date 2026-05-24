@@ -68,7 +68,7 @@ serve(async (req) => {
     // Fetch payments — must all belong to this patient + business, not paid/cancelled
     const { data: payments, error: payErr } = await supabase
       .from("payments")
-      .select("id, amount, currency, status, notes, appointment_id, due_date")
+      .select("id, amount, currency, status, notes, appointment_id, due_date, mp_preference_id, updated_at")
       .in("id", paymentIds)
       .eq("business_id", businessId)
       .eq("patient_id", patient.id);
@@ -82,6 +82,20 @@ serve(async (req) => {
     if (invalid) {
       return new Response(JSON.stringify({ error: "Some payments are not payable" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Anti-doble-cobro: rechazar si algún pago ya tiene preferencia MP pendiente reciente (<10 min)
+    const tenMinAgo = Date.now() - 10 * 60 * 1000;
+    const inFlight = payments.find(
+      (p) => p.mp_preference_id && p.status === "pending" &&
+        p.updated_at && new Date(p.updated_at).getTime() > tenMinAgo,
+    );
+    if (inFlight) {
+      return new Response(JSON.stringify({
+        error: "Ya tenés un pago en curso para esta sesión. Esperá a que se confirme o cancele antes de intentar de nuevo.",
+      }), {
+        status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
