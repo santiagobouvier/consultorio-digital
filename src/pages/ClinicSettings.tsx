@@ -81,6 +81,7 @@ const ClinicSettings = () => {
   const [isPrivateClinic, setIsPrivateClinic] = useState(false);
   const [cancellationHoursNotice, setCancellationHoursNotice] = useState<number>(24);
   const [lateCancellationMessage, setLateCancellationMessage] = useState<string>("");
+  const [defaultSessionPrice, setDefaultSessionPrice] = useState<string>("");
 
   // Initial snapshot to detect dirty state
   const [initialSnapshot, setInitialSnapshot] = useState<string>("");
@@ -121,6 +122,7 @@ const ClinicSettings = () => {
       isPrivateClinic,
       cancellationHoursNotice,
       lateCancellationMessage,
+      defaultSessionPrice,
     });
 
   const isDirty = !loading && initialSnapshot !== "" && buildSnapshot() !== initialSnapshot;
@@ -150,7 +152,7 @@ const ClinicSettings = () => {
 
       let { data: business } = await supabase
         .from("businesses")
-        .select("id, public_slug, owner_user_id, is_private_clinic, cancellation_hours_notice, late_cancellation_message")
+        .select("id, public_slug, owner_user_id, is_private_clinic, cancellation_hours_notice, late_cancellation_message, default_session_price")
         .eq("owner_user_id", user.id)
         .maybeSingle();
 
@@ -165,7 +167,7 @@ const ClinicSettings = () => {
         if (userRole?.business_id) {
           const { data: memberBusiness } = await supabase
             .from("businesses")
-            .select("id, public_slug, owner_user_id, is_private_clinic, cancellation_hours_notice, late_cancellation_message")
+            .select("id, public_slug, owner_user_id, is_private_clinic, cancellation_hours_notice, late_cancellation_message, default_session_price")
             .eq("id", userRole.business_id)
             .single();
           business = memberBusiness;
@@ -208,6 +210,8 @@ const ClinicSettings = () => {
         setIsPrivateClinic((business as any).is_private_clinic || false);
         setCancellationHoursNotice((business as any).cancellation_hours_notice ?? 24);
         setLateCancellationMessage((business as any).late_cancellation_message ?? "");
+        const dsp = (business as any).default_session_price;
+        setDefaultSessionPrice(dsp != null ? String(dsp) : "");
       }
 
       const { data: settings } = await supabase
@@ -330,6 +334,7 @@ const ClinicSettings = () => {
           is_private_clinic: isPrivateClinic,
           cancellation_hours_notice: Number.isFinite(cancellationHoursNotice) ? cancellationHoursNotice : 24,
           late_cancellation_message: lateCancellationMessage.trim() || null,
+          default_session_price: defaultSessionPrice.trim() === "" ? null : Number(defaultSessionPrice),
         };
         if (clinicName && clinicName.trim()) {
           businessUpdate.name = clinicName.trim();
