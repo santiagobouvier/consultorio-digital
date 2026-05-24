@@ -346,8 +346,11 @@ export const QuickAppointmentDrawer = ({
           <div className="space-y-3 pt-2 border-t">
             <Label className="text-sm font-semibold flex items-center gap-2">
               <CreditCard className="w-4 h-4" />
-              Pago (opcional)
+              Monto de la sesión
             </Label>
+            <p className="text-xs text-muted-foreground -mt-1">
+              Se genera un pago pendiente vinculado. Marcalo como pagado si ya cobraste.
+            </p>
             
             <div className="space-y-3">
               {/* Amount */}
