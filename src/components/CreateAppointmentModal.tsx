@@ -101,6 +101,8 @@ export function CreateAppointmentModal({
   const [recurrenceEndType, setRecurrenceEndType] = useState<RecurrenceEndType>("count");
   const [recurrenceCount, setRecurrenceCount] = useState(4);
   const [recurrenceEndDate, setRecurrenceEndDate] = useState<Date | undefined>();
+  const [sessionPrice, setSessionPrice] = useState<string>("");
+  const [defaultPrice, setDefaultPrice] = useState<number | null>(null);
 
   // Prefill date when modal opens with a prefilledDate
   useEffect(() => {
@@ -127,6 +129,26 @@ export function CreateAppointmentModal({
       setSelectedPatientId(patientId);
     }
   }, [open, patientId]);
+
+  // Cargar tarifa default del consultorio y precargar input
+  useEffect(() => {
+    if (!open || !businessId) return;
+    (async () => {
+      const { data } = await supabase
+        .from("businesses")
+        .select("default_session_price")
+        .eq("id", businessId)
+        .maybeSingle();
+      const v = (data as any)?.default_session_price;
+      if (v != null) {
+        setDefaultPrice(Number(v));
+        setSessionPrice(String(v));
+      } else {
+        setDefaultPrice(null);
+        setSessionPrice("");
+      }
+    })();
+  }, [open, businessId]);
 
   const fetchPatients = async () => {
     try {
@@ -219,6 +241,7 @@ export function CreateAppointmentModal({
             status: "pending" as const,
             payment_status: "pendiente",
             recurrence_group_id: groupId,
+            session_price: sessionPrice ? Number(sessionPrice) : null,
           };
         });
         const { error } = await supabase.from("appointments").insert(rows as any);
@@ -235,6 +258,7 @@ export function CreateAppointmentModal({
           notes: notes.trim() || null,
           status: "pending",
           payment_status: "pendiente",
+          session_price: sessionPrice ? Number(sessionPrice) : null,
         } as any);
         if (error) throw error;
       }
