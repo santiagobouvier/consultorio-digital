@@ -470,6 +470,25 @@ const ClinicSettings = () => {
                     placeholder="Descripción opcional del consultorio que verán los pacientes." rows={3} className="resize-none"
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="defaultSessionPrice">Tarifa default por sesión (UYU)</Label>
+                  <div className="relative max-w-[200px]">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                    <Input
+                      id="defaultSessionPrice"
+                      type="number"
+                      min={0}
+                      step={1}
+                      value={defaultSessionPrice}
+                      onChange={(e) => setDefaultSessionPrice(e.target.value)}
+                      placeholder="0"
+                      className="h-11 pl-7"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Monto sugerido al crear una nueva cita desde el panel. Genera automáticamente un pago pendiente vinculado.
+                  </p>
+                </div>
               </CardContent>
             </Card>
 
