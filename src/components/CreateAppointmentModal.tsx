@@ -483,6 +483,27 @@ export function CreateAppointmentModal({
               />
             </div>
 
+            {/* Monto de la sesión */}
+            <div className="space-y-2">
+              <Label htmlFor="session_price" className="text-sm font-semibold">Monto de la sesión (UYU)</Label>
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                <Input
+                  id="session_price"
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={sessionPrice}
+                  onChange={(e) => setSessionPrice(e.target.value)}
+                  placeholder={defaultPrice ? String(defaultPrice) : "0"}
+                  className="h-12 text-base rounded-xl pl-8"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Se genera un pago pendiente vinculado a esta cita. Dejá en blanco si no querés cobrar.
+              </p>
+            </div>
+
             {/* Recurrencia */}
             <div className="space-y-3 p-4 border rounded-xl bg-muted/30">
               <div className="flex items-center gap-3">
