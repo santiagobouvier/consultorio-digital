@@ -60,7 +60,7 @@ serve(async (req) => {
     // Check existing payment for this appointment
     const { data: existingPayment } = await supabase
       .from("payments")
-      .select("id, status, mp_preference_id")
+      .select("id, status, mp_preference_id, updated_at")
       .eq("appointment_id", appointmentId)
       .in("status", ["paid", "pending"])
       .order("created_at", { ascending: false })
@@ -70,6 +70,18 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Este turno ya fue pagado" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // Anti-doble-cobro: rechazar si ya hay preferencia MP pendiente reciente (<10 min)
+    if (existingPayment?.status === "pending" && existingPayment.mp_preference_id && existingPayment.updated_at) {
+      const tenMinAgo = Date.now() - 10 * 60 * 1000;
+      if (new Date(existingPayment.updated_at).getTime() > tenMinAgo) {
+        return new Response(JSON.stringify({
+          error: "Ya tenés un pago en curso para esta sesión. Esperá a que se confirme o cancele antes de intentar de nuevo.",
+        }), {
+          status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     // Get appointment
