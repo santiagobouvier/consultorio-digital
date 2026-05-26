@@ -1736,6 +1736,27 @@ export type Database = {
           skipped: number
         }[]
       }
+      get_agenda_view: {
+        Args: { p_business_id: string; p_from: string; p_to: string }
+        Returns: {
+          contact_name: string
+          contact_phone: string
+          end_at: string
+          id: string
+          is_own: boolean
+          modality: string
+          notes: string
+          patient_id: string
+          patient_name: string
+          payment_status: string
+          professional_id: string
+          session_price: number
+          space_id: string
+          space_name: string
+          start_at: string
+          status: string
+        }[]
+      }
       get_available_slots: {
         Args: {
           p_business_id: string
