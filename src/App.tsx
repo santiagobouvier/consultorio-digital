@@ -13,6 +13,7 @@ import { BusinessIdProvider } from "@/contexts/BusinessIdContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { PWAInstalledCelebrationModal } from "@/components/PWAInstalledCelebrationModal";
 import LoadingPage from "@/components/LoadingPage";
+import { useAuthSync } from "@/hooks/use-auth-sync";
 
 
 // Lazy load all pages for optimal performance (code-split per route)
@@ -103,6 +104,15 @@ const PROTECTED_ROUTE_PREFIXES = [
 const isOnProtectedRoute = () =>
   PROTECTED_ROUTE_PREFIXES.some((prefix) => window.location.pathname.startsWith(prefix));
 
+/**
+ * Wrapper interno que vive DENTRO del BrowserRouter para poder usar
+ * useNavigate / useLocation desde el hook de sincronización entre pestañas.
+ */
+const AuthSyncBridge = () => {
+  useAuthSync();
+  return null;
+};
+
 const App = () => {
   useEffect(() => {
     // Único responsable de reaccionar a cambios de sesión a nivel app:
@@ -139,6 +149,7 @@ const App = () => {
         <SessionExpiredDialog />
         <PWAInstalledCelebrationModal />
         <BrowserRouter>
+          <AuthSyncBridge />
           <AuthProvider>
             <BusinessIdProvider>
             <Suspense fallback={<LoadingPage />}>

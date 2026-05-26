@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { triggerSessionExpired } from "@/components/SessionExpiredDialog";
@@ -28,14 +28,26 @@ export const BusinessIdProvider = ({ children }: { children: ReactNode }) => {
   const { user, isSuperAdmin, isReady: authReady } = useAuth();
   const [businessId, setBusinessId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  // Guard: evita refetches redundantes cuando el evento de auth (típicamente
+  // TOKEN_REFRESHED) no cambia el usuario real. Guardamos el último user.id
+  // para el que ya resolvimos el business correctamente.
+  const lastResolvedUserIdRef = useRef<string | null | undefined>(undefined);
 
-  const fetchBusinessId = useCallback(async () => {
+  const fetchBusinessId = useCallback(async (opts?: { force?: boolean }) => {
+    const currentUserId = user?.id ?? null;
+    // Si ya resolvimos para este mismo userId y no es un refetch forzado, no
+    // hacemos nada. Esto rompe el bucle de re-fetches en cascada que generaban
+    // los TOKEN_REFRESHED entre múltiples pestañas.
+    if (!opts?.force && lastResolvedUserIdRef.current === currentUserId) {
+      return;
+    }
     try {
       setLoading(true);
 
       if (!user) {
         setBusinessId(null);
         setLoading(false);
+        lastResolvedUserIdRef.current = null;
         return;
       }
 
@@ -45,6 +57,7 @@ export const BusinessIdProvider = ({ children }: { children: ReactNode }) => {
       if (isOnPatientPortalRoute()) {
         setBusinessId(null);
         setLoading(false);
+        lastResolvedUserIdRef.current = currentUserId;
         return;
       }
 
@@ -74,6 +87,7 @@ export const BusinessIdProvider = ({ children }: { children: ReactNode }) => {
         if (business) {
           setBusinessId(business.id);
           setLoading(false);
+          lastResolvedUserIdRef.current = currentUserId;
           return;
         } else {
           sessionStorage.removeItem(SAAS_SELECTED_BUSINESS_KEY);
@@ -84,6 +98,7 @@ export const BusinessIdProvider = ({ children }: { children: ReactNode }) => {
       if (isSuperAdmin) {
         setBusinessId(null);
         setLoading(false);
+        lastResolvedUserIdRef.current = currentUserId;
         return;
       }
 
@@ -97,6 +112,7 @@ export const BusinessIdProvider = ({ children }: { children: ReactNode }) => {
       if (ownedBusiness) {
         setBusinessId(ownedBusiness.id);
         setLoading(false);
+        lastResolvedUserIdRef.current = currentUserId;
         return;
       }
 
@@ -111,10 +127,12 @@ export const BusinessIdProvider = ({ children }: { children: ReactNode }) => {
       if (userRole?.business_id) {
         setBusinessId(userRole.business_id);
         setLoading(false);
+        lastResolvedUserIdRef.current = currentUserId;
         return;
       }
 
       setBusinessId(null);
+      lastResolvedUserIdRef.current = currentUserId;
     } catch (error) {
       console.error("Error fetching business ID:", error);
       setBusinessId(null);
@@ -132,7 +150,9 @@ export const BusinessIdProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const handleStorage = (e: StorageEvent) => {
       if (e.key === SAAS_SELECTED_BUSINESS_KEY) {
-        fetchBusinessId();
+        // Cambio manual de business (super admin): forzar refetch.
+        lastResolvedUserIdRef.current = undefined;
+        fetchBusinessId({ force: true });
       }
     };
     window.addEventListener("storage", handleStorage);
@@ -140,7 +160,7 @@ export const BusinessIdProvider = ({ children }: { children: ReactNode }) => {
   }, [fetchBusinessId]);
 
   return (
-    <BusinessIdContext.Provider value={{ businessId, loading, isSuperAdmin, refetch: fetchBusinessId }}>
+    <BusinessIdContext.Provider value={{ businessId, loading, isSuperAdmin, refetch: () => fetchBusinessId({ force: true }) }}>
       {children}
     </BusinessIdContext.Provider>
   );

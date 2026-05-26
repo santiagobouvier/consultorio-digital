@@ -26,6 +26,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [isReady, setIsReady] = useState(false);
   const lastCheckedUserId = useRef<string | null>(null);
+  // Guarda el id del usuario actualmente en state para detectar si un evento
+  // de auth representa un cambio REAL de usuario o solo un refresh de token.
+  const currentUserIdRef = useRef<string | null>(null);
+
+  /**
+   * Setea el usuario manteniendo la identidad de referencia cuando el id no
+   * cambió. Evita re-renders en cascada de consumidores (ej: BusinessIdContext)
+   * cuando llega TOKEN_REFRESHED / USER_UPDATED con el mismo usuario.
+   */
+  const setUserStable = (nextUser: User | null) => {
+    const prevId = currentUserIdRef.current;
+    const nextId = nextUser?.id ?? null;
+    if (prevId === nextId) {
+      // Mismo usuario (o ambos null): no tocar la referencia para no disparar
+      // efectos en consumidores que dependan de `user`.
+      return;
+    }
+    currentUserIdRef.current = nextId;
+    setUser(nextUser);
+  };
 
   const checkSuperAdmin = async (currentUser: User | null) => {
     if (!currentUser) {
@@ -68,7 +88,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (cancelled) return;
       const nextUser = session?.user ?? null;
-      setUser(nextUser);
+      setUserStable(nextUser);
       // Fire and forget — no await dentro del callback.
       void checkSuperAdmin(nextUser);
     });
@@ -77,7 +97,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (cancelled) return;
       const nextUser = session?.user ?? null;
-      setUser(nextUser);
+      setUserStable(nextUser);
       void checkSuperAdmin(nextUser).finally(() => {
         if (!cancelled) setIsReady(true);
       });

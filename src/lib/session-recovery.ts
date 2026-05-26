@@ -2,8 +2,11 @@ import { supabase } from "@/integrations/supabase/client";
 
 const RELOAD_COUNTER_KEY = "__app_reload_counter";
 const RELOAD_WINDOW_START_KEY = "__app_reload_window_start";
-const RELOAD_WINDOW_MS = 10_000;
-const RELOAD_THRESHOLD = 3;
+// Red de seguridad relajada: solo se dispara si hay 5+ reloads en 30s.
+// Los fixes de auth-sync + AuthContext eliminan el bucle real; este guard
+// queda como protección residual para casos edge.
+const RELOAD_WINDOW_MS = 30_000;
+const RELOAD_THRESHOLD = 5;
 
 let cacheClearPromise: Promise<void> | null = null;
 let hardResetPromise: Promise<void> | null = null;
