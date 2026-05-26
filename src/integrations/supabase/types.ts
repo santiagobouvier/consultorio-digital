@@ -1499,6 +1499,7 @@ export type Database = {
           is_active: boolean
           name: string
           notes: string | null
+          owned_by_user_id: string | null
           type: string
           updated_at: string
         }
@@ -1511,6 +1512,7 @@ export type Database = {
           is_active?: boolean
           name: string
           notes?: string | null
+          owned_by_user_id?: string | null
           type?: string
           updated_at?: string
         }
@@ -1523,6 +1525,7 @@ export type Database = {
           is_active?: boolean
           name?: string
           notes?: string | null
+          owned_by_user_id?: string | null
           type?: string
           updated_at?: string
         }
@@ -1601,6 +1604,7 @@ export type Database = {
         Row: {
           business_id: string | null
           calendar_color: string | null
+          coordination_mode: string
           created_at: string
           id: string
           role: string
@@ -1609,6 +1613,7 @@ export type Database = {
         Insert: {
           business_id?: string | null
           calendar_color?: string | null
+          coordination_mode?: string
           created_at?: string
           id?: string
           role: string
@@ -1617,6 +1622,7 @@ export type Database = {
         Update: {
           business_id?: string | null
           calendar_color?: string | null
+          coordination_mode?: string
           created_at?: string
           id?: string
           role?: string
@@ -1730,6 +1736,27 @@ export type Database = {
           skipped: number
         }[]
       }
+      get_agenda_view: {
+        Args: { p_business_id: string; p_from: string; p_to: string }
+        Returns: {
+          contact_name: string
+          contact_phone: string
+          end_at: string
+          id: string
+          is_own: boolean
+          modality: string
+          notes: string
+          patient_id: string
+          patient_name: string
+          payment_status: string
+          professional_id: string
+          session_price: number
+          space_id: string
+          space_name: string
+          start_at: string
+          status: string
+        }[]
+      }
       get_available_slots: {
         Args: {
           p_business_id: string
@@ -1762,6 +1789,14 @@ export type Database = {
         }[]
       }
       get_user_business_id: { Args: { _user_id: string }; Returns: string }
+      get_user_coordination_mode: {
+        Args: { _business_id: string; _user_id: string }
+        Returns: string
+      }
+      is_business_owner: {
+        Args: { _business_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_patient_owner_auth: {
         Args: { _patient_id: string; _user_id: string }
         Returns: boolean
