@@ -175,6 +175,10 @@ const PatientAccess = () => {
               )}
             </Button>
 
+            <p className="text-xs text-center text-gray-500">
+              ¿No tenés acceso? Contactá a tu profesional.
+            </p>
+
             {notFound && (
               <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-center">
                 <p className="text-gray-300 text-sm mb-1">
