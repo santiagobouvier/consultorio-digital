@@ -920,10 +920,12 @@ export type Database = {
       }
       patients: {
         Row: {
+          assigned_professional_id: string | null
           auth_user_id: string | null
           avatar_url: string | null
           business_id: string
           created_at: string
+          created_by: string | null
           email: string | null
           full_name: string
           id: string
@@ -935,10 +937,12 @@ export type Database = {
           whatsapp_phone: string | null
         }
         Insert: {
+          assigned_professional_id?: string | null
           auth_user_id?: string | null
           avatar_url?: string | null
           business_id: string
           created_at?: string
+          created_by?: string | null
           email?: string | null
           full_name: string
           id?: string
@@ -950,10 +954,12 @@ export type Database = {
           whatsapp_phone?: string | null
         }
         Update: {
+          assigned_professional_id?: string | null
           auth_user_id?: string | null
           avatar_url?: string | null
           business_id?: string
           created_at?: string
+          created_by?: string | null
           email?: string | null
           full_name?: string
           id?: string
@@ -1756,6 +1762,14 @@ export type Database = {
         }[]
       }
       get_user_business_id: { Args: { _user_id: string }; Returns: string }
+      is_patient_owner_auth: {
+        Args: { _patient_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_patient_professional: {
+        Args: { _patient_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
       normalize_phone: { Args: { p: string }; Returns: string }
       preview_template_generation: {
