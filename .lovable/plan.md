@@ -1,196 +1,126 @@
-## Status
 
-- **1.B — RLS isolation by assigned professional** ✅ DONE (2026-05-26)
-- Bug #10 CLOSED.
+# Sub-fase A — Espacios compartidos: investigación previa + plan
 
----
+## 1. Estado actual del schema
 
-## Hallazgo crítico previo
+### `spaces`
+| columna | tipo | nullable | default |
+|---|---|---|---|
+| id | uuid | no | gen_random_uuid() |
+| business_id | uuid | no | — |
+| name | text | no | — |
+| type | text | no | 'physical' |
+| capacity | int | no | 1 |
+| color | text | sí | — |
+| notes | text | sí | — |
+| is_active | bool | no | true |
+| created_at / updated_at | timestamptz | no | now() |
 
-`patients` **no tiene** ni `assigned_professional_id` ni `created_by`. Sin esos campos no se puede implementar el modelo "cada profesional ve solo lo suyo" en `patients` (ni en cascada en `payments`, `session_notes`, `patient_documents`, `scheduled_reminders`, `patient_notifications`, que dependen de la asignación del paciente).
+No tiene `description` (vos lo mencionás como opcional, no existe; uso `notes` o no lo toco).
+Falta `owned_by_user_id`.
 
-Por lo tanto la Sub-fase 1.B requiere primero una **migración de schema**, no solo de policies.
+### `user_roles`
+| columna | tipo | nullable | default |
+|---|---|---|---|
+| id | uuid | no | gen_random_uuid() |
+| user_id | uuid | no | — |
+| role | text | no | — |
+| business_id | uuid | **sí** | — |
+| calendar_color | text | sí | '#00b5b5' |
+| created_at | timestamptz | no | now() |
 
----
+Falta `coordination_mode`. Ojo: `business_id` es nullable (super_admin no tiene business). El trigger nuevo debe ignorar filas sin business_id.
 
-## 1. Inventario de tablas con `business_id` / `patient_id` / `professional_id`
+### `professional_spaces`
+Existe (professional_id, space_id, created_at). Hoy se usa en **un solo lugar real**: el JOIN dentro de la RPC `get_available_slots` (línea 232 de la migración 20260518204410) para filtrar qué espacios puede usar cada profesional en el booking público.
 
-| Tabla | business_id | patient_id | professional_id | Clasificación propuesta |
-|---|---|---|---|---|
-| appointments | ✓ | ✓ | ✓ | **Ya migrada (1.A) — privada por profesional** |
-| patients | ✓ | — | — (falta) | **Privada por profesional asignado** |
-| payments | ✓ | ✓ | — | **Privada por profesional asignado del paciente / de la cita** |
-| appointment_reschedule_requests | ✓ | — (vía appt) | — | **Privada (deriva del professional_id de la appointment original)** |
-| patient_notifications | ✓ | ✓ | — | **Privada (deriva del paciente)** — verificar |
-| session_notes | ✓ | ✓ | — (author_user_id) | **Privada por author_user_id + profesional asignado del paciente** |
-| patient_documents | ✓ | ✓ | — (uploaded_by) | **Privada por profesional asignado del paciente** |
-| scheduled_reminders | ✓ | ✓ | — | **Privada por profesional asignado del paciente** |
-| appointment_requests | ✓ | — | — | **Compartida en el business** (reservas públicas, sin asignación previa). Mantener actual. |
-| availability_rules / exceptions / templates / slots | ✓ | — | ✓/— | Mantener actuales (compartido o por profesional dueño). |
-| spaces / professional_spaces / services | ✓ | — | — | Compartidas en el business. Sin cambios. |
-| payment_policies | ✓ | — | — | Configuración del negocio. Sin cambios. |
-| push_subscriptions | ✓ | — | — | Ya filtra por user_id. Sin cambios. |
-| subscriptions / user_roles / professional_portal_invites / patient_portal_invites / pending_business_activations | varios | — | — | Administrativas. Sin cambios. |
+### Policies actuales de `spaces`
+- `spaces_super_admin` — ALL, `is_super_admin(auth.uid())`
+- `spaces_business_all` — ALL, `user_belongs_to_business(auth.uid(), business_id)` (todos los miembros pueden todo)
+- `spaces_patient_select` — SELECT para pacientes activos del business
 
----
+### RPC `get_agenda_view`
+**No existe.** La agenda hoy lee directo de `appointments` con RLS filtrando por `professional_id = auth.uid()` (Sub-fase 1.A). Tu spec asume que ya existe y la "actualizamos"; en realidad hay que **crearla de cero**.
 
-## 2. Cambios de schema requeridos
+## 2. Dependencias frontend a mirar
 
-```sql
--- Asignación del paciente a un profesional
-ALTER TABLE public.patients
-  ADD COLUMN assigned_professional_id uuid,
-  ADD COLUMN created_by uuid;
+- `PatientBookingModal.tsx` → llama `rpc("get_available_slots")` → esa RPC joinea `professional_spaces`. Si dejamos `professional_spaces` deprecated pero vacía/inconsistente para nuevos `independent`, el booking público **devolverá 0 slots** para profesionales sin filas en `professional_spaces`. **Hay que tocar `get_available_slots` o garantizar consistencia.** Lo marco como riesgo abierto al final.
+- Resto del frontend: solo `PatientBookingModal` usa `spaces` directamente. No hay UI de gestión de espacios todavía.
+- No hay nada usando `get_agenda_view` (no existe).
 
--- Backfill: asignar al owner del business para no romper acceso
-UPDATE public.patients p
-SET assigned_professional_id = b.owner_user_id,
-    created_by = b.owner_user_id
-FROM public.businesses b
-WHERE p.business_id = b.id
-  AND p.assigned_professional_id IS NULL;
+## 3. Decisiones que necesito confirmadas
 
-CREATE INDEX idx_patients_assigned_prof ON public.patients(assigned_professional_id);
-```
+1. **`professional_spaces` y `get_available_slots`**: ¿qué hacemos en esta sub-fase?
+   - **Opción A (recomendada):** ajustar `get_available_slots` para que use la nueva lógica (`shared` ve espacios del business con `owned_by_user_id IS NULL`; `independent` ve solo los suyos `owned_by_user_id = professional_id`) y dejar de mirar `professional_spaces`. Así el booking público sigue andando sin requerir backfill de `professional_spaces` para los espacios nuevos auto-generados.
+   - **Opción B:** seguir alimentando `professional_spaces` (insertar fila al auto-generar "Mi consultorio"/"Online" en el trigger) y no tocar la RPC. Más conservador pero deja deuda.
+   
+2. **`coordination_mode` para super_admin / filas sin business_id**: ¿forzar `shared` como default igual o permitir NULL? Propongo: default `'shared'` siempre, y el trigger de auto-generación solo dispara cuando `business_id IS NOT NULL AND role IN ('owner','professional')`.
 
-No se agregan FKs a `auth.users` (regla del proyecto).
+3. **RPC `get_agenda_view`**: ¿qué firma querés? Propongo:
+   ```
+   get_agenda_view(p_business_id uuid, p_from timestamptz, p_to timestamptz)
+   RETURNS TABLE (
+     id uuid, start_at timestamptz, end_at timestamptz,
+     space_id uuid, space_name text,
+     professional_id uuid,
+     is_own boolean,
+     -- campos completos solo si is_own = true (sino NULL):
+     patient_id uuid, patient_name text, status text, modality text,
+     notes text, contact_name text, contact_phone text, session_price numeric,
+     payment_status text
+   )
+   ```
+   Lógica:
+   - Si caller es `independent` → solo sus citas (todos los campos).
+   - Si caller es `shared` → sus citas (todos los campos) + citas de **otros profesionales `shared` del mismo business** con solo `start_at/end_at/space_id/space_name/professional_id/is_own=false` y resto NULL.
+   - `super_admin` y owner viendo el business: trato como `shared`.
 
----
+## 4. Plan SQL (3 migraciones, en orden)
 
-## 3. Helper común (security definer)
+**Migración 1 — schema + helpers + trigger**
+- `ALTER TABLE user_roles ADD coordination_mode text NOT NULL DEFAULT 'shared' CHECK (IN ('shared','independent'))`.
+- `ALTER TABLE spaces ADD owned_by_user_id uuid` + índice.
+- `COMMENT ON TABLE professional_spaces IS 'DEPRECATED — sustituido por spaces.owned_by_user_id + coordination_mode. Mantener filas existentes; no leer desde frontend nuevo.'`.
+- `get_user_coordination_mode(user, business)`.
+- `is_business_owner(user, business)`.
+- `handle_coordination_mode_change()` trigger: AFTER INSERT/UPDATE OF coordination_mode en `user_roles`, si pasa a `independent` y `business_id IS NOT NULL`, crear "Mi consultorio" + "Online" con `owned_by_user_id = NEW.user_id` (o reactivar si ya existían). Skip si `business_id IS NULL`.
 
-Para evitar duplicar joins en cada policy:
+**Migración 2 — RLS de `spaces`**
+- DROP `spaces_business_all`.
+- KEEP `spaces_super_admin`, `spaces_patient_select` (ajustando el select de paciente para que solo vea espacios shared del business: `owned_by_user_id IS NULL`).
+- CREATE:
+  - `spaces_select_member`: `user_belongs_to_business(auth.uid(), business_id) AND (owned_by_user_id IS NULL OR owned_by_user_id = auth.uid())`
+  - `spaces_insert_shared_owner`: owner del business AND `owned_by_user_id IS NULL`
+  - `spaces_insert_independent_self`: miembro del business AND `owned_by_user_id = auth.uid()`
+  - `spaces_update_shared_owner` / `spaces_delete_shared_owner`: owner AND `owned_by_user_id IS NULL`
+  - `spaces_update_own_independent` / `spaces_delete_own_independent`: `owned_by_user_id = auth.uid()`
 
-```sql
-CREATE OR REPLACE FUNCTION public.is_patient_professional(_user_id uuid, _patient_id uuid)
-RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM public.patients p
-    WHERE p.id = _patient_id
-      AND (p.assigned_professional_id = _user_id OR p.created_by = _user_id)
-  );
-$$;
+**Migración 3 — RPC `get_agenda_view`** con la lógica de §3.3. SECURITY DEFINER, validando que `auth.uid()` pertenece al business (`user_belongs_to_business` o super_admin).
 
-CREATE OR REPLACE FUNCTION public.is_patient_owner_auth(_user_id uuid, _patient_id uuid)
-RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM public.patients p
-    WHERE p.id = _patient_id AND p.auth_user_id = _user_id
-  );
-$$;
-```
+**Opción A elegida** → en la misma Migración 3 también:
+- Reemplazar `get_available_slots` para que el filtro de espacios deje de usar `professional_spaces` y use:
+  ```
+  spaces.business_id = p_business_id
+  AND spaces.is_active
+  AND (spaces.owned_by_user_id IS NULL OR spaces.owned_by_user_id = p_professional_id)
+  ```
+  Y filtrar por coordination_mode del profesional target (si es `independent`, solo sus propios; si es `shared`, solo `owned_by_user_id IS NULL`).
 
----
+## 5. Tests SQL que correré al final
+1. Insert `user_role` con `coordination_mode='independent'` → spaces "Mi consultorio" + "Online" creados con `owned_by_user_id` correcto.
+2. Update `coordination_mode` shared → independent → spaces reactivados, sin duplicar.
+3. Como profesional shared: `SELECT * FROM spaces WHERE business_id=X` → ve shared (NULL) + propios; NO ve los de otro independent.
+4. Como profesional staff (no owner): intentar insert con `owned_by_user_id IS NULL` → falla. Insert con `owned_by_user_id = auth.uid()` → ok.
+5. Como owner: insert shared OK.
+6. `get_agenda_view` con 2 shared del mismo business: ve los suyos con datos + bloques anonimizados del otro.
+7. `get_agenda_view` siendo independent: solo lo suyo.
 
-## 4. Plan drop/create por tabla
-
-### 4.1 `patients`
-
-**Drop:** `patients_select_own_business`, `patients_insert_own_business`, `patients_update_own_business`, `patients_delete_own_business` (las 4 basadas en `user_belongs_to_business`).
-**Mantener:** "Patients can update their own record", "Patients can view their own record", "Super admin can delete patients".
-
-**Create:**
-- `patients_select_assigned_or_creator` (SELECT, authenticated): `is_super_admin(auth.uid()) OR assigned_professional_id = auth.uid() OR created_by = auth.uid()`
-- `patients_insert_business_member` (INSERT): `user_belongs_to_business(auth.uid(), business_id) AND (assigned_professional_id IS NULL OR assigned_professional_id = auth.uid()) AND (created_by IS NULL OR created_by = auth.uid())`
-- `patients_update_assigned` (UPDATE): `is_super_admin(auth.uid()) OR assigned_professional_id = auth.uid() OR created_by = auth.uid()`
-- `patients_delete_assigned` (DELETE): `assigned_professional_id = auth.uid() OR created_by = auth.uid()`
-
-**Trigger** `patients_set_defaults_biu`:
-- BEFORE INSERT: si `created_by IS NULL` → `auth.uid()`; si `assigned_professional_id IS NULL` → `auth.uid()`.
-- BEFORE UPDATE: si la fila vieja tiene `assigned_professional_id` y `auth.uid()` NO es super_admin ni el assigned actual, **bloquear** cambio de `assigned_professional_id` y `business_id`. También bloquear que el paciente (auth_user_id=auth.uid()) cambie esos campos vía su policy de self-update.
-
-### 4.2 `payments`
-
-**Drop:** `payments_select_own_business`, `payments_insert_own_business`, `payments_update_own_business`, `payments_delete_own_business`.
-**Mantener:** "Patients can view their own payments", "Super admin can delete payments".
-
-**Create:**
-- `payments_select_prof` (SELECT): `is_super_admin(auth.uid()) OR is_patient_professional(auth.uid(), patient_id) OR EXISTS (SELECT 1 FROM appointments a WHERE a.id = payments.appointment_id AND a.professional_id = auth.uid())`
-- `payments_insert_prof` (INSERT): `is_super_admin(auth.uid()) OR is_patient_professional(auth.uid(), patient_id)`
-- `payments_update_prof` (UPDATE): mismo using/check que select. (Webhook MP usa service role → bypass).
-- `payments_delete_prof` (DELETE): `is_super_admin(auth.uid()) OR is_patient_professional(auth.uid(), patient_id)`
-
-### 4.3 `appointment_reschedule_requests`
-
-**Drop:** `reschedule_business_members_all`.
-**Mantener:** `reschedule_patient_select_own`, `reschedule_patient_insert_own`, `reschedule_super_admin_all`.
-
-**Create:**
-- `reschedule_prof_select` (SELECT, authenticated): `EXISTS (SELECT 1 FROM appointments a WHERE a.id = original_appointment_id AND a.professional_id = auth.uid())`
-- `reschedule_prof_update` (UPDATE): mismo expression. (Los RPCs `approve_reschedule_request` / `reject_reschedule_request` son SECURITY DEFINER; agregar al chequeo interno la condición `a.professional_id = auth.uid() OR is_super_admin(auth.uid())` en lugar del actual `user_belongs_to_business`.)
-
-### 4.4 `session_notes`
-
-**Drop:** `session_notes_select_own_business`, `session_notes_insert_own_business`, `session_notes_update_own_business`, `session_notes_delete_own_business`.
-**Mantener:** `session_notes_super_admin_all`.
-
-**Create:**
-- SELECT: `is_super_admin(auth.uid()) OR author_user_id = auth.uid() OR is_patient_professional(auth.uid(), patient_id)`
-- INSERT: `user_belongs_to_business(auth.uid(), business_id) AND author_user_id = auth.uid() AND (is_patient_professional(auth.uid(), patient_id) OR is_super_admin(auth.uid()))`
-- UPDATE: `author_user_id = auth.uid() OR is_super_admin(auth.uid())`
-- DELETE: igual que UPDATE.
-
-### 4.5 `patient_documents`
-
-**Drop:** las 4 `*_own_business`.
-**Mantener:** super_admin.
-
-**Create:**
-- SELECT: `is_super_admin(auth.uid()) OR uploaded_by = auth.uid() OR is_patient_professional(auth.uid(), patient_id)`
-- INSERT: `uploaded_by = auth.uid() AND is_patient_professional(auth.uid(), patient_id)`
-- UPDATE / DELETE: `is_super_admin(auth.uid()) OR uploaded_by = auth.uid() OR is_patient_professional(auth.uid(), patient_id)`
-
-### 4.6 `scheduled_reminders`
-
-**Drop:** las 4 `*_own_business`.
-**Mantener:** super_admin.
-
-**Create:** todas usan `is_super_admin(auth.uid()) OR is_patient_professional(auth.uid(), patient_id)`.
-
-Nota: el trigger `auto_create_reminders` corre en contexto del usuario que crea la cita; ahora `professional_id = auth.uid()` (post 1.A) garantiza acceso. OK.
-
-### 4.7 `patient_notifications`
-
-Estado actual:
-- `notif_patient_select_own` ✓ paciente
-- `notif_patient_update_own` ✓ paciente
-- `notif_business_insert` — usa `user_belongs_to_business`. **Cambiar** a `is_super_admin(auth.uid()) OR is_patient_professional(auth.uid(), patient_id)` para que solo el profesional asignado pueda insertar avisos del paciente. (Los triggers `notify_*` son SECURITY DEFINER y siguen funcionando, bypass RLS).
-- Falta SELECT para el profesional asignado → **agregar** `notif_prof_select` con `is_patient_professional(auth.uid(), patient_id)`.
-- `notif_super_admin_all` ✓.
-
-### 4.8 `appointment_requests`
-
-**Sin cambios.** Reservas públicas no asignadas. Owner/profesionales del business las triagean. Aceptado como "compartida en business".
+## 6. Lo que **no** cambia ahora
+- UI (sub-fase B).
+- `professional_spaces` (deprecated, datos quedan).
+- Lógica de creación de citas (sub-fase C).
+- RLS de `appointments` (ya está bien para esta sub-fase: cada profesional ve las suyas; los bloques anonimizados los entrega la RPC con SECURITY DEFINER).
 
 ---
 
-## 5. Impacto en código y edge functions
-
-Tras aplicar, revisar/ajustar:
-- `BusinessIdContext` y queries que hagan `from('patients').select('*')` ya filtrarán automáticamente por RLS (cada profesional ve solo los suyos).
-- UI de Patients/Payments necesitará indicar visualmente la asignación. **Fuera de scope de este bug** salvo que rompamos alguna pantalla — lo evaluamos después de aplicar.
-- Edge functions con `SUPABASE_SERVICE_ROLE_KEY` (create-patient-invite, create-patient-payment, webhook MP, etc.) bypasean RLS → siguen funcionando.
-- RPC `approve_reschedule_request` / `reject_reschedule_request`: ajustar el chequeo interno como se detalla en 4.3.
-
----
-
-## 6. Orden de ejecución (cuando me des OK)
-
-1. **Migración 1**: schema (`patients.assigned_professional_id`, `created_by`), backfill, índice, helpers (`is_patient_professional`, `is_patient_owner_auth`), trigger `patients_set_defaults_biu`.
-2. **Migración 2**: drop+create policies de `patients`.
-3. **Migración 3**: drop+create policies de `payments`.
-4. **Migración 4**: policies de `appointment_reschedule_requests` + update RPCs.
-5. **Migración 5**: policies de `session_notes`, `patient_documents`, `scheduled_reminders`.
-6. **Migración 6**: policies de `patient_notifications`.
-7. Smoke-test funcional en preview con 2 profesionales del mismo business + 1 paciente + super_admin.
-
----
-
-## 7. Riesgos / preguntas para vos antes de codear
-
-1. **Backfill de `assigned_professional_id`**: propongo asignar al `owner_user_id` del business. ¿OK o preferís dejarlo NULL y forzar reasignación manual? (NULL implica que pacientes legacy quedan invisibles para todos los profesionales que no sean el creador — más estricto pero rompe acceso existente).
-2. **Reasignación de paciente entre profesionales**: ¿solo super_admin y el owner del business pueden reasignar? Hoy lo restringimos solo a super_admin via trigger. ¿Sumamos owner?
-3. **Pacientes "compartidos"** (clínicas multi-prof donde el secretario carga a todos): el modelo actual no lo soporta sin una tabla de relación N:M. ¿Lo dejamos para fase posterior?
-4. Confirmar que `appointment_requests` queda como compartido del business (público + triagea cualquier miembro).
-
-Pasame OK + respuestas a esas 4 preguntas y arranco con la Migración 1.
+**Necesito tu OK + respuesta a las 3 decisiones de §3 antes de ejecutar las 3 migraciones.**
