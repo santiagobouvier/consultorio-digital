@@ -1601,6 +1601,7 @@ export type Database = {
         Row: {
           business_id: string | null
           calendar_color: string | null
+          coordination_mode: string
           created_at: string
           id: string
           role: string
@@ -1609,6 +1610,7 @@ export type Database = {
         Insert: {
           business_id?: string | null
           calendar_color?: string | null
+          coordination_mode?: string
           created_at?: string
           id?: string
           role: string
@@ -1617,6 +1619,7 @@ export type Database = {
         Update: {
           business_id?: string | null
           calendar_color?: string | null
+          coordination_mode?: string
           created_at?: string
           id?: string
           role?: string
