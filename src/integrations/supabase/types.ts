@@ -1499,6 +1499,7 @@ export type Database = {
           is_active: boolean
           name: string
           notes: string | null
+          owned_by_user_id: string | null
           type: string
           updated_at: string
         }
@@ -1511,6 +1512,7 @@ export type Database = {
           is_active?: boolean
           name: string
           notes?: string | null
+          owned_by_user_id?: string | null
           type?: string
           updated_at?: string
         }
@@ -1523,6 +1525,7 @@ export type Database = {
           is_active?: boolean
           name?: string
           notes?: string | null
+          owned_by_user_id?: string | null
           type?: string
           updated_at?: string
         }
