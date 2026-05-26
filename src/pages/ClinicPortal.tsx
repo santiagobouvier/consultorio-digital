@@ -18,7 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import { usePWAInstall } from "@/hooks/use-pwa-install";
 import { PortalWelcomeInstall } from "@/components/portal/PortalWelcomeInstall";
 import { PatientBookingModal } from "@/components/PatientBookingModal";
-import { Building2, Sun, Moon, Eye, EyeOff, Loader2, AlertCircle, LogOut } from "lucide-react";
+import { Building2, Sun, Moon, Eye, EyeOff, Loader2, AlertCircle, LogOut, ArrowLeft } from "lucide-react";
 import {
   PatientPortalView,
   type PortalBranding,
@@ -75,10 +75,9 @@ const BrandedLogin = ({
   themeStyle: Record<string, string>;
 }) => {
   const { toast } = useToast();
-  const [isLogin, setIsLogin] = useState(true);
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -86,20 +85,8 @@ const BrandedLogin = ({
     e.preventDefault();
     setLoading(true);
     try {
-      if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.auth.signUp({
-          email, password,
-          options: {
-            data: { name },
-            emailRedirectTo: `${window.location.origin}/portal/${branding.slug}`,
-          },
-        });
-        if (error) throw error;
-        toast({ title: "Cuenta creada", description: "Revisá tu email para verificar tu cuenta." });
-      }
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
     } catch (err: any) {
       toast({ title: "Error", description: err.message || "Ocurrió un error", variant: "destructive" });
     } finally {
@@ -110,6 +97,14 @@ const BrandedLogin = ({
   return (
     <div className="min-h-screen" style={themeStyle as any}>
       <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center p-4 transition-colors duration-300">
+        <Button
+          variant="ghost"
+          onClick={() => navigate("/")}
+          className="absolute top-4 left-4 h-11 min-w-11 px-3 gap-1.5 rounded-full text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          <span className="text-sm">Volver</span>
+        </Button>
         <Button variant="ghost" size="icon" onClick={() => setIsDark(!isDark)} className="absolute top-4 right-4 h-9 w-9 rounded-full">
           {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
         </Button>
@@ -129,19 +124,13 @@ const BrandedLogin = ({
           </div>
           <Card className="border-border/60 shadow-xl">
             <CardHeader className="pb-4">
-              <CardTitle className="text-lg text-center">{isLogin ? "Iniciar sesión" : "Crear cuenta"}</CardTitle>
+              <CardTitle className="text-lg text-center">Iniciar sesión</CardTitle>
               <p className="text-sm text-muted-foreground text-center">
-                {isLogin ? "Ingresá con tu cuenta de paciente" : "Registrate para acceder a tu portal"}
+                Ingresá con tu cuenta de paciente
               </p>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
-                {!isLogin && (
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Nombre completo</Label>
-                    <Input id="name" type="text" placeholder="Tu nombre" value={name} onChange={e => setName(e.target.value)} required={!isLogin} />
-                  </div>
-                )}
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
                   <Input id="email" type="email" placeholder="tu@email.com" value={email} onChange={e => setEmail(e.target.value)} required />
@@ -157,15 +146,11 @@ const BrandedLogin = ({
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  {isLogin ? "Ingresar" : "Crear cuenta"}
+                  Ingresar
                 </Button>
               </form>
-              <Separator className="my-4" />
-              <p className="text-sm text-center text-muted-foreground">
-                {isLogin ? "¿No tenés cuenta?" : "¿Ya tenés cuenta?"}{" "}
-                <button onClick={() => setIsLogin(!isLogin)} className="text-primary font-medium hover:underline">
-                  {isLogin ? "Registrate" : "Iniciá sesión"}
-                </button>
+              <p className="text-xs text-center text-muted-foreground mt-4">
+                ¿No tenés acceso? Contactá a tu profesional.
               </p>
             </CardContent>
           </Card>
