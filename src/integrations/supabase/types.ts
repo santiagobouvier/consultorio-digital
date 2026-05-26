@@ -1768,6 +1768,14 @@ export type Database = {
         }[]
       }
       get_user_business_id: { Args: { _user_id: string }; Returns: string }
+      get_user_coordination_mode: {
+        Args: { _business_id: string; _user_id: string }
+        Returns: string
+      }
+      is_business_owner: {
+        Args: { _business_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_patient_owner_auth: {
         Args: { _patient_id: string; _user_id: string }
         Returns: boolean
