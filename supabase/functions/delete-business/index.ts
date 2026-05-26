@@ -177,6 +177,7 @@ serve(async (req) => {
     // ---- 4) Owner auth.user cleanup (only if requested AND owner has no other businesses AND not super_admin AND not the caller) ----
     let ownerDeleted = false;
     let ownerSkippedReason: string | null = null;
+    let ownerOtherBusinesses = 0;
 
     if (deleteOwnerAuthUser) {
       if (business.owner_user_id === user.id) {
@@ -190,7 +191,8 @@ serve(async (req) => {
 
         const { data: ownerIsSuper } = await serviceClient.rpc("is_super_admin", { _user_id: business.owner_user_id });
 
-        if ((otherBizCount ?? 0) > 0) {
+        ownerOtherBusinesses = otherBizCount ?? 0;
+        if (ownerOtherBusinesses > 0) {
           ownerSkippedReason = "El owner tiene otros consultorios activos";
         } else if (ownerIsSuper) {
           ownerSkippedReason = "El owner es super_admin";
@@ -219,6 +221,7 @@ serve(async (req) => {
         owner_email: ownerEmailForLog,
         owner_auth_user_deleted: ownerDeleted,
         owner_skipped_reason: ownerSkippedReason,
+        owner_other_businesses: ownerOtherBusinesses,
         storage_warnings: storageWarnings,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
