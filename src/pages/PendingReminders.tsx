@@ -34,6 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   Send, Trash2, Bell, Mail, MessageSquare, Check, Copy, CheckSquare,
   Search, Pencil, XCircle, Clock, BellRing, MailCheck, X, Plus,
@@ -117,7 +118,15 @@ const PendingReminders = () => {
 
   // Create manual reminder state
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [createForm, setCreateForm] = useState({ patientId: "", appointmentId: "", channel: "whatsapp" as "whatsapp" | "email", message: "", hoursBefore: "24" });
+  const [createForm, setCreateForm] = useState({
+    mode: "appointment" as "appointment" | "free",
+    patientId: "",
+    appointmentId: "",
+    channel: "whatsapp" as "whatsapp" | "email",
+    message: "",
+    hoursBefore: "24",
+    scheduledAt: "",
+  });
   const [createSaving, setCreateSaving] = useState(false);
 
   // Main reminders query — key matches query-prefetch.ts
