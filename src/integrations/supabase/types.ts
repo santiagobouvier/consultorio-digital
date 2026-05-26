@@ -1315,7 +1315,7 @@ export type Database = {
       }
       scheduled_reminders: {
         Row: {
-          appointment_id: string
+          appointment_id: string | null
           auto_send: boolean
           business_id: string
           channel: string
@@ -1328,7 +1328,7 @@ export type Database = {
           type: string
         }
         Insert: {
-          appointment_id: string
+          appointment_id?: string | null
           auto_send?: boolean
           business_id: string
           channel?: string
@@ -1341,7 +1341,7 @@ export type Database = {
           type?: string
         }
         Update: {
-          appointment_id?: string
+          appointment_id?: string | null
           auto_send?: boolean
           business_id?: string
           channel?: string
