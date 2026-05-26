@@ -1,103 +1,189 @@
-# Plan: Sistema PWA install impecable
+## Hallazgo crítico previo
 
-## 1. Estado actual
+`patients` **no tiene** ni `assigned_professional_id` ni `created_by`. Sin esos campos no se puede implementar el modelo "cada profesional ve solo lo suyo" en `patients` (ni en cascada en `payments`, `session_notes`, `patient_documents`, `scheduled_reminders`, `patient_notifications`, que dependen de la asignación del paciente).
 
-- **`usePWAInstall`** ya existe (`src/hooks/use-pwa-install.ts`) pero su API es mínima: solo `canInstall`, `install`, `isInstalled`, `isPreview`, `isIOS`. Hay que extenderla.
-- **Manifest dinámico**: ya implementado en `ClinicPortal.tsx` (líneas ~336-370) vía edge function `get-clinic-manifest` — recibe `slug` y `origin`, devuelve manifest con `name`, `short_name`, `theme_color`, `start_url=/portal/{slug}`, `icons`. **No hay que tocarlo**, solo verificar que tenga `display: standalone`, `scope`, `orientation: any`, `description`.
-- **`PortalWelcomeInstall`** ya tiene flujo welcome, detecta plataforma manualmente con `detectPlatform()` propio (duplicado de lo que va al hook). Hay que refactorizar para usar el hook centralizado y abrir el tutorial nuevo en lugar del bloque inline `showInstructions`.
-- **`IOSInstallGuideModal`** existe pero es estático con iconos lucide. Lo reemplazamos por `IOSInstallTutorial` con SVG animados.
-- **`PWAInstallBanner`** sticky/inline ya existe para el portal del paciente (`PatientPortalView`). Lo dejamos como está pero sumamos un `InstallAppButton` en el header.
-- Panel profesional: no hay header propio centralizado; el sidebar (`AppSidebar` / `PremiumSidebar`) y `MobileHeader` son los puntos de inserción. La card dismissible va en `Dashboard.tsx`.
+Por lo tanto la Sub-fase 1.B requiere primero una **migración de schema**, no solo de policies.
 
-## 2. Decisiones técnicas
+---
 
-**Centralización**: toda la lógica (detección + dispatch) vive en `usePWAInstall`. Los componentes UI (botón, tutoriales) consumen el hook. Cero duplicación.
+## 1. Inventario de tablas con `business_id` / `patient_id` / `professional_id`
 
-**API extendida del hook**:
-```ts
-{
-  canInstall, isInstalled, isIOS, isAndroid, isDesktop,
-  isUnsupported,            // Firefox + otros sin beforeinstallprompt y no iOS/desktop-safari
-  isDesktopSafari,
-  triggerInstall: () => Promise<'accepted' | 'dismissed' | 'ios' | 'desktop-safari' | 'unsupported'>,
-}
+| Tabla | business_id | patient_id | professional_id | Clasificación propuesta |
+|---|---|---|---|---|
+| appointments | ✓ | ✓ | ✓ | **Ya migrada (1.A) — privada por profesional** |
+| patients | ✓ | — | — (falta) | **Privada por profesional asignado** |
+| payments | ✓ | ✓ | — | **Privada por profesional asignado del paciente / de la cita** |
+| appointment_reschedule_requests | ✓ | — (vía appt) | — | **Privada (deriva del professional_id de la appointment original)** |
+| patient_notifications | ✓ | ✓ | — | **Privada (deriva del paciente)** — verificar |
+| session_notes | ✓ | ✓ | — (author_user_id) | **Privada por author_user_id + profesional asignado del paciente** |
+| patient_documents | ✓ | ✓ | — (uploaded_by) | **Privada por profesional asignado del paciente** |
+| scheduled_reminders | ✓ | ✓ | — | **Privada por profesional asignado del paciente** |
+| appointment_requests | ✓ | — | — | **Compartida en el business** (reservas públicas, sin asignación previa). Mantener actual. |
+| availability_rules / exceptions / templates / slots | ✓ | — | ✓/— | Mantener actuales (compartido o por profesional dueño). |
+| spaces / professional_spaces / services | ✓ | — | — | Compartidas en el business. Sin cambios. |
+| payment_policies | ✓ | — | — | Configuración del negocio. Sin cambios. |
+| push_subscriptions | ✓ | — | — | Ya filtra por user_id. Sin cambios. |
+| subscriptions / user_roles / professional_portal_invites / patient_portal_invites / pending_business_activations | varios | — | — | Administrativas. Sin cambios. |
+
+---
+
+## 2. Cambios de schema requeridos
+
+```sql
+-- Asignación del paciente a un profesional
+ALTER TABLE public.patients
+  ADD COLUMN assigned_professional_id uuid,
+  ADD COLUMN created_by uuid;
+
+-- Backfill: asignar al owner del business para no romper acceso
+UPDATE public.patients p
+SET assigned_professional_id = b.owner_user_id,
+    created_by = b.owner_user_id
+FROM public.businesses b
+WHERE p.business_id = b.id
+  AND p.assigned_professional_id IS NULL;
+
+CREATE INDEX idx_patients_assigned_prof ON public.patients(assigned_professional_id);
 ```
-`triggerInstall` no abre modales — devuelve un discriminador y el componente caller decide qué modal abrir. Esto mantiene el hook sin acoplamiento a UI.
 
-**Animaciones SVG**: **CSS keyframes** (no SMIL). Razón: SMIL está deprecado en Chromium hace años, CSS keyframes funcionan en todos los browsers, son trivialmente debuggeables y permiten `prefers-reduced-motion`. Cada ilustración es un componente React con `<style>` scoped por clase única.
+No se agregan FKs a `auth.users` (regla del proyecto).
 
-**No agregamos dependencias**. Animaciones puras CSS, SVG inline.
+---
 
-**Toast**: `sonner` (ya está integrado en el proyecto).
+## 3. Helper común (security definer)
 
-## 3. Archivos a crear
+Para evitar duplicar joins en cada policy:
 
-```text
-src/hooks/use-pwa-install.ts                          (REFACTOR — extender API)
-src/components/pwa/InstallAppButton.tsx               (NUEVO — reemplaza al existente)
-src/components/pwa/IOSInstallTutorial.tsx             (NUEVO — modal con 3 pasos animados)
-src/components/pwa/DesktopSafariTutorial.tsx          (NUEVO)
-src/components/pwa/UnsupportedBrowserModal.tsx        (NUEVO)
-src/components/pwa/illustrations/IOSShareStep.tsx     (NUEVO — SVG animado paso 1)
-src/components/pwa/illustrations/IOSAddToHomeStep.tsx (NUEVO — SVG animado paso 2)
-src/components/pwa/illustrations/IOSConfirmStep.tsx   (NUEVO — SVG animado paso 3)
-src/components/pwa/illustrations/SafariMenuStep.tsx   (NUEVO — para desktop Safari)
-src/components/pwa/InstallPromptCard.tsx              (NUEVO — card dismissible para dashboard)
+```sql
+CREATE OR REPLACE FUNCTION public.is_patient_professional(_user_id uuid, _patient_id uuid)
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.patients p
+    WHERE p.id = _patient_id
+      AND (p.assigned_professional_id = _user_id OR p.created_by = _user_id)
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION public.is_patient_owner_auth(_user_id uuid, _patient_id uuid)
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.patients p
+    WHERE p.id = _patient_id AND p.auth_user_id = _user_id
+  );
+$$;
 ```
 
-## 4. Archivos a modificar
+---
 
-- **`src/components/InstallAppButton.tsx`** (existente, viejo): borrar. El nuevo vive en `src/components/pwa/`. Actualizar el único import en `src/pages/Landing.tsx` si existe.
-- **`src/components/portal/PortalWelcomeInstall.tsx`**: borrar `detectPlatform` local, `showInstructions`, bloques de pasos inline (`iosSteps`/`androidSteps`). Reemplazar handler `handleInstallClick` por `const result = await triggerInstall()` y abrir el modal apropiado (`IOSInstallTutorial`, `DesktopSafariTutorial`, `UnsupportedBrowserModal`). Conservar confetti, branding hero, features grid, justInstalled state.
-- **`src/components/portal/PatientPortalView.tsx`**: insertar `<InstallAppButton variant="icon-text" />` (desktop) / `variant="icon-only"` (mobile) en el header entre theme toggle y logout. Decidir variant por breakpoint con clases responsive (renderizar ambos, ocultar con `hidden md:inline-flex`).
-- **`src/components/IOSInstallGuideModal.tsx`**: deprecar (queda sin imports tras refactor de `PWAInstallBanner`). Actualizar `PWAInstallBanner` para usar `IOSInstallTutorial` nuevo en su lugar y borrar `IOSInstallGuideModal`.
-- **`src/components/MobileHeader.tsx`**: agregar `<InstallAppButton variant="icon-only" />`.
-- **`src/components/AppSidebar.tsx`** y/o **`src/components/PremiumSidebar.tsx`**: agregar `<InstallAppButton variant="icon-text" label="Instalar app" />` en el footer del sidebar (encima del logout o brand footer).
-- **`src/pages/Dashboard.tsx`**: insertar `<InstallPromptCard />` (dismissible con localStorage key `pwa_install_card_dismissed_pro`).
-- **`supabase/functions/get-clinic-manifest/index.ts`**: verificar y, si falta, asegurar `display: "standalone"`, `scope: "/"` (o `/portal/{slug}`), `orientation: "any"`, `description` cálida.
+## 4. Plan drop/create por tabla
 
-## 5. Comportamiento por plataforma
+### 4.1 `patients`
 
-| Plataforma | `triggerInstall()` | UI resultante |
-|---|---|---|
-| Android Chrome/Edge con `beforeinstallprompt` | `prompt()` nativo | Toast éxito + reload (si accepted) |
-| Desktop Chrome/Edge con `beforeinstallprompt` | `prompt()` nativo | Toast éxito + reload |
-| iOS Safari | retorna `'ios'` | Abre `IOSInstallTutorial` |
-| Desktop Safari | retorna `'desktop-safari'` | Abre `DesktopSafariTutorial` |
-| Firefox / otros sin soporte | retorna `'unsupported'` | Abre `UnsupportedBrowserModal` |
-| Android Chrome SIN `beforeinstallprompt` (ya rechazado, etc.) | retorna `'unsupported'` con mensaje específico "Buscá 'Instalar app' en el menú del navegador" | Modal informativo |
-| Ya instalado | botón no renderiza | — |
+**Drop:** `patients_select_own_business`, `patients_insert_own_business`, `patients_update_own_business`, `patients_delete_own_business` (las 4 basadas en `user_belongs_to_business`).
+**Mantener:** "Patients can update their own record", "Patients can view their own record", "Super admin can delete patients".
 
-Reload post-install: `setTimeout(() => window.location.reload(), 2000)` solo si `outcome === 'accepted'`.
+**Create:**
+- `patients_select_assigned_or_creator` (SELECT, authenticated): `is_super_admin(auth.uid()) OR assigned_professional_id = auth.uid() OR created_by = auth.uid()`
+- `patients_insert_business_member` (INSERT): `user_belongs_to_business(auth.uid(), business_id) AND (assigned_professional_id IS NULL OR assigned_professional_id = auth.uid()) AND (created_by IS NULL OR created_by = auth.uid())`
+- `patients_update_assigned` (UPDATE): `is_super_admin(auth.uid()) OR assigned_professional_id = auth.uid() OR created_by = auth.uid()`
+- `patients_delete_assigned` (DELETE): `assigned_professional_id = auth.uid() OR created_by = auth.uid()`
 
-## 6. Detalle ilustraciones SVG iOS
+**Trigger** `patients_set_defaults_biu`:
+- BEFORE INSERT: si `created_by IS NULL` → `auth.uid()`; si `assigned_professional_id IS NULL` → `auth.uid()`.
+- BEFORE UPDATE: si la fila vieja tiene `assigned_professional_id` y `auth.uid()` NO es super_admin ni el assigned actual, **bloquear** cambio de `assigned_professional_id` y `business_id`. También bloquear que el paciente (auth_user_id=auth.uid()) cambie esos campos vía su policy de self-update.
 
-Cada ilustración: viewBox `0 0 200 360` (proporción iPhone), línea fina `stroke-width="1.5"` con `currentColor`, fills suaves con opacity. Un `<circle>` "dedo" animado con `@keyframes` que:
+### 4.2 `payments`
 
-1. `opacity: 0 → 1` (300ms fade-in)
-2. `transform: translate(...)` hacia el target (600ms)
-3. Pulso `scale(1) → scale(0.85) → scale(1)` (200ms tap)
-4. `opacity: 1 → 0` (400ms fade-out)
-5. Pausa 500ms, loop.
+**Drop:** `payments_select_own_business`, `payments_insert_own_business`, `payments_update_own_business`, `payments_delete_own_business`.
+**Mantener:** "Patients can view their own payments", "Super admin can delete payments".
 
-Total ciclo ~2.5s. Respeta `@media (prefers-reduced-motion: reduce)` → desactiva animación.
+**Create:**
+- `payments_select_prof` (SELECT): `is_super_admin(auth.uid()) OR is_patient_professional(auth.uid(), patient_id) OR EXISTS (SELECT 1 FROM appointments a WHERE a.id = payments.appointment_id AND a.professional_id = auth.uid())`
+- `payments_insert_prof` (INSERT): `is_super_admin(auth.uid()) OR is_patient_professional(auth.uid(), patient_id)`
+- `payments_update_prof` (UPDATE): mismo using/check que select. (Webhook MP usa service role → bypass).
+- `payments_delete_prof` (DELETE): `is_super_admin(auth.uid()) OR is_patient_professional(auth.uid(), patient_id)`
 
-## 7. Criterios de aceptación cubiertos
+### 4.3 `appointment_reschedule_requests`
 
-✅ Botón sutil en header (portal + profesional), oculto si instalado
-✅ Android/Desktop Chrome: 1 tap → prompt nativo
-✅ iOS: 1 tap → tutorial animado SVG
-✅ Desktop Safari: 1 tap → tutorial Dock
-✅ Firefox: 1 tap → modal explicativo
-✅ Toast + reload tras instalar
-✅ Manifest dinámico verificado
-✅ Mobile 375px responsive
-✅ Sin dependencias nuevas, sin GIFs
+**Drop:** `reschedule_business_members_all`.
+**Mantener:** `reschedule_patient_select_own`, `reschedule_patient_insert_own`, `reschedule_super_admin_all`.
 
-## 8. Fuera de scope
+**Create:**
+- `reschedule_prof_select` (SELECT, authenticated): `EXISTS (SELECT 1 FROM appointments a WHERE a.id = original_appointment_id AND a.professional_id = auth.uid())`
+- `reschedule_prof_update` (UPDATE): mismo expression. (Los RPCs `approve_reschedule_request` / `reject_reschedule_request` son SECURITY DEFINER; agregar al chequeo interno la condición `a.professional_id = auth.uid() OR is_super_admin(auth.uid())` en lugar del actual `user_belongs_to_business`.)
 
-- No tocar service workers, cache strategies, ni `vite.config.ts` (workbox)
-- No agregar pop-ups intrusivos fuera del welcome screen del paciente y la card dismissible del dashboard profesional
-- No cambiar la lógica de `PortalWelcomeInstall.tsx` para decidir cuándo aparece (la flag `portal_welcomed_{slug}` ya está manejada en `ClinicPortal.tsx`)
+### 4.4 `session_notes`
 
-Aprobá y arranco.
+**Drop:** `session_notes_select_own_business`, `session_notes_insert_own_business`, `session_notes_update_own_business`, `session_notes_delete_own_business`.
+**Mantener:** `session_notes_super_admin_all`.
+
+**Create:**
+- SELECT: `is_super_admin(auth.uid()) OR author_user_id = auth.uid() OR is_patient_professional(auth.uid(), patient_id)`
+- INSERT: `user_belongs_to_business(auth.uid(), business_id) AND author_user_id = auth.uid() AND (is_patient_professional(auth.uid(), patient_id) OR is_super_admin(auth.uid()))`
+- UPDATE: `author_user_id = auth.uid() OR is_super_admin(auth.uid())`
+- DELETE: igual que UPDATE.
+
+### 4.5 `patient_documents`
+
+**Drop:** las 4 `*_own_business`.
+**Mantener:** super_admin.
+
+**Create:**
+- SELECT: `is_super_admin(auth.uid()) OR uploaded_by = auth.uid() OR is_patient_professional(auth.uid(), patient_id)`
+- INSERT: `uploaded_by = auth.uid() AND is_patient_professional(auth.uid(), patient_id)`
+- UPDATE / DELETE: `is_super_admin(auth.uid()) OR uploaded_by = auth.uid() OR is_patient_professional(auth.uid(), patient_id)`
+
+### 4.6 `scheduled_reminders`
+
+**Drop:** las 4 `*_own_business`.
+**Mantener:** super_admin.
+
+**Create:** todas usan `is_super_admin(auth.uid()) OR is_patient_professional(auth.uid(), patient_id)`.
+
+Nota: el trigger `auto_create_reminders` corre en contexto del usuario que crea la cita; ahora `professional_id = auth.uid()` (post 1.A) garantiza acceso. OK.
+
+### 4.7 `patient_notifications`
+
+Estado actual:
+- `notif_patient_select_own` ✓ paciente
+- `notif_patient_update_own` ✓ paciente
+- `notif_business_insert` — usa `user_belongs_to_business`. **Cambiar** a `is_super_admin(auth.uid()) OR is_patient_professional(auth.uid(), patient_id)` para que solo el profesional asignado pueda insertar avisos del paciente. (Los triggers `notify_*` son SECURITY DEFINER y siguen funcionando, bypass RLS).
+- Falta SELECT para el profesional asignado → **agregar** `notif_prof_select` con `is_patient_professional(auth.uid(), patient_id)`.
+- `notif_super_admin_all` ✓.
+
+### 4.8 `appointment_requests`
+
+**Sin cambios.** Reservas públicas no asignadas. Owner/profesionales del business las triagean. Aceptado como "compartida en business".
+
+---
+
+## 5. Impacto en código y edge functions
+
+Tras aplicar, revisar/ajustar:
+- `BusinessIdContext` y queries que hagan `from('patients').select('*')` ya filtrarán automáticamente por RLS (cada profesional ve solo los suyos).
+- UI de Patients/Payments necesitará indicar visualmente la asignación. **Fuera de scope de este bug** salvo que rompamos alguna pantalla — lo evaluamos después de aplicar.
+- Edge functions con `SUPABASE_SERVICE_ROLE_KEY` (create-patient-invite, create-patient-payment, webhook MP, etc.) bypasean RLS → siguen funcionando.
+- RPC `approve_reschedule_request` / `reject_reschedule_request`: ajustar el chequeo interno como se detalla en 4.3.
+
+---
+
+## 6. Orden de ejecución (cuando me des OK)
+
+1. **Migración 1**: schema (`patients.assigned_professional_id`, `created_by`), backfill, índice, helpers (`is_patient_professional`, `is_patient_owner_auth`), trigger `patients_set_defaults_biu`.
+2. **Migración 2**: drop+create policies de `patients`.
+3. **Migración 3**: drop+create policies de `payments`.
+4. **Migración 4**: policies de `appointment_reschedule_requests` + update RPCs.
+5. **Migración 5**: policies de `session_notes`, `patient_documents`, `scheduled_reminders`.
+6. **Migración 6**: policies de `patient_notifications`.
+7. Smoke-test funcional en preview con 2 profesionales del mismo business + 1 paciente + super_admin.
+
+---
+
+## 7. Riesgos / preguntas para vos antes de codear
+
+1. **Backfill de `assigned_professional_id`**: propongo asignar al `owner_user_id` del business. ¿OK o preferís dejarlo NULL y forzar reasignación manual? (NULL implica que pacientes legacy quedan invisibles para todos los profesionales que no sean el creador — más estricto pero rompe acceso existente).
+2. **Reasignación de paciente entre profesionales**: ¿solo super_admin y el owner del business pueden reasignar? Hoy lo restringimos solo a super_admin via trigger. ¿Sumamos owner?
+3. **Pacientes "compartidos"** (clínicas multi-prof donde el secretario carga a todos): el modelo actual no lo soporta sin una tabla de relación N:M. ¿Lo dejamos para fase posterior?
+4. Confirmar que `appointment_requests` queda como compartido del business (público + triagea cualquier miembro).
+
+Pasame OK + respuestas a esas 4 preguntas y arranco con la Migración 1.
