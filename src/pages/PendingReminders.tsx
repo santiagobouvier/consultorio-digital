@@ -360,19 +360,33 @@ const PendingReminders = () => {
   };
 
   const createManualReminder = async () => {
-    if (!businessId || !createForm.patientId || !createForm.appointmentId || !createForm.message.trim()) return;
+    if (!businessId || !createForm.patientId || !createForm.message.trim()) return;
+    if (createForm.mode === "appointment" && !createForm.appointmentId) return;
+    if (createForm.mode === "free" && !createForm.scheduledAt) return;
     setCreateSaving(true);
     try {
-      const appt = upcomingAppointments.find(a => a.id === createForm.appointmentId);
-      if (!appt) throw new Error("Cita no encontrada");
+      let scheduledFor: Date;
+      let appointmentId: string | null = null;
 
-      const apptDate = new Date(appt.start_at);
-      const hours = parseInt(createForm.hoursBefore);
-      const scheduledFor = new Date(apptDate);
-      scheduledFor.setHours(scheduledFor.getHours() - hours);
+      if (createForm.mode === "appointment") {
+        const appt = upcomingAppointments.find(a => a.id === createForm.appointmentId);
+        if (!appt) throw new Error("Cita no encontrada");
+        const apptDate = new Date(appt.start_at);
+        const hours = parseInt(createForm.hoursBefore);
+        scheduledFor = new Date(apptDate);
+        scheduledFor.setHours(scheduledFor.getHours() - hours);
+        appointmentId = createForm.appointmentId;
+      } else {
+        scheduledFor = new Date(createForm.scheduledAt);
+        if (isNaN(scheduledFor.getTime()) || scheduledFor.getTime() <= Date.now()) {
+          toast({ title: "Fecha inválida", description: "Elegí una fecha y hora futura.", variant: "destructive" });
+          setCreateSaving(false);
+          return;
+        }
+      }
 
       const { error } = await supabase.from("scheduled_reminders").insert({
-        appointment_id: createForm.appointmentId,
+        appointment_id: appointmentId,
         patient_id: createForm.patientId,
         business_id: businessId,
         scheduled_for: scheduledFor.toISOString(),
@@ -386,7 +400,7 @@ const PendingReminders = () => {
 
       invalidateReminders();
       setShowCreateModal(false);
-      setCreateForm({ patientId: "", appointmentId: "", channel: "whatsapp", message: "", hoursBefore: "24" });
+      setCreateForm({ mode: "appointment", patientId: "", appointmentId: "", channel: "whatsapp", message: "", hoursBefore: "24", scheduledAt: "" });
       toast({ title: "✓ Recordatorio creado" });
     } catch (err) {
       console.error(err);
