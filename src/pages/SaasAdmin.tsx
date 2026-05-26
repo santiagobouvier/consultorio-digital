@@ -931,7 +931,17 @@ const SaasAdmin = () => {
         <AlertDialogContent className="sm:max-w-md">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2 text-destructive"><AlertTriangle className="h-5 w-5" />Eliminar consultorio</AlertDialogTitle>
-            <AlertDialogDescription className="space-y-3"><p>Estás por eliminar el consultorio <strong>"{businessToDelete?.name}"</strong> y todos sus datos. Esta acción es irreversible.</p><p className="text-xs text-muted-foreground">Se eliminarán: profesionales, pacientes, citas, pagos, recordatorios, servicios, slots, invitaciones y suscripciones.</p></AlertDialogDescription>
+            <AlertDialogDescription className="space-y-3">
+              <p>Estás por eliminar el consultorio <strong>"{businessToDelete?.name}"</strong> y todos sus datos. Esta acción es irreversible.</p>
+              <p className="text-xs text-muted-foreground">Se eliminarán: profesionales, pacientes, citas, pagos, recordatorios, servicios, slots, invitaciones y suscripciones.</p>
+              {ownerOtherBizCount === null ? (
+                <p className="text-xs text-muted-foreground">Verificando cuenta del owner…</p>
+              ) : ownerOtherBizCount > 0 ? (
+                <p className="text-xs"><strong>Cuenta del owner</strong> ({businessToDelete?.ownerEmail}) se <strong>preservará</strong>: tiene {ownerOtherBizCount} consultorio(s) adicional(es).</p>
+              ) : (
+                <p className="text-xs text-destructive"><strong>También se eliminará</strong> la cuenta del owner ({businessToDelete?.ownerEmail}) de auth (no tiene otros consultorios).</p>
+              )}
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="py-4">
             <div className="flex items-start gap-3 p-3 bg-destructive/5 border border-destructive/20 rounded-lg">
