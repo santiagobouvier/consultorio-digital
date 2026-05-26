@@ -1,3 +1,10 @@
+## Status
+
+- **1.B — RLS isolation by assigned professional** ✅ DONE (2026-05-26)
+- Bug #10 CLOSED.
+
+---
+
 ## Hallazgo crítico previo
 
 `patients` **no tiene** ni `assigned_professional_id` ni `created_by`. Sin esos campos no se puede implementar el modelo "cada profesional ve solo lo suyo" en `patients` (ni en cascada en `payments`, `session_notes`, `patient_documents`, `scheduled_reminders`, `patient_notifications`, que dependen de la asignación del paciente).
