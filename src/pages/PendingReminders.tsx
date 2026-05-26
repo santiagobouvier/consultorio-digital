@@ -826,6 +826,26 @@ const PendingReminders = () => {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
+              <label className="text-sm font-medium">Tipo de recordatorio</label>
+              <ToggleGroup
+                type="single"
+                value={createForm.mode}
+                onValueChange={(v) => {
+                  if (!v) return;
+                  setCreateForm(f => ({ ...f, mode: v as "appointment" | "free" }));
+                }}
+                className="grid grid-cols-2 gap-2 w-full"
+              >
+                <ToggleGroupItem value="appointment" className="rounded-xl border data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
+                  Para una cita
+                </ToggleGroupItem>
+                <ToggleGroupItem value="free" className="rounded-xl border data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
+                  Mensaje libre
+                </ToggleGroupItem>
+              </ToggleGroup>
+            </div>
+
+            <div className="space-y-2">
               <label className="text-sm font-medium">Paciente</label>
               <Select value={createForm.patientId} onValueChange={v => setCreateForm(f => ({ ...f, patientId: v, appointmentId: "" }))}>
                 <SelectTrigger className="rounded-xl"><SelectValue placeholder="Seleccionar paciente" /></SelectTrigger>
@@ -837,11 +857,13 @@ const PendingReminders = () => {
               </Select>
             </div>
 
-            {createForm.patientId && (
+            {createForm.mode === "appointment" && createForm.patientId && (
               <div className="space-y-2">
                 <label className="text-sm font-medium">Cita próxima</label>
                 {appointmentsForPatient.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Este paciente no tiene citas próximas</p>
+                  <p className="text-sm text-muted-foreground">
+                    Este paciente no tiene citas próximas. Cambiá a <span className="font-medium text-foreground">"Mensaje libre"</span> para enviarle un recordatorio.
+                  </p>
                 ) : (
                   <Select value={createForm.appointmentId} onValueChange={v => setCreateForm(f => ({ ...f, appointmentId: v }))}>
                     <SelectTrigger className="rounded-xl"><SelectValue placeholder="Seleccionar cita" /></SelectTrigger>
@@ -857,7 +879,20 @@ const PendingReminders = () => {
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-3">
+            {createForm.mode === "free" && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Fecha y hora de envío</label>
+                <Input
+                  type="datetime-local"
+                  value={createForm.scheduledAt}
+                  min={new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)}
+                  onChange={e => setCreateForm(f => ({ ...f, scheduledAt: e.target.value }))}
+                  className="rounded-xl"
+                />
+              </div>
+            )}
+
+            <div className={createForm.mode === "appointment" ? "grid grid-cols-1 sm:grid-cols-2 gap-3" : ""}>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Canal</label>
                 <Select value={createForm.channel} onValueChange={(v: "whatsapp" | "email") => setCreateForm(f => ({ ...f, channel: v }))}>
@@ -868,18 +903,20 @@ const PendingReminders = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Anticipación</label>
-                <Select value={createForm.hoursBefore} onValueChange={v => setCreateForm(f => ({ ...f, hoursBefore: v }))}>
-                  <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1">1 hora antes</SelectItem>
-                    <SelectItem value="24">1 día antes</SelectItem>
-                    <SelectItem value="48">2 días antes</SelectItem>
-                    <SelectItem value="168">1 semana antes</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              {createForm.mode === "appointment" && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Anticipación</label>
+                  <Select value={createForm.hoursBefore} onValueChange={v => setCreateForm(f => ({ ...f, hoursBefore: v }))}>
+                    <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">1 hora antes</SelectItem>
+                      <SelectItem value="24">1 día antes</SelectItem>
+                      <SelectItem value="48">2 días antes</SelectItem>
+                      <SelectItem value="168">1 semana antes</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -897,7 +934,13 @@ const PendingReminders = () => {
             <Button variant="outline" onClick={() => setShowCreateModal(false)} className="rounded-xl">Cancelar</Button>
             <Button
               onClick={createManualReminder}
-              disabled={createSaving || !createForm.patientId || !createForm.appointmentId || !createForm.message.trim()}
+              disabled={
+                createSaving ||
+                !createForm.patientId ||
+                !createForm.message.trim() ||
+                (createForm.mode === "appointment" && !createForm.appointmentId) ||
+                (createForm.mode === "free" && !createForm.scheduledAt)
+              }
               className="rounded-xl"
             >
               {createSaving ? "Creando..." : "Crear recordatorio"}
