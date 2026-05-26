@@ -148,6 +148,7 @@ const SaasAdmin = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [businessToDelete, setBusinessToDelete] = useState<BusinessWithDetails | null>(null);
   const [deleteConfirmChecked, setDeleteConfirmChecked] = useState(false);
+  const [ownerOtherBizCount, setOwnerOtherBizCount] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [businessToEdit, setBusinessToEdit] = useState<BusinessWithDetails | null>(null);
@@ -330,7 +331,22 @@ const SaasAdmin = () => {
 
   const enterBusiness = (id: string) => { sessionStorage.setItem("saas_selected_business", id); navigate("/dashboard"); };
 
-  const openDeleteModal = (b: BusinessWithDetails) => { setBusinessToDelete(b); setDeleteConfirmChecked(false); setShowDeleteModal(true); };
+  const openDeleteModal = async (b: BusinessWithDetails) => {
+    setBusinessToDelete(b);
+    setDeleteConfirmChecked(false);
+    setOwnerOtherBizCount(null);
+    setShowDeleteModal(true);
+    try {
+      const { count } = await supabase
+        .from("businesses")
+        .select("id", { count: "exact", head: true })
+        .eq("owner_user_id", b.owner_user_id)
+        .neq("id", b.id);
+      setOwnerOtherBizCount(count ?? 0);
+    } catch {
+      setOwnerOtherBizCount(null);
+    }
+  };
 
   const handleDeleteBusiness = async () => {
     if (!businessToDelete || !deleteConfirmChecked) return;
@@ -341,7 +357,12 @@ const SaasAdmin = () => {
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      toast({ title: "Consultorio eliminado", description: `"${businessToDelete.name}" y todos sus datos fueron eliminados.` });
+      const ownerDeleted = data?.owner_auth_user_deleted === true;
+      const skipReason = data?.owner_skipped_reason as string | null;
+      const desc = ownerDeleted
+        ? `"${businessToDelete.name}" y la cuenta del owner (${data?.owner_email ?? "—"}) fueron eliminados.`
+        : `"${businessToDelete.name}" eliminado. Cuenta del owner preservada${skipReason ? ` (${skipReason})` : ""}.`;
+      toast({ title: "Consultorio eliminado", description: desc });
       setShowDeleteModal(false); setBusinessToDelete(null); await loadData();
     } catch (error: any) { toast({ title: "Error al eliminar", description: error.message || "No se pudo eliminar. Probá de nuevo.", variant: "destructive" }); } finally { setDeleting(false); }
   };
@@ -910,7 +931,17 @@ const SaasAdmin = () => {
         <AlertDialogContent className="sm:max-w-md">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2 text-destructive"><AlertTriangle className="h-5 w-5" />Eliminar consultorio</AlertDialogTitle>
-            <AlertDialogDescription className="space-y-3"><p>Estás por eliminar el consultorio <strong>"{businessToDelete?.name}"</strong> y todos sus datos. Esta acción es irreversible.</p><p className="text-xs text-muted-foreground">Se eliminarán: profesionales, pacientes, citas, pagos, recordatorios, servicios, slots, invitaciones y suscripciones.</p></AlertDialogDescription>
+            <AlertDialogDescription className="space-y-3">
+              <p>Estás por eliminar el consultorio <strong>"{businessToDelete?.name}"</strong> y todos sus datos. Esta acción es irreversible.</p>
+              <p className="text-xs text-muted-foreground">Se eliminarán: profesionales, pacientes, citas, pagos, recordatorios, servicios, slots, invitaciones y suscripciones.</p>
+              {ownerOtherBizCount === null ? (
+                <p className="text-xs text-muted-foreground">Verificando cuenta del owner…</p>
+              ) : ownerOtherBizCount > 0 ? (
+                <p className="text-xs"><strong>Cuenta del owner</strong> ({businessToDelete?.ownerEmail}) se <strong>preservará</strong>: tiene {ownerOtherBizCount} consultorio(s) adicional(es).</p>
+              ) : (
+                <p className="text-xs text-destructive"><strong>También se eliminará</strong> la cuenta del owner ({businessToDelete?.ownerEmail}) de auth (no tiene otros consultorios).</p>
+              )}
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="py-4">
             <div className="flex items-start gap-3 p-3 bg-destructive/5 border border-destructive/20 rounded-lg">
