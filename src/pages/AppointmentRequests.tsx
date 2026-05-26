@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -274,6 +274,41 @@ const AppointmentRequests = () => {
     queryClient.invalidateQueries({ queryKey: ["recent_unack_cancellations", businessId] });
     queryClient.invalidateQueries({ queryKey: ["appointments", businessId] });
   };
+
+  // Realtime: invalidar las listas cuando cambian las tablas relacionadas
+  useEffect(() => {
+    if (!businessId) return;
+
+    const channel = supabase
+      .channel(`appointment-requests-page-${businessId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "appointment_requests", filter: `business_id=eq.${businessId}` },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["appointment_requests", businessId] });
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "appointments", filter: `business_id=eq.${businessId}` },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["portal_pending_appointments", businessId] });
+          queryClient.invalidateQueries({ queryKey: ["recent_unack_cancellations", businessId] });
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "appointment_reschedule_requests", filter: `business_id=eq.${businessId}` },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["reschedule_pending_requests", businessId] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [businessId, queryClient]);
 
   // ---------- Portal booking actions ----------
   const confirmPortalBooking = async (item: Extract<PendingItem, { kind: "portal_booking" }>) => {
