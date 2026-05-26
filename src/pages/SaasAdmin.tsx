@@ -148,6 +148,7 @@ const SaasAdmin = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [businessToDelete, setBusinessToDelete] = useState<BusinessWithDetails | null>(null);
   const [deleteConfirmChecked, setDeleteConfirmChecked] = useState(false);
+  const [ownerOtherBizCount, setOwnerOtherBizCount] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [businessToEdit, setBusinessToEdit] = useState<BusinessWithDetails | null>(null);
@@ -330,7 +331,22 @@ const SaasAdmin = () => {
 
   const enterBusiness = (id: string) => { sessionStorage.setItem("saas_selected_business", id); navigate("/dashboard"); };
 
-  const openDeleteModal = (b: BusinessWithDetails) => { setBusinessToDelete(b); setDeleteConfirmChecked(false); setShowDeleteModal(true); };
+  const openDeleteModal = async (b: BusinessWithDetails) => {
+    setBusinessToDelete(b);
+    setDeleteConfirmChecked(false);
+    setOwnerOtherBizCount(null);
+    setShowDeleteModal(true);
+    try {
+      const { count } = await supabase
+        .from("businesses")
+        .select("id", { count: "exact", head: true })
+        .eq("owner_user_id", b.owner_user_id)
+        .neq("id", b.id);
+      setOwnerOtherBizCount(count ?? 0);
+    } catch {
+      setOwnerOtherBizCount(null);
+    }
+  };
 
   const handleDeleteBusiness = async () => {
     if (!businessToDelete || !deleteConfirmChecked) return;
@@ -341,7 +357,12 @@ const SaasAdmin = () => {
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      toast({ title: "Consultorio eliminado", description: `"${businessToDelete.name}" y todos sus datos fueron eliminados.` });
+      const ownerDeleted = data?.owner_auth_user_deleted === true;
+      const skipReason = data?.owner_skipped_reason as string | null;
+      const desc = ownerDeleted
+        ? `"${businessToDelete.name}" y la cuenta del owner (${data?.owner_email ?? "—"}) fueron eliminados.`
+        : `"${businessToDelete.name}" eliminado. Cuenta del owner preservada${skipReason ? ` (${skipReason})` : ""}.`;
+      toast({ title: "Consultorio eliminado", description: desc });
       setShowDeleteModal(false); setBusinessToDelete(null); await loadData();
     } catch (error: any) { toast({ title: "Error al eliminar", description: error.message || "No se pudo eliminar. Probá de nuevo.", variant: "destructive" }); } finally { setDeleting(false); }
   };
