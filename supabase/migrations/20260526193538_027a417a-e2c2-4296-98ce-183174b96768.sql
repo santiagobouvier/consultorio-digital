@@ -1,0 +1,1 @@
+ALTER TABLE public.scheduled_reminders ALTER COLUMN appointment_id DROP NOT NULL;
