@@ -641,6 +641,14 @@ const ClinicSettings = () => {
             )}
           </TabsContent>
 
+          {/* TAB: CONSULTORIO (solo owner) */}
+          {isOwner && businessId && (
+            <TabsContent value="consultorio" className="space-y-5 mt-5">
+              <SpacesManagementSection businessId={businessId} />
+              <ProfessionalsCoordinationSection businessId={businessId} />
+            </TabsContent>
+          )}
+
           {/* TAB: MENSAJES */}
           <TabsContent value="mensajes" className="space-y-5 mt-5">
             <Card className="border-primary/20 bg-primary/5">
