@@ -25,6 +25,7 @@ import {
   Building2,
   MessageSquare,
   CreditCard,
+  DoorOpen,
 } from "lucide-react";
 import { NotificationActivationCard } from "@/components/NotificationActivationCard";
 import { useDashboardBranding } from "@/contexts/DashboardBrandingContext";
@@ -33,6 +34,8 @@ import { PlanUsageCard } from "@/components/PlanUsageCard";
 import LoadingPage from "@/components/LoadingPage";
 import { buildShareUrl } from "@/config/app";
 import { PaymentPolicySettings } from "@/components/PaymentPolicySettings";
+import { SpacesManagementSection } from "@/components/settings/SpacesManagementSection";
+import { ProfessionalsCoordinationSection } from "@/components/settings/ProfessionalsCoordinationSection";
 
 const DEFAULT_TEMPLATES = {
   reminder:
@@ -416,13 +419,18 @@ const ClinicSettings = () => {
         <PlanUsageCard businessId={businessId} />
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid grid-cols-3 sm:grid-cols-5 w-full h-auto p-1">
+          <TabsList className={`grid w-full h-auto p-1 ${isOwner ? "grid-cols-3 sm:grid-cols-6" : "grid-cols-3 sm:grid-cols-5"}`}>
             <TabsTrigger value="general" className="gap-1.5 text-xs sm:text-sm py-2">
               <Building2 className="h-3.5 w-3.5" /> General
             </TabsTrigger>
             <TabsTrigger value="equipo" className="gap-1.5 text-xs sm:text-sm py-2">
               <Users className="h-3.5 w-3.5" /> Equipo
             </TabsTrigger>
+            {isOwner && (
+              <TabsTrigger value="consultorio" className="gap-1.5 text-xs sm:text-sm py-2">
+                <DoorOpen className="h-3.5 w-3.5" /> Consultorio
+              </TabsTrigger>
+            )}
             <TabsTrigger value="mensajes" className="gap-1.5 text-xs sm:text-sm py-2">
               <MessageSquare className="h-3.5 w-3.5" /> Mensajes
             </TabsTrigger>
@@ -632,6 +640,14 @@ const ClinicSettings = () => {
               </>
             )}
           </TabsContent>
+
+          {/* TAB: CONSULTORIO (solo owner) */}
+          {isOwner && businessId && (
+            <TabsContent value="consultorio" className="space-y-5 mt-5">
+              <SpacesManagementSection businessId={businessId} />
+              <ProfessionalsCoordinationSection businessId={businessId} />
+            </TabsContent>
+          )}
 
           {/* TAB: MENSAJES */}
           <TabsContent value="mensajes" className="space-y-5 mt-5">
