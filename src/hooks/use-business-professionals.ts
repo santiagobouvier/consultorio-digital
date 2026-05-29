@@ -53,17 +53,26 @@ export function useBusinessProfessionals(businessId: string | null) {
       const profileMap = new Map((profiles ?? []).map((p) => [p.id, p]));
 
       const nowIso = new Date().toISOString();
-      const { data: futureAppts } = await supabase
-        .from("appointments")
-        .select("professional_id, space_id, spaces!inner(owned_by_user_id)")
+      const { data: sharedSpaces } = await supabase
+        .from("spaces")
+        .select("id")
         .eq("business_id", businessId)
-        .gte("start_at", nowIso)
-        .in("professional_id", userIds);
+        .is("owned_by_user_id", null);
+      const sharedSpaceIds = (sharedSpaces ?? []).map((s) => s.id);
 
       const futureSharedCount = new Map<string, number>();
-      for (const a of (futureAppts as any[]) ?? []) {
-        if (a.spaces?.owned_by_user_id === null && a.professional_id) {
-          futureSharedCount.set(a.professional_id, (futureSharedCount.get(a.professional_id) ?? 0) + 1);
+      if (sharedSpaceIds.length > 0) {
+        const { data: futureAppts } = await supabase
+          .from("appointments")
+          .select("professional_id")
+          .eq("business_id", businessId)
+          .gte("start_at", nowIso)
+          .in("professional_id", userIds)
+          .in("space_id", sharedSpaceIds);
+        for (const a of futureAppts ?? []) {
+          if (a.professional_id) {
+            futureSharedCount.set(a.professional_id, (futureSharedCount.get(a.professional_id) ?? 0) + 1);
+          }
         }
       }
 
