@@ -23,7 +23,7 @@ export const PLAN_DEFINITIONS: Record<string, PlanDefinition> = {
     maxPatients: 15,
     priceAnnual: 1290,
     priceMonthly: 1613,
-    hasPublicWeb: false,
+    hasPublicWeb: true,
   },
   esencial: {
     code: "esencial",
@@ -33,7 +33,7 @@ export const PLAN_DEFINITIONS: Record<string, PlanDefinition> = {
     maxPatients: 40,
     priceAnnual: 2500,
     priceMonthly: 3125,
-    hasPublicWeb: false,
+    hasPublicWeb: true,
     isHighlighted: true,
     highlightLabel: "Más elegido",
   },
