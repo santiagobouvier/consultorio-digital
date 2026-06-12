@@ -68,7 +68,7 @@ const Pricing = () => {
             Elegí el plan ideal para tu consultorio
           </h1>
           <p className="text-white/50 text-base sm:text-lg max-w-2xl mx-auto">
-            Todos los planes incluyen 30 días de prueba gratis. Sin compromiso, cancelá cuando quieras.
+            Todos los planes incluyen 15 días de prueba gratis. Sin compromiso, cancelá cuando quieras.
           </p>
         </div>
 
@@ -101,7 +101,7 @@ const Pricing = () => {
                 className="text-base sm:text-lg font-bold mb-1"
                 style={{ color: "hsl(176,80%,75%)" }}
               >
-                Importante: no pedimos tarjeta para los 30 días gratis
+                Importante: no pedimos tarjeta para los 15 días gratis
               </div>
               <p className="text-sm text-white/70 leading-snug">
                 Probá todo el sistema sin riesgo. No vas a ingresar ningún dato de pago hasta que decidas continuar. Dale sin miedo.
@@ -287,7 +287,7 @@ const PlanCard = ({ plan, billingCycle, onSelect }: PlanCardProps) => {
               }
         }
       >
-        Empezar 30 días gratis
+        Empezar 15 días gratis
       </Button>
     </div>
   );
