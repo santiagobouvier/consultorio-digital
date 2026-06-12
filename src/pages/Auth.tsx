@@ -445,7 +445,7 @@ const Auth = () => {
               </div>
             </div>
             <p className="text-xs text-[hsl(160,80%,50%)] mt-2 ml-13">
-              ✨ 30 días gratis, sin tarjeta requerida
+              ✨ 15 días gratis, sin tarjeta requerida
             </p>
           </div>
         )}

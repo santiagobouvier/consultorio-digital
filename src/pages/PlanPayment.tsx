@@ -83,7 +83,7 @@ const PlanPayment = () => {
                 /mes {billingPeriod === "annual" ? "(pago anual)" : "(pago mensual)"}
               </p>
               {!skipTrial && (
-                <p className="text-xs text-[hsl(160,80%,50%)] mt-1">30 días gratis</p>
+                <p className="text-xs text-[hsl(160,80%,50%)] mt-1">15 días gratis</p>
               )}
             </div>
           </div>
