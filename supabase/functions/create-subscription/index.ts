@@ -7,17 +7,17 @@ const corsHeaders = {
 };
 
 const PLAN_PRICES: Record<string, { monthly: number; annual: number }> = {
-  emprendedor: { monthly: 1690, annual: 1290 },
-  esencial: { monthly: 3490, annual: 2790 },
-  profesional: { monthly: 5990, annual: 4790 },
-  consultorio: { monthly: 10990, annual: 8790 },
+  emprendedor: { monthly: 1613, annual: 1290 },
+  esencial: { monthly: 3125, annual: 2500 },
+  profesional: { monthly: 5625, annual: 4500 },
+  consultorio: { monthly: 10000, annual: 8000 },
   // Legacy codes mapped
-  starter: { monthly: 1690, annual: 1290 },
-  individual: { monthly: 3490, annual: 2790 },
-  inicial: { monthly: 3490, annual: 2790 },
-  professional: { monthly: 5990, annual: 4790 },
-  advanced: { monthly: 10990, annual: 8790 },
-  equipo: { monthly: 10990, annual: 8790 },
+  starter: { monthly: 1613, annual: 1290 },
+  individual: { monthly: 3125, annual: 2500 },
+  inicial: { monthly: 3125, annual: 2500 },
+  professional: { monthly: 5625, annual: 4500 },
+  advanced: { monthly: 10000, annual: 8000 },
+  equipo: { monthly: 10000, annual: 8000 },
 };
 
 serve(async (req) => {
