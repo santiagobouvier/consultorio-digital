@@ -137,7 +137,7 @@ const Pricing = () => {
                 color: "hsl(160,80%,50%)",
               }}
             >
-              Ahorrá hasta 25%
+              Ahorrá 20%
             </Badge>
           </button>
         </div>
