@@ -393,7 +393,7 @@ const SaasAdmin = () => {
     if (!businessToActivate) return;
     try {
       setActivating(true);
-      const trialEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+      const trialEnd = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString();
       const periodEnd = trialEnd;
 
       // Buscar suscripción actual
@@ -980,7 +980,7 @@ const SaasAdmin = () => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2"><Zap className="h-5 w-5 text-primary" />Activar suscripción</DialogTitle>
             <DialogDescription>
-              Activación manual sin MercadoPago para <strong>{businessToActivate?.name}</strong>. Se marcará como activa por 30 días.
+              Activación manual sin MercadoPago para <strong>{businessToActivate?.name}</strong>. Se marcará como activa por 15 días.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -998,7 +998,7 @@ const SaasAdmin = () => {
             </div>
             <Alert>
               <AlertDescription className="text-xs">
-                Esta acción establece <code>status = active</code>, actualiza el plan y extiende el período por 30 días. No genera cargos en MercadoPago.
+                Esta acción establece <code>status = active</code>, actualiza el plan y extiende el período por 15 días. No genera cargos en MercadoPago.
               </AlertDescription>
             </Alert>
           </div>
