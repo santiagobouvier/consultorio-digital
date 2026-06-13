@@ -1,5 +1,113 @@
+# Plan — Alinear UX al PDF de Oferta de Valor
 
-# Sub-fase A — Espacios compartidos: investigación previa + plan
+Norte: el PDF de oferta de valor. Flujo de 4 pasos (Configurá → Reservá → Cobrá → Fidelizá) y "fácil de usar" para un psicólogo que atiende solo. Este plan **no agrega features nuevos**: orquesta lo que ya existe y corrige inconsistencias entre la promesa del PDF y el producto actual.
+
+## Diagnóstico verificado
+
+1. **OnboardingWizard (`src/pages/OnboardingWizard.tsx`)** cubre solo los 4 pasos de **perfil del negocio** (datos, branding, slug, etc.). NO orquesta el flujo operativo del PDF: definir semana tipo → generar slots → conectar Mercado Pago → compartir link. Esas piezas existen sueltas (WeeklyTemplateEditor, GenerateSlotsDialog, connect-mercadopago, PublicClinic) pero el usuario debe descubrirlas por su cuenta. **Este es el hueco principal.**
+2. **Modo privacidad** hoy: el toggle del Dashboard solo oculta el monto de ingresos (localStorage, scope dashboard). NO oculta nombres de pacientes en agenda/listas. El PDF promete "modo privacidad para compartir pantalla", que requiere ocultar nombres en agenda + listas, no solo el monto.
+3. Sidebar actual (`AppSidebar.tsx` / `PremiumSidebar.tsx`) tiene 8+ items flat. El PDF sintetiza en 6 áreas (Agenda, Reserva, Pagos, Recordatorios, Ficha, Pacientes).
+4. Ficha de paciente: hoy datos clínicos (notas, motivo) quedan por debajo de pagos/turnos.
+5. Página pública (PublicClinic) y portal PWA son entradas separadas sin un módulo único que las explique al profesional.
+
+---
+
+## Fase 1 — Barata, antes de mostrar a usuarios reales
+
+### 1.1 Checklist de activación persistente en el Dashboard
+
+**Objetivo:** orquestar las piezas existentes en el orden del PDF, sin reescribir flujos.
+
+**Ubicación:** card destacada en `src/pages/Dashboard.tsx`, arriba de todo, visible solo mientras quede al menos un ítem pendiente. Se autodestruye (no hay que cerrarla) cuando los 4 están completos.
+
+**Ítems y detección de completitud (todo en cliente, consultando datos reales que ya existen):**
+
+| # | Ítem | "Done" cuando… | CTA | Hook/query existente |
+|---|---|---|---|---|
+| 1 | Definí tu semana tipo | `availability_templates` del business tiene ≥1 fila activa | → `/horarios-disponibles` (tab plantilla) | `useAvailabilityTemplate` |
+| 2 | Generá tus horarios del mes | `available_slots` con `start_at > now()` existe (≥1) | → `/horarios-disponibles` + abrir `GenerateSlotsDialog` | query directa a `available_slots` |
+| 3 | Conectá Mercado Pago | `businesses.mp_access_token IS NOT NULL` (o equivalente actual del flow de OAuth) | → `/mi-consultorio` sección MP | leer `businesses` del contexto |
+| 4 | Compartí tu link público | flag `onboarding_link_shared_at` en `businesses` (nuevo campo) set en el click "Copiar/Compartir" | → modal con link `/consultorio/:slug` + botón copiar/WhatsApp | nuevo |
+
+**Único cambio de schema en Fase 1:** agregar `onboarding_link_shared_at timestamptz null` a `businesses`. No toca límites, RLS ni cobros.
+
+**UX:** cada ítem es una fila con check verde si done, círculo vacío si pending, CTA al lado. Diseño consistente con el dark theme actual.
+
+### 1.2 Pantalla post-activación
+
+Cuando los 4 ítems quedan completos, mostrar **una sola vez** (flag local + `onboarding_link_shared_at` ya garantiza que pasó por el paso 4) un modal/celebration:
+
+> "Tu consultorio está listo. Compartí tu link para empezar a recibir reservas."
+
+Con: link, botón copiar, botón WhatsApp, botón "Ir al dashboard". No bloquea nada. Se dispara desde el Dashboard al detectar transición "pending → all done".
+
+### 1.3 Reagrupar sidebar en las 6 áreas del PDF
+
+**Solo navegación, sin tocar rutas ni páginas.** Reordenar y agrupar visualmente en `AppSidebar.tsx` y `PremiumSidebar.tsx`:
+
+- **Agenda** → Agenda, Horarios, Pendientes (solicitudes)
+- **Reserva** → (link a página pública + portal — placeholder hasta Fase 2.5)
+- **Pagos** → Pagos, Facturación
+- **Recordatorios** → Recordatorios pendientes
+- **Ficha** → (sin item directo; se accede desde paciente — se documenta solo)
+- **Pacientes** → Pacientes, Estadísticas
+
+Mantener "Configuración" (Mi consultorio, Portal pacientes, Panel Admin si super_admin) como bloque inferior separado, igual que hoy.
+
+### 1.4 Reordenar ficha de paciente
+
+En `src/pages/PatientDetail.tsx`: subir **Motivo de consulta** y **Notas de sesión** por encima de Pagos y Turnos. Es reorden de tabs/secciones, no cambia componentes.
+
+---
+
+## Fase 2 — Después de validar con psicólogos reales
+
+No se ejecuta hasta tener feedback de Fase 1. Documentado para tenerlo en cola.
+
+### 2.5 Módulo unificado "Tu presencia online"
+
+Nueva ruta `/presencia-online` (o subreemplazo de "Portal pacientes" en sidebar) con dos cards:
+- **Página pública** (`/consultorio/:slug`): preview + link + QR + copiar.
+- **Portal PWA del paciente**: invitar pacientes, descargar QR, instrucciones.
+
+No duplica funcionalidad, centraliza acceso. Reemplaza el item "Portal pacientes" del sidebar.
+
+### 2.6 Bandeja de recordatorios pendientes del día
+
+Vista que agrupa por día los recordatorios WhatsApp pendientes de enviar (hoy `PendingReminders` ya existe pero sin agrupación por día ni "todos los de hoy de un saque"). Mejora de UI sobre lo existente.
+
+### 2.7 Modo privacidad — decisión
+
+Dos caminos, **elegir uno con el usuario tras Fase 1**:
+
+- **A. Extender el feature:** mover el flag de localStorage a un contexto global (`PrivacyModeContext`), exponer toggle en `MobileHeader`/topbar, y aplicar en: agenda (V2: AppointmentCard, DayViewV2, WeekViewV2, MonthViewV2), lista de pacientes, ficha de paciente, recordatorios. Nombres → "Paciente" o iniciales. Montos → ya cubierto.
+- **B. Ajustar la promesa del PDF:** dejar el modo privacidad solo para ingresos y reescribir el copy del PDF para que no prometa ocultar nombres.
+
+Recomendación tentativa: A, pero requiere ~1 día de trabajo cuidadoso para cubrir todas las vistas sin romper estados. No se decide acá.
+
+---
+
+## Lo que este plan NO hace
+
+- No toca precios, límites, gating ni lógica de cobro.
+- No toca espacios compartidos / coordination_mode (la sub-fase A previa de este archivo queda pospuesta; si querés retomarla, la rescato a otro archivo).
+- No reescribe el OnboardingWizard existente: el checklist del Dashboard cumple el rol de "guía operativa post-onboarding".
+- No agrega features nuevos del PDF que no existan ya en el código.
+
+---
+
+## Archivos que tocaría Fase 1
+
+- `src/pages/Dashboard.tsx` — montar checklist + detección de "all done" para disparar celebración.
+- `src/components/ActivationChecklist.tsx` — nuevo, contiene las 4 filas y queries.
+- `src/components/ActivationCompleteModal.tsx` — nuevo, modal post-activación con link.
+- `src/components/AppSidebar.tsx` y `src/components/PremiumSidebar.tsx` — reordenar + agrupar.
+- `src/pages/PatientDetail.tsx` — reordenar secciones.
+- 1 migración SQL: `ALTER TABLE businesses ADD COLUMN onboarding_link_shared_at timestamptz` (sin cambios de RLS porque ya cubre `businesses`).
+
+---
+
+**Espero tu OK antes de ejecutar. Si querés cambiar orden, sacar algo, o decidir ya el camino de modo privacidad (A vs B), avisame y reescribo.**
 
 ## 1. Estado actual del schema
 
