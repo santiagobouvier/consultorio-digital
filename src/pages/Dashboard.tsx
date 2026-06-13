@@ -16,6 +16,7 @@ import { calculatePaymentStatus, formatCurrency } from "@/lib/payments";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { NotificationActivationCard } from "@/components/NotificationActivationCard";
 import { InstallPromptCard } from "@/components/pwa/InstallPromptCard";
+import { ActivationChecklist } from "@/components/ActivationChecklist";
 import {
   DropdownMenu,
   DropdownMenuContent,
