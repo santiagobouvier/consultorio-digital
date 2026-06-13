@@ -332,7 +332,7 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
 
       {/* Main Content */}
       <main className="max-w-[1400px] mx-auto px-10 py-10 space-y-10">
-        
+        <ActivationChecklist businessId={businessId} />
         {/* KPIs Row - 4 Large Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {/* Citas hoy */}
