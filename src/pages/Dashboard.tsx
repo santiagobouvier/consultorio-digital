@@ -16,6 +16,7 @@ import { calculatePaymentStatus, formatCurrency } from "@/lib/payments";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { NotificationActivationCard } from "@/components/NotificationActivationCard";
 import { InstallPromptCard } from "@/components/pwa/InstallPromptCard";
+import { ActivationChecklist } from "@/components/ActivationChecklist";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -418,6 +419,7 @@ const Dashboard = () => {
       <div className="min-h-screen bg-background">
       <div className="max-w-2xl mx-auto p-4 sm:p-6 space-y-6">
         <InstallPromptCard />
+        {businessId && <ActivationChecklist businessId={businessId} />}
         {/* Super Admin Business Selector */}
         {isSuperAdmin && allBusinesses.length > 0 && (
           <Card className="mobile-card-compact bg-primary/5 border-primary/30">
