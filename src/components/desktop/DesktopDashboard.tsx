@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { MonthlyHighlights } from "@/components/MonthlyHighlights";
+import { ActivationChecklist } from "@/components/ActivationChecklist";
 import { HelpTooltip } from "@/components/HelpTooltip";
 
 import {
