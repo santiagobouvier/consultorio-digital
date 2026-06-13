@@ -605,6 +605,7 @@ export type Database = {
           late_cancellation_message: string | null
           name: string
           onboarding_completed: boolean
+          onboarding_link_shared_at: string | null
           owner_user_id: string
           plan_code: string
           plan_expires_at: string | null
@@ -640,6 +641,7 @@ export type Database = {
           late_cancellation_message?: string | null
           name: string
           onboarding_completed?: boolean
+          onboarding_link_shared_at?: string | null
           owner_user_id: string
           plan_code?: string
           plan_expires_at?: string | null
@@ -675,6 +677,7 @@ export type Database = {
           late_cancellation_message?: string | null
           name?: string
           onboarding_completed?: boolean
+          onboarding_link_shared_at?: string | null
           owner_user_id?: string
           plan_code?: string
           plan_expires_at?: string | null
