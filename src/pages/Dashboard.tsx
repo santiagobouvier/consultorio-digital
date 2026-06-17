@@ -18,6 +18,10 @@ import { NotificationActivationCard } from "@/components/NotificationActivationC
 import { InstallPromptCard } from "@/components/pwa/InstallPromptCard";
 import { ActivationChecklist } from "@/components/ActivationChecklist";
 import {
+  ActivationCompleteModal,
+  wasActivationCelebrated,
+} from "@/components/ActivationCompleteModal";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
