@@ -97,9 +97,6 @@ export function AppSidebar() {
   };
 
   const isActive = (path: string) => location.pathname === path;
-  const visibleConfigItems = isSuperAdmin
-    ? configItems.filter((item) => item.url !== "/billing")
-    : configItems;
 
   return (
     <Sidebar
@@ -110,14 +107,122 @@ export function AppSidebar() {
       } as React.CSSProperties}
     >
       <SidebarContent className="bg-[#0a0a0a] border-r border-white/5 pt-14 md:pt-16">
-        {/* Main navigation */}
+        {/* Dashboard */}
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {dashboardItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton
+                    isActive={isActive(item.url)}
+                    onClick={() => handleNavigate(item.url)}
+                    className={`mx-2 rounded-lg transition-all duration-200 ${
+                      isActive(item.url)
+                        ? "bg-[hsla(176,80%,40%,0.08)] text-[hsl(176,80%,40%)]"
+                        : "text-white/45 hover:text-white/80 hover:bg-white/[0.03]"
+                    }`}
+                  >
+                    <item.icon className="h-4 w-4" />
+                    <span className="text-sm">{item.title}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Agenda */}
         <SidebarGroup>
           <SidebarGroupLabel className="text-white/25 text-[10px] uppercase tracking-widest px-4 mb-1">
-            Principal
+            Agenda
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {mainItems.map((item) => (
+              {agendaItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton
+                    isActive={isActive(item.url)}
+                    onClick={() => handleNavigate(item.url)}
+                    className={`mx-2 rounded-lg transition-all duration-200 ${
+                      isActive(item.url)
+                        ? "bg-[hsla(176,80%,40%,0.08)] text-[hsl(176,80%,40%)]"
+                        : "text-white/45 hover:text-white/80 hover:bg-white/[0.03]"
+                    }`}
+                  >
+                    <item.icon className="h-4 w-4" />
+                    <span className="text-sm">{item.title}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Pacientes */}
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-white/25 text-[10px] uppercase tracking-widest px-4 mb-1">
+            Pacientes
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {pacientesItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton
+                    isActive={isActive(item.url)}
+                    onClick={() => handleNavigate(item.url)}
+                    className={`mx-2 rounded-lg transition-all duration-200 ${
+                      isActive(item.url)
+                        ? "bg-[hsla(176,80%,40%,0.08)] text-[hsl(176,80%,40%)]"
+                        : "text-white/45 hover:text-white/80 hover:bg-white/[0.03]"
+                    }`}
+                  >
+                    <item.icon className="h-4 w-4" />
+                    <span className="text-sm">{item.title}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Pagos */}
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-white/25 text-[10px] uppercase tracking-widest px-4 mb-1">
+            Pagos
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {(isSuperAdmin
+                ? pagosItems.filter((item) => item.url !== "/billing")
+                : pagosItems
+              ).map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton
+                    isActive={isActive(item.url)}
+                    onClick={() => handleNavigate(item.url)}
+                    className={`mx-2 rounded-lg transition-all duration-200 ${
+                      isActive(item.url)
+                        ? "bg-[hsla(176,80%,40%,0.08)] text-[hsl(176,80%,40%)]"
+                        : "text-white/45 hover:text-white/80 hover:bg-white/[0.03]"
+                    }`}
+                  >
+                    <item.icon className="h-4 w-4" />
+                    <span className="text-sm">{item.title}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Recordatorios */}
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-white/25 text-[10px] uppercase tracking-widest px-4 mb-1">
+            Recordatorios
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {recordatoriosItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     isActive={isActive(item.url)}
@@ -140,14 +245,14 @@ export function AppSidebar() {
         {/* Separator */}
         <div className="mx-6 my-2 h-px bg-white/5" />
 
-        {/* Config navigation */}
+        {/* Configuración */}
         <SidebarGroup>
           <SidebarGroupLabel className="text-white/25 text-[10px] uppercase tracking-widest px-4 mb-1">
             Configuración
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {visibleConfigItems.map((item) => (
+              {configItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     isActive={isActive(item.url)}
