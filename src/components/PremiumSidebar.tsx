@@ -312,18 +312,68 @@ export function PremiumSidebar() {
 
           {/* Main nav */}
           <nav className="flex-1 px-2.5 py-2 space-y-0.5 overflow-y-auto overflow-x-hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            {/* Dashboard */}
+            {dashboardItems.map((item) => (
+              <div key={item.url}>{renderItem(item)}</div>
+            ))}
+
+            {/* Agenda */}
             <div
               className={cn(
-                "text-[10px] uppercase tracking-[0.15em] font-medium mb-2 transition-all duration-200",
+                "text-[10px] uppercase tracking-[0.15em] font-medium mb-2 mt-2 transition-all duration-200",
                 expanded
                   ? "text-white/20 px-3 opacity-100"
                   : "text-transparent opacity-0 h-0 mb-0"
               )}
             >
-              Principal
+              Agenda
             </div>
+            {agendaItems.map((item) => (
+              <div key={item.url}>{renderItem(item)}</div>
+            ))}
 
-            {mainItems.map((item) => (
+            {/* Pacientes */}
+            <div
+              className={cn(
+                "text-[10px] uppercase tracking-[0.15em] font-medium mb-2 mt-2 transition-all duration-200",
+                expanded
+                  ? "text-white/20 px-3 opacity-100"
+                  : "text-transparent opacity-0 h-0 mb-0"
+              )}
+            >
+              Pacientes
+            </div>
+            {pacientesItems.map((item) => (
+              <div key={item.url}>{renderItem(item)}</div>
+            ))}
+
+            {/* Pagos */}
+            <div
+              className={cn(
+                "text-[10px] uppercase tracking-[0.15em] font-medium mb-2 mt-2 transition-all duration-200",
+                expanded
+                  ? "text-white/20 px-3 opacity-100"
+                  : "text-transparent opacity-0 h-0 mb-0"
+              )}
+            >
+              Pagos
+            </div>
+            {visiblePagosItems.map((item) => (
+              <div key={item.url}>{renderItem(item)}</div>
+            ))}
+
+            {/* Recordatorios */}
+            <div
+              className={cn(
+                "text-[10px] uppercase tracking-[0.15em] font-medium mb-2 mt-2 transition-all duration-200",
+                expanded
+                  ? "text-white/20 px-3 opacity-100"
+                  : "text-transparent opacity-0 h-0 mb-0"
+              )}
+            >
+              Recordatorios
+            </div>
+            {recordatoriosItems.map((item) => (
               <div key={item.url}>{renderItem(item)}</div>
             ))}
 
@@ -331,6 +381,7 @@ export function PremiumSidebar() {
               <div className="h-px bg-gradient-to-r from-transparent via-white/[0.08] to-transparent" />
             </div>
 
+            {/* Configuración */}
             <div
               className={cn(
                 "text-[10px] uppercase tracking-[0.15em] font-medium mb-2 transition-all duration-200",
@@ -342,7 +393,7 @@ export function PremiumSidebar() {
               Configuración
             </div>
 
-            {visibleConfigItems.map((item) => (
+            {configItems.map((item) => (
               <div key={item.url}>{renderItem(item)}</div>
             ))}
 
