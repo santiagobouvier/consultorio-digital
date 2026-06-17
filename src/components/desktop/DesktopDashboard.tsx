@@ -338,7 +338,19 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
 
       {/* Main Content */}
       <main className="max-w-[1400px] mx-auto px-10 py-10 space-y-10">
-        <ActivationChecklist businessId={businessId} />
+        <ActivationChecklist
+          businessId={businessId}
+          onAllDone={() => {
+            if (!wasActivationCelebrated(businessId)) {
+              setShowActivationDone(true);
+            }
+          }}
+        />
+        <ActivationCompleteModal
+          businessId={businessId}
+          open={showActivationDone}
+          onClose={() => setShowActivationDone(false)}
+        />
         {/* KPIs Row - 4 Large Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {/* Citas hoy */}
