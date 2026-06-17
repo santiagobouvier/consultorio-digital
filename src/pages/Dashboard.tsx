@@ -18,6 +18,10 @@ import { NotificationActivationCard } from "@/components/NotificationActivationC
 import { InstallPromptCard } from "@/components/pwa/InstallPromptCard";
 import { ActivationChecklist } from "@/components/ActivationChecklist";
 import {
+  ActivationCompleteModal,
+  wasActivationCelebrated,
+} from "@/components/ActivationCompleteModal";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -72,6 +76,7 @@ const Dashboard = () => {
   const [isDemo, setIsDemo] = useState(false);
   const [allBusinesses, setAllBusinesses] = useState<Business[]>([]);
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
+  const [showActivationDone, setShowActivationDone] = useState(false);
 
   const statusMap: Record<string, string> = {
     pending: "pendiente",
@@ -419,7 +424,23 @@ const Dashboard = () => {
       <div className="min-h-screen bg-background">
       <div className="max-w-2xl mx-auto p-4 sm:p-6 space-y-6">
         <InstallPromptCard />
-        {businessId && <ActivationChecklist businessId={businessId} />}
+        {businessId && (
+          <ActivationChecklist
+            businessId={businessId}
+            onAllDone={() => {
+              if (!wasActivationCelebrated(businessId)) {
+                setShowActivationDone(true);
+              }
+            }}
+          />
+        )}
+        {businessId && (
+          <ActivationCompleteModal
+            businessId={businessId}
+            open={showActivationDone}
+            onClose={() => setShowActivationDone(false)}
+          />
+        )}
         {/* Super Admin Business Selector */}
         {isSuperAdmin && allBusinesses.length > 0 && (
           <Card className="mobile-card-compact bg-primary/5 border-primary/30">

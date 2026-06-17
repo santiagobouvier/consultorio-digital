@@ -14,6 +14,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { MonthlyHighlights } from "@/components/MonthlyHighlights";
 import { ActivationChecklist } from "@/components/ActivationChecklist";
+import {
+  ActivationCompleteModal,
+  wasActivationCelebrated,
+} from "@/components/ActivationCompleteModal";
 import { HelpTooltip } from "@/components/HelpTooltip";
 
 import {
@@ -98,6 +102,7 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
   const [todayAppointments, setTodayAppointments] = useState<Appointment[]>([]);
   
   const [dataLoading, setDataLoading] = useState(true);
+  const [showActivationDone, setShowActivationDone] = useState(false);
 
   const userName = propUserName;
 
@@ -333,7 +338,19 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
 
       {/* Main Content */}
       <main className="max-w-[1400px] mx-auto px-10 py-10 space-y-10">
-        <ActivationChecklist businessId={businessId} />
+        <ActivationChecklist
+          businessId={businessId}
+          onAllDone={() => {
+            if (!wasActivationCelebrated(businessId)) {
+              setShowActivationDone(true);
+            }
+          }}
+        />
+        <ActivationCompleteModal
+          businessId={businessId}
+          open={showActivationDone}
+          onClose={() => setShowActivationDone(false)}
+        />
         {/* KPIs Row - 4 Large Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {/* Citas hoy */}
