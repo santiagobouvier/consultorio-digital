@@ -161,7 +161,7 @@ export const ActivationChecklist = ({ businessId, onAllDone }: Props) => {
       title: "Conectá Mercado Pago",
       desc: "Para cobrar reservas online.",
       action: (
-        <Button size="sm" variant="outline" onClick={() => navigate("/billing")}>
+        <Button size="sm" variant="outline" onClick={() => navigate("/mi-consultorio?tab=pagos")}>
           Conectar <ArrowRight className="h-4 w-4 ml-1" />
         </Button>
       ),
