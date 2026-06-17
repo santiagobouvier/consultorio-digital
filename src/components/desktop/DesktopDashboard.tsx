@@ -14,6 +14,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { MonthlyHighlights } from "@/components/MonthlyHighlights";
 import { ActivationChecklist } from "@/components/ActivationChecklist";
+import {
+  ActivationCompleteModal,
+  wasActivationCelebrated,
+} from "@/components/ActivationCompleteModal";
 import { HelpTooltip } from "@/components/HelpTooltip";
 
 import {
@@ -98,6 +102,7 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
   const [todayAppointments, setTodayAppointments] = useState<Appointment[]>([]);
   
   const [dataLoading, setDataLoading] = useState(true);
+  const [showActivationDone, setShowActivationDone] = useState(false);
 
   const userName = propUserName;
 
