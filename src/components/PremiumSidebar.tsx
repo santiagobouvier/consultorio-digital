@@ -44,19 +44,31 @@ type NavItem = {
   highlight?: boolean;
 };
 
-const mainItems: NavItem[] = [
+const dashboardItems: NavItem[] = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "Pendientes", url: "/solicitudes", icon: FileText, highlight: true },
-  { title: "Pacientes", url: "/patients", icon: Users },
+];
+
+const agendaItems: NavItem[] = [
   { title: "Agenda", url: "/agenda", icon: CalendarDays },
-  { title: "Pagos", url: "/pagos", icon: Receipt },
-  { title: "Recordatorios", url: "/recordatorios-pendientes", icon: Clock },
   { title: "Horarios", url: "/horarios-disponibles", icon: AlarmClock },
+  { title: "Solicitudes", url: "/solicitudes", icon: FileText, highlight: true },
+];
+
+const pacientesItems: NavItem[] = [
+  { title: "Pacientes", url: "/patients", icon: Users },
   { title: "Estadísticas", url: "/estadisticas", icon: BarChart3 },
 ];
 
-const configItems = [
+const pagosItems: NavItem[] = [
+  { title: "Pagos", url: "/pagos", icon: Receipt },
   { title: "Facturación", url: "/billing", icon: CreditCard },
+];
+
+const recordatoriosItems: NavItem[] = [
+  { title: "Recordatorios", url: "/recordatorios-pendientes", icon: Clock },
+];
+
+const configItems: NavItem[] = [
   { title: "Mi consultorio", url: "/mi-consultorio", icon: Settings },
   { title: "Portal", url: "/personalizar-portal", icon: Palette },
 ];
