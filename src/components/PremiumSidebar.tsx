@@ -162,9 +162,9 @@ export function PremiumSidebar() {
         .toUpperCase()
     : "U";
 
-  const visibleConfigItems = isSuperAdmin
-    ? configItems.filter((item) => item.url !== "/billing")
-    : configItems;
+  const visiblePagosItems = isSuperAdmin
+    ? pagosItems.filter((item) => item.url !== "/billing")
+    : pagosItems;
 
   const renderItem = (item: NavItem) => {
     const active = isActive(item.url);
