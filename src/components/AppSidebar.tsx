@@ -32,19 +32,31 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useEffect, useState } from "react";
 
-const mainItems = [
+const dashboardItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "Pacientes", url: "/patients", icon: Users },
+];
+
+const agendaItems = [
   { title: "Agenda", url: "/agenda", icon: CalendarDays },
-  { title: "Pagos", url: "/pagos", icon: Receipt },
-  { title: "Recordatorios", url: "/recordatorios-pendientes", icon: Clock },
   { title: "Horarios", url: "/horarios-disponibles", icon: AlarmClock },
-  { title: "Pendientes", url: "/solicitudes", icon: FileText },
+  { title: "Solicitudes", url: "/solicitudes", icon: FileText },
+];
+
+const pacientesItems = [
+  { title: "Pacientes", url: "/patients", icon: Users },
   { title: "Estadísticas", url: "/estadisticas", icon: BarChart3 },
 ];
 
-const configItems = [
+const pagosItems = [
+  { title: "Pagos", url: "/pagos", icon: Receipt },
   { title: "Facturación", url: "/billing", icon: CreditCard },
+];
+
+const recordatoriosItems = [
+  { title: "Recordatorios", url: "/recordatorios-pendientes", icon: Clock },
+];
+
+const configItems = [
   { title: "Mi consultorio", url: "/mi-consultorio", icon: Settings },
   { title: "Portal pacientes", url: "/personalizar-portal", icon: Palette },
 ];
