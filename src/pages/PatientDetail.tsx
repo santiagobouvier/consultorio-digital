@@ -660,7 +660,6 @@ const PatientDetail = () => {
         <div className="hidden lg:grid lg:grid-cols-3 lg:gap-6 lg:items-start">
           <div className="lg:col-span-2 space-y-6">
             {infoSection}
-            {appointmentsSection}
             {patient && (
               <SessionNotes
                 patientId={patient.id}
@@ -668,6 +667,7 @@ const PatientDetail = () => {
                 appointments={appointments.map((a) => ({ id: a.id, start_at: a.start_at }))}
               />
             )}
+            {appointmentsSection}
             {patient && (
               <PatientDocuments
                 patientId={patient.id}
@@ -685,13 +685,13 @@ const PatientDetail = () => {
           <Tabs defaultValue="info" className="w-full">
             <TabsList className="grid grid-cols-5 w-full h-11 rounded-xl">
               <TabsTrigger value="info" className="rounded-lg text-xs sm:text-sm">Info</TabsTrigger>
+              <TabsTrigger value="notes" className="rounded-lg text-xs sm:text-sm">Notas</TabsTrigger>
               <TabsTrigger value="appointments" className="rounded-lg gap-1 text-xs sm:text-sm">
                 Citas
                 {appointments.length > 0 && (
                   <span className="text-xs font-semibold opacity-70">({appointments.length})</span>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="notes" className="rounded-lg text-xs sm:text-sm">Notas</TabsTrigger>
               <TabsTrigger value="docs" className="rounded-lg text-xs sm:text-sm">Docs</TabsTrigger>
               <TabsTrigger value="payments" className="rounded-lg gap-1 text-xs sm:text-sm">
                 Pagos
@@ -703,9 +703,6 @@ const PatientDetail = () => {
             <TabsContent value="info" className="mt-4">
               {infoSection}
             </TabsContent>
-            <TabsContent value="appointments" className="mt-4">
-              {appointmentsSection}
-            </TabsContent>
             <TabsContent value="notes" className="mt-4">
               {patient && (
                 <SessionNotes
@@ -714,6 +711,9 @@ const PatientDetail = () => {
                   appointments={appointments.map((a) => ({ id: a.id, start_at: a.start_at }))}
                 />
               )}
+            </TabsContent>
+            <TabsContent value="appointments" className="mt-4">
+              {appointmentsSection}
             </TabsContent>
             <TabsContent value="docs" className="mt-4">
               {patient && (
