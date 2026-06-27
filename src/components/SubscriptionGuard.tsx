@@ -229,8 +229,9 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
           return;
         }
 
-        // TESTING MODE — durante testing dejamos pasar a usuarios en trial
-        // sin preapproval de MP. Revertir antes del lanzamiento.
+        // A propósito: en el modelo "prueba 15 días sin tarjeta", los usuarios
+        // en trial entran sin tener Mercado Pago configurado. NO bloquear acá.
+        // (Los vencidos/cancelados/none ya se bloquean más abajo.)
         activationCache.set(businessId, true);
         setCheckingActivation(false);
         setActivationChecked(true);
