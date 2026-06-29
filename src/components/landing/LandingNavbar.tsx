@@ -3,7 +3,7 @@
 // Mobile: a full-screen overlay menu with its own close button, whose items
 // animate in staggered.
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Menu, X, ArrowRight } from "lucide-react";
 
@@ -25,6 +25,7 @@ function Wordmark({ className = "" }: { className?: string }) {
 }
 
 export function LandingNavbar() {
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -46,6 +47,11 @@ export function LandingNavbar() {
   const go = (id: string) => {
     setOpen(false);
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const goDemo = () => {
+    setOpen(false);
+    navigate("/demo");
   };
 
   const solid = scrolled || open;
@@ -93,6 +99,13 @@ export function LandingNavbar() {
                 />
               </button>
             ))}
+            <button
+              onClick={goDemo}
+              className="group relative py-1 text-sm font-medium tracking-wide text-white/70 hover:text-white transition-colors"
+            >
+              Demo
+              <span className="nav-link-underline absolute left-0 -bottom-0.5 h-px w-0 group-hover:w-full" style={{ backgroundColor: GREEN }} />
+            </button>
           </nav>
 
           {/* Desktop CTAs */}
@@ -160,6 +173,14 @@ export function LandingNavbar() {
                 <ArrowRight className="w-6 h-6 text-white/25 transition-all group-hover:text-white group-hover:translate-x-1" />
               </button>
             ))}
+            <button
+              onClick={goDemo}
+              className="nav-item group flex items-center justify-between py-5 border-b border-white/10 text-left"
+              style={{ animationDelay: `${0.07 * LINKS.length + 0.05}s` }}
+            >
+              <span className="text-3xl font-semibold text-white tracking-tight">Demo</span>
+              <ArrowRight className="w-6 h-6 text-white/25 transition-all group-hover:text-white group-hover:translate-x-1" />
+            </button>
           </nav>
 
           {/* CTAs */}

@@ -3,7 +3,6 @@
 // profesional en su panel).
 import { useNavigate, Link } from "react-router-dom";
 import { Globe, Smartphone, LayoutDashboard, ArrowLeft, ArrowRight, Lock } from "lucide-react";
-import { DEMO_CLINIC_SLUG, DEMO_PANEL_ENABLED, DEMO_PORTAL_PATH } from "@/lib/demo-config";
 
 const BRAND = "#00a5a0";
 
@@ -29,8 +28,8 @@ const Demo = () => {
       subtitle: "Lo que ve un paciente nuevo",
       description: "Entra a tu web, ve tus horarios disponibles y reserva su turno solo, sin que tengas que escribirle.",
       cta: "Reservar un turno",
-      enabled: Boolean(DEMO_CLINIC_SLUG),
-      onClick: () => navigate(`/consultorio/${DEMO_CLINIC_SLUG}/reservar`),
+      enabled: true,
+      onClick: () => navigate("/demo/reservar"),
     },
     {
       icon: Smartphone,
@@ -40,7 +39,7 @@ const Demo = () => {
       description: "Su espacio con tu marca: próximas sesiones, historial y reservas. Como tu propia app.",
       cta: "Entrar al portal",
       enabled: true,
-      onClick: () => navigate(DEMO_PORTAL_PATH),
+      onClick: () => navigate("/portal-paciente/demo"),
     },
     {
       icon: LayoutDashboard,
@@ -49,7 +48,8 @@ const Demo = () => {
       subtitle: "Lo que ves vos",
       description: "El panel donde gestionás tu día: agenda, citas, pacientes y cobros. Probalo con datos de ejemplo.",
       cta: "Ver el panel",
-      enabled: DEMO_PANEL_ENABLED,
+      enabled: true,
+      onClick: () => navigate("/demo/agenda"),
     },
   ];
 

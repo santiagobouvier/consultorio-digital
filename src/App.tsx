@@ -53,6 +53,8 @@ const Activating = lazy(() => import("./pages/Activating"));
 const ActivateBusinessAccount = lazy(() => import("./pages/ActivateBusinessAccount"));
 const Pricing = lazy(() => import("./pages/Pricing"));
 const Demo = lazy(() => import("./pages/Demo"));
+const DemoReservar = lazy(() => import("./pages/DemoReservar"));
+const DemoAgenda = lazy(() => import("./pages/DemoAgenda"));
 const AccessSelector = lazy(() => import("./pages/AccessSelector"));
 const PatientAccess = lazy(() => import("./pages/PatientAccess"));
 const SubscriptionGuard = lazy(() => import("./components/SubscriptionGuard"));
@@ -176,6 +178,8 @@ const App = () => {
                 <Route path="/portal/:slug" element={<ClinicPortal />} />
                 <Route path="/pricing" element={<Pricing />} />
                 <Route path="/demo" element={<Demo />} />
+                <Route path="/demo/reservar" element={<DemoReservar />} />
+                <Route path="/demo/agenda" element={<DemoAgenda />} />
                 <Route path="/acceso" element={<AccessSelector />} />
                 <Route path="/acceso/paciente" element={<PatientAccess />} />
 

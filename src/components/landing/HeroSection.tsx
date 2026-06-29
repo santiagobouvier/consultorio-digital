@@ -2,6 +2,7 @@
 // no window/card, no product screenshot — a bold, atmospheric, typography-led
 // hero with an animated gradient headline and a dramatic central glow.
 import type { MouseEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Check, ChevronDown } from "lucide-react";
 
@@ -11,6 +12,7 @@ const GREEN = "#00c78a";
 const TRUST = ["Sin tarjeta", "15 días gratis", "Cancelás cuando quieras"];
 
 export function HeroSection() {
+  const navigate = useNavigate();
   const go = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
   const scrollNext = (e: MouseEvent<HTMLButtonElement>) =>
     e.currentTarget.closest("section")?.nextElementSibling?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -91,11 +93,11 @@ export function HeroSection() {
             <ArrowRight className="w-4 h-4 ml-2" />
           </Button>
           <Button
-            onClick={() => go("funciones")}
+            onClick={() => navigate("/demo")}
             variant="outline"
             className="w-full sm:w-auto h-14 px-8 text-base font-semibold rounded-full bg-transparent text-white border-white/20 hover:bg-white/5"
           >
-            Ver cómo funciona
+            Ver la demo
           </Button>
         </div>
 
