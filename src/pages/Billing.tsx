@@ -35,7 +35,7 @@ import {
   getPlanDefinition,
   formatPrice,
   PLAN_DEFINITIONS,
-  PLAN_ORDER,
+  PUBLIC_PLAN_ORDER,
   normalizePlanCode,
   type PlanDefinition,
 } from "@/lib/plan-definitions";
@@ -214,6 +214,11 @@ const Billing = () => {
 
   const plan = subscription ? getPlanDefinition(subscription.plan_code) : null;
   const currentPlanCode = subscription ? normalizePlanCode(subscription.plan_code) : null;
+  // Only public plans are self-service. If the customer is already on a hidden
+  // (multi-professional) plan, keep showing it so they still see their current plan.
+  const billingPlanOrder = currentPlanCode && !PUBLIC_PLAN_ORDER.includes(currentPlanCode)
+    ? [...PUBLIC_PLAN_ORDER, currentPlanCode]
+    : PUBLIC_PLAN_ORDER;
   const status = subscription ? statusConfig[subscription.status] || statusConfig.expired : null;
   const StatusIcon = status?.icon || Clock;
 
@@ -558,7 +563,7 @@ const Billing = () => {
 
           {/* Plan cards grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {PLAN_ORDER.map((code) => {
+            {billingPlanOrder.map((code) => {
               const p = PLAN_DEFINITIONS[code];
               const price = selectedBilling === "annual" ? p.priceAnnual : p.priceMonthly;
               const isCurrent = code === currentPlanCode;

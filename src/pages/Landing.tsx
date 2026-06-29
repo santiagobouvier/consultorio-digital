@@ -23,7 +23,6 @@ import {
   Download,
   BarChart3,
   Link2,
-  UserPlus,
   Send,
   LayoutDashboard,
   MessageCircle,
@@ -32,7 +31,7 @@ import {
 } from "lucide-react";
 import PricingCard from "@/components/PricingCard";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { PLAN_DEFINITIONS, PLAN_ORDER, formatPrice } from "@/lib/plan-definitions";
+import { PLAN_DEFINITIONS, PUBLIC_PLAN_ORDER, formatPrice } from "@/lib/plan-definitions";
 import logoWhite from "@/assets/logo-consultorio-digital-white.png";
 import { InstallAppButton } from "@/components/InstallAppButton";
 import { ScrollReveal } from "@/components/landing/ScrollReveal";
@@ -49,7 +48,7 @@ const GREEN_GLOW = "rgba(0, 199, 138, 0.15)";
 const faqItems = [
   {
     question: "¿Qué incluye cada plan?",
-    answer: "Todos los planes incluyen las mismas funcionalidades: portal del paciente, agenda, cobro online con Mercado Pago, recordatorios con un click por WhatsApp, estadísticas, app instalable, marca blanca, calendario multi-profesional y más. La única diferencia está en la cantidad de profesionales y pacientes activos que podés manejar."
+    answer: "Todos los planes incluyen las mismas funcionalidades: portal del paciente, agenda, cobro online con Mercado Pago, recordatorios con un click por WhatsApp, estadísticas, app instalable, marca blanca y más. La única diferencia está en la cantidad de pacientes activos que podés manejar."
   },
   {
     question: "¿Puedo cambiar de plan en cualquier momento?",
@@ -86,8 +85,6 @@ const allFeatures = [
   "Estadísticas y métricas",
   "Marca blanca (logo y colores)",
   "Cobro online con Mercado Pago",
-  "Calendario multi-profesional",
-  "Invitación de profesionales",
 ];
 
 const planFeatures: Record<string, string[]> = {
@@ -101,7 +98,7 @@ const Landing = () => {
   const whatsappPersonalizado = "https://wa.me/59891093977?text=Hola,%20quiero%20un%20plan%20personalizado%20para%20mi%20consultorio.";
 
   const getPricingPlans = () => {
-    const visiblePlans = PLAN_ORDER.filter(code => code !== "personalizado");
+    const visiblePlans = PUBLIC_PLAN_ORDER.filter(code => code !== "personalizado");
     
     return visiblePlans.map(planCode => {
       const plan = PLAN_DEFINITIONS[planCode];
@@ -406,7 +403,7 @@ const Landing = () => {
                   {[
                     "Un sistema privado para tu consultorio",
                     "Todo centralizado y claro",
-                    "Acceso para vos, tu equipo y tus pacientes",
+                    "Acceso para vos y tus pacientes",
                     "Alertas de pagos y recordatorios con un click por WhatsApp",
                   ].map((text, i) => (
                     <li key={i} className="flex items-start gap-3">
@@ -616,17 +613,17 @@ const Landing = () => {
                   Agenda inteligente
                 </div>
                 <h2 className="text-xl sm:text-3xl md:text-4xl font-bold mb-4 tracking-tight">
-                  Agenda compartida,{" "}
+                  Agenda inteligente,{" "}
                   <span style={{ color: GREEN }}>visión clara</span>
                 </h2>
                 <p className="text-gray-400 text-sm sm:text-base leading-relaxed font-light mb-6">
-                  Vista diaria, semanal y mensual con <strong className="text-white">colores por profesional</strong>. 
-                  Filtrá por profesional, arrastrá citas y controlá la disponibilidad de todo el equipo.
+                  Vista diaria, semanal y mensual de tu consultorio.
+                  Arrastrá citas, marcá tu disponibilidad y tené todo bajo control.
                 </p>
                 <ul className="space-y-3">
                   {[
-                    "Colores distintos para cada profesional",
-                    "Filtros rápidos por profesional",
+                    "Arrastrá y reprogramá citas en segundos",
+                    "Filtros rápidos por estado y paciente",
                     "Vistas: día, semana, mes",
                     "Pagos pendientes del día en la agenda",
                   ].map((text, i) => (
@@ -696,7 +693,7 @@ const Landing = () => {
           <ScrollReveal>
             <div className="text-center mb-10 sm:mb-14">
               <h2 className="text-xl sm:text-3xl md:text-4xl font-bold mb-4 tracking-tight">
-                Sumá pacientes y colegas en segundos
+                Sumá pacientes en segundos
               </h2>
               <p className="text-gray-400 text-sm sm:text-base font-light max-w-2xl mx-auto">
                 Generás un link, lo mandás por WhatsApp y listo. Sin formularios complicados.
@@ -704,13 +701,13 @@ const Landing = () => {
             </div>
           </ScrollReveal>
 
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="grid gap-6 max-w-xl mx-auto">
             <ScrollReveal delay={100}>
               <div
                 className="p-6 sm:p-8 rounded-xl sm:rounded-2xl border border-white/5 transition-all duration-500 hover:border-white/15"
                 style={{ backgroundColor: '#111111' }}
               >
-                <div 
+                <div
                   className="w-12 h-12 rounded-xl flex items-center justify-center mb-5"
                   style={{ backgroundColor: GREEN_BG }}
                 >
@@ -729,31 +726,6 @@ const Landing = () => {
                   </span>
                   <ArrowRight className="w-3 h-3 text-gray-600" />
                   <span className="px-2 py-1 rounded-md font-medium" style={{ backgroundColor: GREEN_BG, color: GREEN }}>✓ Activo</span>
-                </div>
-              </div>
-            </ScrollReveal>
-
-            <ScrollReveal delay={250}>
-              <div
-                className="p-6 sm:p-8 rounded-xl sm:rounded-2xl border border-white/5 transition-all duration-500 hover:border-white/15"
-                style={{ backgroundColor: '#111111' }}
-              >
-                <div 
-                  className="w-12 h-12 rounded-xl flex items-center justify-center mb-5"
-                  style={{ backgroundColor: 'rgba(147, 51, 234, 0.1)' }}
-                >
-                  <UserPlus className="w-6 h-6" style={{ color: '#a78bfa' }} />
-                </div>
-                <h3 className="text-lg font-bold text-white mb-2">Sumar profesionales</h3>
-                <p className="text-gray-500 text-sm leading-relaxed font-light mb-4">
-                  Invitá colegas por email. Se registran solos, quedan vinculados a tu consultorio y aparecen en la agenda compartida.
-                </p>
-                <div className="flex items-center gap-2 text-[10px]">
-                  <span className="px-2 py-1 rounded-md text-gray-400" style={{ backgroundColor: '#1a1a1a' }}>Invitar por email</span>
-                  <ArrowRight className="w-3 h-3 text-gray-600" />
-                  <span className="px-2 py-1 rounded-md text-gray-400" style={{ backgroundColor: '#1a1a1a' }}>Se registra</span>
-                  <ArrowRight className="w-3 h-3 text-gray-600" />
-                  <span className="px-2 py-1 rounded-md font-medium" style={{ backgroundColor: 'rgba(147, 51, 234, 0.1)', color: '#a78bfa' }}>✓ En tu equipo</span>
                 </div>
               </div>
             </ScrollReveal>
@@ -1033,17 +1005,17 @@ const Landing = () => {
                   boxShadow: '0 8px 40px rgba(0, 0, 0, 0.4), 0 0 60px rgba(0, 199, 138, 0.05)',
                 }}
               >
-                <div className="text-4xl sm:text-5xl mb-4">🏢</div>
+                <div className="text-4xl sm:text-5xl mb-4">🚀</div>
                 <h3 className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-3 tracking-tight">
-                  Solución para consultorios grandes
+                  ¿Necesitás algo a medida?
                 </h3>
                 <p className="text-gray-400 text-sm sm:text-base mb-6 sm:mb-8 max-w-lg mx-auto leading-relaxed">
-                  ¿Tenés un equipo más grande o necesitás más capacidad?
+                  ¿Necesitás más capacidad o una configuración especial?
                   <br />
                   Te armamos un plan a tu medida.
                 </p>
                 <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 mb-8 text-sm sm:text-base text-gray-300">
-                  {["Más profesionales", "Más pacientes", "Configuraciones a medida"].map((text, i) => (
+                  {["Más pacientes", "Más capacidad", "Configuraciones a medida"].map((text, i) => (
                     <div key={i} className="flex items-center gap-2">
                       <Check className="w-5 h-5 flex-shrink-0" style={{ color: GREEN }} />
                       <span>{text}</span>

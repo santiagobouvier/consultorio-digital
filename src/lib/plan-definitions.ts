@@ -73,6 +73,12 @@ export const PLAN_DEFINITIONS: Record<string, PlanDefinition> = {
 export const PLAN_ORDER = ["emprendedor", "esencial", "profesional", "consultorio"];
 export const PLAN_ORDER_WITH_CUSTOM = ["emprendedor", "esencial", "profesional", "consultorio", "personalizado"];
 
+// Plans offered publicly for self-service purchase. The multi-professional
+// plans (profesional, consultorio) stay hidden until the professional-payment
+// settlement module exists — selling them now would promise per-professional
+// payouts the platform can't yet manage. Admin can still assign any plan.
+export const PUBLIC_PLAN_ORDER = ["emprendedor", "esencial"];
+
 // Helper functions
 export function getPlanDefinition(planCode: string): PlanDefinition {
   const normalized = normalizePlanCode(planCode);

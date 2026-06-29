@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import {
   PLAN_DEFINITIONS,
-  PLAN_ORDER,
+  PUBLIC_PLAN_ORDER,
   formatPrice,
   type PlanDefinition,
 } from "@/lib/plan-definitions";
@@ -38,7 +38,7 @@ const Pricing = () => {
     [user, billingCycle, navigate]
   );
 
-  const plans = PLAN_ORDER.map((code) => PLAN_DEFINITIONS[code]);
+  const plans = PUBLIC_PLAN_ORDER.map((code) => PLAN_DEFINITIONS[code]);
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: "hsl(180,15%,4%)" }}>
@@ -143,7 +143,7 @@ const Pricing = () => {
         </div>
 
         {/* Plan cards grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-3xl mx-auto">
           {plans.map((plan) => (
             <PlanCard
               key={plan.code}
