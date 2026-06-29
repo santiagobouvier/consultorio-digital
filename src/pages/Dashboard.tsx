@@ -9,6 +9,7 @@ import { Users, CalendarPlus, CalendarDays, UserPlus, Bell, LogOut, Camera, Cred
 import { MonthlyHighlights } from "@/components/MonthlyHighlights";
 import LoadingPage from "@/components/LoadingPage";
 import { PlanUsageCard } from "@/components/PlanUsageCard";
+import { PublicLinkCard } from "@/components/PublicLinkCard";
 import { PatientForm } from "@/components/PatientForm";
 import { CreateAppointmentModal } from "@/components/CreateAppointmentModal";
 import { GlobalPaymentForm } from "@/components/GlobalPaymentForm";
@@ -545,6 +546,9 @@ const Dashboard = () => {
 
         {/* Plan Usage Card */}
         <PlanUsageCard businessId={businessId} />
+
+        {/* Link de la web pública — siempre a mano */}
+        <PublicLinkCard businessId={businessId} />
 
         {/* KPI Metrics Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
