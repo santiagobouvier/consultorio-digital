@@ -599,7 +599,7 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* ── Calendario Multi-profesional ── */}
+      {/* ── Agenda inteligente ── */}
       <section className="relative px-4 sm:px-6 py-14 sm:py-24 z-10" style={{ backgroundColor: '#080808' }}>
         <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-2 gap-8 md:gap-14 items-center">
@@ -687,7 +687,7 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* ── Invitaciones — Pacientes y Profesionales ── */}
+      {/* ── Invitaciones — Pacientes ── */}
       <section className="relative px-4 sm:px-6 py-14 sm:py-24 z-10" style={{ backgroundColor: '#080808' }}>
         <div className="max-w-5xl mx-auto">
           <ScrollReveal>
@@ -755,7 +755,7 @@ const Landing = () => {
                 <ul className="space-y-3">
                   {[
                     "Pacientes activos y tendencias",
-                    "Citas por período y por profesional",
+                    "Citas por período",
                     "Ingresos y cobros pendientes",
                     "Resumen diario con acciones rápidas",
                   ].map((text, i) => (
