@@ -1,8 +1,9 @@
 // Landing hero. Intentionally different from the UI mock-up sections below:
 // no window/card, no product screenshot — a bold, atmospheric, typography-led
 // hero with an animated gradient headline and a dramatic central glow.
+import type { MouseEvent } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Check } from "lucide-react";
+import { ArrowRight, Check, ChevronDown } from "lucide-react";
 
 const BRAND = "#00a5a0";
 const GREEN = "#00c78a";
@@ -11,6 +12,8 @@ const TRUST = ["Sin tarjeta", "15 días gratis", "Cancelás cuando quieras"];
 
 export function HeroSection() {
   const go = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+  const scrollNext = (e: MouseEvent<HTMLButtonElement>) =>
+    e.currentTarget.closest("section")?.nextElementSibling?.scrollIntoView({ behavior: "smooth", block: "start" });
 
   return (
     <section className="relative min-h-screen flex items-center justify-center px-4 sm:px-6 overflow-hidden z-10">
@@ -18,7 +21,9 @@ export function HeroSection() {
         @keyframes heroGlow { 0%, 100% { opacity: 0.5; transform: scale(1); } 50% { opacity: 0.85; transform: scale(1.08); } }
         @keyframes heroGrad { 0% { background-position: 0% 50%; } 100% { background-position: 200% 50%; } }
         @keyframes heroUp { from { opacity: 0; transform: translateY(22px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes heroArrow { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(7px); } }
         .hero-up { opacity: 0; animation: heroUp 0.8s cubic-bezier(0.16,1,0.3,1) forwards; }
+        .hero-arrow { animation: heroArrow 2s ease-in-out infinite; }
       `}</style>
 
       {/* Dramatic central glow */}
@@ -108,15 +113,14 @@ export function HeroSection() {
         </div>
       </div>
 
-      {/* Scroll indicator */}
-      <div
-        className="absolute bottom-8 left-1/2 -translate-x-1/2 hidden sm:block"
-        style={{ animation: "scrollBounce 2s ease-in-out infinite" }}
+      {/* Scroll-down arrow → next section */}
+      <button
+        onClick={scrollNext}
+        aria-label="Ir a la siguiente sección"
+        className="hero-arrow absolute bottom-8 left-1/2 -translate-x-1/2 text-white/40 hover:text-white/80 transition-colors"
       >
-        <div className="w-6 h-10 rounded-full border-2 border-white/20 flex items-start justify-center p-1.5">
-          <div className="w-1.5 h-2.5 rounded-full bg-white/40" style={{ animation: "scrollDot 2s ease-in-out infinite" }} />
-        </div>
-      </div>
+        <ChevronDown className="w-7 h-7" />
+      </button>
     </section>
   );
 }
