@@ -125,6 +125,7 @@ const Landing = () => {
         price: `${formatPrice(price)}`,
         priceNote: isAnnual ? "UYU / mes (pago anual)" : "UYU / mes",
         savingsNote: isAnnual ? "Menos de una consulta por mes" : "Menos de una consulta por mes",
+        annualSavings: isAnnual ? (plan.priceMonthly - plan.priceAnnual) * 12 : 0,
         buttonText: "Empezar 15 días gratis",
         buttonLink: `/auth?plan=${planCode}&billing=${isAnnual ? 'annual' : 'monthly'}`,
         buyText: "Comprar ahora sin prueba",
