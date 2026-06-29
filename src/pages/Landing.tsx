@@ -103,10 +103,12 @@ const Landing = () => {
     return visiblePlans.map(planCode => {
       const plan = PLAN_DEFINITIONS[planCode];
       const price = isAnnual ? plan.priceAnnual : plan.priceMonthly;
-      const profText = plan.maxProfessionals === 1 
-        ? "1 profesional" 
+      const profText = plan.maxProfessionals === 1
+        ? "1 profesional"
         : `Hasta ${plan.maxProfessionals} profesionales`;
-      const patText = `Hasta ${plan.maxPatients} pacientes activos`;
+      const patText = plan.maxPatients === null
+        ? "Pacientes activos sin límite"
+        : `Hasta ${plan.maxPatients} pacientes activos`;
 
       const includedFeatures = planFeatures[planCode] || [];
       const features = allFeatures.map(f => ({
@@ -987,7 +989,7 @@ const Landing = () => {
           </ScrollReveal>
 
           {/* Pricing Cards Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-8 sm:mb-12 max-w-3xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-8 sm:mb-12 max-w-5xl mx-auto">
             {getPricingPlans().map((plan, index) => (
               <ScrollReveal key={plan.id} delay={index * 100}>
                 <PricingCard {...plan} />
