@@ -36,6 +36,7 @@ import logoWhite from "@/assets/logo-consultorio-digital-white.png";
 import { InstallAppButton } from "@/components/InstallAppButton";
 import { ScrollReveal } from "@/components/landing/ScrollReveal";
 import { ScreenshotPlaceholder } from "@/components/landing/ScreenshotPlaceholder";
+import { AgendaPreview } from "@/components/landing/AgendaPreview";
 
 // Brand colors
 const BRAND = "#00a5a0";
@@ -639,7 +640,7 @@ const Landing = () => {
             </ScrollReveal>
 
             <ScrollReveal direction="right" delay={200}>
-              <ScreenshotPlaceholder accent="#00c78a" />
+              <AgendaPreview />
             </ScrollReveal>
           </div>
         </div>
