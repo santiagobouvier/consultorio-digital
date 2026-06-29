@@ -35,8 +35,8 @@ import { PLAN_DEFINITIONS, PUBLIC_PLAN_ORDER, formatPrice } from "@/lib/plan-def
 import logoWhite from "@/assets/logo-consultorio-digital-white.png";
 import { InstallAppButton } from "@/components/InstallAppButton";
 import { ScrollReveal } from "@/components/landing/ScrollReveal";
-import { ScreenshotPlaceholder } from "@/components/landing/ScreenshotPlaceholder";
 import { AgendaPreview } from "@/components/landing/AgendaPreview";
+import { PortalPreview, BookingPreview, PaymentsPreview, StatsPreview } from "@/components/landing/LandingPreviews";
 
 // Brand colors
 const BRAND = "#00a5a0";
@@ -504,7 +504,7 @@ const Landing = () => {
             </ScrollReveal>
 
             <ScrollReveal direction="right" delay={200}>
-              <ScreenshotPlaceholder accent="#a78bfa" />
+              <PortalPreview />
             </ScrollReveal>
           </div>
         </div>
@@ -515,7 +515,7 @@ const Landing = () => {
         <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-2 gap-8 md:gap-14 items-center">
             <ScrollReveal direction="left">
-              <ScreenshotPlaceholder accent="#00c78a" />
+              <BookingPreview />
             </ScrollReveal>
 
             <ScrollReveal direction="right" delay={200}>
@@ -651,7 +651,7 @@ const Landing = () => {
         <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-2 gap-8 md:gap-14 items-center">
             <ScrollReveal direction="left">
-              <ScreenshotPlaceholder accent="#f59e0b" />
+              <PaymentsPreview />
             </ScrollReveal>
 
             <ScrollReveal direction="right" delay={200}>
@@ -772,7 +772,7 @@ const Landing = () => {
             </ScrollReveal>
 
             <ScrollReveal direction="right" delay={200}>
-              <ScreenshotPlaceholder accent="#60a5fa" />
+              <StatsPreview />
             </ScrollReveal>
           </div>
         </div>
