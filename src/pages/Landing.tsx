@@ -12,9 +12,6 @@ import {
   Lock, 
   Sparkles,
   AlertTriangle,
-  Monitor,
-  Tablet,
-  Smartphone,
   ArrowRight,
   Clock,
   Eye,
@@ -32,11 +29,11 @@ import {
 import PricingCard from "@/components/PricingCard";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { PLAN_DEFINITIONS, PUBLIC_PLAN_ORDER, formatPrice } from "@/lib/plan-definitions";
-import logoWhite from "@/assets/logo-consultorio-digital-white.png";
 import { InstallAppButton } from "@/components/InstallAppButton";
 import { ScrollReveal } from "@/components/landing/ScrollReveal";
 import { AgendaPreview } from "@/components/landing/AgendaPreview";
 import { LandingNavbar } from "@/components/landing/LandingNavbar";
+import { HeroSection } from "@/components/landing/HeroSection";
 import { PortalPreview, BookingPreview, PaymentsPreview, StatsPreview } from "@/components/landing/LandingPreviews";
 
 // Brand colors
@@ -206,172 +203,8 @@ const Landing = () => {
         />
       </div>
 
-      {/* Hero Section */}
-      <section className="relative min-h-[80vh] sm:min-h-[85vh] flex items-center px-4 sm:px-6 lg:px-10 py-12 sm:py-16 lg:py-12 z-10">
-        <div className="w-full max-w-7xl mx-auto">
-          <div 
-            className="relative rounded-2xl sm:rounded-3xl overflow-hidden"
-            style={{ 
-              backgroundColor: '#111111',
-              boxShadow: `0 8px 60px ${BRAND_GLOW}, 0 0 120px rgba(0, 165, 160, 0.06)`,
-              animation: 'heroFadeIn 1s cubic-bezier(0.16,1,0.3,1) forwards',
-            }}
-          >
-            <div 
-              className="absolute -inset-px rounded-2xl sm:rounded-3xl pointer-events-none"
-              style={{
-                background: `linear-gradient(135deg, rgba(0,165,160,0.25), transparent 40%, transparent 60%, rgba(0,199,138,0.15))`,
-                borderRadius: 'inherit',
-              }}
-            />
-
-            <div className="relative grid grid-cols-1 lg:grid-cols-2 gap-0">
-              <div className="p-6 sm:p-8 lg:p-10 xl:p-12 flex flex-col justify-center">
-                <div className="flex justify-center lg:justify-start mb-1">
-                  <img 
-                    src={logoWhite} 
-                    alt="Tu Consultorio Digital" 
-                    className="h-20 sm:h-24 lg:h-28 w-auto"
-                    style={{ animation: 'logoFloat 6s ease-in-out infinite' }}
-                  />
-                </div>
-                
-                <h1 className="text-2xl sm:text-3xl lg:text-4xl xl:text-[2.7rem] font-bold tracking-tight text-center lg:text-left mb-3 sm:mb-4 leading-tight">
-                  Tu consultorio ordenado:
-                  <span 
-                    className="block bg-clip-text text-transparent"
-                    style={{ backgroundImage: `linear-gradient(135deg, ${BRAND}, ${GREEN})` }}
-                  >
-                    pacientes, agenda y pagos
-                  </span>
-                  <span className="block">en un solo lugar</span>
-                </h1>
-                
-                <p className="text-sm sm:text-base lg:text-lg text-gray-400 text-center lg:text-left mb-4 lg:mb-6 max-w-lg mx-auto lg:mx-0 leading-relaxed font-light">
-                  Gestioná pacientes, agenda privada, pagos y recordatorios sin planillas ni mensajes sueltos.
-                </p>
-
-                <div className="flex justify-center lg:justify-start gap-3 mb-5 lg:mb-6">
-                  {[
-                    { icon: Monitor, label: "Computadora" },
-                    { icon: Tablet, label: "Tablet" },
-                    { icon: Smartphone, label: "Celular" },
-                  ].map((device, i) => (
-                    <div 
-                      key={device.label}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/10 text-gray-400 text-xs"
-                      style={{
-                        backgroundColor: 'rgba(255,255,255,0.03)',
-                        animation: `badgePop 0.5s cubic-bezier(0.16,1,0.3,1) ${600 + i * 120}ms both`,
-                      }}
-                    >
-                      <device.icon className="w-3.5 h-3.5" style={{ color: GREEN }} />
-                      {device.label}
-                    </div>
-                  ))}
-                </div>
-                
-                <div 
-                  className="flex flex-col sm:flex-row justify-center lg:justify-start gap-3"
-                  style={{ animation: 'fadeSlideUp 0.7s cubic-bezier(0.16,1,0.3,1) 0.4s both' }}
-                >
-                  <a href="#pricing">
-                    <Button 
-                      size="lg" 
-                      className="w-full sm:w-auto h-12 px-8 text-sm font-semibold rounded-xl transition-all duration-300 hover:scale-[1.03] group"
-                      style={{ backgroundColor: BRAND, boxShadow: `0 4px 30px ${BRAND_SHADOW}` }}
-                    >
-                      Empezar 15 días gratis
-                      <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" />
-                    </Button>
-                  </a>
-                  <a href="/acceso">
-                    <Button 
-                      variant="outline"
-                      size="lg" 
-                      className="w-full sm:w-auto h-12 px-8 text-sm font-semibold rounded-xl transition-all duration-300 bg-transparent text-white border-white/20 hover:bg-white/5 hover:border-white/30"
-                    >
-                      Ingresar
-                    </Button>
-                  </a>
-                </div>
-
-                <div 
-                  className="flex justify-center lg:justify-start mt-3"
-                  style={{ animation: 'fadeSlideUp 0.7s cubic-bezier(0.16,1,0.3,1) 0.6s both' }}
-                >
-                  <InstallAppButton />
-                </div>
-              </div>
-
-              <div className="hidden lg:flex items-center justify-center p-6 lg:p-8 xl:p-10" style={{ backgroundColor: '#0c0c0c' }}>
-                <div className="w-full max-w-md xl:max-w-lg">
-                  <div 
-                    className="rounded-xl border border-white/10 overflow-hidden"
-                    style={{ backgroundColor: '#0a0a0a' }}
-                  >
-                    <div className="flex items-center gap-2 px-4 py-2.5 border-b border-white/5" style={{ backgroundColor: '#0f0f0f' }}>
-                      <div className="flex gap-1.5">
-                        <div className="w-2.5 h-2.5 rounded-full bg-red-500/60" />
-                        <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/60" />
-                        <div className="w-2.5 h-2.5 rounded-full bg-green-500/60" />
-                      </div>
-                      <div className="flex-1 mx-6">
-                        <div className="h-5 rounded-md bg-white/5 max-w-[200px] mx-auto flex items-center justify-center">
-                          <span className="text-[10px] text-gray-600">tuconsultorio.digital</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="p-4">
-                      <div className="grid grid-cols-3 gap-3 mb-3">
-                        {[
-                          { label: "Pacientes activos", value: "24", color: GREEN },
-                          { label: "Citas esta semana", value: "12", color: BRAND },
-                          { label: "Pagos pendientes", value: "3", color: "#f59e0b" },
-                        ].map((stat) => (
-                          <div
-                            key={stat.label}
-                            className="rounded-lg border border-white/5 p-3"
-                            style={{ backgroundColor: '#111111' }}
-                          >
-                            <p className="text-[9px] text-gray-500 mb-1">{stat.label}</p>
-                            <p className="text-lg font-bold" style={{ color: stat.color }}>{stat.value}</p>
-                          </div>
-                        ))}
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="rounded-lg border border-white/5 p-3" style={{ backgroundColor: '#111111' }}>
-                          <p className="text-[9px] text-gray-500 mb-2">Próximas citas</p>
-                          {["10:00 — María L.", "11:30 — Juan P.", "14:00 — Ana R."].map((cita) => (
-                            <div key={cita} className="flex items-center gap-2 py-1">
-                              <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: GREEN }} />
-                              <span className="text-[10px] text-gray-400">{cita}</span>
-                            </div>
-                          ))}
-                        </div>
-                        <div className="rounded-lg border border-white/5 p-3" style={{ backgroundColor: '#111111' }}>
-                          <p className="text-[9px] text-gray-500 mb-2">Cobros del mes</p>
-                          <p className="text-lg font-bold" style={{ color: GREEN }}>$48.500</p>
-                          <p className="text-[10px] text-gray-600 mt-1">+15% vs. mes anterior</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div 
-          className="absolute bottom-8 left-1/2 -translate-x-1/2"
-          style={{ animation: 'scrollBounce 2s ease-in-out infinite' }}
-        >
-          <div className="w-6 h-10 rounded-full border-2 border-white/20 flex items-start justify-center p-1.5">
-            <div className="w-1.5 h-2.5 rounded-full bg-white/40" style={{ animation: 'scrollDot 2s ease-in-out infinite' }} />
-          </div>
-        </div>
-      </section>
+      {/* Hero */}
+      <HeroSection />
 
       {/* Problem → Solution Section */}
       <section className="relative px-4 sm:px-6 py-14 sm:py-24 bg-black z-10">
