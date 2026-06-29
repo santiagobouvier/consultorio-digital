@@ -45,6 +45,8 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
   const [verifyingPayment, setVerifyingPayment] = useState(false);
   const [paymentVerified, setPaymentVerified] = useState(false);
   const [paymentTimedOut, setPaymentTimedOut] = useState(false);
+  // Watchdog: corta el preloader infinito si la carga inicial se cuelga.
+  const [loadTimedOut, setLoadTimedOut] = useState(false);
 
   const { status, loading } = useSubscriptionStatus(businessId);
   const [reactivating, setReactivating] = useState(false);
@@ -246,6 +248,24 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
     return () => { cancelled = true; };
   }, [businessId, status, loading, businessLoading, isSuperAdmin]);
 
+  // ¿Estamos en un estado de carga (preloader)?
+  const stillGating =
+    !authReady ||
+    businessLoading ||
+    (!!businessId && (loading || checkingActivation || !activationChecked)) ||
+    noneGraceActive;
+
+  // Watchdog: si seguimos cargando tras 12s (ej: una consulta colgada por red),
+  // dejamos de girar el preloader y ofrecemos recargar, en vez de quedar infinito.
+  useEffect(() => {
+    if (!stillGating) {
+      setLoadTimedOut(false);
+      return;
+    }
+    const t = setTimeout(() => setLoadTimedOut(true), 12000);
+    return () => clearTimeout(t);
+  }, [stillGating]);
+
   // Si ya verificamos la suscripción en esta sesión, saltear todo y renderizar directo
   if (subscriptionVerified && !verifyingPayment && !paymentTimedOut && !showCelebration) {
     // Aún necesitamos esperar auth/business en la primera carga
@@ -257,6 +277,30 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
         return <>{children}</>;
       }
     }
+  }
+
+  // Red de seguridad: la carga se colgó demasiado → ofrecer recargar.
+  if (stillGating && loadTimedOut) {
+    return (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center px-5 py-8" style={{ backgroundColor: '#111111' }}>
+        <div className="w-full max-w-md text-center space-y-5 sm:space-y-6">
+          <div className="mx-auto w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[hsla(40,100%,60%,0.12)] flex items-center justify-center">
+            <Clock className="w-8 h-8 sm:w-10 sm:h-10 text-[hsl(40,100%,60%)]" />
+          </div>
+          <h2 className="text-xl sm:text-2xl font-bold text-white">Está tardando más de lo normal</h2>
+          <p className="text-sm sm:text-base text-white/50 px-2">
+            Puede ser tu conexión. Recargá la página para reintentar.
+          </p>
+          <Button
+            onClick={() => window.location.reload()}
+            className="w-full h-12 font-semibold text-white text-base"
+            style={{ backgroundColor: '#00a5a0', boxShadow: '0 4px 20px rgba(0,165,160,0.3)' }}
+          >
+            Recargar página
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   if (!authReady || businessLoading) return <LoadingPage />;
