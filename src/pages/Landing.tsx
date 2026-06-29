@@ -34,6 +34,7 @@ import { ScrollReveal } from "@/components/landing/ScrollReveal";
 import { AgendaPreview } from "@/components/landing/AgendaPreview";
 import { LandingNavbar } from "@/components/landing/LandingNavbar";
 import { HeroSection } from "@/components/landing/HeroSection";
+import { ScrollToTop } from "@/components/landing/ScrollToTop";
 import { PortalPreview, BookingPreview, PaymentsPreview, StatsPreview } from "@/components/landing/LandingPreviews";
 
 // Brand colors
@@ -139,6 +140,7 @@ const Landing = () => {
   return (
     <div className="min-h-screen bg-black text-white overflow-x-hidden">
       <LandingNavbar />
+      <ScrollToTop />
       {/* Animated parallax background */}
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
         <div 
