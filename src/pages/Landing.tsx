@@ -36,6 +36,7 @@ import logoWhite from "@/assets/logo-consultorio-digital-white.png";
 import { InstallAppButton } from "@/components/InstallAppButton";
 import { ScrollReveal } from "@/components/landing/ScrollReveal";
 import { AgendaPreview } from "@/components/landing/AgendaPreview";
+import { LandingNavbar } from "@/components/landing/LandingNavbar";
 import { PortalPreview, BookingPreview, PaymentsPreview, StatsPreview } from "@/components/landing/LandingPreviews";
 
 // Brand colors
@@ -140,6 +141,7 @@ const Landing = () => {
 
   return (
     <div className="min-h-screen bg-black text-white overflow-x-hidden">
+      <LandingNavbar />
       {/* Animated parallax background */}
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
         <div 
@@ -468,7 +470,7 @@ const Landing = () => {
       {/* ═══════════════════════════════════════════════════════════ */}
 
       {/* ── Portal del Paciente con Marca Blanca ── */}
-      <section className="relative px-4 sm:px-6 py-14 sm:py-24 z-10 bg-black">
+      <section id="funciones" className="relative px-4 sm:px-6 py-14 sm:py-24 z-10 bg-black scroll-mt-20">
         <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-2 gap-8 md:gap-14 items-center">
             <ScrollReveal direction="left">
@@ -894,7 +896,7 @@ const Landing = () => {
       </section>
 
       {/* Pricing Section */}
-      <section id="pricing" className="relative px-4 sm:px-6 py-14 sm:py-28 bg-black z-10">
+      <section id="pricing" className="relative px-4 sm:px-6 py-14 sm:py-28 bg-black z-10 scroll-mt-20">
         <div className="max-w-6xl mx-auto">
           <ScrollReveal>
             <div className="text-center mb-8 sm:mb-12">
@@ -1045,7 +1047,7 @@ const Landing = () => {
       </section>
 
       {/* FAQ Section */}
-      <section className="relative px-4 sm:px-6 py-14 sm:py-28 z-10" style={{ backgroundColor: '#080808' }}>
+      <section id="preguntas" className="relative px-4 sm:px-6 py-14 sm:py-28 z-10 scroll-mt-20" style={{ backgroundColor: '#080808' }}>
         <div className="max-w-3xl mx-auto">
           <ScrollReveal>
             <div className="text-center mb-10 sm:mb-16">
