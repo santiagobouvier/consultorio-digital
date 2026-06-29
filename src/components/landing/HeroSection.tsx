@@ -47,12 +47,12 @@ export function HeroSection() {
 
         {/* Headline */}
         <h1
-          className="hero-up text-4xl sm:text-6xl md:text-7xl font-bold tracking-tight leading-[1.05] mb-6"
+          className="hero-up text-4xl sm:text-6xl md:text-7xl font-bold tracking-tight leading-[1.12] mb-6"
           style={{ animationDelay: "0.1s" }}
         >
           Todo tu consultorio,
           <span
-            className="block bg-clip-text text-transparent"
+            className="block bg-clip-text text-transparent pb-2"
             style={{
               backgroundImage: `linear-gradient(90deg, ${BRAND}, ${GREEN}, ${BRAND})`,
               backgroundSize: "200% auto",
