@@ -1,11 +1,11 @@
 // Sticky landing navbar. Transparent over the hero, turns solid (blur + border)
 // once scrolled. Desktop: refined inline links with animated underline + CTAs.
-// Mobile: a full-screen overlay menu whose items animate in, staggered.
+// Mobile: a full-screen overlay menu with its own close button, whose items
+// animate in staggered.
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Menu, X, ArrowRight } from "lucide-react";
-import logoWhite from "@/assets/logo-consultorio-digital-white.png";
 
 const BRAND = "#00a5a0";
 const GREEN = "#00c78a";
@@ -15,6 +15,14 @@ const LINKS = [
   { label: "Precios", id: "pricing" },
   { label: "Preguntas", id: "preguntas" },
 ];
+
+function Wordmark({ className = "" }: { className?: string }) {
+  return (
+    <span className={`font-bold tracking-tight text-white ${className}`}>
+      Consultorio<span style={{ color: GREEN }}> Digital</span>
+    </span>
+  );
+}
 
 export function LandingNavbar() {
   const [open, setOpen] = useState(false);
@@ -61,13 +69,13 @@ export function LandingNavbar() {
         }}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 md:h-20 flex items-center justify-between">
-          {/* Logo → back to top */}
+          {/* Wordmark → back to top */}
           <button
             onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
             className="flex items-center transition-opacity hover:opacity-80"
             aria-label="Inicio"
           >
-            <img src={logoWhite} alt="Tu Consultorio Digital" className="h-9 md:h-12 w-auto" />
+            <Wordmark className="text-lg md:text-2xl" />
           </button>
 
           {/* Desktop links */}
@@ -104,13 +112,13 @@ export function LandingNavbar() {
             </Button>
           </div>
 
-          {/* Mobile toggle */}
+          {/* Mobile open button */}
           <button
-            className="md:hidden p-2 -mr-2 text-white relative z-[70]"
-            onClick={() => setOpen((o) => !o)}
-            aria-label={open ? "Cerrar menú" : "Abrir menú"}
+            className="md:hidden p-2 -mr-2 text-white"
+            onClick={() => setOpen(true)}
+            aria-label="Abrir menú"
           >
-            {open ? <X className="w-7 h-7" /> : <Menu className="w-7 h-7" />}
+            <Menu className="w-7 h-7" />
           </button>
         </div>
       </header>
@@ -127,9 +135,16 @@ export function LandingNavbar() {
             style={{ background: `radial-gradient(ellipse 80% 50% at 50% 0%, ${BRAND}1f, transparent 70%)` }}
           />
 
-          {/* top row (logo) */}
-          <div className="h-16 px-4 flex items-center">
-            <img src={logoWhite} alt="Tu Consultorio Digital" className="h-9 w-auto" />
+          {/* top row: wordmark + close */}
+          <div className="relative h-16 px-4 flex items-center justify-between">
+            <Wordmark className="text-lg" />
+            <button
+              onClick={() => setOpen(false)}
+              className="p-2 -mr-2 text-white/80 hover:text-white transition-colors"
+              aria-label="Cerrar menú"
+            >
+              <X className="w-7 h-7" />
+            </button>
           </div>
 
           {/* links */}
