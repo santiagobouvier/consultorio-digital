@@ -121,8 +121,9 @@ export const ReminderModal = ({
           message,
           channel,
           type: "reminder",
-          status: channel === "email" ? "scheduled" : "pending_manual",
-          auto_send: channel === "email",
+          // Both channels now auto-send via the cron (whatsapp through Twilio).
+          status: "scheduled",
+          auto_send: true,
         });
 
       if (error) throw error;

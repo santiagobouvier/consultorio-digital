@@ -21,6 +21,9 @@ verify_jwt = false
 [functions.process-scheduled-reminders]
 verify_jwt = false
 
+[functions.send-whatsapp]
+verify_jwt = false
+
 [functions.create-session-payment]
 verify_jwt = false
 

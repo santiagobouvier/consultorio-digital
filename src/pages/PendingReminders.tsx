@@ -393,8 +393,9 @@ const PendingReminders = () => {
         message: createForm.message,
         channel: createForm.channel,
         type: "reminder",
-        status: createForm.channel === "email" ? "scheduled" : "pending_manual",
-        auto_send: createForm.channel === "email",
+        // Both channels auto-send via the cron (whatsapp through Twilio).
+        status: "scheduled",
+        auto_send: true,
       });
       if (error) throw error;
 
