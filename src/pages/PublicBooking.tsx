@@ -44,7 +44,33 @@ const formatSlotDate = (dateStr: string) => {
 
 const formatTime = (t: string) => t.slice(0, 5);
 
-const PublicBooking = () => {
+// Datos de ejemplo para el modo demo (nada se guarda).
+const demoDate = (offset: number) => {
+  const d = new Date();
+  d.setDate(d.getDate() + offset);
+  return d.toISOString().slice(0, 10);
+};
+const DEMO_BUSINESS = {
+  id: "demo",
+  name: "Lic. Laura López",
+  specialty: "Psicología clínica",
+  public_slug: "demo",
+  custom_subdomain: null,
+  portal_logo_url: null,
+  portal_primary_color: "176 100% 32%",
+  portal_dark_primary_color: "176 85% 42%",
+  portal_clinic_display_name: "Lic. Laura López",
+  plan_code: "esencial",
+};
+const DEMO_SLOTS: Slot[] = [
+  { id: "s1", date: demoDate(1), start_time: "09:00:00", end_time: "10:00:00", modality: "presencial", price: null },
+  { id: "s2", date: demoDate(1), start_time: "10:30:00", end_time: "11:30:00", modality: "online", price: null },
+  { id: "s3", date: demoDate(2), start_time: "15:00:00", end_time: "16:00:00", modality: "online", price: null },
+  { id: "s4", date: demoDate(2), start_time: "16:30:00", end_time: "17:30:00", modality: "presencial", price: null },
+  { id: "s5", date: demoDate(3), start_time: "12:00:00", end_time: "13:00:00", modality: "online", price: null },
+] as Slot[];
+
+const PublicBooking = ({ demo = false }: { demo?: boolean }) => {
   const { slug } = useParams();
   const navigate = useNavigate();
 
@@ -64,6 +90,12 @@ const PublicBooking = () => {
     const load = async () => {
       try {
         setLoading(true);
+        if (demo) {
+          setBusiness(DEMO_BUSINESS);
+          setSlots(DEMO_SLOTS);
+          if (!cancelled) setLoading(false);
+          return;
+        }
         if (!slug) {
           if (!cancelled) setLoading(false);
           return;
@@ -141,7 +173,7 @@ const PublicBooking = () => {
     return () => {
       cancelled = true;
     };
-  }, [slug]);
+  }, [slug, demo]);
 
   const accent = useMemo(() => {
     const light = business?.portal_primary_color || "176 100% 32%";
@@ -170,7 +202,7 @@ const PublicBooking = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedSlot || !slug) return;
+    if (!selectedSlot || (!slug && !demo)) return;
 
     const parsed = formSchema.safeParse(form);
     if (!parsed.success) {
@@ -183,6 +215,12 @@ const PublicBooking = () => {
       return;
     }
     setErrors({});
+
+    // Modo demo: no se envía nada, solo mostramos el éxito.
+    if (demo) {
+      setSuccess(true);
+      return;
+    }
 
     try {
       setSubmitting(true);
@@ -310,7 +348,7 @@ const PublicBooking = () => {
 
   return (
     <div className="min-h-screen bg-background text-foreground" style={brandStyle}>
-      <PublicThemeControl />
+      {!demo && <PublicThemeControl />}
       {/* Header */}
       <header className="border-b border-border bg-card/40">
         <div className="container mx-auto max-w-4xl px-4 py-4 flex items-center justify-between gap-3">
