@@ -12,6 +12,7 @@ import LoadingPage from "@/components/LoadingPage";
 import { toast } from "sonner";
 import NotFound from "./NotFound";
 import { getPlanDefinition } from "@/lib/plan-definitions";
+import { PublicThemeControl } from "@/components/public/PublicThemeControl";
 
 type Slot = {
   id: string;
@@ -309,6 +310,7 @@ const PublicBooking = () => {
 
   return (
     <div className="min-h-screen bg-background text-foreground" style={brandStyle}>
+      <PublicThemeControl />
       {/* Header */}
       <header className="border-b border-border bg-card/40">
         <div className="container mx-auto max-w-4xl px-4 py-4 flex items-center justify-between gap-3">
