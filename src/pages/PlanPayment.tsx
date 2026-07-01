@@ -112,7 +112,7 @@ const PlanPayment = () => {
           </Button>
 
           <a
-            href="https://wa.me/59891093977?text=Hola%2C%20tengo%20una%20consulta%20sobre%20Consultorio%20Digital"
+            href="https://wa.me/59898543623?text=Hola%2C%20tengo%20una%20consulta%20sobre%20Consultorio%20Digital"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center justify-center gap-2 text-sm text-white/40 hover:text-white/60 transition-colors py-2"

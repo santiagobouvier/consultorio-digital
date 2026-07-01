@@ -95,7 +95,7 @@ const planFeatures: Record<string, string[]> = {
 };
 const Landing = () => {
   const [isAnnual, setIsAnnual] = useState(true);
-  const whatsappPersonalizado = "https://wa.me/59891093977?text=Hola,%20quiero%20un%20plan%20personalizado%20para%20mi%20consultorio.";
+  const whatsappPersonalizado = "https://wa.me/59898543623?text=Hola,%20quiero%20un%20plan%20personalizado%20para%20mi%20consultorio.";
 
   const getPricingPlans = () => {
     const visiblePlans = PUBLIC_PLAN_ORDER.filter(code => code !== "personalizado");
