@@ -67,6 +67,7 @@ interface BusinessWithDetails {
   isDemo: boolean;
   subscriptionStatus: "trial" | "active" | "expired" | "cancelled" | "none";
   trialDaysLeft: number | null;
+  mpConnected: boolean; // true si la suscripción tiene cobro automático por Mercado Pago
 }
 
 interface SaasMetrics {
@@ -160,6 +161,7 @@ const SaasAdmin = () => {
   const [showActivateModal, setShowActivateModal] = useState(false);
   const [businessToActivate, setBusinessToActivate] = useState<BusinessWithDetails | null>(null);
   const [activatePlan, setActivatePlan] = useState<string>("esencial");
+  const [activateType, setActivateType] = useState<"trial" | "active">("trial");
   const [activating, setActivating] = useState(false);
   const [activeSection, setActiveSection] = useState<SaasSection>("home");
 
@@ -189,8 +191,8 @@ const SaasAdmin = () => {
       const { data: patientsData } = await supabase.from("patients").select("business_id").eq("is_active", true);
       const patientCountMap = new Map<string, number>();
       patientsData?.forEach(p => { patientCountMap.set(p.business_id, (patientCountMap.get(p.business_id) || 0) + 1); });
-      const { data: subsData } = await supabase.from("subscriptions").select("business_id, status, trial_ends_at");
-      const subsMap = new Map<string, { status: string; trial_ends_at: string | null }>();
+      const { data: subsData } = await supabase.from("subscriptions").select("business_id, status, trial_ends_at, mercadopago_preapproval_id");
+      const subsMap = new Map<string, { status: string; trial_ends_at: string | null; mercadopago_preapproval_id: string | null }>();
       subsData?.forEach((s: any) => { if (s.business_id) subsMap.set(s.business_id, s); });
       const businessesWithDetails: BusinessWithDetails[] = (businessesData || []).map(b => ({
         ...b, ownerEmail: profileMap.get(b.owner_user_id) || "N/A",
@@ -206,6 +208,7 @@ const SaasAdmin = () => {
           if (sub.status === "cancelled") return { subscriptionStatus: "cancelled" as const, trialDaysLeft: null };
           return { subscriptionStatus: (sub.status as any) || ("none" as const), trialDaysLeft: null };
         })(),
+        mpConnected: !!subsMap.get(b.id)?.mercadopago_preapproval_id,
         professionalsCount: profCountMap.get(b.id) || 0, patientsCount: patientCountMap.get(b.id) || 0,
         planCode: b.plan_code || "individual", isActive: b.is_active !== false,
         customMaxProfessionals: b.custom_max_professionals, customMaxPatients: b.custom_max_patients,
@@ -386,6 +389,7 @@ const SaasAdmin = () => {
     const normalized = normalizePlanCode(b.planCode);
     const valid = ["emprendedor", "esencial", "profesional", "consultorio"].includes(normalized) ? normalized : "esencial";
     setActivatePlan(valid);
+    setActivateType("trial");
     setShowActivateModal(true);
   };
 
@@ -393,6 +397,9 @@ const SaasAdmin = () => {
     if (!businessToActivate) return;
     try {
       setActivating(true);
+      // "trial" → prueba de 15 días que vence sola. "active" → cuenta activa
+      // (acceso pleno, sin cobro automático; se cobra manual hasta que se suscriba por MP).
+      const newStatus = activateType === "trial" ? "trial" : "active";
       const trialEnd = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString();
       const periodEnd = trialEnd;
 
@@ -407,7 +414,7 @@ const SaasAdmin = () => {
         const { error: subErr } = await supabase
           .from("subscriptions")
           .update({
-            status: "active",
+            status: newStatus,
             plan_code: activatePlan,
             trial_ends_at: trialEnd,
             current_period_start: new Date().toISOString(),
@@ -421,7 +428,7 @@ const SaasAdmin = () => {
         const { error: insErr } = await supabase.from("subscriptions").insert({
           business_id: businessToActivate.id,
           plan_code: activatePlan,
-          status: "active",
+          status: newStatus,
           trial_ends_at: trialEnd,
           current_period_start: new Date().toISOString(),
           current_period_end: periodEnd,
@@ -439,7 +446,7 @@ const SaasAdmin = () => {
         .eq("id", businessToActivate.id);
       if (bizErr) throw bizErr;
 
-      toast({ title: "Suscripción activada correctamente" });
+      toast({ title: activateType === "trial" ? "Prueba de 15 días activada" : "Cuenta activada (sin cobro automático)" });
       setShowActivateModal(false);
       setBusinessToActivate(null);
       await loadData();
@@ -676,8 +683,8 @@ const SaasAdmin = () => {
                             {business.patientsCount}/{config.maxPatients ?? "∞"} pac
                           </span>
                           <span className="text-muted-foreground/40">·</span>
-                          <span className={`shrink-0 ${business.subscriptionStatus === "active" ? "text-success" : business.subscriptionStatus === "expired" ? "text-destructive" : business.subscriptionStatus === "trial" ? "text-amber-500" : ""}`}>
-                            {business.isDemo ? "Demo" : business.subscriptionStatus === "active" ? "Pagando" : business.subscriptionStatus === "trial" ? `Prueba ${business.trialDaysLeft}d` : business.subscriptionStatus === "expired" ? "Expirado" : business.subscriptionStatus === "cancelled" ? "Cancelado" : !business.isActive ? "Inactivo" : "Sin plan"}
+                          <span className={`shrink-0 ${business.subscriptionStatus === "active" ? (business.mpConnected ? "text-success" : "text-amber-500") : business.subscriptionStatus === "expired" ? "text-destructive" : business.subscriptionStatus === "trial" ? "text-amber-500" : ""}`}>
+                            {business.isDemo ? "Demo" : business.subscriptionStatus === "active" ? (business.mpConnected ? "Pagando" : "Activa (manual)") : business.subscriptionStatus === "trial" ? `Prueba ${business.trialDaysLeft}d` : business.subscriptionStatus === "expired" ? "Expirado" : business.subscriptionStatus === "cancelled" ? "Cancelado" : !business.isActive ? "Inactivo" : "Sin plan"}
                           </span>
                         </div>
                       </div>
@@ -779,7 +786,9 @@ const SaasAdmin = () => {
                             {(() => {
                               if (business.isDemo) return <Badge variant="outline" className="text-[10px] px-2 py-0.5 border-amber-500/40 text-amber-500">Demo</Badge>;
                               if (!business.isActive) return <Badge variant="secondary" className="text-[10px] px-2 py-0.5 bg-muted text-muted-foreground">Inactivo</Badge>;
-                              if (business.subscriptionStatus === "active") return <Badge variant="secondary" className="text-[10px] px-2 py-0.5 bg-success/10 text-success">Pagando</Badge>;
+                              if (business.subscriptionStatus === "active") return business.mpConnected
+                                ? <Badge variant="secondary" className="text-[10px] px-2 py-0.5 bg-success/10 text-success">Pagando</Badge>
+                                : <Badge variant="secondary" className="text-[10px] px-2 py-0.5 bg-amber-500/10 text-amber-500">Activa (manual)</Badge>;
                               if (business.subscriptionStatus === "trial" && business.trialDaysLeft !== null) return <Badge variant="secondary" className={`text-[10px] px-2 py-0.5 ${business.trialDaysLeft <= 2 ? "bg-destructive/10 text-destructive" : "bg-amber-500/10 text-amber-500"}`}>Prueba · {business.trialDaysLeft}d</Badge>;
                               if (business.subscriptionStatus === "expired") return <Badge variant="secondary" className="text-[10px] px-2 py-0.5 bg-destructive/10 text-destructive">Expirado</Badge>;
                               if (business.subscriptionStatus === "cancelled") return <Badge variant="secondary" className="text-[10px] px-2 py-0.5 bg-muted text-muted-foreground">Cancelado</Badge>;
@@ -978,12 +987,22 @@ const SaasAdmin = () => {
       <Dialog open={showActivateModal} onOpenChange={(open) => { if (!open) setBusinessToActivate(null); setShowActivateModal(open); }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><Zap className="h-5 w-5 text-primary" />Activar suscripción</DialogTitle>
+            <DialogTitle className="flex items-center gap-2"><Zap className="h-5 w-5 text-primary" />Activar manualmente</DialogTitle>
             <DialogDescription>
-              Activación manual sin MercadoPago para <strong>{businessToActivate?.name}</strong>. Se marcará como activa por 15 días.
+              Activación manual para <strong>{businessToActivate?.name}</strong>.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Tipo de activación</Label>
+              <Select value={activateType} onValueChange={(v) => setActivateType(v as "trial" | "active")}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="trial">Prueba 15 días (vence sola)</SelectItem>
+                  <SelectItem value="active">Cuenta activa (acceso pleno, sin cobro)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className="space-y-2">
               <Label>Plan a asignar</Label>
               <Select value={activatePlan} onValueChange={setActivatePlan}>
@@ -998,7 +1017,9 @@ const SaasAdmin = () => {
             </div>
             <Alert>
               <AlertDescription className="text-xs">
-                Esta acción establece <code>status = active</code>, actualiza el plan y extiende el período por 15 días. No genera cargos en MercadoPago.
+                {activateType === "trial"
+                  ? "Crea una prueba gratuita de 15 días. Al vencer, la cuenta se bloquea y la persona paga por Mercado Pago."
+                  : "Deja la cuenta activa con acceso pleno y SIN cobro automático. La vas a tener que cobrar manualmente (aparece como \"Activa (manual)\" en la lista) hasta que la persona se suscriba por Mercado Pago."}
               </AlertDescription>
             </Alert>
           </div>

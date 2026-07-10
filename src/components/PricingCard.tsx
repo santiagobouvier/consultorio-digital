@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Check, X } from "lucide-react";
+import { formatPrice } from "@/lib/plan-definitions";
 
 interface PricingFeature {
   text: string;
@@ -15,6 +16,7 @@ interface PricingCardProps {
   price: string;
   priceNote?: string;
   savingsNote?: string;
+  annualSavings?: number;
   buttonText: string;
   buttonLink: string;
   buyText?: string;
@@ -33,6 +35,7 @@ const PricingCard = ({
   price,
   priceNote,
   savingsNote,
+  annualSavings = 0,
   buttonText,
   buttonLink,
   buyText,
@@ -85,8 +88,13 @@ const PricingCard = ({
         {priceNote && (
           <span className="text-gray-500 text-xs sm:text-sm ml-1 sm:ml-2">{priceNote}</span>
         )}
+        {annualSavings > 0 && (
+          <p className="text-xs sm:text-sm mt-2 font-semibold" style={{ color: "#00c78a" }}>
+            Ahorrás {formatPrice(annualSavings)} al año
+          </p>
+        )}
         {savingsNote && (
-          <p className="text-xs mt-2 font-light" style={{ color: "#00c78a" }}>
+          <p className="text-xs mt-1 font-light text-gray-500">
             {savingsNote}
           </p>
         )}

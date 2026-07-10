@@ -314,9 +314,7 @@ const OnboardingWizard = () => {
       } catch {}
 
       toast.success("¡Consultorio configurado correctamente!");
-      // TESTING MODE — revert before production launch
-      // Original: navigate("/activar-prueba");
-      navigate("/dashboard");
+      navigate("/activar-prueba");
     } catch (error: any) {
       console.error("Error saving:", error);
       toast.error("Error al guardar los datos. Intentá de nuevo.");

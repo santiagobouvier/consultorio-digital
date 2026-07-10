@@ -20,7 +20,7 @@ export const PLAN_DEFINITIONS: Record<string, PlanDefinition> = {
     name: "Emprendedor",
     description: "Para empezar tu consultorio digital",
     maxProfessionals: 1,
-    maxPatients: 15,
+    maxPatients: 20,
     priceAnnual: 1290,
     priceMonthly: 1613,
     hasPublicWeb: true,
@@ -30,7 +30,7 @@ export const PLAN_DEFINITIONS: Record<string, PlanDefinition> = {
     name: "Esencial",
     description: "Para el profesional independiente establecido",
     maxProfessionals: 1,
-    maxPatients: 40,
+    maxPatients: 50,
     priceAnnual: 2500,
     priceMonthly: 3125,
     hasPublicWeb: true,
@@ -40,9 +40,9 @@ export const PLAN_DEFINITIONS: Record<string, PlanDefinition> = {
   profesional: {
     code: "profesional",
     name: "Profesional",
-    description: "Para consultorios en crecimiento con equipo",
-    maxProfessionals: 3,
-    maxPatients: 120,
+    description: "Para el profesional con la agenda llena",
+    maxProfessionals: 1,
+    maxPatients: null,
     priceAnnual: 4500,
     priceMonthly: 5625,
     hasPublicWeb: true,
@@ -72,6 +72,12 @@ export const PLAN_DEFINITIONS: Record<string, PlanDefinition> = {
 // Ordered list for UI display (personalizado excluded from public pricing)
 export const PLAN_ORDER = ["emprendedor", "esencial", "profesional", "consultorio"];
 export const PLAN_ORDER_WITH_CUSTOM = ["emprendedor", "esencial", "profesional", "consultorio", "personalizado"];
+
+// Plans offered publicly for self-service purchase. All public plans are
+// single-professional and differ only by active-patient capacity. The
+// multi-professional plan (consultorio) stays hidden until the per-professional
+// payment settlement module exists. Admin can still assign any plan.
+export const PUBLIC_PLAN_ORDER = ["emprendedor", "esencial", "profesional"];
 
 // Helper functions
 export function getPlanDefinition(planCode: string): PlanDefinition {

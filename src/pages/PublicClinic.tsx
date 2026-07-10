@@ -7,6 +7,7 @@ import { CalendarDays, LogIn, Clock, Stethoscope } from "lucide-react";
 import LoadingPage from "@/components/LoadingPage";
 import NotFound from "./NotFound";
 import { getPlanDefinition } from "@/lib/plan-definitions";
+import { PublicThemeControl } from "@/components/public/PublicThemeControl";
 
 type DayKey = "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday";
 
@@ -191,6 +192,7 @@ const PublicClinic = () => {
 
   return (
     <div className="min-h-screen bg-background text-foreground" style={brandStyle}>
+      <PublicThemeControl />
       {/* Hero */}
       <header className="relative overflow-hidden border-b border-border">
         {coverUrl ? (

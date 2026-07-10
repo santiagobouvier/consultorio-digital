@@ -14,6 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { MonthlyHighlights } from "@/components/MonthlyHighlights";
 import { ActivationChecklist } from "@/components/ActivationChecklist";
+import { PublicLinkCard } from "@/components/PublicLinkCard";
 import {
   ActivationCompleteModal,
   wasActivationCelebrated,
@@ -351,6 +352,10 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
           open={showActivationDone}
           onClose={() => setShowActivationDone(false)}
         />
+
+        {/* Link de la web pública — siempre a mano */}
+        <PublicLinkCard businessId={businessId} />
+
         {/* KPIs Row - 4 Large Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {/* Citas hoy */}
