@@ -1041,7 +1041,7 @@ const Landing = () => {
 
       {/* Floating WhatsApp Button */}
       <a
-        href="https://wa.me/59891905437?text=Hola%2C%20vine%20desde%20la%20web%20de%20Consultorio%20Digital%20y%20tengo%20una%20consulta"
+        href="https://wa.me/59898543623?text=Hola%2C%20vine%20desde%20la%20web%20de%20Consultorio%20Digital%20y%20tengo%20una%20consulta"
         target="_blank"
         rel="noopener noreferrer"
         className="fixed bottom-6 right-6 z-50 group flex items-center gap-2"
