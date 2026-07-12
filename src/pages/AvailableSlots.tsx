@@ -2,15 +2,14 @@ import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, CalendarRange, Calendar, ListChecks, Users, Loader2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { ArrowLeft, Users, Loader2, Plus, ListChecks } from "lucide-react";
 import { useBusinessId } from "@/hooks/use-business-id";
 import { useProfessionals } from "@/hooks/use-professionals";
 import { useAvailabilityTemplate } from "@/hooks/use-availability-template";
 import { WeeklyTemplateEditor } from "@/components/horarios/WeeklyTemplateEditor";
-import { GenerateSlotsDialog } from "@/components/horarios/GenerateSlotsDialog";
 import { PunctualBlockForm } from "@/components/horarios/PunctualBlockForm";
 import { SlotsList, SlotRow } from "@/components/horarios/SlotsList";
 import { toast } from "@/hooks/use-toast";
@@ -31,13 +30,13 @@ const AvailableSlots = () => {
     }
   }, [currentUserId, selectedProUserId]);
 
-  const { template, setTemplate, loading: templateLoading, save, reload } = useAvailabilityTemplate(
+  const { template, setTemplate, loading: templateLoading, save } = useAvailabilityTemplate(
     businessId,
     selectedProUserId
   );
 
   const [saving, setSaving] = useState(false);
-  const [generatorOpen, setGeneratorOpen] = useState(false);
+  const [punctualOpen, setPunctualOpen] = useState(false);
   const [slots, setSlots] = useState<SlotRow[]>([]);
   const [slotsLoading, setSlotsLoading] = useState(true);
 
@@ -45,12 +44,14 @@ const AvailableSlots = () => {
     if (!businessId || !selectedProUserId) return;
     setSlotsLoading(true);
     try {
+      const today = new Date().toISOString().slice(0, 10);
       const { data, error } = await (supabase as any)
         .from("availability_slots")
         .select("id, date, start_time, end_time, modality, price, status, notes, professional_user_id, generated_from_template")
         .eq("business_id", businessId)
         .or(`professional_user_id.eq.${selectedProUserId},professional_user_id.is.null`)
-        .order("date", { ascending: false })
+        .gte("date", today)
+        .order("date", { ascending: true })
         .order("start_time", { ascending: true });
       if (error) throw error;
       setSlots(data ?? []);
@@ -129,7 +130,7 @@ const AvailableSlots = () => {
                 <HelpTooltip id="schedules" />
               </h1>
               <p className="text-muted-foreground mt-1 text-sm md:text-base">
-                Configurá tu semana tipo una vez y generá los horarios del mes en segundos.
+                Definí cuándo atendés. Tu agenda se genera y se mantiene al día sola.
               </p>
             </div>
             {showProfessionalSelector && (
@@ -164,50 +165,26 @@ const AvailableSlots = () => {
             </CardContent>
           </Card>
         ) : (
-          <Tabs defaultValue="template" className="w-full">
-            <div className="flex items-center gap-3 flex-wrap">
-              <TabsList className="grid grid-cols-3 w-full max-w-md">
-                <TabsTrigger value="template" className="gap-2">
-                  <CalendarRange className="h-4 w-4" /> Plantilla
-                </TabsTrigger>
-                <TabsTrigger value="punctual" className="gap-2">
-                  <Calendar className="h-4 w-4" /> Bloque puntual
-                </TabsTrigger>
-                <TabsTrigger value="list" className="gap-2">
-                  <ListChecks className="h-4 w-4" /> Lista
-                </TabsTrigger>
-              </TabsList>
-              <TabsContent value="template" className="m-0">
-                <HelpTooltip id="schedulesTemplate" />
-              </TabsContent>
-              <TabsContent value="punctual" className="m-0">
-                <HelpTooltip id="schedulesPunctual" />
-              </TabsContent>
-              <TabsContent value="list" className="m-0">
-                <HelpTooltip id="schedulesList" />
-              </TabsContent>
-            </div>
+          <>
+            {/* Semana tipo (guardar = agenda generada y mantenida sola) */}
+            <WeeklyTemplateEditor
+              template={template}
+              onChange={setTemplate as any}
+              onSave={handleSaveTemplate}
+              saving={saving}
+            />
 
-            <TabsContent value="template" className="mt-6">
-              <WeeklyTemplateEditor
-                template={template}
-                onChange={setTemplate as any}
-                onSave={handleSaveTemplate}
-                saving={saving}
-                onOpenGenerator={() => setGeneratorOpen(true)}
-                canGenerate={!!template.id}
-              />
-            </TabsContent>
-
-            <TabsContent value="punctual" className="mt-6">
-              <PunctualBlockForm
-                businessId={businessId}
-                professionalUserId={selectedProUserId}
-                onCreated={loadSlots}
-              />
-            </TabsContent>
-
-            <TabsContent value="list" className="mt-6">
+            {/* Próximos horarios */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <h2 className="text-lg font-semibold inline-flex items-center gap-2">
+                  <ListChecks className="h-5 w-5 text-primary" />
+                  Próximos horarios
+                </h2>
+                <Button variant="outline" size="sm" onClick={() => setPunctualOpen(true)}>
+                  <Plus className="h-4 w-4 mr-1" /> Horario suelto
+                </Button>
+              </div>
               {slotsLoading ? (
                 <Card>
                   <CardContent className="py-16 flex items-center justify-center text-muted-foreground">
@@ -217,17 +194,28 @@ const AvailableSlots = () => {
               ) : (
                 <SlotsList slots={slots} onChange={loadSlots} />
               )}
-            </TabsContent>
-          </Tabs>
-        )}
+            </div>
 
-        {template?.id && (
-          <GenerateSlotsDialog
-            open={generatorOpen}
-            onOpenChange={setGeneratorOpen}
-            templateId={template.id}
-            onGenerated={loadSlots}
-          />
+            {/* Horario suelto (fuera de la semana tipo) */}
+            <Dialog open={punctualOpen} onOpenChange={setPunctualOpen}>
+              <DialogContent className="sm:max-w-lg">
+                <DialogHeader>
+                  <DialogTitle>Agregar horario suelto</DialogTitle>
+                  <DialogDescription>
+                    Un turno puntual fuera de tu semana tipo (por ejemplo, un sábado excepcional).
+                  </DialogDescription>
+                </DialogHeader>
+                <PunctualBlockForm
+                  businessId={businessId}
+                  professionalUserId={selectedProUserId}
+                  onCreated={() => {
+                    setPunctualOpen(false);
+                    loadSlots();
+                  }}
+                />
+              </DialogContent>
+            </Dialog>
+          </>
         )}
       </div>
     </div>

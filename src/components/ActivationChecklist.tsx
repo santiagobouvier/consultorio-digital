@@ -136,23 +136,14 @@ export const ActivationChecklist = ({ businessId, onAllDone }: Props) => {
   const items = [
     {
       key: "template",
-      done: state.template,
+      // Al guardar la semana tipo la agenda se genera sola, así que ambas
+      // condiciones se cumplen juntas en el flujo nuevo.
+      done: state.template && state.slots,
       title: "Definí tu semana tipo",
-      desc: "Marcá los días y horarios en que atendés.",
+      desc: "Marcá tus días y horarios; tu agenda se genera sola.",
       action: (
         <Button size="sm" variant="outline" onClick={() => navigate("/horarios-disponibles")}>
           Configurar <ArrowRight className="h-4 w-4 ml-1" />
-        </Button>
-      ),
-    },
-    {
-      key: "slots",
-      done: state.slots,
-      title: "Generá tus horarios del mes",
-      desc: "Creá los turnos disponibles para que los pacientes puedan reservar.",
-      action: (
-        <Button size="sm" variant="outline" onClick={() => navigate("/horarios-disponibles")}>
-          Generar <ArrowRight className="h-4 w-4 ml-1" />
         </Button>
       ),
     },

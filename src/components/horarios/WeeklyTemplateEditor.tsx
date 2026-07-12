@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sparkles, Clock, Save, Plus, X } from "lucide-react";
+import { Clock, Save, Plus, X } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import {
   AvailabilityTemplate,
@@ -20,11 +20,9 @@ interface Props {
   onChange: (t: AvailabilityTemplate) => void;
   onSave: () => Promise<void>;
   saving: boolean;
-  onOpenGenerator: () => void;
-  canGenerate: boolean;
 }
 
-export const WeeklyTemplateEditor = ({ template, onChange, onSave, saving, onOpenGenerator, canGenerate }: Props) => {
+export const WeeklyTemplateEditor = ({ template, onChange, onSave, saving }: Props) => {
   const updateDay = (key: DayKey, patch: Partial<DayConfig>) => {
     onChange({
       ...template,
@@ -196,15 +194,14 @@ export const WeeklyTemplateEditor = ({ template, onChange, onSave, saving, onOpe
         </CardContent>
       </Card>
 
-      <div className="flex flex-col sm:flex-row gap-3 sticky bottom-4">
-        <Button onClick={handleSave} disabled={saving} size="lg" className="flex-1">
+      <div className="sticky bottom-4 space-y-1.5">
+        <Button onClick={handleSave} disabled={saving} size="lg" className="w-full">
           <Save className="h-4 w-4 mr-2" />
-          {saving ? "Guardando..." : "Guardar plantilla"}
+          {saving ? "Guardando y generando agenda..." : "Guardar semana tipo"}
         </Button>
-        <Button onClick={onOpenGenerator} disabled={!canGenerate} size="lg" variant="default" className="flex-1 bg-primary">
-          <Sparkles className="h-4 w-4 mr-2" />
-          Generar horarios del mes
-        </Button>
+        <p className="text-center text-xs text-muted-foreground">
+          Al guardar, tu agenda se genera para los próximos 60 días y se mantiene al día sola.
+        </p>
       </div>
     </div>
   );
