@@ -71,8 +71,29 @@ const AvailableSlots = () => {
     if (!template) return;
     setSaving(true);
     try {
-      await save(template);
-      toast({ title: "Plantilla guardada", description: "Ahora podés generar los horarios del mes." });
+      const saved = await save(template);
+
+      // Guardar = agenda lista: se generan los próximos 60 días automáticamente
+      // (estrategia 'skip': no duplica ni toca turnos existentes/reservados).
+      // Un cron diario mantiene ese horizonte extendido de ahí en más.
+      if (saved?.id) {
+        const from = new Date().toISOString().slice(0, 10);
+        const toDate = new Date();
+        toDate.setDate(toDate.getDate() + 60);
+        const { error: genError } = await (supabase as any).rpc("generate_slots_from_template", {
+          p_template_id: saved.id,
+          p_from_date: from,
+          p_to_date: toDate.toISOString().slice(0, 10),
+          p_conflict_strategy: "skip",
+        });
+        if (genError) throw genError;
+        await loadSlots();
+      }
+
+      toast({
+        title: "Semana guardada",
+        description: "Tu agenda quedó generada para los próximos 60 días y se mantiene al día sola.",
+      });
     } catch (e: any) {
       console.error(e);
       toast({ title: "Error", description: e?.message ?? "No se pudo guardar", variant: "destructive" });
