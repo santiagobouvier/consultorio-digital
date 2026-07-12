@@ -2,14 +2,48 @@ import { supabase } from "@/integrations/supabase/client";
 
 const RELOAD_COUNTER_KEY = "__app_reload_counter";
 const RELOAD_WINDOW_START_KEY = "__app_reload_window_start";
+const CHUNK_RECOVERY_STATE_KEY = "__app_chunk_recovery_state";
 // Red de seguridad relajada: solo se dispara si hay 5+ reloads en 30s.
 // Los fixes de auth-sync + AuthContext eliminan el bucle real; este guard
 // queda como protección residual para casos edge.
 const RELOAD_WINDOW_MS = 30_000;
 const RELOAD_THRESHOLD = 5;
+const CHUNK_RECOVERY_WINDOW_MS = 120_000;
+
+const CHUNK_LOAD_ERROR_PATTERNS = [
+  /Failed to fetch dynamically imported module/i,
+  /error loading dynamically imported module/i,
+  /Importing a module script failed/i,
+  /ChunkLoadError/i,
+  /Loading chunk \d+ failed/i,
+];
 
 let cacheClearPromise: Promise<void> | null = null;
 let hardResetPromise: Promise<void> | null = null;
+
+const getErrorText = (error: unknown): string => {
+  if (!error) return "";
+  if (typeof error === "string") return error;
+
+  if (error instanceof Error) {
+    return `${error.name} ${error.message} ${error.stack ?? ""}`;
+  }
+
+  if (typeof error === "object") {
+    const maybeError = error as { message?: unknown; stack?: unknown; reason?: unknown; payload?: unknown };
+    return [maybeError.message, maybeError.stack, maybeError.reason, maybeError.payload]
+      .map((value) => (typeof value === "string" ? value : getErrorText(value)))
+      .filter(Boolean)
+      .join(" ");
+  }
+
+  return "";
+};
+
+export const isChunkLoadFailure = (error: unknown): boolean => {
+  const text = getErrorText(error);
+  return CHUNK_LOAD_ERROR_PATTERNS.some((pattern) => pattern.test(text));
+};
 
 const getServiceWorkerRegistrations = async (): Promise<ServiceWorkerRegistration[]> => {
   if (typeof window === "undefined" || !("serviceWorker" in navigator)) {
@@ -137,6 +171,41 @@ export const hardResetBrowserSession = async (
   })();
 
   await hardResetPromise;
+};
+
+interface RecoverFromChunkLoadFailureOptions {
+  unregisterServiceWorkers?: boolean;
+}
+
+export const recoverFromChunkLoadFailure = async (
+  options: RecoverFromChunkLoadFailureOptions = {}
+) => {
+  if (typeof window === "undefined") return false;
+
+  const now = Date.now();
+  const path = `${window.location.pathname}${window.location.search}`;
+
+  try {
+    const previous = JSON.parse(
+      sessionStorage.getItem(CHUNK_RECOVERY_STATE_KEY) ?? "null"
+    ) as { path?: string; at?: number } | null;
+
+    if (
+      previous?.path === path &&
+      typeof previous.at === "number" &&
+      now - previous.at < CHUNK_RECOVERY_WINDOW_MS
+    ) {
+      return false;
+    }
+
+    sessionStorage.setItem(CHUNK_RECOVERY_STATE_KEY, JSON.stringify({ path, at: now }));
+  } catch {
+    // Si sessionStorage falla, seguimos con la recuperación; peor caso, una recarga.
+  }
+
+  await clearServiceWorkerCaches({ unregister: options.unregisterServiceWorkers ?? true });
+  window.location.reload();
+  return true;
 };
 
 export const detectReloadLoopAndRecover = async () => {
