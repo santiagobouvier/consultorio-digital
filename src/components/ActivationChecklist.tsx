@@ -1,3 +1,4 @@
+import { buildShareUrl } from "@/config/app";
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -82,7 +83,7 @@ export const ActivationChecklist = ({ businessId, onAllDone }: Props) => {
   if (state.loading || allDone) return null;
 
   const publicUrl = state.slug
-    ? `${window.location.origin}/consultorio/${state.slug}`
+    ? buildShareUrl(`/consultorio/${state.slug}`)
     : null;
 
   const markShared = async () => {

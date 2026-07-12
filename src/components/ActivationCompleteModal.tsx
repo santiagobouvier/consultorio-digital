@@ -1,3 +1,4 @@
+import { buildShareUrl } from "@/config/app";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -55,7 +56,7 @@ export const ActivationCompleteModal = ({ businessId, open, onClose }: Props) =>
     };
   }, [open, businessId]);
 
-  const publicUrl = slug ? `${window.location.origin}/consultorio/${slug}` : null;
+  const publicUrl = slug ? buildShareUrl(`/consultorio/${slug}`) : null;
 
   const handleCopy = async () => {
     if (!publicUrl) return;
