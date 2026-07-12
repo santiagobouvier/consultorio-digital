@@ -141,28 +141,19 @@ const PublicBooking = ({ demo = false }: { demo?: boolean }) => {
           return;
         }
 
-        // Slots disponibles próximos (próximos 60 días, máx 50)
-        const today = new Date().toISOString().slice(0, 10);
-        const future = new Date();
-        future.setDate(future.getDate() + 60);
-        const futureStr = future.toISOString().slice(0, 10);
-
-        const { data: slotsData, error: slotsError } = await supabase
-          .from("availability_slots")
-          .select("id, date, start_time, end_time, modality, price")
-          .eq("business_id", businessData.id)
-          .eq("status", "available")
-          .gte("date", today)
-          .lte("date", futureStr)
-          .order("date", { ascending: true })
-          .order("start_time", { ascending: true })
-          .limit(50);
+        // Slots disponibles próximos. Va por la edge function pública porque
+        // la lectura directa de availability_slots está bloqueada por RLS
+        // para visitantes anónimos (devuelve siempre vacío).
+        const { data: slotsResp, error: slotsError } = await supabase.functions.invoke(
+          "public-get-availability-slots",
+          { body: { slug } }
+        );
 
         if (slotsError) throw slotsError;
 
         if (cancelled) return;
         setBusiness(businessData);
-        setSlots((slotsData ?? []) as Slot[]);
+        setSlots((slotsResp?.slots ?? []) as Slot[]);
       } catch (error) {
         console.error("[PublicBooking] Error cargando reserva:", error);
       } finally {
