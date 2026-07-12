@@ -3,10 +3,14 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { lazy, Suspense, useEffect } from "react";
+import { Component, lazy, Suspense, useEffect, type ErrorInfo, type ReactNode } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { supabase } from "@/integrations/supabase/client";
-import { clearServiceWorkerCaches } from "@/lib/session-recovery";
+import {
+  clearServiceWorkerCaches,
+  isChunkLoadFailure,
+  recoverFromChunkLoadFailure,
+} from "@/lib/session-recovery";
 import { SessionExpiredDialog, triggerSessionExpired } from "@/components/SessionExpiredDialog";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { BusinessIdProvider } from "@/contexts/BusinessIdContext";
@@ -59,6 +63,38 @@ const AccessSelector = lazy(() => import("./pages/AccessSelector"));
 const PatientAccess = lazy(() => import("./pages/PatientAccess"));
 const SubscriptionGuard = lazy(() => import("./components/SubscriptionGuard"));
 const SuperAdminGuard = lazy(() => import("./components/SuperAdminGuard"));
+
+class ChunkLoadRecoveryBoundary extends Component<
+  { children: ReactNode },
+  { chunkLoadFailed: boolean; error: unknown }
+> {
+  state = { chunkLoadFailed: false, error: null };
+
+  static getDerivedStateFromError(error: unknown) {
+    return { chunkLoadFailed: isChunkLoadFailure(error), error };
+  }
+
+  componentDidCatch(error: unknown, errorInfo: ErrorInfo) {
+    if (isChunkLoadFailure(error)) {
+      void recoverFromChunkLoadFailure({ unregisterServiceWorkers: true });
+      return;
+    }
+
+    console.error("Error no recuperable en la app", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.chunkLoadFailed) {
+      return <LoadingPage />;
+    }
+
+    if (this.state.error) {
+      throw this.state.error;
+    }
+
+    return this.props.children;
+  }
+}
 
 // Defaults globales: datos válidos por 30s, mantenidos en caché 5min.
 // refetchOnWindowFocus: true permite revalidar datos al volver a la pestaña
@@ -155,6 +191,7 @@ const App = () => {
           <AuthSyncBridge />
           <AuthProvider>
             <BusinessIdProvider>
+            <ChunkLoadRecoveryBoundary>
             <Suspense fallback={<LoadingPage />}>
               <Routes>
                 {/* Public routes */}
@@ -204,6 +241,7 @@ const App = () => {
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>
+            </ChunkLoadRecoveryBoundary>
             </BusinessIdProvider>
           </AuthProvider>
         </BrowserRouter>
