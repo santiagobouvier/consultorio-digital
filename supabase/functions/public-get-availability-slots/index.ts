@@ -1,6 +1,11 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.48.0";
 
+// Public availability for the booking page (no login).
+// Privacy: returns ONLY the minimum needed to pick a slot — date, times,
+// modality and price of AVAILABLE future slots. No patient data, no notes,
+// no professional identifiers. The rest of the agenda stays private.
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -20,15 +25,60 @@ serve(async (req) => {
   }
 
   try {
-    // PRIVACY: This endpoint no longer returns public availability
-    // Patients must be authenticated and use the client-side query with RLS
-    // This endpoint is kept for backwards compatibility but returns empty slots
-    
+    const { slug } = await req.json().catch(() => ({}));
+    if (!slug || typeof slug !== "string") {
+      return new Response(
+        JSON.stringify({ error: "missing_slug" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    // Resolve business by public slug (fallback: custom subdomain)
+    let business: { id: string } | null = null;
+    const bySlug = await supabase
+      .from("businesses")
+      .select("id")
+      .eq("public_slug", slug)
+      .maybeSingle();
+    business = bySlug.data;
+
+    if (!business) {
+      const bySubdomain = await supabase
+        .from("businesses")
+        .select("id")
+        .eq("custom_subdomain", slug)
+        .maybeSingle();
+      business = bySubdomain.data;
+    }
+
+    if (!business) {
+      return new Response(
+        JSON.stringify({ error: "business_not_found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    // Available future slots, next 60 days, minimal fields only
+    const today = new Date().toISOString().slice(0, 10);
+    const future = new Date();
+    future.setDate(future.getDate() + 60);
+    const futureStr = future.toISOString().slice(0, 10);
+
+    const { data: slots, error } = await supabase
+      .from("availability_slots")
+      .select("id, date, start_time, end_time, modality, price")
+      .eq("business_id", business.id)
+      .eq("status", "available")
+      .gte("date", today)
+      .lte("date", futureStr)
+      .order("date", { ascending: true })
+      .order("start_time", { ascending: true })
+      .limit(50);
+
+    if (error) throw error;
+
     return new Response(
-      JSON.stringify({ 
-        slots: [],
-        message: "La agenda es privada. Los pacientes registrados pueden reservar desde su portal."
-      }),
+      JSON.stringify({ slots: slots ?? [] }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (error) {
