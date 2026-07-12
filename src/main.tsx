@@ -20,6 +20,12 @@ window.addEventListener("unhandledrejection", (event) => {
   void recoverFromChunkLoadFailure({ unregisterServiceWorkers: true });
 });
 
+window.addEventListener("error", (event) => {
+  if (!isChunkLoadFailure(event.error ?? event.message)) return;
+  event.preventDefault();
+  void recoverFromChunkLoadFailure({ unregisterServiceWorkers: true });
+});
+
 const isInIframe = (() => {
   try {
     return window.self !== window.top;
