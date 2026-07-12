@@ -110,68 +110,55 @@ export const PatientBookingModal = ({
       const today = new Date().toISOString().slice(0, 10);
       const maxDate = addDays(new Date(), 90).toISOString().slice(0, 10);
 
-      let professionalId: string | null = null;
+      let fallbackProfessionalId: string | null = null;
       const { data: patientRow } = await supabase
         .from("patients")
         .select("*")
         .eq("id", patientId)
         .maybeSingle();
       const assigned = (patientRow as any)?.assigned_professional_id as string | undefined;
-      if (assigned) professionalId = assigned;
+      if (assigned) fallbackProfessionalId = assigned;
 
-      if (!professionalId) {
+      if (!fallbackProfessionalId) {
         const { data: biz } = await supabase
           .from("businesses")
           .select("owner_user_id")
           .eq("id", businessId)
           .maybeSingle();
-        professionalId = biz?.owner_user_id ?? null;
+        fallbackProfessionalId = biz?.owner_user_id ?? null;
       }
 
-      if (!professionalId) {
-        setSlots([]);
-        return;
-      }
-
-      const { data: spacesData, error: spacesError } = await supabase
-        .from("spaces")
-        .select("id, type")
+      // Lee directo de availability_slots (RLS deja ver los available del business
+      // al paciente autenticado). Esta es la misma fuente que usa "Horarios del
+      // consultorio", así que lo que el profesional configura aparece acá.
+      const { data, error } = await (supabase as any)
+        .from("availability_slots")
+        .select("id, date, start_time, end_time, modality, price, professional_user_id")
         .eq("business_id", businessId)
-        .eq("is_active", true);
-      if (spacesError) throw spacesError;
-      const spaceTypeById = new Map<string, string>(
-        (spacesData || []).map((s: any) => [s.id as string, s.type as string]),
-      );
-
-      const { data, error } = await supabase.rpc("get_available_slots", {
-        p_business_id: businessId,
-        p_professional_id: professionalId,
-        p_date_from: today,
-        p_date_to: maxDate,
-      });
+        .eq("status", "available")
+        .gte("date", today)
+        .lte("date", maxDate)
+        .order("date", { ascending: true })
+        .order("start_time", { ascending: true });
       if (error) throw error;
 
-      const pad = (n: number) => String(n).padStart(2, "0");
-      const mapped: AvailabilitySlot[] = (data || []).flatMap((row: any) => {
-        const start = new Date(row.slot_start_at);
-        const end = new Date(row.slot_end_at);
-        const spaceIds: string[] = Array.isArray(row.available_space_ids) ? row.available_space_ids : [];
-        return spaceIds.map((spaceId: string) => {
-          const spaceType = spaceTypeById.get(spaceId) ?? "physical";
-          const modality = spaceType === "virtual" ? "online" : "presencial";
-          return {
-            id: `${row.slot_start_at}-${row.professional_id}-${spaceId}`,
-            date: row.slot_date,
-            start_time: `${pad(start.getHours())}:${pad(start.getMinutes())}:00`,
-            end_time: `${pad(end.getHours())}:${pad(end.getMinutes())}:00`,
-            modality,
-            price: null,
-            start_at: row.slot_start_at,
-            end_at: row.slot_end_at,
-            space_id: spaceId,
-            professional_id: row.professional_id,
-          };
-        });
+      const mapped: AvailabilitySlot[] = (data || []).map((row: any) => {
+        const startAt = new Date(`${row.date}T${row.start_time}`).toISOString();
+        const endAt = new Date(`${row.date}T${row.end_time}`).toISOString();
+        const rawMod = String(row.modality || "").toLowerCase();
+        const modality = rawMod.includes("online") || rawMod.includes("virtual") ? "online" : "presencial";
+        return {
+          id: row.id,
+          date: row.date,
+          start_time: row.start_time,
+          end_time: row.end_time,
+          modality,
+          price: row.price ?? null,
+          start_at: startAt,
+          end_at: endAt,
+          space_id: "",
+          professional_id: row.professional_user_id ?? fallbackProfessionalId ?? "",
+        };
       });
       setSlots(mapped);
     } catch (error) {
@@ -233,7 +220,7 @@ export const PatientBookingModal = ({
           .insert({
             business_id: businessId,
             original_appointment_id: rescheduleAppointment.id,
-            requested_slot_id: null,
+            requested_slot_id: selectedSlot.id || null,
             requested_start_at: startAt,
             requested_end_at: endAt,
             reason: notes || null,
@@ -252,8 +239,8 @@ export const PatientBookingModal = ({
           .insert({
             business_id: businessId,
             patient_id: patientId,
-            availability_slot_id: null,
-            space_id: selectedSlot.space_id,
+            availability_slot_id: selectedSlot.id || null,
+            space_id: selectedSlot.space_id || null,
             professional_id: selectedSlot.professional_id,
             start_at: startAt,
             end_at: endAt,
@@ -263,6 +250,14 @@ export const PatientBookingModal = ({
             source: "patient_portal",
           });
         if (appointmentError) throw appointmentError;
+
+        // Reservar el slot para que no pueda volver a elegirse.
+        if (selectedSlot.id) {
+          await (supabase as any)
+            .from("availability_slots")
+            .update({ status: "booked" })
+            .eq("id", selectedSlot.id);
+        }
       }
 
       goToStep("success");
