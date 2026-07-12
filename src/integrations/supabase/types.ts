@@ -1818,6 +1818,13 @@ export type Database = {
           total_slots: number
         }[]
       }
+      refill_template_slots: {
+        Args: { p_days_ahead?: number }
+        Returns: {
+          created: number
+          template_id: string
+        }[]
+      }
       reject_reschedule_request: {
         Args: { p_rejection_reason?: string; p_request_id: string }
         Returns: Json
