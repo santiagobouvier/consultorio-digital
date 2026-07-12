@@ -1,5 +1,6 @@
 // Tarjeta fija para que el profesional tenga SIEMPRE a mano el link de su web
 // pública (reservas): copiar, abrir y compartir por WhatsApp.
+import { buildShareUrl } from "@/config/app";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -25,7 +26,7 @@ export function PublicLinkCard({ businessId }: { businessId: string }) {
 
   if (!slug) return null;
 
-  const url = `${window.location.origin}/consultorio/${slug}`;
+  const url = buildShareUrl(`/consultorio/${slug}`);
   const display = url.replace(/^https?:\/\//, "");
 
   const copy = async () => {
