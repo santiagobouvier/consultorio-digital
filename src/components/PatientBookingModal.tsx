@@ -330,6 +330,35 @@ export const PatientBookingModal = ({
         if (appointmentError) throw appointmentError;
       }
 
+      // Best-effort: avisar por email al profesional (no bloquea el flujo)
+      try {
+        const { data: biz } = await supabase
+          .from("businesses")
+          .select("contact_email, name")
+          .eq("id", businessId)
+          .maybeSingle();
+        if (biz?.contact_email) {
+          const fecha = format(new Date(startAt), "dd/MM/yyyy HH:mm", { locale: es });
+          await supabase.functions.invoke("send-resend-email", {
+            body: {
+              to: biz.contact_email,
+              template: "raw",
+              businessId,
+              data: {
+                subject: isReschedule
+                  ? `Solicitud de reprogramación · ${fecha}`
+                  : `Nueva reserva desde el portal · ${fecha}`,
+                message: isReschedule
+                  ? `Un paciente pidió reprogramar su cita para el ${fecha}.\n\nRevisala y confirmala desde tu panel (Solicitudes).`
+                  : `Un paciente reservó desde su portal para el ${fecha}.\n\nLa cita está pendiente de tu confirmación en el panel.`,
+              },
+            },
+          });
+        }
+      } catch (mailErr) {
+        console.warn("Aviso al profesional falló:", mailErr);
+      }
+
       goToStep("success");
       toast({
         title: isReschedule ? "Solicitud enviada" : "Reserva creada",
