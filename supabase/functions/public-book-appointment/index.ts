@@ -138,9 +138,6 @@ serve(async (req) => {
     // Horario en hora de Uruguay (UTC-3 fijo, sin DST desde 2015)
     const startAt = new Date(`${date}T${startTime}:00-03:00`);
     const endAt = new Date(startAt.getTime() + service.duration_minutes * 60 * 1000);
-    const endTimeLocal = endAt.toLocaleTimeString("en-GB", {
-      timeZone: "America/Montevideo", hour: "2-digit", minute: "2-digit",
-    });
 
     const { data: appointment, error: appointmentError } = await supabase
       .from("appointments")
@@ -166,20 +163,6 @@ serve(async (req) => {
     if (appointmentError || !appointment) {
       console.error("Error creating appointment:", appointmentError);
       return json({ error: "appointment_creation_failed" }, 500);
-    }
-
-    // Transición: reservar los casilleros viejos que se solapen para que el
-    // flujo por slots (portal) no pueda duplicar este horario.
-    const { error: slotGuardError } = await supabase
-      .from("availability_slots")
-      .update({ status: "reserved" })
-      .eq("business_id", business.id)
-      .eq("date", date)
-      .eq("status", "available")
-      .lt("start_time", endTimeLocal)
-      .gt("end_time", startTime);
-    if (slotGuardError) {
-      console.warn("Slot transition guard failed:", slotGuardError);
     }
 
     // Best-effort: mail de confirmación al paciente
