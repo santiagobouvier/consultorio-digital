@@ -30,6 +30,15 @@ const MODE_LABEL: Record<string, string> = {
   online: "Online",
   presencial: "Presencial",
   ambas: "Online o presencial",
+  // Valores legacy que pueden existir en la base
+  in_person: "Presencial",
+  virtual: "Online",
+};
+
+const normalizeMode = (mode: string): string => {
+  if (mode === "in_person") return "presencial";
+  if (mode === "virtual") return "online";
+  return MODE_LABEL[mode] ? mode : "ambas";
 };
 
 interface Props {
@@ -83,7 +92,7 @@ export function ServicesManager({ businessId }: Props) {
     setForm({
       name: s.name,
       duration: String(s.duration_minutes),
-      mode: s.mode || "ambas",
+      mode: normalizeMode(s.mode || "ambas"),
       price: s.suggested_price != null ? String(s.suggested_price) : "",
     });
     setDialogOpen(true);
