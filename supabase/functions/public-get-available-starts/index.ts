@@ -25,7 +25,7 @@ serve(async (req) => {
 
   try {
     const { slug, serviceId, days } = await req.json().catch(() => ({}));
-    if (!slug || typeof slug !== "string" || !serviceId || typeof serviceId !== "string") {
+    if (!slug || typeof slug !== "string") {
       return new Response(
         JSON.stringify({ error: "missing_params" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -44,6 +44,21 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ error: "business_not_found" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    // Sin serviceId: devolver el menú de tipos de sesión activos (para que la
+    // página de reserva arme el paso "elegí tu tipo de sesión").
+    if (!serviceId || typeof serviceId !== "string") {
+      const { data: services } = await supabase
+        .from("services")
+        .select("id, name, duration_minutes, mode, suggested_price")
+        .eq("business_id", business.id)
+        .eq("is_active", true)
+        .order("duration_minutes", { ascending: true });
+      return new Response(
+        JSON.stringify({ services: services ?? [] }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,20 +7,29 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, CalendarDays, CheckCircle2, Clock, Loader2, Stethoscope, Video } from "lucide-react";
+import { ArrowLeft, CalendarDays, CheckCircle2, Clock, Loader2, Stethoscope, Video, MapPin } from "lucide-react";
 import LoadingPage from "@/components/LoadingPage";
 import { toast } from "sonner";
 import NotFound from "./NotFound";
 import { getPlanDefinition } from "@/lib/plan-definitions";
 import { PublicThemeControl } from "@/components/public/PublicThemeControl";
 
-type Slot = {
+// Horarios 2.0: la reserva es por TIPO DE SESIÓN (service). El visitante elige
+// el tipo, el motor calcula los inicios que caben según su duración, completa
+// sus datos y confirma. Ya no depende de casilleros precortados.
+
+type Service = {
   id: string;
-  date: string;
-  start_time: string;
-  end_time: string;
-  modality: string;
-  price: number | null;
+  name: string;
+  duration_minutes: number;
+  mode: string; // 'online' | 'presencial' | 'ambas'
+  suggested_price: number | null;
+};
+
+type Start = {
+  day: string;        // YYYY-MM-DD
+  start_time: string; // HH:MM:SS
+  end_time: string;   // HH:MM:SS
 };
 
 const formSchema = z.object({
@@ -44,12 +53,13 @@ const formatSlotDate = (dateStr: string) => {
 
 const formatTime = (t: string) => t.slice(0, 5);
 
-// Datos de ejemplo para el modo demo (nada se guarda).
-const demoDate = (offset: number) => {
-  const d = new Date();
-  d.setDate(d.getDate() + offset);
-  return d.toISOString().slice(0, 10);
+const MODE_LABEL: Record<string, string> = {
+  online: "Online",
+  presencial: "Presencial",
+  ambas: "Online o presencial",
 };
+
+// ── Datos de ejemplo para el modo demo (nada se guarda) ──
 const DEMO_BUSINESS = {
   id: "demo",
   name: "Lic. Laura López",
@@ -62,13 +72,35 @@ const DEMO_BUSINESS = {
   portal_clinic_display_name: "Lic. Laura López",
   plan_code: "esencial",
 };
-const DEMO_SLOTS: Slot[] = [
-  { id: "s1", date: demoDate(1), start_time: "09:00:00", end_time: "10:00:00", modality: "presencial", price: null },
-  { id: "s2", date: demoDate(1), start_time: "10:30:00", end_time: "11:30:00", modality: "online", price: null },
-  { id: "s3", date: demoDate(2), start_time: "15:00:00", end_time: "16:00:00", modality: "online", price: null },
-  { id: "s4", date: demoDate(2), start_time: "16:30:00", end_time: "17:30:00", modality: "presencial", price: null },
-  { id: "s5", date: demoDate(3), start_time: "12:00:00", end_time: "13:00:00", modality: "online", price: null },
-] as Slot[];
+
+const DEMO_SERVICES: Service[] = [
+  { id: "demo-s1", name: "Sesión individual", duration_minutes: 50, mode: "ambas", suggested_price: 1500 },
+  { id: "demo-s2", name: "Primera consulta", duration_minutes: 90, mode: "online", suggested_price: 2000 },
+];
+
+// Genera inicios demo desde ventanas 9-13 y 15-19 según la duración elegida.
+const demoStarts = (durationMinutes: number): Start[] => {
+  const out: Start[] = [];
+  const pad = (n: number) => String(n).padStart(2, "0");
+  for (let offset = 1; offset <= 4; offset++) {
+    const d = new Date();
+    d.setDate(d.getDate() + offset);
+    if (d.getDay() === 0) continue; // domingo cerrado
+    const day = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    for (const [wStart, wEnd] of [[9 * 60, 13 * 60], [15 * 60, 19 * 60]]) {
+      let t = wStart;
+      while (t + durationMinutes <= wEnd) {
+        out.push({
+          day,
+          start_time: `${pad(Math.floor(t / 60))}:${pad(t % 60)}:00`,
+          end_time: `${pad(Math.floor((t + durationMinutes) / 60))}:${pad((t + durationMinutes) % 60)}:00`,
+        });
+        t += durationMinutes;
+      }
+    }
+  }
+  return out;
+};
 
 const PublicBooking = ({ demo = false }: { demo?: boolean }) => {
   const { slug } = useParams();
@@ -77,13 +109,48 @@ const PublicBooking = ({ demo = false }: { demo?: boolean }) => {
   const [loading, setLoading] = useState(true);
   const [business, setBusiness] = useState<any>(null);
   const [planAllowsPublicWeb, setPlanAllowsPublicWeb] = useState(true);
-  const [slots, setSlots] = useState<Slot[]>([]);
-  const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
+
+  const [services, setServices] = useState<Service[]>([]);
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [starts, setStarts] = useState<Start[]>([]);
+  const [startsLoading, setStartsLoading] = useState(false);
+  const [selectedStart, setSelectedStart] = useState<Start | null>(null);
+  const [modalityChoice, setModalityChoice] = useState<"online" | "presencial">("online");
+
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
 
   const [form, setForm] = useState({ name: "", email: "", phone: "", message: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const loadStarts = useCallback(async (service: Service) => {
+    setStartsLoading(true);
+    setSelectedStart(null);
+    try {
+      if (demo) {
+        setStarts(demoStarts(service.duration_minutes));
+        return;
+      }
+      const { data, error } = await supabase.functions.invoke("public-get-available-starts", {
+        body: { slug, serviceId: service.id, days: 30 },
+      });
+      if (error) throw error;
+      setStarts((data?.starts ?? []) as Start[]);
+    } catch (e) {
+      console.error("[PublicBooking] Error cargando horarios:", e);
+      toast.error("No pudimos cargar los horarios. Recargá la página.");
+      setStarts([]);
+    } finally {
+      setStartsLoading(false);
+    }
+  }, [demo, slug]);
+
+  const selectService = useCallback((service: Service) => {
+    setSelectedService(service);
+    if (service.mode === "online") setModalityChoice("online");
+    if (service.mode === "presencial") setModalityChoice("presencial");
+    void loadStarts(service);
+  }, [loadStarts]);
 
   useEffect(() => {
     let cancelled = false;
@@ -92,7 +159,7 @@ const PublicBooking = ({ demo = false }: { demo?: boolean }) => {
         setLoading(true);
         if (demo) {
           setBusiness(DEMO_BUSINESS);
-          setSlots(DEMO_SLOTS);
+          setServices(DEMO_SERVICES);
           if (!cancelled) setLoading(false);
           return;
         }
@@ -124,9 +191,7 @@ const PublicBooking = ({ demo = false }: { demo?: boolean }) => {
         }
 
         if (!businessData) {
-          if (!cancelled) {
-            setLoading(false);
-          }
+          if (!cancelled) setLoading(false);
           return;
         }
 
@@ -141,19 +206,16 @@ const PublicBooking = ({ demo = false }: { demo?: boolean }) => {
           return;
         }
 
-        // Slots disponibles próximos. Va por la edge function pública porque
-        // la lectura directa de availability_slots está bloqueada por RLS
-        // para visitantes anónimos (devuelve siempre vacío).
-        const { data: slotsResp, error: slotsError } = await supabase.functions.invoke(
-          "public-get-availability-slots",
+        // Menú de tipos de sesión (vía edge function: anon no lee services)
+        const { data: svcResp, error: svcError } = await supabase.functions.invoke(
+          "public-get-available-starts",
           { body: { slug } }
         );
-
-        if (slotsError) throw slotsError;
+        if (svcError) throw svcError;
 
         if (cancelled) return;
         setBusiness(businessData);
-        setSlots((slotsResp?.slots ?? []) as Slot[]);
+        setServices((svcResp?.services ?? []) as Service[]);
       } catch (error) {
         console.error("[PublicBooking] Error cargando reserva:", error);
       } finally {
@@ -165,6 +227,13 @@ const PublicBooking = ({ demo = false }: { demo?: boolean }) => {
       cancelled = true;
     };
   }, [slug, demo]);
+
+  // Un solo tipo de sesión → se elige solo
+  useEffect(() => {
+    if (!loading && services.length === 1 && !selectedService) {
+      selectService(services[0]);
+    }
+  }, [loading, services, selectedService, selectService]);
 
   const accent = useMemo(() => {
     const light = business?.portal_primary_color || "176 100% 32%";
@@ -181,19 +250,19 @@ const PublicBooking = ({ demo = false }: { demo?: boolean }) => {
     [accent]
   );
 
-  const slotsByDate = useMemo(() => {
-    const map = new Map<string, Slot[]>();
-    for (const s of slots) {
-      const list = map.get(s.date) ?? [];
+  const startsByDate = useMemo(() => {
+    const map = new Map<string, Start[]>();
+    for (const s of starts) {
+      const list = map.get(s.day) ?? [];
       list.push(s);
-      map.set(s.date, list);
+      map.set(s.day, list);
     }
     return Array.from(map.entries()).map(([date, items]) => ({ date, items }));
-  }, [slots]);
+  }, [starts]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedSlot || (!slug && !demo)) return;
+    if (!selectedService || !selectedStart || (!slug && !demo)) return;
 
     const parsed = formSchema.safeParse(form);
     if (!parsed.success) {
@@ -215,27 +284,25 @@ const PublicBooking = ({ demo = false }: { demo?: boolean }) => {
 
     try {
       setSubmitting(true);
-      const { data, error } = await supabase.functions.invoke(
-        "public-create-appointment-request",
-        {
-          body: {
-            slug,
-            slotId: selectedSlot.id,
-            name: parsed.data.name,
-            email: parsed.data.email,
-            phone: parsed.data.phone,
-            message: parsed.data.message ?? "",
-          },
-        }
-      );
+      const { data, error } = await supabase.functions.invoke("public-book-appointment", {
+        body: {
+          slug,
+          serviceId: selectedService.id,
+          date: selectedStart.day,
+          startTime: formatTime(selectedStart.start_time),
+          modality: selectedService.mode === "ambas" ? modalityChoice : selectedService.mode,
+          name: parsed.data.name,
+          email: parsed.data.email,
+          phone: parsed.data.phone,
+          message: parsed.data.message ?? "",
+        },
+      });
 
       if (error || (data && (data as any).error)) {
         const errCode = (data as any)?.error || error?.message;
-        if (errCode === "slot_not_available") {
-          toast.error("Ese horario ya no está disponible. Elegí otro.");
-          // refrescar slots
-          setSelectedSlot(null);
-          setSlots((prev) => prev.filter((s) => s.id !== selectedSlot.id));
+        if (errCode === "start_not_available") {
+          toast.error("Ese horario se acaba de ocupar. Elegí otro.");
+          await loadStarts(selectedService);
         } else {
           toast.error("No pudimos confirmar tu reserva. Intentá de nuevo.");
         }
@@ -301,13 +368,16 @@ const PublicBooking = ({ demo = false }: { demo?: boolean }) => {
                 Te enviamos los detalles a tu email. El consultorio se pondrá en contacto si necesita algo más.
               </p>
             </div>
-            {selectedSlot && (
+            {selectedStart && (
               <div className="bg-muted/40 border border-border rounded-lg p-3 text-sm">
-                <p className="font-semibold text-foreground">
-                  {formatSlotDate(selectedSlot.date)}
+                {selectedService && (
+                  <p className="font-semibold text-foreground">{selectedService.name}</p>
+                )}
+                <p className="font-medium text-foreground">
+                  {formatSlotDate(selectedStart.day)}
                 </p>
                 <p className="text-muted-foreground">
-                  {formatTime(selectedSlot.start_time)} – {formatTime(selectedSlot.end_time)}
+                  {formatTime(selectedStart.start_time)} – {formatTime(selectedStart.end_time)}
                 </p>
               </div>
             )}
@@ -336,6 +406,14 @@ const PublicBooking = ({ demo = false }: { demo?: boolean }) => {
       </div>
     );
   }
+
+  const stepDone = (n: number) =>
+    (n === 1 && !!selectedService) || (n === 2 && !!selectedStart);
+
+  const stepBadgeStyle = (active: boolean) =>
+    active
+      ? { background: `hsl(var(--brand))`, color: "white" }
+      : { background: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))" };
 
   return (
     <div className="min-h-screen bg-background text-foreground" style={brandStyle}>
@@ -376,99 +454,160 @@ const PublicBooking = ({ demo = false }: { demo?: boolean }) => {
             Reservá tu turno
           </h1>
           <p className="text-sm sm:text-base text-muted-foreground">
-            Elegí un horario disponible y completá tus datos. No necesitás crear una cuenta.
+            Elegí tu tipo de sesión y un horario. No necesitás crear una cuenta.
           </p>
         </div>
 
-        {/* Paso 1: elegir slot */}
+        {/* Paso 1: tipo de sesión */}
         <section className="space-y-3">
           <div className="flex items-center gap-2">
             <div
               className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold"
-              style={{ background: `hsl(var(--brand))`, color: "white" }}
+              style={stepBadgeStyle(true)}
             >
               1
             </div>
-            <h2 className="text-lg sm:text-xl font-semibold">Elegí un horario</h2>
+            <h2 className="text-lg sm:text-xl font-semibold">Elegí tu tipo de sesión</h2>
           </div>
 
-          {slots.length === 0 ? (
+          {services.length === 0 ? (
             <Card>
               <CardContent className="pt-6 pb-6 text-center space-y-2">
                 <Clock className="h-8 w-8 mx-auto text-muted-foreground" />
-                <p className="font-medium text-foreground">No hay horarios disponibles por ahora</p>
+                <p className="font-medium text-foreground">Este consultorio todavía no habilitó reservas online</p>
                 <p className="text-sm text-muted-foreground">
-                  Te recomendamos volver más tarde o contactar directamente al consultorio.
+                  Contactalo directamente para coordinar tu sesión.
                 </p>
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-4">
-              {slotsByDate.map(({ date, items }) => (
-                <Card key={date}>
-                  <CardContent className="p-4 sm:p-5 space-y-3">
-                    <div className="flex items-center gap-2">
-                      <CalendarDays
-                        className="h-4 w-4"
-                        style={{ color: `hsl(var(--brand))` }}
-                      />
-                      <h3 className="text-sm sm:text-base font-semibold capitalize">
-                        {formatSlotDate(date)}
-                      </h3>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {items.map((slot) => {
-                        const isSelected = selectedSlot?.id === slot.id;
-                        return (
-                          <button
-                            key={slot.id}
-                            type="button"
-                            onClick={() => setSelectedSlot(slot)}
-                            className="px-3 py-2 rounded-md border-2 text-sm font-medium transition-all flex items-center gap-2"
-                            style={
-                              isSelected
-                                ? {
-                                    background: `hsl(var(--brand))`,
-                                    borderColor: `hsl(var(--brand))`,
-                                    color: "white",
-                                  }
-                                : {
-                                    borderColor: `hsl(var(--brand) / 0.3)`,
-                                    color: `hsl(var(--brand))`,
-                                    background: `hsl(var(--brand) / 0.06)`,
-                                  }
-                            }
-                          >
-                            <span>
-                              {formatTime(slot.start_time)} – {formatTime(slot.end_time)}
-                            </span>
-                            {slot.modality?.toLowerCase() === "online" && (
-                              <Video className="h-3.5 w-3.5" />
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {services.map((s) => {
+                const isSelected = selectedService?.id === s.id;
+                return (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => selectService(s)}
+                    className="text-left rounded-xl border-2 p-4 transition-all"
+                    style={
+                      isSelected
+                        ? { borderColor: `hsl(var(--brand))`, background: `hsl(var(--brand) / 0.08)` }
+                        : { borderColor: "hsl(var(--border))", background: "hsl(var(--card))" }
+                    }
+                  >
+                    <p className="font-semibold text-foreground">{s.name}</p>
+                    <p className="text-sm text-muted-foreground mt-0.5 flex items-center gap-2 flex-wrap">
+                      <span className="inline-flex items-center gap-1">
+                        <Clock className="h-3.5 w-3.5" /> {s.duration_minutes} min
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        {s.mode === "online" ? <Video className="h-3.5 w-3.5" /> : s.mode === "presencial" ? <MapPin className="h-3.5 w-3.5" /> : null}
+                        {MODE_LABEL[s.mode] ?? s.mode}
+                      </span>
+                    </p>
+                    {s.suggested_price != null && (
+                      <p className="text-sm font-semibold mt-1" style={{ color: `hsl(var(--brand))` }}>
+                        ${s.suggested_price.toLocaleString("es-UY")}
+                      </p>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           )}
         </section>
 
-        {/* Paso 2: datos de contacto */}
-        {slots.length > 0 && (
+        {/* Paso 2: horario */}
+        {selectedService && (
           <section className="space-y-3">
             <div className="flex items-center gap-2">
               <div
                 className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold"
-                style={
-                  selectedSlot
-                    ? { background: `hsl(var(--brand))`, color: "white" }
-                    : { background: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))" }
-                }
+                style={stepBadgeStyle(stepDone(1))}
               >
                 2
+              </div>
+              <h2 className="text-lg sm:text-xl font-semibold">Elegí un horario</h2>
+            </div>
+
+            {startsLoading ? (
+              <Card>
+                <CardContent className="py-10 flex items-center justify-center text-muted-foreground">
+                  <Loader2 className="h-5 w-5 animate-spin mr-2" /> Buscando horarios...
+                </CardContent>
+              </Card>
+            ) : starts.length === 0 ? (
+              <Card>
+                <CardContent className="pt-6 pb-6 text-center space-y-2">
+                  <Clock className="h-8 w-8 mx-auto text-muted-foreground" />
+                  <p className="font-medium text-foreground">No hay horarios disponibles por ahora</p>
+                  <p className="text-sm text-muted-foreground">
+                    Te recomendamos volver más tarde o contactar directamente al consultorio.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-4">
+                {startsByDate.map(({ date, items }) => (
+                  <Card key={date}>
+                    <CardContent className="p-4 sm:p-5 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <CalendarDays
+                          className="h-4 w-4"
+                          style={{ color: `hsl(var(--brand))` }}
+                        />
+                        <h3 className="text-sm sm:text-base font-semibold capitalize">
+                          {formatSlotDate(date)}
+                        </h3>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {items.map((s) => {
+                          const key = `${s.day}-${s.start_time}`;
+                          const isSelected =
+                            selectedStart?.day === s.day && selectedStart?.start_time === s.start_time;
+                          return (
+                            <button
+                              key={key}
+                              type="button"
+                              onClick={() => setSelectedStart(s)}
+                              className="px-3 py-2 rounded-md border-2 text-sm font-medium transition-all"
+                              style={
+                                isSelected
+                                  ? {
+                                      background: `hsl(var(--brand))`,
+                                      borderColor: `hsl(var(--brand))`,
+                                      color: "white",
+                                    }
+                                  : {
+                                      borderColor: `hsl(var(--brand) / 0.3)`,
+                                      color: `hsl(var(--brand))`,
+                                      background: `hsl(var(--brand) / 0.06)`,
+                                    }
+                              }
+                            >
+                              {formatTime(s.start_time)}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* Paso 3: datos de contacto */}
+        {selectedService && starts.length > 0 && (
+          <section className="space-y-3">
+            <div className="flex items-center gap-2">
+              <div
+                className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold"
+                style={stepBadgeStyle(stepDone(2))}
+              >
+                3
               </div>
               <h2 className="text-lg sm:text-xl font-semibold">Tus datos</h2>
             </div>
@@ -476,6 +615,31 @@ const PublicBooking = ({ demo = false }: { demo?: boolean }) => {
             <Card>
               <CardContent className="p-4 sm:p-6">
                 <form onSubmit={handleSubmit} className="space-y-4">
+                  {selectedService.mode === "ambas" && (
+                    <div className="space-y-1.5">
+                      <Label>Modalidad</Label>
+                      <div className="flex gap-2">
+                        {(["online", "presencial"] as const).map((m) => (
+                          <button
+                            key={m}
+                            type="button"
+                            onClick={() => setModalityChoice(m)}
+                            disabled={!selectedStart || submitting}
+                            className="flex-1 inline-flex items-center justify-center gap-2 rounded-md border-2 py-2 text-sm font-medium transition-all"
+                            style={
+                              modalityChoice === m
+                                ? { borderColor: `hsl(var(--brand))`, color: `hsl(var(--brand))`, background: `hsl(var(--brand) / 0.08)` }
+                                : { borderColor: "hsl(var(--border))", color: "hsl(var(--muted-foreground))" }
+                            }
+                          >
+                            {m === "online" ? <Video className="h-4 w-4" /> : <MapPin className="h-4 w-4" />}
+                            {m === "online" ? "Online" : "Presencial"}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
                       <Label htmlFor="name">Nombre completo *</Label>
@@ -484,7 +648,7 @@ const PublicBooking = ({ demo = false }: { demo?: boolean }) => {
                         value={form.name}
                         onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                         placeholder="Ej: María González"
-                        disabled={!selectedSlot || submitting}
+                        disabled={!selectedStart || submitting}
                         maxLength={100}
                       />
                       {errors.name && (
@@ -499,7 +663,7 @@ const PublicBooking = ({ demo = false }: { demo?: boolean }) => {
                         value={form.phone}
                         onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
                         placeholder="099 123 456"
-                        disabled={!selectedSlot || submitting}
+                        disabled={!selectedStart || submitting}
                         maxLength={30}
                       />
                       {errors.phone && (
@@ -515,7 +679,7 @@ const PublicBooking = ({ demo = false }: { demo?: boolean }) => {
                       value={form.email}
                       onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
                       placeholder="tu@email.com"
-                      disabled={!selectedSlot || submitting}
+                      disabled={!selectedStart || submitting}
                       maxLength={255}
                     />
                     {errors.email && (
@@ -530,12 +694,12 @@ const PublicBooking = ({ demo = false }: { demo?: boolean }) => {
                       onChange={(e) => setForm((f) => ({ ...f, message: e.target.value }))}
                       placeholder="Contanos brevemente qué te gustaría tratar."
                       rows={3}
-                      disabled={!selectedSlot || submitting}
+                      disabled={!selectedStart || submitting}
                       maxLength={500}
                     />
                   </div>
 
-                  {selectedSlot && (
+                  {selectedStart && (
                     <div
                       className="rounded-lg p-3 text-sm flex items-center gap-2"
                       style={{
@@ -545,7 +709,7 @@ const PublicBooking = ({ demo = false }: { demo?: boolean }) => {
                     >
                       <CalendarDays className="h-4 w-4 flex-shrink-0" />
                       <span className="font-medium capitalize">
-                        {formatSlotDate(selectedSlot.date)} · {formatTime(selectedSlot.start_time)}
+                        {selectedService.name} · {formatSlotDate(selectedStart.day)} · {formatTime(selectedStart.start_time)}
                       </span>
                     </div>
                   )}
@@ -553,11 +717,11 @@ const PublicBooking = ({ demo = false }: { demo?: boolean }) => {
                   <Button
                     type="submit"
                     size="lg"
-                    disabled={!selectedSlot || submitting}
+                    disabled={!selectedStart || submitting}
                     className="w-full gap-2 font-semibold"
                     style={{
-                      background: selectedSlot ? `hsl(var(--brand))` : undefined,
-                      color: selectedSlot ? "white" : undefined,
+                      background: selectedStart ? `hsl(var(--brand))` : undefined,
+                      color: selectedStart ? "white" : undefined,
                     }}
                   >
                     {submitting ? (
@@ -568,7 +732,7 @@ const PublicBooking = ({ demo = false }: { demo?: boolean }) => {
                     ) : (
                       <>
                         <CheckCircle2 className="h-4 w-4" />
-                        {selectedSlot ? "Confirmar reserva" : "Elegí un horario primero"}
+                        {selectedStart ? "Confirmar reserva" : "Elegí un horario primero"}
                       </>
                     )}
                   </Button>
