@@ -1,11 +1,9 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Clock, Save, Plus, X } from "lucide-react";
+import { Save, Plus, X } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import {
   AvailabilityTemplate,
@@ -72,59 +70,8 @@ export const WeeklyTemplateEditor = ({ template, onChange, onSave, saving }: Pro
 
   return (
     <div className="space-y-6">
-      {/* Configuración general */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="h-5 w-5 text-primary" />
-            Configuración general
-          </CardTitle>
-          <CardDescription>Aplica a todos los slots generados desde esta plantilla</CardDescription>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="space-y-2">
-            <Label>Duración del slot</Label>
-            <Select
-              value={String(template.slot_duration_minutes)}
-              onValueChange={(v) => onChange({ ...template, slot_duration_minutes: parseInt(v) })}
-            >
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="30">30 minutos</SelectItem>
-                <SelectItem value="45">45 minutos</SelectItem>
-                <SelectItem value="60">60 minutos</SelectItem>
-                <SelectItem value="90">90 minutos</SelectItem>
-                <SelectItem value="120">120 minutos</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label>Modalidad por defecto</Label>
-            <Select
-              value={template.modality}
-              onValueChange={(v) => onChange({ ...template, modality: v })}
-            >
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Online">Online</SelectItem>
-                <SelectItem value="Presencial">Presencial</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label>Precio sugerido (opcional)</Label>
-            <Input
-              type="number"
-              step="0.01"
-              placeholder="Ej: 1500"
-              value={template.default_price ?? ""}
-              onChange={(e) => onChange({ ...template, default_price: e.target.value ? parseFloat(e.target.value) : null })}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Días de la semana */}
+      {/* Días de la semana. La duración, modalidad y precio ya no van acá:
+          viven en los tipos de sesión (ServicesManager). */}
       <Card>
         <CardHeader>
           <CardTitle>Semana tipo</CardTitle>
@@ -197,10 +144,10 @@ export const WeeklyTemplateEditor = ({ template, onChange, onSave, saving }: Pro
       <div className="sticky bottom-4 space-y-1.5">
         <Button onClick={handleSave} disabled={saving} size="lg" className="w-full">
           <Save className="h-4 w-4 mr-2" />
-          {saving ? "Guardando y generando agenda..." : "Guardar semana tipo"}
+          {saving ? "Guardando..." : "Guardar semana tipo"}
         </Button>
         <p className="text-center text-xs text-muted-foreground">
-          Al guardar, tu agenda se genera para los próximos 60 días y se mantiene al día sola.
+          Al guardar, tu disponibilidad queda al día en la web pública y el portal.
         </p>
       </div>
     </div>
