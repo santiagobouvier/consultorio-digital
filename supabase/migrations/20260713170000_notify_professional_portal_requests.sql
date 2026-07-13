@@ -37,9 +37,15 @@ BEGIN
   v_subject := v_subject || ' · ' || v_when;
   v_message := replace(v_message, '%WHEN%', v_when);
 
+  -- La función send-resend-email exige un JWT válido en el gateway (igual que
+  -- todos los llamados que sí funcionan). Usamos la anon key, que es pública.
   PERFORM net.http_post(
     url := 'https://sfvuuzpmsgepooeamkin.supabase.co/functions/v1/send-resend-email',
-    headers := jsonb_build_object('Content-Type', 'application/json'),
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNmdnV1enBtc2dlcG9vZWFta2luIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ1ODc3NjgsImV4cCI6MjA4MDE2Mzc2OH0.P_Iaw8XxkPA5sY04-v5gUYFJ2ZSS2kyo3js6X9MQamA',
+      'apikey', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNmdnV1enBtc2dlcG9vZWFta2luIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ1ODc3NjgsImV4cCI6MjA4MDE2Mzc2OH0.P_Iaw8XxkPA5sY04-v5gUYFJ2ZSS2kyo3js6X9MQamA'
+    ),
     body := jsonb_build_object(
       'to', v_email,
       'template', 'raw',
