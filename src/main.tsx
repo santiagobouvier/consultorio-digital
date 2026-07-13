@@ -2,7 +2,29 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 import { registerSW } from "virtual:pwa-register";
-import { detectReloadLoopAndRecover } from "@/lib/session-recovery";
+import {
+  clearServiceWorkerCaches,
+  detectReloadLoopAndRecover,
+  isChunkLoadFailure,
+  recoverFromChunkLoadFailure,
+} from "@/lib/session-recovery";
+
+window.addEventListener("vite:preloadError", (event) => {
+  event.preventDefault();
+  void recoverFromChunkLoadFailure({ unregisterServiceWorkers: true });
+});
+
+window.addEventListener("unhandledrejection", (event) => {
+  if (!isChunkLoadFailure(event.reason)) return;
+  event.preventDefault();
+  void recoverFromChunkLoadFailure({ unregisterServiceWorkers: true });
+});
+
+window.addEventListener("error", (event) => {
+  if (!isChunkLoadFailure(event.error ?? event.message)) return;
+  event.preventDefault();
+  void recoverFromChunkLoadFailure({ unregisterServiceWorkers: true });
+});
 
 const isInIframe = (() => {
   try {
@@ -37,9 +59,7 @@ const bootstrap = async () => {
   }
 
   if (isPreviewHost || isInIframe) {
-    navigator.serviceWorker?.getRegistrations().then((registrations) => {
-      registrations.forEach((registration) => registration.unregister());
-    });
+    await clearServiceWorkerCaches({ unregister: true });
   } else {
     // No usamos immediate:true ni callbacks que recarguen automáticamente.
     // El nuevo SW se activará cuando el usuario cierre y vuelva a abrir la

@@ -1777,6 +1777,20 @@ export type Database = {
           total_capacity: number
         }[]
       }
+      get_available_starts: {
+        Args: {
+          p_business_id: string
+          p_duration_minutes: number
+          p_from: string
+          p_professional_user_id: string
+          p_to: string
+        }
+        Returns: {
+          day: string
+          end_time: string
+          start_time: string
+        }[]
+      }
       get_plan_limits: {
         Args: { p_plan_code: string }
         Returns: {
@@ -1816,6 +1830,13 @@ export type Database = {
           conflicts: number
           days_with_slots: number
           total_slots: number
+        }[]
+      }
+      refill_template_slots: {
+        Args: { p_days_ahead?: number }
+        Returns: {
+          created: number
+          template_id: string
         }[]
       }
       reject_reschedule_request: {
