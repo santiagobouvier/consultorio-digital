@@ -10,6 +10,7 @@ import { useBusinessId } from "@/hooks/use-business-id";
 import { useProfessionals } from "@/hooks/use-professionals";
 import { useAvailabilityTemplate } from "@/hooks/use-availability-template";
 import { WeeklyTemplateEditor } from "@/components/horarios/WeeklyTemplateEditor";
+import { ServicesManager } from "@/components/horarios/ServicesManager";
 import { PunctualBlockForm } from "@/components/horarios/PunctualBlockForm";
 import { SlotsList, SlotRow } from "@/components/horarios/SlotsList";
 import { toast } from "@/hooks/use-toast";
@@ -166,6 +167,9 @@ const AvailableSlots = () => {
           </Card>
         ) : (
           <>
+            {/* Tipos de sesión (qué ofrecés) */}
+            <ServicesManager businessId={businessId} />
+
             {/* Semana tipo (guardar = agenda generada y mantenida sola) */}
             <WeeklyTemplateEditor
               template={template}
