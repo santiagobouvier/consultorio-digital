@@ -36,8 +36,15 @@ interface Props {
 export function NotificationBell({ patientId }: Props) {
   const { notifications, unreadCount, markAsRead, markAllAsRead } = usePatientNotifications(patientId);
 
+  // Abrir la campana = dar por vistas las notificaciones (el globito desaparece).
+  const handleOpenChange = (open: boolean) => {
+    if (open && unreadCount > 0) {
+      void markAllAsRead();
+    }
+  };
+
   return (
-    <Popover>
+    <Popover onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <Button
           variant="ghost"
