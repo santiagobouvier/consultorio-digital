@@ -38,6 +38,22 @@ interface AvailabilitySlot {
   professional_id: string;
 }
 
+interface PortalService {
+  id: string | null; // null = servicio de respaldo cuando el consultorio no configuró tipos
+  name: string;
+  duration_minutes: number;
+  mode: string; // 'online' | 'presencial' | 'ambas'
+  suggested_price: number | null;
+}
+
+const FALLBACK_SERVICE: PortalService = {
+  id: null,
+  name: "Sesión",
+  duration_minutes: 60,
+  mode: "ambas",
+  suggested_price: null,
+};
+
 interface BookingBranding {
   name?: string;
   logoUrl?: string;
@@ -58,7 +74,7 @@ interface PatientBookingModalProps {
   } | null;
 }
 
-type Step = "date" | "slot" | "confirm" | "success";
+type Step = "service" | "date" | "slot" | "confirm" | "success";
 
 export const PatientBookingModal = ({
   open,
@@ -71,8 +87,12 @@ export const PatientBookingModal = ({
 }: PatientBookingModalProps) => {
   const [loading, setLoading] = useState(true);
   const [slots, setSlots] = useState<AvailabilitySlot[]>([]);
-  const [step, setStep] = useState<Step>("date");
-  const [prevStep, setPrevStep] = useState<Step>("date");
+  const [services, setServices] = useState<PortalService[]>([]);
+  const [selectedService, setSelectedService] = useState<PortalService | null>(null);
+  const [modalityChoice, setModalityChoice] = useState<"online" | "presencial">("online");
+  const [professionalId, setProfessionalId] = useState<string | null>(null);
+  const [step, setStep] = useState<Step>("service");
+  const [prevStep, setPrevStep] = useState<Step>("service");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [selectedSlot, setSelectedSlot] = useState<AvailabilitySlot | null>(null);
   const [notes, setNotes] = useState("");
@@ -84,19 +104,92 @@ export const PatientBookingModal = ({
 
   useEffect(() => {
     if (open) {
-      loadAvailableSlots();
       resetState();
+      void init();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, businessId, rescheduleAppointment?.id]);
 
   const resetState = () => {
-    setStep("date");
-    setPrevStep("date");
+    setStep("service");
+    setPrevStep("service");
     setSelectedDate(undefined);
     setSelectedSlot(null);
+    setSelectedService(null);
     setNotes("");
     setCalendarMonth(new Date());
+  };
+
+  // Resuelve el profesional y carga el menú de tipos de sesión. En reprogramación
+  // no se elige tipo: se conserva la duración de la cita original.
+  const init = async () => {
+    setLoading(true);
+    try {
+      let profId: string | null = null;
+      const { data: patientRow } = await supabase
+        .from("patients")
+        .select("assigned_professional_id")
+        .eq("id", patientId)
+        .maybeSingle();
+      profId = (patientRow as any)?.assigned_professional_id ?? null;
+      if (!profId) {
+        const { data: biz } = await supabase
+          .from("businesses")
+          .select("owner_user_id")
+          .eq("id", businessId)
+          .maybeSingle();
+        profId = biz?.owner_user_id ?? null;
+      }
+      setProfessionalId(profId);
+
+      if (isReschedule && rescheduleAppointment) {
+        const durationMin = Math.max(
+          15,
+          Math.round(
+            (new Date(rescheduleAppointment.end_at).getTime() -
+              new Date(rescheduleAppointment.start_at).getTime()) / 60000,
+          ),
+        );
+        const svc: PortalService = { ...FALLBACK_SERVICE, duration_minutes: durationMin };
+        setServices([svc]);
+        setSelectedService(svc);
+        setStep("date");
+        setPrevStep("date");
+        await loadStarts(svc, profId);
+        return;
+      }
+
+      const { data: svcData } = await supabase
+        .from("services")
+        .select("id, name, duration_minutes, mode, suggested_price")
+        .eq("business_id", businessId)
+        .eq("is_active", true)
+        .order("duration_minutes", { ascending: true });
+
+      const list: PortalService[] =
+        svcData && svcData.length > 0 ? (svcData as PortalService[]) : [FALLBACK_SERVICE];
+      setServices(list);
+
+      if (list.length === 1) {
+        setSelectedService(list[0]);
+        if (list[0].mode === "presencial") setModalityChoice("presencial");
+        setStep("date");
+        setPrevStep("date");
+        await loadStarts(list[0], profId);
+      } else {
+        setLoading(false);
+      }
+    } catch (e) {
+      console.error("Error inicializando reserva:", e);
+      setLoading(false);
+    }
+  };
+
+  const handleServiceSelect = async (svc: PortalService) => {
+    setSelectedService(svc);
+    setModalityChoice(svc.mode === "presencial" ? "presencial" : "online");
+    goToStep("date");
+    await loadStarts(svc, professionalId);
   };
 
   const goToStep = (next: Step) => {
@@ -104,65 +197,43 @@ export const PatientBookingModal = ({
     setStep(next);
   };
 
-  const loadAvailableSlots = async () => {
+  // Inicios calculados por el mismo motor que usa la reserva pública:
+  // ventanas de la semana tipo − citas ocupadas, según la duración del servicio.
+  const loadStarts = async (svc: PortalService, profId: string | null) => {
     setLoading(true);
     try {
       const today = new Date().toISOString().slice(0, 10);
-      const maxDate = addDays(new Date(), 90).toISOString().slice(0, 10);
+      const maxDate = addDays(new Date(), 60).toISOString().slice(0, 10);
 
-      let fallbackProfessionalId: string | null = null;
-      const { data: patientRow } = await supabase
-        .from("patients")
-        .select("*")
-        .eq("id", patientId)
-        .maybeSingle();
-      const assigned = (patientRow as any)?.assigned_professional_id as string | undefined;
-      if (assigned) fallbackProfessionalId = assigned;
-
-      if (!fallbackProfessionalId) {
-        const { data: biz } = await supabase
-          .from("businesses")
-          .select("owner_user_id")
-          .eq("id", businessId)
-          .maybeSingle();
-        fallbackProfessionalId = biz?.owner_user_id ?? null;
-      }
-
-      // Lee directo de availability_slots (RLS deja ver los available del business
-      // al paciente autenticado). Esta es la misma fuente que usa "Horarios del
-      // consultorio", así que lo que el profesional configura aparece acá.
-      const { data, error } = await (supabase as any)
-        .from("availability_slots")
-        .select("id, date, start_time, end_time, modality, price, professional_user_id")
-        .eq("business_id", businessId)
-        .eq("status", "available")
-        .gte("date", today)
-        .lte("date", maxDate)
-        .order("date", { ascending: true })
-        .order("start_time", { ascending: true });
+      const { data, error } = await (supabase as any).rpc("get_available_starts", {
+        p_business_id: businessId,
+        p_professional_user_id: profId,
+        p_duration_minutes: svc.duration_minutes,
+        p_from: today,
+        p_to: maxDate,
+      });
       if (error) throw error;
 
       const mapped: AvailabilitySlot[] = (data || []).map((row: any) => {
-        const startAt = new Date(`${row.date}T${row.start_time}`).toISOString();
-        const endAt = new Date(`${row.date}T${row.end_time}`).toISOString();
-        const rawMod = String(row.modality || "").toLowerCase();
-        const modality = rawMod.includes("online") || rawMod.includes("virtual") ? "online" : "presencial";
+        const startTime: string = String(row.start_time).slice(0, 8);
+        const endTime: string = String(row.end_time).slice(0, 8);
         return {
-          id: row.id,
-          date: row.date,
-          start_time: row.start_time,
-          end_time: row.end_time,
-          modality,
-          price: row.price ?? null,
-          start_at: startAt,
-          end_at: endAt,
+          id: `${row.day}-${startTime}`,
+          date: row.day,
+          start_time: startTime,
+          end_time: endTime,
+          modality: svc.mode,
+          price: svc.suggested_price,
+          // Hora de Uruguay (UTC-3 fijo, sin DST)
+          start_at: `${row.day}T${startTime}-03:00`,
+          end_at: `${row.day}T${endTime}-03:00`,
           space_id: "",
-          professional_id: row.professional_user_id ?? fallbackProfessionalId ?? "",
+          professional_id: profId ?? "",
         };
       });
       setSlots(mapped);
     } catch (error) {
-      console.error("Error loading slots:", error);
+      console.error("Error loading starts:", error);
       toast({ title: "Error", description: "No se pudieron cargar los horarios disponibles", variant: "destructive" });
     } finally {
       setLoading(false);
@@ -203,6 +274,10 @@ export const PatientBookingModal = ({
     else if (step === "slot") {
       setSelectedDate(undefined);
       goToStep("date");
+    } else if (step === "date" && !isReschedule && services.length > 1) {
+      setSelectedService(null);
+      setSlots([]);
+      goToStep("service");
     }
   };
 
@@ -220,7 +295,7 @@ export const PatientBookingModal = ({
           .insert({
             business_id: businessId,
             original_appointment_id: rescheduleAppointment.id,
-            requested_slot_id: selectedSlot.id || null,
+            requested_slot_id: null,
             requested_start_at: startAt,
             requested_end_at: endAt,
             reason: notes || null,
@@ -234,30 +309,25 @@ export const PatientBookingModal = ({
           .eq("id", rescheduleAppointment.id);
         if (updError) throw updError;
       } else {
+        const finalModality =
+          selectedService?.mode === "ambas" ? modalityChoice : (selectedService?.mode ?? selectedSlot.modality);
         const { error: appointmentError } = await supabase
           .from("appointments")
           .insert({
             business_id: businessId,
             patient_id: patientId,
-            availability_slot_id: selectedSlot.id || null,
-            space_id: selectedSlot.space_id || null,
-            professional_id: selectedSlot.professional_id,
+            availability_slot_id: null,
+            professional_id: selectedSlot.professional_id || null,
+            service_id: selectedService?.id ?? null,
+            session_price: selectedService?.suggested_price ?? null,
             start_at: startAt,
             end_at: endAt,
-            modality: selectedSlot.modality,
+            modality: finalModality,
             notes: notes || null,
             status: "pending",
             source: "patient_portal",
           });
         if (appointmentError) throw appointmentError;
-
-        // Reservar el slot para que no pueda volver a elegirse.
-        if (selectedSlot.id) {
-          await (supabase as any)
-            .from("availability_slots")
-            .update({ status: "booked" })
-            .eq("id", selectedSlot.id);
-        }
       }
 
       goToStep("success");
@@ -295,13 +365,14 @@ export const PatientBookingModal = ({
   };
 
   const stepTitle: Record<Step, string> = {
+    service: "Elegí tu tipo de sesión",
     date: isReschedule ? "Elegí una nueva fecha" : "Elegí una fecha",
     slot: isReschedule ? "Elegí un nuevo horario" : "Elegí un horario",
     confirm: isReschedule ? "Confirmá la reprogramación" : "Confirmá tu reserva",
     success: isReschedule ? "Solicitud enviada" : "Reserva confirmada",
   };
 
-  const stepIndex: Record<Step, number> = { date: 0, slot: 1, confirm: 2, success: 2 };
+  const stepIndex: Record<Step, number> = { service: 0, date: 0, slot: 1, confirm: 2, success: 2 };
   const currentIndex = stepIndex[step];
 
   // Slide direction for transition
@@ -336,7 +407,7 @@ export const PatientBookingModal = ({
           style={{ paddingTop: "env(safe-area-inset-top)" }}
         >
           <div className="flex items-center gap-2 px-4 sm:px-6 h-14">
-            {step !== "date" && step !== "success" ? (
+            {(step === "slot" || step === "confirm" || (step === "date" && !isReschedule && services.length > 1)) ? (
               <Button
                 variant="ghost"
                 size="icon"
@@ -444,6 +515,8 @@ export const PatientBookingModal = ({
                 isReschedule={isReschedule}
                 onClose={() => onOpenChange(false)}
               />
+            ) : step === "service" ? (
+              <ServiceStep services={services} onSelect={handleServiceSelect} />
             ) : slots.length === 0 ? (
               <EmptyState onClose={() => onOpenChange(false)} />
             ) : step === "date" ? (
@@ -472,6 +545,10 @@ export const PatientBookingModal = ({
                 onNotesChange={setNotes}
                 cancellationHours={cancellationHours}
                 isReschedule={isReschedule}
+                serviceName={!isReschedule ? selectedService?.name : undefined}
+                allowModalityChoice={selectedService?.mode === "ambas"}
+                modalityChoice={modalityChoice}
+                onModalityChange={setModalityChoice}
               />
             )}
           </div>
@@ -509,6 +586,45 @@ export const PatientBookingModal = ({
 };
 
 /* ─── Sub-components ─── */
+
+function ServiceStep({
+  services,
+  onSelect,
+}: {
+  services: PortalService[];
+  onSelect: (s: PortalService) => void;
+}) {
+  return (
+    <div className="grid gap-2">
+      {services.map((s, i) => (
+        <button
+          key={s.id ?? "fallback"}
+          onClick={() => onSelect(s)}
+          style={{ animationDelay: `${i * 40}ms`, animationFillMode: "both" }}
+          className={cn(
+            "group flex items-center gap-3 w-full p-4 min-h-16 border-2 rounded-2xl",
+            "border-border/60 bg-card hover:border-primary hover:shadow-md hover:-translate-y-0.5",
+            "transition-all duration-200 text-left",
+            "animate-in fade-in slide-in-from-bottom-2",
+          )}
+        >
+          <div className="h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
+            <Clock className="h-5 w-5" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-base font-bold leading-tight truncate">{s.name}</div>
+            <div className="text-xs text-muted-foreground mt-0.5">
+              {s.duration_minutes} min
+              {s.mode === "online" ? " · Online" : s.mode === "presencial" ? " · Presencial" : " · Online o presencial"}
+              {s.suggested_price != null ? ` · $${s.suggested_price.toLocaleString("es-UY")}` : ""}
+            </div>
+          </div>
+          <ChevronRightSmall className="h-5 w-5 text-muted-foreground/40 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+        </button>
+      ))}
+    </div>
+  );
+}
 
 function DateStep({
   availableDates,
@@ -632,6 +748,7 @@ function SlotStep({
       </h3>
       <div className="grid gap-2">
         {slots.map((slot, i) => {
+          const isAmbas = slot.modality === "ambas";
           const isOnline = slot.modality === "online" || slot.modality === "virtual";
           return (
             <button
@@ -660,7 +777,7 @@ function SlotStep({
                   {slot.start_time.slice(0, 5)} – {slot.end_time.slice(0, 5)}
                 </div>
                 <div className="text-xs text-muted-foreground mt-0.5">
-                  {isOnline ? "Sesión online" : "Sesión presencial"}
+                  {isAmbas ? "Online o presencial" : isOnline ? "Sesión online" : "Sesión presencial"}
                 </div>
               </div>
               <ChevronRightSmall className="h-5 w-5 text-muted-foreground/40 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
@@ -680,6 +797,10 @@ function ConfirmStep({
   onNotesChange,
   cancellationHours,
   isReschedule,
+  serviceName,
+  allowModalityChoice,
+  modalityChoice,
+  onModalityChange,
 }: {
   slot: AvailabilitySlot;
   selectedDate: Date;
@@ -688,8 +809,13 @@ function ConfirmStep({
   onNotesChange: (v: string) => void;
   cancellationHours: number;
   isReschedule: boolean;
+  serviceName?: string;
+  allowModalityChoice?: boolean;
+  modalityChoice?: "online" | "presencial";
+  onModalityChange?: (m: "online" | "presencial") => void;
 }) {
-  const isOnline = slot.modality === "online" || slot.modality === "virtual";
+  const effectiveModality = allowModalityChoice ? (modalityChoice ?? "online") : slot.modality;
+  const isOnline = effectiveModality === "online" || effectiveModality === "virtual";
   const maxNotes = 500;
 
   return (
@@ -709,6 +835,9 @@ function ConfirmStep({
             {isOnline ? <Video className="h-6 w-6" /> : <MapPin className="h-6 w-6" />}
           </div>
           <div>
+            {serviceName && (
+              <p className="text-sm font-semibold text-primary mb-0.5">{serviceName}</p>
+            )}
             <p className="text-lg font-bold capitalize leading-tight">
               {format(selectedDate, "EEEE d 'de' MMMM", { locale: es })}
             </p>
@@ -716,14 +845,35 @@ function ConfirmStep({
               {slot.start_time.slice(0, 5)} – {slot.end_time.slice(0, 5)}
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {getModalityPill(slot.modality, "md")}
-            {slot.price != null && slot.price > 0 && (
-              <span className="inline-flex items-center text-sm font-semibold text-foreground bg-background border rounded-full px-3 py-1">
-                ${slot.price}
-              </span>
-            )}
-          </div>
+          {allowModalityChoice ? (
+            <div className="flex gap-2">
+              {(["online", "presencial"] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => onModalityChange?.(m)}
+                  className={cn(
+                    "flex-1 inline-flex items-center justify-center gap-2 rounded-xl border-2 py-2 text-sm font-medium transition-all",
+                    modalityChoice === m
+                      ? "border-primary text-primary bg-primary/10"
+                      : "border-border text-muted-foreground",
+                  )}
+                >
+                  {m === "online" ? <Video className="h-4 w-4" /> : <MapPin className="h-4 w-4" />}
+                  {m === "online" ? "Online" : "Presencial"}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-wrap items-center gap-2">
+              {getModalityPill(effectiveModality, "md")}
+            </div>
+          )}
+          {slot.price != null && slot.price > 0 && (
+            <span className="inline-flex items-center text-sm font-semibold text-foreground bg-background border rounded-full px-3 py-1">
+              ${slot.price.toLocaleString("es-UY")}
+            </span>
+          )}
           {isOnline && (
             <p className="text-xs text-muted-foreground">
               Recibirás el link de la videollamada antes del horario.
