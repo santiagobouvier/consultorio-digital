@@ -6,6 +6,9 @@ verify_jwt = false
 [functions.public-get-availability-slots]
 verify_jwt = false
 
+[functions.public-get-available-starts]
+verify_jwt = false
+
 [functions.setup-demo-user]
 verify_jwt = false
 
