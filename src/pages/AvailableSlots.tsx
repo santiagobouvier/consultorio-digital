@@ -46,10 +46,13 @@ const AvailableSlots = () => {
     setSlotsLoading(true);
     try {
       const today = new Date().toISOString().slice(0, 10);
+      // Solo horarios sueltos: los de la semana tipo ya no se materializan,
+      // el motor de disponibilidad los calcula directo desde la plantilla.
       const { data, error } = await (supabase as any)
         .from("availability_slots")
         .select("id, date, start_time, end_time, modality, price, status, notes, professional_user_id, generated_from_template")
         .eq("business_id", businessId)
+        .is("generated_from_template", null)
         .or(`professional_user_id.eq.${selectedProUserId},professional_user_id.is.null`)
         .gte("date", today)
         .order("date", { ascending: true })
@@ -73,28 +76,13 @@ const AvailableSlots = () => {
     if (!template) return;
     setSaving(true);
     try {
-      const saved = await save(template);
-
-      // Guardar = agenda lista: se generan los próximos 60 días automáticamente
-      // (estrategia 'skip': no duplica ni toca turnos existentes/reservados).
-      // Un cron diario mantiene ese horizonte extendido de ahí en más.
-      if (saved?.id) {
-        const from = new Date().toISOString().slice(0, 10);
-        const toDate = new Date();
-        toDate.setDate(toDate.getDate() + 60);
-        const { error: genError } = await (supabase as any).rpc("generate_slots_from_template", {
-          p_template_id: saved.id,
-          p_from_date: from,
-          p_to_date: toDate.toISOString().slice(0, 10),
-          p_conflict_strategy: "skip",
-        });
-        if (genError) throw genError;
-        await loadSlots();
-      }
+      // Guardar la semana tipo alcanza: la disponibilidad se calcula en vivo
+      // desde la plantilla, sin pregenerar casilleros.
+      await save(template);
 
       toast({
         title: "Semana guardada",
-        description: "Tu agenda quedó generada para los próximos 60 días y se mantiene al día sola.",
+        description: "Tu disponibilidad ya está al día en la web pública y el portal.",
       });
     } catch (e: any) {
       console.error(e);
@@ -131,7 +119,7 @@ const AvailableSlots = () => {
                 <HelpTooltip id="schedules" />
               </h1>
               <p className="text-muted-foreground mt-1 text-sm md:text-base">
-                Definí cuándo atendés. Tu agenda se genera y se mantiene al día sola.
+                Definí cuándo atendés. Los horarios para reservar se calculan solos según tus tipos de sesión.
               </p>
             </div>
             {showProfessionalSelector && (
@@ -178,12 +166,12 @@ const AvailableSlots = () => {
               saving={saving}
             />
 
-            {/* Próximos horarios */}
+            {/* Horarios sueltos (fuera de la semana tipo) */}
             <div className="space-y-3">
               <div className="flex items-center justify-between gap-3 flex-wrap">
                 <h2 className="text-lg font-semibold inline-flex items-center gap-2">
                   <ListChecks className="h-5 w-5 text-primary" />
-                  Próximos horarios
+                  Horarios sueltos
                 </h2>
                 <Button variant="outline" size="sm" onClick={() => setPunctualOpen(true)}>
                   <Plus className="h-4 w-4 mr-1" /> Horario suelto

@@ -57,7 +57,7 @@ export const SlotsList = ({ slots, onChange }: Props) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
       return;
     }
-    toast({ title: "Slot bloqueado" });
+    toast({ title: "Horario bloqueado" });
     onChange();
   };
 
@@ -67,7 +67,7 @@ export const SlotsList = ({ slots, onChange }: Props) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
       return;
     }
-    toast({ title: "Slot eliminado" });
+    toast({ title: "Horario eliminado" });
     onChange();
   };
 
