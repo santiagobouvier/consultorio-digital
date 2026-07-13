@@ -14,7 +14,7 @@ interface Props {
 
 interface ChecklistState {
   template: boolean;
-  slots: boolean;
+  services: boolean;
   mp: boolean;
   shared: boolean;
   slug: string | null;
@@ -23,7 +23,7 @@ interface ChecklistState {
 
 const initial: ChecklistState = {
   template: false,
-  slots: false,
+  services: false,
   mp: false,
   shared: false,
   slug: null,
@@ -36,18 +36,17 @@ export const ActivationChecklist = ({ businessId, onAllDone }: Props) => {
   const [sharing, setSharing] = useState(false);
 
   const fetchState = useCallback(async () => {
-    const today = new Date().toISOString().slice(0, 10);
-    const [tpl, slots, pol, biz] = await Promise.all([
+    const [tpl, svcs, pol, biz] = await Promise.all([
       supabase
         .from("availability_templates")
         .select("id", { count: "exact", head: true })
         .eq("business_id", businessId)
         .eq("is_active", true),
       supabase
-        .from("availability_slots")
+        .from("services")
         .select("id", { count: "exact", head: true })
         .eq("business_id", businessId)
-        .gte("date", today),
+        .eq("is_active", true),
       supabase
         .from("payment_policies")
         .select("mp_access_token")
@@ -61,7 +60,7 @@ export const ActivationChecklist = ({ businessId, onAllDone }: Props) => {
     ]);
     setState({
       template: (tpl.count ?? 0) > 0,
-      slots: (slots.count ?? 0) > 0,
+      services: (svcs.count ?? 0) > 0,
       mp: !!pol.data?.mp_access_token,
       shared: !!biz.data?.onboarding_link_shared_at,
       slug: biz.data?.public_slug ?? null,
@@ -74,7 +73,7 @@ export const ActivationChecklist = ({ businessId, onAllDone }: Props) => {
   }, [fetchState]);
 
   const allDone =
-    !state.loading && state.template && state.slots && state.mp && state.shared;
+    !state.loading && state.template && state.services && state.mp && state.shared;
 
   useEffect(() => {
     if (allDone) onAllDone?.();
@@ -135,12 +134,21 @@ export const ActivationChecklist = ({ businessId, onAllDone }: Props) => {
 
   const items = [
     {
+      key: "services",
+      done: state.services,
+      title: "Creá tus tipos de sesión",
+      desc: "Nombre, duración y precio de lo que ofrecés (ej: Sesión individual, 60 min).",
+      action: (
+        <Button size="sm" variant="outline" onClick={() => navigate("/horarios-disponibles")}>
+          Configurar <ArrowRight className="h-4 w-4 ml-1" />
+        </Button>
+      ),
+    },
+    {
       key: "template",
-      // Al guardar la semana tipo la agenda se genera sola, así que ambas
-      // condiciones se cumplen juntas en el flujo nuevo.
-      done: state.template && state.slots,
+      done: state.template,
       title: "Definí tu semana tipo",
-      desc: "Marcá tus días y horarios; tu agenda se genera sola.",
+      desc: "Marcá tus días y horarios; la disponibilidad se calcula sola.",
       action: (
         <Button size="sm" variant="outline" onClick={() => navigate("/horarios-disponibles")}>
           Configurar <ArrowRight className="h-4 w-4 ml-1" />
