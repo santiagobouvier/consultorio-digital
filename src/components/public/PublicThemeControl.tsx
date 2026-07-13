@@ -8,7 +8,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 
 const STORAGE_KEY = "theme-preference";
 
-export function PublicThemeControl() {
+export function PublicThemeControl({ inline = false }: { inline?: boolean }) {
   const { setTheme } = useTheme();
 
   useEffect(() => {
@@ -23,6 +23,12 @@ export function PublicThemeControl() {
       setTheme("dark");
     }
   }, [setTheme]);
+
+  // inline: va dentro del header de la página (evita taparse con otros
+  // elementos en mobile). Sin inline: botón flotante clásico.
+  if (inline) {
+    return <ThemeToggle variant="ghost" />;
+  }
 
   return (
     <div className="fixed top-4 right-4 z-50">

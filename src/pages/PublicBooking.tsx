@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
@@ -40,10 +40,17 @@ const formSchema = z.object({
 });
 
 const DAY_NAMES = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+const DAY_SHORT = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 const MONTH_NAMES = [
   "enero", "febrero", "marzo", "abril", "mayo", "junio",
   "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
 ];
+const MONTH_SHORT = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+
+const parseDay = (dateStr: string) => {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return { date: new Date(y, m - 1, d), d, m };
+};
 
 const formatSlotDate = (dateStr: string) => {
   const [y, m, d] = dateStr.split("-").map(Number);
@@ -114,8 +121,20 @@ const PublicBooking = ({ demo = false }: { demo?: boolean }) => {
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [starts, setStarts] = useState<Start[]>([]);
   const [startsLoading, setStartsLoading] = useState(false);
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [selectedStart, setSelectedStart] = useState<Start | null>(null);
   const [modalityChoice, setModalityChoice] = useState<"online" | "presencial">("online");
+
+  // Para el scroll automático entre pasos
+  const scheduleRef = useRef<HTMLElement | null>(null);
+  const formRef = useRef<HTMLElement | null>(null);
+
+  const scrollTo = (ref: React.MutableRefObject<HTMLElement | null>) => {
+    // Pequeña espera para que la sección ya esté renderizada
+    window.setTimeout(() => {
+      ref.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 80);
+  };
 
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -126,6 +145,7 @@ const PublicBooking = ({ demo = false }: { demo?: boolean }) => {
   const loadStarts = useCallback(async (service: Service) => {
     setStartsLoading(true);
     setSelectedStart(null);
+    setSelectedDay(null);
     try {
       if (demo) {
         setStarts(demoStarts(service.duration_minutes));
@@ -145,12 +165,18 @@ const PublicBooking = ({ demo = false }: { demo?: boolean }) => {
     }
   }, [demo, slug]);
 
-  const selectService = useCallback((service: Service) => {
+  const selectService = useCallback((service: Service, scroll = true) => {
     setSelectedService(service);
     if (service.mode === "online") setModalityChoice("online");
     if (service.mode === "presencial") setModalityChoice("presencial");
     void loadStarts(service);
+    if (scroll) scrollTo(scheduleRef);
   }, [loadStarts]);
+
+  const selectStart = (s: Start) => {
+    setSelectedStart(s);
+    scrollTo(formRef);
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -228,10 +254,10 @@ const PublicBooking = ({ demo = false }: { demo?: boolean }) => {
     };
   }, [slug, demo]);
 
-  // Un solo tipo de sesión → se elige solo
+  // Un solo tipo de sesión → se elige solo (sin scroll: es la carga inicial)
   useEffect(() => {
     if (!loading && services.length === 1 && !selectedService) {
-      selectService(services[0]);
+      selectService(services[0], false);
     }
   }, [loading, services, selectedService, selectService]);
 
@@ -250,6 +276,8 @@ const PublicBooking = ({ demo = false }: { demo?: boolean }) => {
     [accent]
   );
 
+  // Días con disponibilidad, SIEMPRE en orden cronológico y con los horarios
+  // de cada día ordenados (no dependemos del orden en que lleguen los datos).
   const startsByDate = useMemo(() => {
     const map = new Map<string, Start[]>();
     for (const s of starts) {
@@ -257,8 +285,30 @@ const PublicBooking = ({ demo = false }: { demo?: boolean }) => {
       list.push(s);
       map.set(s.day, list);
     }
-    return Array.from(map.entries()).map(([date, items]) => ({ date, items }));
+    return Array.from(map.entries())
+      .map(([date, items]) => ({
+        date,
+        items: [...items].sort((a, b) => a.start_time.localeCompare(b.start_time)),
+      }))
+      .sort((a, b) => a.date.localeCompare(b.date));
   }, [starts]);
+
+  // Día seleccionado: por defecto el primero con lugar; si desaparece
+  // (ej: se recargaron los horarios), volvemos al primero.
+  useEffect(() => {
+    if (startsByDate.length === 0) {
+      setSelectedDay(null);
+      return;
+    }
+    if (!selectedDay || !startsByDate.some((d) => d.date === selectedDay)) {
+      setSelectedDay(startsByDate[0].date);
+    }
+  }, [startsByDate, selectedDay]);
+
+  const timesForSelectedDay = useMemo(
+    () => startsByDate.find((d) => d.date === selectedDay)?.items ?? [],
+    [startsByDate, selectedDay]
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -417,13 +467,13 @@ const PublicBooking = ({ demo = false }: { demo?: boolean }) => {
 
   return (
     <div className="min-h-screen bg-background text-foreground" style={brandStyle}>
-      {!demo && <PublicThemeControl />}
-      {/* Header */}
+      {/* Header: el botón de tema vive acá adentro (no flota) para que en
+          mobile nunca se encime con el nombre del consultorio. */}
       <header className="border-b border-border bg-card/40">
         <div className="container mx-auto max-w-4xl px-4 py-4 flex items-center justify-between gap-3">
           <button
             onClick={() => navigate(`/consultorio/${targetSlug}`)}
-            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors shrink-0"
           >
             <ArrowLeft className="h-4 w-4" />
             <span className="hidden sm:inline">Volver</span>
@@ -445,10 +495,11 @@ const PublicBooking = ({ demo = false }: { demo?: boolean }) => {
             )}
             <span className="font-semibold text-sm sm:text-base truncate">{clinicName}</span>
           </div>
+          <div className="shrink-0">{!demo && <PublicThemeControl inline />}</div>
         </div>
       </header>
 
-      <main className="container mx-auto max-w-4xl px-4 py-6 sm:py-10 space-y-6 sm:space-y-8">
+      <main className="container mx-auto max-w-4xl px-4 py-6 sm:py-10 space-y-6 sm:space-y-8 pb-28 sm:pb-10">
         <div className="text-center space-y-2">
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight">
             Reservá tu turno
@@ -518,9 +569,9 @@ const PublicBooking = ({ demo = false }: { demo?: boolean }) => {
           )}
         </section>
 
-        {/* Paso 2: horario */}
+        {/* Paso 2: día (tira horizontal) + horarios del día elegido */}
         {selectedService && (
-          <section className="space-y-3">
+          <section ref={scheduleRef} className="space-y-3 scroll-mt-4">
             <div className="flex items-center gap-2">
               <div
                 className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold"
@@ -528,7 +579,7 @@ const PublicBooking = ({ demo = false }: { demo?: boolean }) => {
               >
                 2
               </div>
-              <h2 className="text-lg sm:text-xl font-semibold">Elegí un horario</h2>
+              <h2 className="text-lg sm:text-xl font-semibold">Elegí día y horario</h2>
             </div>
 
             {startsLoading ? (
@@ -548,21 +599,65 @@ const PublicBooking = ({ demo = false }: { demo?: boolean }) => {
                 </CardContent>
               </Card>
             ) : (
-              <div className="space-y-4">
-                {startsByDate.map(({ date, items }) => (
-                  <Card key={date}>
-                    <CardContent className="p-4 sm:p-5 space-y-3">
+              <Card>
+                <CardContent className="p-4 sm:p-5 space-y-4">
+                  {/* Tira de días con lugar (scroll horizontal) */}
+                  <div
+                    className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 snap-x"
+                    role="tablist"
+                    aria-label="Días disponibles"
+                  >
+                    {startsByDate.map(({ date }) => {
+                      const { date: d, d: dayNum, m } = parseDay(date);
+                      const isSelected = selectedDay === date;
+                      return (
+                        <button
+                          key={date}
+                          type="button"
+                          role="tab"
+                          aria-selected={isSelected}
+                          onClick={() => {
+                            setSelectedDay(date);
+                            setSelectedStart(null);
+                          }}
+                          className="flex flex-col items-center justify-center rounded-xl border-2 px-3 py-2 min-w-[64px] snap-start transition-all"
+                          style={
+                            isSelected
+                              ? {
+                                  background: `hsl(var(--brand))`,
+                                  borderColor: `hsl(var(--brand))`,
+                                  color: "white",
+                                }
+                              : {
+                                  borderColor: "hsl(var(--border))",
+                                  background: "hsl(var(--card))",
+                                  color: "hsl(var(--foreground))",
+                                }
+                          }
+                        >
+                          <span className={`text-[11px] uppercase tracking-wide ${isSelected ? "" : "text-muted-foreground"}`}>
+                            {DAY_SHORT[d.getDay()]}
+                          </span>
+                          <span className="text-lg font-bold leading-tight">{dayNum}</span>
+                          <span className={`text-[11px] ${isSelected ? "" : "text-muted-foreground"}`}>
+                            {MONTH_SHORT[m - 1]}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Horarios del día elegido */}
+                  {selectedDay && (
+                    <div className="space-y-3">
                       <div className="flex items-center gap-2">
-                        <CalendarDays
-                          className="h-4 w-4"
-                          style={{ color: `hsl(var(--brand))` }}
-                        />
-                        <h3 className="text-sm sm:text-base font-semibold capitalize">
-                          {formatSlotDate(date)}
+                        <CalendarDays className="h-4 w-4" style={{ color: `hsl(var(--brand))` }} />
+                        <h3 className="text-sm sm:text-base font-semibold">
+                          {formatSlotDate(selectedDay)}
                         </h3>
                       </div>
-                      <div className="flex flex-wrap gap-2">
-                        {items.map((s) => {
+                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+                        {timesForSelectedDay.map((s) => {
                           const key = `${s.day}-${s.start_time}`;
                           const isSelected =
                             selectedStart?.day === s.day && selectedStart?.start_time === s.start_time;
@@ -570,8 +665,8 @@ const PublicBooking = ({ demo = false }: { demo?: boolean }) => {
                             <button
                               key={key}
                               type="button"
-                              onClick={() => setSelectedStart(s)}
-                              className="px-3 py-2 rounded-md border-2 text-sm font-medium transition-all"
+                              onClick={() => selectStart(s)}
+                              className="px-2 py-2.5 rounded-md border-2 text-sm font-medium transition-all"
                               style={
                                 isSelected
                                   ? {
@@ -591,17 +686,17 @@ const PublicBooking = ({ demo = false }: { demo?: boolean }) => {
                           );
                         })}
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             )}
           </section>
         )}
 
         {/* Paso 3: datos de contacto */}
         {selectedService && starts.length > 0 && (
-          <section className="space-y-3">
+          <section ref={formRef} className="space-y-3 scroll-mt-4">
             <div className="flex items-center gap-2">
               <div
                 className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold"
@@ -708,7 +803,7 @@ const PublicBooking = ({ demo = false }: { demo?: boolean }) => {
                       }}
                     >
                       <CalendarDays className="h-4 w-4 flex-shrink-0" />
-                      <span className="font-medium capitalize">
+                      <span className="font-medium">
                         {selectedService.name} · {formatSlotDate(selectedStart.day)} · {formatTime(selectedStart.start_time)}
                       </span>
                     </div>
@@ -742,6 +837,30 @@ const PublicBooking = ({ demo = false }: { demo?: boolean }) => {
           </section>
         )}
       </main>
+
+      {/* Barra fija (solo mobile): resumen de la selección siempre a la vista */}
+      {selectedStart && selectedService && (
+        <div className="fixed bottom-0 inset-x-0 z-40 sm:hidden border-t border-border bg-card/95 backdrop-blur px-4 py-3">
+          <button
+            type="button"
+            onClick={() => scrollTo(formRef)}
+            className="w-full flex items-center justify-between gap-3 text-left"
+          >
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground truncate">{selectedService.name}</p>
+              <p className="text-sm font-semibold truncate">
+                {formatSlotDate(selectedStart.day)} · {formatTime(selectedStart.start_time)}
+              </p>
+            </div>
+            <span
+              className="shrink-0 text-xs font-semibold px-3 py-2 rounded-md"
+              style={{ background: `hsl(var(--brand))`, color: "white" }}
+            >
+              Completar datos
+            </span>
+          </button>
+        </div>
+      )}
     </div>
   );
 };
