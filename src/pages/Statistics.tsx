@@ -108,9 +108,11 @@ const Statistics = () => {
   const reportRef = useRef<HTMLDivElement>(null);
 
   // Raw data
-  const [appointments, setAppointments] = useState<Array<{ start_at: string; status: string; professional_id: string | null }>>([]);
+  const [appointments, setAppointments] = useState<Array<{ start_at: string; end_at: string | null; status: string; professional_id: string | null }>>([]);
   const [payments, setPayments] = useState<Array<{ amount: number; status: string; due_date: string; paid_at: string | null; patient_id: string }>>([]);
-  const [slots, setSlots] = useState<Array<{ date: string; status: string }>>([]);
+  // Semana tipo activa: la capacidad de agenda sale de acá (Horarios 2.0),
+  // ya no de casilleros pregenerados.
+  const [templates, setTemplates] = useState<any[]>([]);
   const [allPatients, setAllPatients] = useState<Array<{ id: string; full_name: string; email: string | null; is_active: boolean; whatsapp_phone: string | null }>>([]);
   const [publicSlug, setPublicSlug] = useState<string | null>(null);
 
@@ -122,19 +124,20 @@ const Statistics = () => {
   const loadAll = async () => {
     setLoading(true);
     try {
-      const [{ data: appts }, { data: pays }, { data: sl }, { data: pts }, { data: biz }] = await Promise.all([
+      const [{ data: appts }, { data: pays }, { data: tpls }, { data: pts }, { data: biz }] = await Promise.all([
         supabase
           .from("appointments")
-          .select("start_at, status, professional_id")
+          .select("start_at, end_at, status, professional_id")
           .eq("business_id", businessId!),
         supabase
           .from("payments")
           .select("amount, status, due_date, paid_at, patient_id")
           .eq("business_id", businessId!),
         supabase
-          .from("availability_slots")
-          .select("date, status")
-          .eq("business_id", businessId!),
+          .from("availability_templates")
+          .select("*")
+          .eq("business_id", businessId!)
+          .eq("is_active", true),
         supabase
           .from("patients")
           .select("id, full_name, email, is_active, whatsapp_phone")
@@ -147,7 +150,7 @@ const Statistics = () => {
       ]);
       setAppointments(appts || []);
       setPayments((pays || []).map((p) => ({ ...p, amount: Number(p.amount) })));
-      setSlots(sl || []);
+      setTemplates(tpls || []);
       setAllPatients(pts || []);
       setPublicSlug(biz?.public_slug || null);
     } catch (e) {
@@ -178,14 +181,68 @@ const Statistics = () => {
       }),
     [payments, periodStart]
   );
-  const slotsInPeriod = useMemo(
-    () =>
-      slots.filter((s) => {
-        const d = new Date(s.date);
-        return d >= periodStart && d <= new Date();
-      }),
-    [slots, periodStart]
-  );
+  // === Ocupación (Horarios 2.0): horas con cita ÷ horas de la semana tipo ===
+  const weeklyCapacityMinutes = useMemo(() => {
+    const toMin = (t: string | null) => {
+      if (!t) return 0;
+      const [h, m] = String(t).split(":").map(Number);
+      return (h || 0) * 60 + (m || 0);
+    };
+    let total = 0;
+    for (const t of templates) {
+      for (const day of ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]) {
+        if (!t[`${day}_enabled`]) continue;
+        const s1 = toMin(t[`${day}_start_1`]);
+        const e1 = toMin(t[`${day}_end_1`]);
+        if (e1 > s1) total += e1 - s1;
+        const s2 = toMin(t[`${day}_start_2`]);
+        const e2 = toMin(t[`${day}_end_2`]);
+        if (e2 > s2) total += e2 - s2;
+      }
+    }
+    return total;
+  }, [templates]);
+
+  // Ocupación por semana: minutos con cita de cada semana / capacidad semanal.
+  // Las semanas sin citas cuentan como 0% (desde la primera cita del período).
+  const occupancyData = useMemo(() => {
+    if (weeklyCapacityMinutes <= 0) return [] as Array<{ week: string; ocupacion: number }>;
+    const valid = apptsInPeriod.filter((a) => a.status !== "cancelled" && a.status !== "no_show" && a.end_at);
+    if (valid.length === 0) return [] as Array<{ week: string; ocupacion: number }>;
+
+    const mondayOf = (d: Date) => {
+      const m = new Date(d);
+      const day = m.getDay() || 7;
+      m.setDate(m.getDate() - day + 1);
+      m.setHours(0, 0, 0, 0);
+      return m;
+    };
+    const keyOf = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+    const bookedByWeek = new Map<string, number>();
+    let firstStart = Infinity;
+    for (const a of valid) {
+      const start = new Date(a.start_at);
+      const mins = Math.max(0, (new Date(a.end_at!).getTime() - start.getTime()) / 60000);
+      const key = keyOf(mondayOf(start));
+      bookedByWeek.set(key, (bookedByWeek.get(key) ?? 0) + mins);
+      if (start.getTime() < firstStart) firstStart = start.getTime();
+    }
+
+    const out: Array<{ week: string; ocupacion: number }> = [];
+    const cursor = mondayOf(new Date(firstStart));
+    const now = new Date();
+    while (cursor <= now) {
+      const key = keyOf(cursor);
+      out.push({
+        week: key.slice(5).replace("-", "/"),
+        ocupacion: Math.min(100, Math.round(((bookedByWeek.get(key) ?? 0) / weeklyCapacityMinutes) * 100)),
+      });
+      cursor.setDate(cursor.getDate() + 7);
+    }
+    return out.slice(-12);
+  }, [apptsInPeriod, weeklyCapacityMinutes]);
 
   // === KPIs ===
   const kpis = useMemo(() => {
@@ -196,11 +253,11 @@ const Statistics = () => {
     const noShow = validAppts.filter((a) => a.status === "no_show").length;
     const noShowRate = totalCitas > 0 ? Math.round((noShow / totalCitas) * 100) : 0;
     const activePatients = allPatients.filter((p) => p.is_active).length;
-    const occupied = slotsInPeriod.filter((s) => s.status === "booked").length;
-    const totalSlots = slotsInPeriod.length;
-    const occupancy = totalSlots > 0 ? Math.round((occupied / totalSlots) * 100) : 0;
-    return { totalCitas, cobrado, pendiente, noShowRate, activePatients, occupancy, totalSlots };
-  }, [apptsInPeriod, paymentsInPeriod, payments, allPatients, slotsInPeriod]);
+    const occupancy = occupancyData.length
+      ? Math.round(occupancyData.reduce((s, w) => s + w.ocupacion, 0) / occupancyData.length)
+      : 0;
+    return { totalCitas, cobrado, pendiente, noShowRate, activePatients, occupancy };
+  }, [apptsInPeriod, paymentsInPeriod, payments, allPatients, occupancyData]);
 
   // === Revenue by month ===
   const revenueData: RevenueMonth[] = useMemo(() => {
@@ -296,30 +353,6 @@ const Statistics = () => {
         rate: v.total > 0 ? Math.round((v.noShow / v.total) * 100) : 0,
       }));
   }, [apptsInPeriod]);
-
-  // === Occupancy by week (last weeks in period) ===
-  const occupancyData = useMemo(() => {
-    const map = new Map<string, { booked: number; total: number }>();
-    for (const s of slotsInPeriod) {
-      const d = new Date(s.date);
-      // ISO week key
-      const monday = new Date(d);
-      const day = monday.getDay() || 7;
-      monday.setDate(monday.getDate() - day + 1);
-      const key = `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, "0")}-${String(monday.getDate()).padStart(2, "0")}`;
-      if (!map.has(key)) map.set(key, { booked: 0, total: 0 });
-      const w = map.get(key)!;
-      w.total++;
-      if (s.status === "booked") w.booked++;
-    }
-    return Array.from(map.entries())
-      .sort(([a], [b]) => a.localeCompare(b))
-      .slice(-12)
-      .map(([k, v]) => ({
-        week: k.slice(5).replace("-", "/"),
-        ocupacion: v.total > 0 ? Math.round((v.booked / v.total) * 100) : 0,
-      }));
-  }, [slotsInPeriod]);
 
   // === New vs returning patients ===
   const retentionData: RetentionMonth[] = useMemo(() => {
@@ -632,7 +665,9 @@ const Statistics = () => {
           </CardHeader>
           <CardContent>
             {occupancyData.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-8 text-center">No hay slots generados en el período</p>
+              <p className="text-sm text-muted-foreground py-8 text-center">
+                Se necesita una semana tipo configurada y al menos una cita en el período.
+              </p>
             ) : (
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
