@@ -60,13 +60,14 @@ serve(async (req) => {
     const cleanMessage = typeof message === "string" ? message.slice(0, 500) : "";
 
     // Negocio por slug público (fallback: subdominio)
-    let business: { id: string; owner_user_id: string } | null = null;
+    type Biz = { id: string; owner_user_id: string; name: string; contact_email: string | null };
+    let business: Biz | null = null;
     const bySlug = await supabase
-      .from("businesses").select("id, owner_user_id").eq("public_slug", slug).maybeSingle();
+      .from("businesses").select("id, owner_user_id, name, contact_email").eq("public_slug", slug).maybeSingle();
     business = bySlug.data;
     if (!business) {
       const bySub = await supabase
-        .from("businesses").select("id, owner_user_id").eq("custom_subdomain", slug).maybeSingle();
+        .from("businesses").select("id, owner_user_id, name, contact_email").eq("custom_subdomain", slug).maybeSingle();
       business = bySub.data;
     }
     if (!business) return json({ error: "business_not_found" }, 404);
@@ -114,6 +115,10 @@ serve(async (req) => {
           email: cleanEmail,
           whatsapp_phone: cleanPhone,
           reason_for_consultation: cleanMessage || null,
+          // El RLS de patients solo deja ver fichas asignadas al profesional o
+          // creadas por él; sin esto la ficha queda huérfana ("Sin paciente").
+          assigned_professional_id: business.owner_user_id,
+          created_by: business.owner_user_id,
         })
         .select("id")
         .maybeSingle();
@@ -202,6 +207,38 @@ serve(async (req) => {
       });
     } catch (mailErr) {
       console.warn("Confirmation email failed:", mailErr);
+    }
+
+    // Best-effort: mail "Nueva reserva" al profesional
+    try {
+      if (business.contact_email) {
+        const modLabel = modality === "online" ? "Online" : "Presencial";
+        await fetch(`${supabaseUrl}/functions/v1/send-resend-email`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${serviceRoleKey}`,
+          },
+          body: JSON.stringify({
+            to: business.contact_email,
+            template: "raw",
+            businessId: business.id,
+            data: {
+              subject: `Nueva reserva: ${cleanName} · ${date} ${startTime}`,
+              message:
+                `Tenés una nueva reserva online.\n\n` +
+                `Paciente: ${cleanName}\n` +
+                `Tipo de sesión: ${service.name} (${service.duration_minutes} min)\n` +
+                `Fecha: ${date} a las ${startTime} · ${modLabel}\n` +
+                `Teléfono: ${cleanPhone}\nEmail: ${cleanEmail}` +
+                (cleanMessage ? `\nMotivo: ${cleanMessage}` : "") +
+                `\n\nLa cita ya está confirmada en tu agenda.`,
+            },
+          }),
+        });
+      }
+    } catch (ownerMailErr) {
+      console.warn("Owner notification email failed:", ownerMailErr);
     }
 
     // Best-effort: push al dueño
