@@ -75,12 +75,28 @@ serve(async (req) => {
       // Find subscription by MP preapproval id
       const { data: subscription, error: findError } = await supabase
         .from("subscriptions")
-        .select("id, business_id, status, plan_code, billing_period")
+        .select("id, business_id, status, plan_code, billing_period, trial_ends_at")
         .eq("mercadopago_preapproval_id", data.id)
         .maybeSingle();
 
       if (findError || !subscription) {
         console.error("Subscription not found for preapproval:", data.id);
+        return new Response("OK", { status: 200, headers: corsHeaders });
+      }
+
+      // GUARDA DE ACCESO: un preapproval "pending" (checkout abandonado) o
+      // "cancelled" (canceló el débito) NO debe pisar una prueba vigente ni
+      // bloquear a un activo por un intento de cambio de plan a medias.
+      const trialStillValid = subscription.status === "trial"
+        && !!subscription.trial_ends_at
+        && new Date(subscription.trial_ends_at).getTime() > Date.now();
+
+      if ((newStatus === "pending" || newStatus === "cancelled") && trialStillValid) {
+        console.log(`Preapproval ${newStatus} pero el trial sigue vigente: se mantiene el acceso`);
+        return new Response("OK", { status: 200, headers: corsHeaders });
+      }
+      if (newStatus === "pending" && subscription.status === "active") {
+        console.log("Preapproval pending pero la suscripción está activa: se mantiene el acceso");
         return new Response("OK", { status: 200, headers: corsHeaders });
       }
 
@@ -265,11 +281,28 @@ serve(async (req) => {
         if (subscription) {
           const externalReference = parseExternalReference(payment.external_reference);
 
+          // Renovación: extender el período hasta el próximo cobro de MP
+          // (sin esto, current_period_end quedaba congelado en el primer mes).
+          let periodEnd: string | null = null;
+          try {
+            const preResp = await fetch(
+              `https://api.mercadopago.com/preapproval/${payment.metadata.preapproval_id}`,
+              { headers: { Authorization: `Bearer ${mercadoPagoToken}` } }
+            );
+            if (preResp.ok) {
+              const pre = await preResp.json();
+              periodEnd = pre.next_payment_date ?? null;
+            }
+          } catch (e) {
+            console.error("No se pudo leer next_payment_date del preapproval:", e);
+          }
+
           await supabase
             .from("subscriptions")
             .update({
               status: "active",
               current_period_start: new Date().toISOString(),
+              ...(periodEnd ? { current_period_end: periodEnd } : {}),
               cancelled_at: null,
               ...(externalReference?.plan_code ? { plan_code: externalReference.plan_code } : {}),
               ...(externalReference?.billing_period ? { billing_period: externalReference.billing_period } : {}),
