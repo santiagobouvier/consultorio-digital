@@ -94,6 +94,11 @@ const Payments = () => {
     searchParams.get("status") || "all"
   );
   const [patientFilter, setPatientFilter] = useState<string>("all");
+  // Período: preset o rango personalizado (sobre la fecha de vencimiento;
+  // "Cobrado" usa la fecha de pago dentro del mismo rango)
+  const [periodFilter, setPeriodFilter] = useState<string>("all");
+  const [customFrom, setCustomFrom] = useState("");
+  const [customTo, setCustomTo] = useState("");
   const [editingPayment, setEditingPayment] = useState<Payment | null>(null);
   const [deletingPaymentId, setDeletingPaymentId] = useState<string | null>(null);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
@@ -160,7 +165,7 @@ const Payments = () => {
     const status = searchParams.get("status");
     if (status) setStatusFilter(status);
     setCurrentPage(1);
-  }, [searchParams, searchQuery, statusFilter, patientFilter]);
+  }, [searchParams, searchQuery, statusFilter, patientFilter, periodFilter, customFrom, customTo]);
 
 
   const handleDeletePayment = async () => {
@@ -177,9 +182,47 @@ const Payments = () => {
     }
   };
 
+  // Rango de fechas del período elegido ([desde, hasta], null = sin límite)
+  const periodRange = useMemo((): { from: Date | null; to: Date | null } => {
+    const now = new Date();
+    switch (periodFilter) {
+      case "this_month":
+        return { from: new Date(now.getFullYear(), now.getMonth(), 1), to: null };
+      case "last_month":
+        return {
+          from: new Date(now.getFullYear(), now.getMonth() - 1, 1),
+          to: new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999),
+        };
+      case "30d":
+        return { from: new Date(now.getTime() - 30 * 86400000), to: null };
+      case "this_year":
+        return { from: new Date(now.getFullYear(), 0, 1), to: null };
+      case "custom":
+        return {
+          from: customFrom ? new Date(customFrom + "T00:00:00") : null,
+          to: customTo ? new Date(customTo + "T23:59:59.999") : null,
+        };
+      default:
+        return { from: null, to: null };
+    }
+  }, [periodFilter, customFrom, customTo]);
+
+  const rangeActive = !!(periodRange.from || periodRange.to);
+  const inPeriod = useCallback(
+    (iso: string | null) => {
+      if (!iso) return false;
+      const d = new Date(iso);
+      if (periodRange.from && d < periodRange.from) return false;
+      if (periodRange.to && d > periodRange.to) return false;
+      return true;
+    },
+    [periodRange]
+  );
+
   const filteredPayments = payments.filter((payment) => {
     if (statusFilter !== "all" && payment.status !== statusFilter) return false;
     if (patientFilter !== "all" && payment.patient_id !== patientFilter) return false;
+    if (rangeActive && !inPeriod(payment.due_date)) return false;
     if (searchQuery) {
       const patientName = payment.patients?.full_name?.toLowerCase() || "";
       if (!patientName.includes(searchQuery.toLowerCase())) return false;
@@ -201,18 +244,26 @@ const Payments = () => {
     return a.due_date.localeCompare(b.due_date);
   });
 
-  // Números del mes en curso (lo cancelado no cuenta)
+  // Números: del período elegido; sin período, del mes en curso.
+  // Lo cancelado no cuenta. Vencidos/pendientes son de HOY, no del período.
   const stats = useMemo(() => {
     const now = new Date();
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const inMonth = (d: string | null) => !!d && new Date(d) >= monthStart;
+    const from = rangeActive ? periodRange.from : new Date(now.getFullYear(), now.getMonth(), 1);
+    const to = rangeActive ? periodRange.to : null;
+    const within = (iso: string | null) => {
+      if (!iso) return false;
+      const d = new Date(iso);
+      if (from && d < from) return false;
+      if (to && d > to) return false;
+      return true;
+    };
     const active = payments.filter((p) => p.status !== "cancelled");
-    const totalAmount = active.filter((p) => inMonth(p.due_date)).reduce((sum, p) => sum + p.amount, 0);
-    const paidAmount = active.filter((p) => p.paid_at && inMonth(p.paid_at)).reduce((sum, p) => sum + p.amount, 0);
+    const totalAmount = active.filter((p) => within(p.due_date)).reduce((sum, p) => sum + p.amount, 0);
+    const paidAmount = active.filter((p) => within(p.paid_at)).reduce((sum, p) => sum + p.amount, 0);
     const overdueCount = payments.filter((p) => p.status === "overdue").length;
     const pendingCount = payments.filter((p) => p.status === "pending" || p.status === "due_soon").length;
     return { totalAmount, paidAmount, overdueCount, pendingCount };
-  }, [payments]);
+  }, [payments, rangeActive, periodRange]);
 
   // Deudores: pagos vencidos agrupados por paciente, el que más debe primero
   const debtors = useMemo(() => {
@@ -263,7 +314,7 @@ const Payments = () => {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
             {
-              label: "Facturado (mes)",
+              label: rangeActive ? "Facturado (período)" : "Facturado (mes)",
               value: formatCurrency(stats.totalAmount, "UYU"),
               icon: DollarSign,
               color: "text-primary",
@@ -271,7 +322,7 @@ const Payments = () => {
               helpId: "paymentsTotalBilled" as const,
             },
             {
-              label: "Cobrado (mes)",
+              label: rangeActive ? "Cobrado (período)" : "Cobrado (mes)",
               value: formatCurrency(stats.paidAmount, "UYU"),
               icon: CheckCircle2,
               color: "text-emerald-600",
@@ -355,6 +406,19 @@ const Payments = () => {
               ))}
             </SelectContent>
           </Select>
+          <Select value={periodFilter} onValueChange={setPeriodFilter}>
+            <SelectTrigger className="w-full sm:w-[180px] h-12 rounded-2xl border-border/50 shadow-sm bg-card">
+              <SelectValue placeholder="Período" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todo el historial</SelectItem>
+              <SelectItem value="this_month">Este mes</SelectItem>
+              <SelectItem value="last_month">Mes pasado</SelectItem>
+              <SelectItem value="30d">Últimos 30 días</SelectItem>
+              <SelectItem value="this_year">Este año</SelectItem>
+              <SelectItem value="custom">Personalizado…</SelectItem>
+            </SelectContent>
+          </Select>
           <Button
             variant="outline"
             className="h-12 rounded-2xl border-border/50 shadow-sm bg-card gap-2"
@@ -376,6 +440,32 @@ const Payments = () => {
             <span className="hidden sm:inline">Exportar CSV</span>
           </Button>
         </div>
+
+        {/* Rango personalizado */}
+        {periodFilter === "custom" && (
+          <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+            <div className="flex items-center gap-2 flex-1">
+              <span className="text-sm text-muted-foreground w-14 shrink-0">Desde</span>
+              <Input
+                type="date"
+                value={customFrom}
+                max={customTo || undefined}
+                onChange={(e) => setCustomFrom(e.target.value)}
+                className="h-11 rounded-2xl border-border/50 bg-card"
+              />
+            </div>
+            <div className="flex items-center gap-2 flex-1">
+              <span className="text-sm text-muted-foreground w-14 shrink-0">Hasta</span>
+              <Input
+                type="date"
+                value={customTo}
+                min={customFrom || undefined}
+                onChange={(e) => setCustomTo(e.target.value)}
+                className="h-11 rounded-2xl border-border/50 bg-card"
+              />
+            </div>
+          </div>
+        )}
 
         {/* Deudores: siempre a la vista, el que más debe primero */}
         {debtors.length > 0 && statusFilter !== "paid" && statusFilter !== "cancelled" && (
