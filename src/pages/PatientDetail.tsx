@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -6,13 +6,25 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Mail, Phone, Calendar, FileText, CreditCard, Plus, Check, RefreshCw, Pencil, Trash2, UserPlus, User as UserIcon } from "lucide-react";
+import {
+  ArrowLeft, Mail, Phone, Calendar, FileText, CreditCard, Plus, Check,
+  RefreshCw, Pencil, Trash2, UserPlus, User as UserIcon, MessageCircle,
+  CalendarPlus, MoreHorizontal, Clock, AlertTriangle, Video, MapPin, Lock,
+} from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { format } from "date-fns";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { format, isAfter, isBefore } from "date-fns";
 import { es } from "date-fns/locale";
 import { PaymentForm } from "@/components/PaymentForm";
 import { PatientForm } from "@/components/PatientForm";
 import { PatientInviteModal } from "@/components/PatientInviteModal";
+import { CreateAppointmentModal } from "@/components/CreateAppointmentModal";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,6 +39,7 @@ import { PaymentWhatsAppMenu } from "@/components/PaymentWhatsAppMenu";
 import LoadingPage from "@/components/LoadingPage";
 import { SessionNotes } from "@/components/SessionNotes";
 import { PatientDocuments } from "@/components/PatientDocuments";
+import { cn } from "@/lib/utils";
 import {
   calculatePaymentStatus,
   getPaymentStatusColor,
@@ -49,6 +62,7 @@ interface Patient {
   is_active: boolean;
   avatar_url: string | null;
   created_at: string;
+  auth_user_id: string | null;
 }
 
 interface Appointment {
@@ -76,15 +90,20 @@ interface Payment {
 const statusLabels: Record<string, string> = {
   pending: "Pendiente",
   confirmed: "Confirmada",
+  scheduled: "Confirmada",
   cancelled: "Cancelada",
+  cancelled_by_patient: "Cancelada por paciente",
+  reschedule_requested: "Reprogramación pedida",
   attended: "Realizada",
   no_show: "No asistió",
 };
 
+const CANCELLED_STATUSES = ["cancelled", "cancelled_by_patient"];
+
 const PatientDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  
+
   const [patient, setPatient] = useState<Patient | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -97,11 +116,13 @@ const PatientDetail = () => {
   const [showEditPatient, setShowEditPatient] = useState(false);
   const [showDeletePatient, setShowDeletePatient] = useState(false);
   const [deletingPatient, setDeletingPatient] = useState(false);
+  const [showCreateAppointment, setShowCreateAppointment] = useState(false);
 
   useEffect(() => {
     if (id) {
       fetchData();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const fetchData = async () => {
@@ -110,14 +131,12 @@ const PatientDetail = () => {
     try {
       setLoading(true);
 
-      // Check authentication
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         navigate("/auth");
         return;
       }
 
-      // Fetch patient
       const { data: patientData, error: patientError } = await supabase
         .from("patients")
         .select("*")
@@ -140,9 +159,8 @@ const PatientDetail = () => {
         return;
       }
 
-      setPatient(patientData);
+      setPatient(patientData as Patient);
 
-      // Fetch appointments
       const { data: appointmentsData } = await supabase
         .from("appointments")
         .select("id, start_at, end_at, status, modality, source")
@@ -151,23 +169,21 @@ const PatientDetail = () => {
 
       setAppointments(appointmentsData || []);
 
-      // Fetch payments (defensively) with real-time status calculation
       try {
-        const { data: paymentsData, error: paymentsError } = await supabase
+        const { data: paymentsData, error: payError } = await supabase
           .from("payments")
           .select("id, amount, currency, due_date, status, paid_at, method, notes, recurrence_type, anchor_day")
           .eq("patient_id", id)
-          .order("due_date", { ascending: true });
+          .order("due_date", { ascending: false });
 
-        if (paymentsError) {
-          console.error("Error fetching payments:", paymentsError);
+        if (payError) {
+          console.error("Error fetching payments:", payError);
           setPaymentsError(true);
         } else {
-          // Calculate real-time status for each payment
           const paymentsWithStatus = (paymentsData || []).map((payment) => ({
             ...payment,
             status: calculatePaymentStatus(payment),
-            recurrence_type: (payment.recurrence_type || 'one_time') as RecurrenceType,
+            recurrence_type: (payment.recurrence_type || "one_time") as RecurrenceType,
           })) as Payment[];
           setPayments(paymentsWithStatus);
         }
@@ -194,13 +210,59 @@ const PatientDetail = () => {
     return format(new Date(dateString), "d MMM yyyy, HH:mm", { locale: es });
   };
 
-  const formatCurrencyLocal = (amount: number, currency: string) => {
-    return formatCurrency(amount, currency);
+  // ── Resumen calculado ──
+  const now = new Date();
+  const nextAppointment = useMemo(
+    () =>
+      [...appointments]
+        .filter((a) => !CANCELLED_STATUSES.includes(a.status) && isAfter(new Date(a.start_at), now))
+        .sort((a, b) => a.start_at.localeCompare(b.start_at))[0] ?? null,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [appointments]
+  );
+  const pastSessions = useMemo(
+    () =>
+      appointments.filter(
+        (a) =>
+          isBefore(new Date(a.start_at), now) &&
+          !CANCELLED_STATUSES.includes(a.status) &&
+          a.status !== "no_show"
+      ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [appointments]
+  );
+  const lastSession = pastSessions[0] ?? null; // appointments viene ordenado desc
+  const unpaid = useMemo(
+    () => payments.filter((p) => !p.paid_at && p.status !== "cancelled"),
+    [payments]
+  );
+  const debt = unpaid.reduce((s, p) => s + p.amount, 0);
+  const hasOverdue = unpaid.some((p) => p.status === "overdue");
+  const upcomingAppointments = useMemo(
+    () =>
+      [...appointments]
+        .filter((a) => !CANCELLED_STATUSES.includes(a.status) && isAfter(new Date(a.start_at), now))
+        .sort((a, b) => a.start_at.localeCompare(b.start_at))
+        .slice(0, 3),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [appointments]
+  );
+
+  const hasPortal = !!patient?.auth_user_id;
+
+  const openWhatsApp = () => {
+    if (!patient?.whatsapp_phone) return;
+    const digits = patient.whatsapp_phone.replace(/\D/g, "");
+    const phone = digits.startsWith("0")
+      ? "598" + digits.slice(1)
+      : digits.startsWith("598") || digits.length > 9
+        ? digits
+        : "598" + digits;
+    window.open(`https://wa.me/${phone}`, "_blank");
   };
 
   const handleMarkAsPaid = async (payment: Payment) => {
     try {
-      // Mark current payment as paid
       const { error } = await supabase
         .from("payments")
         .update({ paid_at: new Date().toISOString(), status: "paid" })
@@ -218,13 +280,10 @@ const PatientDetail = () => {
         );
         toast({
           title: "Éxito",
-          description: `Pago marcado como pagado. Próximo vencimiento: ${formatDate(nextDueDate.toISOString())}`,
+          description: `Pago cobrado. Próximo vencimiento: ${formatDate(nextDueDate.toISOString())}`,
         });
       } else {
-        toast({
-          title: "Éxito",
-          description: "Pago marcado como pagado",
-        });
+        toast({ title: "Éxito", description: "Pago marcado como cobrado" });
       }
 
       fetchData();
@@ -240,7 +299,7 @@ const PatientDetail = () => {
 
   const handleDeletePayment = async () => {
     if (!deletingPaymentId) return;
-    
+
     try {
       const { error } = await supabase
         .from("payments")
@@ -249,10 +308,7 @@ const PatientDetail = () => {
 
       if (error) throw error;
 
-      toast({
-        title: "Éxito",
-        description: "Pago eliminado correctamente",
-      });
+      toast({ title: "Éxito", description: "Pago eliminado correctamente" });
       setDeletingPaymentId(null);
       fetchData();
     } catch (error) {
@@ -263,10 +319,6 @@ const PatientDetail = () => {
         variant: "destructive",
       });
     }
-  };
-
-  const handleEditPayment = (payment: Payment) => {
-    setEditingPayment(payment);
   };
 
   const handleDeletePatient = async () => {
@@ -315,410 +367,488 @@ const PatientDetail = () => {
     );
   }
 
-  // ===== Section: Patient Info =====
-  const infoSection = (
-    <Card className="rounded-2xl border-border/50">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-lg font-bold flex items-center gap-2">
-          <FileText className="h-5 w-5 text-primary" />
-          Información del paciente
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="flex items-start gap-3">
-            <Mail className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-            <div className="min-w-0">
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">Email</p>
-              <p className="text-sm font-medium text-foreground break-all">
-                {patient.email || "No registrado"}
-              </p>
-            </div>
-          </div>
-          <div className="flex items-start gap-3">
-            <Phone className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-            <div className="min-w-0">
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">WhatsApp</p>
-              <p className="text-sm font-medium text-foreground break-all">
-                {patient.whatsapp_phone || "No registrado"}
-              </p>
-            </div>
-          </div>
-        </div>
+  const initials =
+    patient.full_name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2) || "P";
 
-        {patient.reason_for_consultation && (
-          <div>
-            <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
-              Motivo de consulta
-            </p>
-            <p className="text-sm text-foreground">{patient.reason_for_consultation}</p>
-          </div>
+  const AppointmentRow = ({ a }: { a: Appointment }) => {
+    const isCancelled = CANCELLED_STATUSES.includes(a.status);
+    return (
+      <div
+        className={cn(
+          "flex items-center justify-between gap-3 p-3 rounded-xl border bg-card",
+          isCancelled && "opacity-60"
         )}
-
-        <div className="pt-4 border-t border-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <p className="text-xs text-muted-foreground">
-            Registrado el {formatDate(patient.created_at)}
+      >
+        <div className="min-w-0">
+          <p className="font-medium text-sm text-foreground">{formatDateTime(a.start_at)}</p>
+          <p className="text-xs text-muted-foreground mt-0.5 inline-flex items-center gap-1">
+            {a.modality === "online" ? <Video className="h-3 w-3" /> : <MapPin className="h-3 w-3" />}
+            {a.modality === "online" ? "Online" : "Presencial"}
           </p>
-          <Button
-            onClick={() => setShowInviteModal(true)}
-            variant="outline"
-            className="rounded-xl"
-          >
-            <UserPlus className="h-4 w-4 mr-2" />
-            Invitar al portal
-          </Button>
         </div>
-      </CardContent>
-    </Card>
-  );
-
-  // ===== Section: Appointments =====
-  const appointmentsSection = (
-    <Card className="rounded-2xl border-border/50">
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between gap-2">
-          <CardTitle className="text-lg font-bold flex items-center gap-2">
-            <Calendar className="h-5 w-5 text-primary" />
-            Citas del paciente
-          </CardTitle>
-          {appointments.length > 0 && (
-            <Badge variant="secondary" className="rounded-full">
-              {appointments.length}
-            </Badge>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent>
-        {appointments.length === 0 ? (
-          <p className="text-muted-foreground text-sm text-center py-6">
-            Este paciente todavía no tiene citas registradas.
-          </p>
-        ) : (
-          <div className="space-y-3 max-h-[520px] overflow-y-auto pr-1">
-            {appointments.map((appointment) => (
-              <div
-                key={appointment.id}
-                className="flex items-center justify-between p-3 rounded-xl bg-muted/30 border border-border/50"
-              >
-                <div className="min-w-0">
-                  <p className="font-medium text-sm text-foreground">
-                    {formatDateTime(appointment.start_at)}
-                  </p>
-                  <div className="flex items-center gap-2 mt-1 flex-wrap">
-                    <span className="text-xs text-muted-foreground">
-                      {appointment.modality === "online" ? "Online" : "Presencial"}
-                    </span>
-                    {appointment.source && appointment.source !== "panel" && (
-                      <span className="text-xs text-muted-foreground">
-                        • Origen: {appointment.source}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <Badge
-                  variant={appointment.status === "attended" ? "default" : "secondary"}
-                  className="rounded-full text-xs shrink-0 ml-2"
-                >
-                  {statusLabels[appointment.status] || appointment.status}
-                </Badge>
-              </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-
-  // ===== Section: Payments =====
-  const paymentsSection = (
-    <Card className="rounded-2xl border-border/50">
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between gap-2">
-          <CardTitle className="text-lg font-bold flex items-center gap-2">
-            <CreditCard className="h-5 w-5 text-primary" />
-            Pagos y vencimientos
-            {payments.length > 0 && (
-              <Badge variant="secondary" className="rounded-full ml-1">
-                {payments.length}
-              </Badge>
-            )}
-          </CardTitle>
-          {!paymentsError && (
-            <Button
-              onClick={() => setShowPaymentForm(true)}
-              className="rounded-xl h-10 px-4 font-semibold"
-            >
-              <Plus className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Registrar</span>
-            </Button>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent>
-        {paymentsError ? (
-          <p className="text-muted-foreground text-sm text-center py-6">
-            Pagos no disponibles en este momento.
-          </p>
-        ) : payments.length === 0 ? (
-          <p className="text-muted-foreground text-sm text-center py-6">
-            Sin pagos registrados.
-          </p>
-        ) : (
-          <div className="space-y-3 max-h-[520px] overflow-y-auto pr-1">
-            {payments.map((payment) => (
-              <div
-                key={payment.id}
-                className="flex flex-col gap-2 p-3 rounded-xl bg-muted/30 border border-border/50"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-bold text-foreground">
-                        {formatCurrencyLocal(payment.amount, payment.currency)}
-                      </p>
-                      <Badge className={`${getPaymentStatusColor(payment.status)} rounded-full text-xs`}>
-                        {getPaymentStatusLabel(payment.status)}
-                      </Badge>
-                      {payment.recurrence_type !== "one_time" && (
-                        <Badge variant="outline" className="rounded-full text-xs gap-1">
-                          <RefreshCw className="h-3 w-3" />
-                          {getRecurrenceTypeLabel(payment.recurrence_type)}
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Vence: {formatDate(payment.due_date)}
-                    </p>
-                    {payment.method && (
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        Método: {payment.method}
-                      </p>
-                    )}
-                    {payment.notes && (
-                      <p className="text-xs text-muted-foreground mt-0.5 italic truncate">
-                        {payment.notes}
-                      </p>
-                    )}
-                    {payment.paid_at && (
-                      <p className="text-xs text-green-600 mt-1">
-                        Pagado el {formatDate(payment.paid_at)}
-                      </p>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center justify-end gap-1 pt-1 border-t border-border/40">
-                  {payment.status !== "paid" && payment.status !== "cancelled" && (
-                    <>
-                      <PaymentWhatsAppMenu
-                        patientPhone={patient.whatsapp_phone}
-                        patientName={patient.full_name}
-                      />
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleMarkAsPaid(payment)}
-                        className="rounded-lg h-8 px-2"
-                        title="Marcar como pagado"
-                      >
-                        <Check className="h-4 w-4" />
-                      </Button>
-                    </>
-                  )}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleEditPayment(payment)}
-                    className="rounded-lg h-8 px-2"
-                    title="Editar pago"
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setDeletingPaymentId(payment.id)}
-                    className="rounded-lg h-8 px-2 text-destructive hover:text-destructive"
-                    title="Eliminar pago"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
+        <Badge
+          variant={a.status === "attended" || a.status === "scheduled" || a.status === "confirmed" ? "default" : "secondary"}
+          className={cn("rounded-full text-xs shrink-0", isCancelled && "bg-muted text-muted-foreground")}
+        >
+          {statusLabels[a.status] || a.status}
+        </Badge>
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
-        {/* Header */}
-        <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate("/patients")}
-            className="shrink-0"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <Avatar className="h-14 w-14 sm:h-16 sm:w-16 rounded-full shrink-0 ring-2 ring-primary/15">
-            {patient.avatar_url && (
-              <AvatarImage src={patient.avatar_url} alt={patient.full_name} className="object-cover" />
-            )}
-            <AvatarFallback className="rounded-full bg-primary/10 text-primary font-bold text-base">
-              {patient.full_name
-                .split(" ")
-                .map((n) => n[0])
-                .join("")
-                .toUpperCase()
-                .slice(0, 2) || <UserIcon className="h-6 w-6" />}
-            </AvatarFallback>
-          </Avatar>
-          <div className="min-w-0 flex-1">
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground truncate">
-              {patient.full_name}
-            </h1>
-            <Badge
-              variant={patient.is_active ? "default" : "secondary"}
-              className="mt-1 rounded-full"
+      <div className="max-w-5xl mx-auto p-4 sm:p-6 lg:p-8 space-y-5">
+
+        {/* ── Cabecera "carnet" ── */}
+        <div className="rounded-2xl border bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-4 sm:p-6">
+          <div className="flex items-start gap-3 sm:gap-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate("/patients")}
+              className="shrink-0 -ml-2"
             >
-              {patient.is_active ? "Activo" : "Inactivo"}
-            </Badge>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+
+            <Avatar className="h-16 w-16 sm:h-20 sm:w-20 rounded-2xl shrink-0 ring-2 ring-primary/20">
+              {patient.avatar_url && (
+                <AvatarImage src={patient.avatar_url} alt={patient.full_name} className="object-cover" />
+              )}
+              <AvatarFallback className="rounded-2xl bg-primary/10 text-primary font-bold text-xl">
+                {initials || <UserIcon className="h-7 w-7" />}
+              </AvatarFallback>
+            </Avatar>
+
+            <div className="min-w-0 flex-1">
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground truncate">
+                {patient.full_name}
+              </h1>
+              {/* Chips que cuentan la historia en 2 segundos */}
+              <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                <Badge
+                  variant={patient.is_active ? "default" : "secondary"}
+                  className="rounded-full text-xs"
+                >
+                  {patient.is_active ? "Activo" : "Inactivo"}
+                </Badge>
+                {!paymentsError && (
+                  hasOverdue ? (
+                    <Badge className="rounded-full text-xs bg-destructive text-destructive-foreground gap-1">
+                      <AlertTriangle className="h-3 w-3" />
+                      Debe {formatCurrency(debt, "UYU")}
+                    </Badge>
+                  ) : unpaid.length > 0 ? (
+                    <Badge className="rounded-full text-xs bg-amber-500 text-white">
+                      Pagos pendientes
+                    </Badge>
+                  ) : payments.length > 0 ? (
+                    <Badge className="rounded-full text-xs bg-emerald-600 text-white">
+                      Al día
+                    </Badge>
+                  ) : null
+                )}
+                {hasPortal ? (
+                  <Badge variant="outline" className="rounded-full text-xs gap-1 border-primary/30 text-primary">
+                    <Check className="h-3 w-3" />
+                    Portal activo
+                  </Badge>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setShowInviteModal(true)}
+                    className="inline-flex items-center gap-1 rounded-full border border-dashed border-border px-2.5 py-0.5 text-xs text-muted-foreground hover:text-foreground hover:border-foreground/40 transition-colors"
+                  >
+                    <UserPlus className="h-3 w-3" />
+                    Invitar al portal
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Menú ⋯ (acciones sensibles escondidas del camino) */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="shrink-0 rounded-xl">
+                  <MoreHorizontal className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="rounded-xl">
+                <DropdownMenuItem onClick={() => setShowInviteModal(true)} className="gap-2 cursor-pointer">
+                  <UserPlus className="h-4 w-4" />
+                  Invitar al portal
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => setShowDeletePatient(true)}
+                  className="gap-2 cursor-pointer text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Eliminar paciente
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
-          <div className="hidden sm:flex items-center gap-2 shrink-0">
+
+          {/* Acciones principales */}
+          <div className="grid grid-cols-3 sm:flex gap-2 mt-4 sm:pl-[4.5rem]">
+            <Button onClick={() => setShowCreateAppointment(true)} className="rounded-xl gap-2 h-10">
+              <CalendarPlus className="h-4 w-4" />
+              <span className="text-xs sm:text-sm">Agendar cita</span>
+            </Button>
             <Button
               variant="outline"
-              size="sm"
-              onClick={() => setShowEditPatient(true)}
-              className="rounded-xl gap-2"
+              onClick={openWhatsApp}
+              disabled={!patient.whatsapp_phone}
+              className="rounded-xl gap-2 h-10"
             >
+              <MessageCircle className="h-4 w-4" />
+              <span className="text-xs sm:text-sm">WhatsApp</span>
+            </Button>
+            <Button variant="outline" onClick={() => setShowEditPatient(true)} className="rounded-xl gap-2 h-10">
               <Pencil className="h-4 w-4" />
-              Editar
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowDeletePatient(true)}
-              className="rounded-xl gap-2 text-destructive hover:text-destructive hover:bg-destructive/5 border-destructive/30"
-            >
-              <Trash2 className="h-4 w-4" />
-              Eliminar
+              <span className="text-xs sm:text-sm">Editar</span>
             </Button>
           </div>
         </div>
 
-        {/* Mobile action buttons */}
-        <div className="flex sm:hidden gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowEditPatient(true)}
-            className="flex-1 rounded-xl gap-2"
-          >
-            <Pencil className="h-4 w-4" />
-            Editar
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowDeletePatient(true)}
-            className="flex-1 rounded-xl gap-2 text-destructive hover:text-destructive hover:bg-destructive/5 border-destructive/30"
-          >
-            <Trash2 className="h-4 w-4" />
-            Eliminar
-          </Button>
+        {/* ── 4 números clave ── */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <Card className="rounded-2xl border-border/50">
+            <CardContent className="p-3.5">
+              <p className="text-xs text-muted-foreground inline-flex items-center gap-1.5">
+                <Calendar className="h-3.5 w-3.5" /> Próxima cita
+              </p>
+              {nextAppointment ? (
+                <p className="text-sm font-bold mt-1">
+                  {format(new Date(nextAppointment.start_at), "EEE d MMM · HH:mm", { locale: es })}
+                </p>
+              ) : (
+                <p className="text-sm font-bold mt-1 text-amber-500">Sin agendar</p>
+              )}
+            </CardContent>
+          </Card>
+          <Card className="rounded-2xl border-border/50">
+            <CardContent className="p-3.5">
+              <p className="text-xs text-muted-foreground inline-flex items-center gap-1.5">
+                <Check className="h-3.5 w-3.5" /> Sesiones
+              </p>
+              <p className="text-sm font-bold mt-1">{pastSessions.length}</p>
+            </CardContent>
+          </Card>
+          <Card className="rounded-2xl border-border/50">
+            <CardContent className="p-3.5">
+              <p className="text-xs text-muted-foreground inline-flex items-center gap-1.5">
+                <CreditCard className="h-3.5 w-3.5" /> Pendiente de pago
+              </p>
+              <p className={cn("text-sm font-bold mt-1", hasOverdue && "text-destructive")}>
+                {paymentsError ? "—" : debt > 0 ? formatCurrency(debt, "UYU") : "$ 0"}
+              </p>
+            </CardContent>
+          </Card>
+          <Card className="rounded-2xl border-border/50">
+            <CardContent className="p-3.5">
+              <p className="text-xs text-muted-foreground inline-flex items-center gap-1.5">
+                <Clock className="h-3.5 w-3.5" /> Última sesión
+              </p>
+              <p className="text-sm font-bold mt-1">
+                {lastSession ? formatDate(lastSession.start_at) : "—"}
+              </p>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Desktop: 2 columns. Payments sticky on the right. */}
-        <div className="hidden lg:grid lg:grid-cols-3 lg:gap-6 lg:items-start">
-          <div className="lg:col-span-2 space-y-6">
-            {infoSection}
-            {patient && (
-              <SessionNotes
-                patientId={patient.id}
-                businessId={patient.business_id}
-                appointments={appointments.map((a) => ({ id: a.id, start_at: a.start_at }))}
-              />
-            )}
-            {appointmentsSection}
-            {patient && (
-              <PatientDocuments
-                patientId={patient.id}
-                businessId={patient.business_id}
-              />
-            )}
-          </div>
-          <div className="lg:col-span-1 lg:sticky lg:top-6">
-            {paymentsSection}
-          </div>
-        </div>
+        {/* ── Pestañas ── */}
+        <Tabs defaultValue="resumen" className="w-full">
+          <TabsList className="grid grid-cols-5 w-full h-11 rounded-xl">
+            <TabsTrigger value="resumen" className="rounded-lg text-xs sm:text-sm">Resumen</TabsTrigger>
+            <TabsTrigger value="notes" className="rounded-lg text-xs sm:text-sm">Notas</TabsTrigger>
+            <TabsTrigger value="payments" className="rounded-lg text-xs sm:text-sm gap-1">
+              Pagos
+              {unpaid.length > 0 && (
+                <span className={cn("w-1.5 h-1.5 rounded-full", hasOverdue ? "bg-destructive" : "bg-amber-500")} />
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="appointments" className="rounded-lg text-xs sm:text-sm">Citas</TabsTrigger>
+            <TabsTrigger value="docs" className="rounded-lg text-xs sm:text-sm">Docs</TabsTrigger>
+          </TabsList>
 
-        {/* Mobile / tablet: tabs to keep payments accessible without scrolling past appointments */}
-        <div className="lg:hidden">
-          <Tabs defaultValue="info" className="w-full">
-            <TabsList className="grid grid-cols-5 w-full h-11 rounded-xl">
-              <TabsTrigger value="info" className="rounded-lg text-xs sm:text-sm">Info</TabsTrigger>
-              <TabsTrigger value="notes" className="rounded-lg text-xs sm:text-sm">Notas</TabsTrigger>
-              <TabsTrigger value="appointments" className="rounded-lg gap-1 text-xs sm:text-sm">
-                Citas
-                {appointments.length > 0 && (
-                  <span className="text-xs font-semibold opacity-70">({appointments.length})</span>
+          {/* Resumen */}
+          <TabsContent value="resumen" className="mt-4 space-y-4">
+            <Card className="rounded-2xl border-border/50">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base font-bold flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-primary" />
+                  Información de contacto
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="flex items-start gap-3">
+                    <Mail className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-xs text-muted-foreground uppercase tracking-wide">Email</p>
+                      <p className="text-sm font-medium text-foreground break-all">
+                        {patient.email || "No registrado"}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <Phone className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-xs text-muted-foreground uppercase tracking-wide">WhatsApp</p>
+                      <p className="text-sm font-medium text-foreground break-all">
+                        {patient.whatsapp_phone || "No registrado"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {patient.reason_for_consultation && (
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                      Motivo de consulta
+                    </p>
+                    <p className="text-sm text-foreground">{patient.reason_for_consultation}</p>
+                  </div>
                 )}
-              </TabsTrigger>
-              <TabsTrigger value="docs" className="rounded-lg text-xs sm:text-sm">Docs</TabsTrigger>
-              <TabsTrigger value="payments" className="rounded-lg gap-1 text-xs sm:text-sm">
-                Pagos
-                {payments.length > 0 && (
-                  <span className="text-xs font-semibold opacity-70">({payments.length})</span>
+
+                {patient.private_notes && (
+                  <div className="rounded-xl bg-muted/40 border border-border/50 p-3">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1 inline-flex items-center gap-1">
+                      <Lock className="h-3 w-3" /> Notas privadas
+                    </p>
+                    <p className="text-sm text-foreground whitespace-pre-line">{patient.private_notes}</p>
+                  </div>
                 )}
-              </TabsTrigger>
-            </TabsList>
-            <TabsContent value="info" className="mt-4">
-              {infoSection}
-            </TabsContent>
-            <TabsContent value="notes" className="mt-4">
-              {patient && (
-                <SessionNotes
-                  patientId={patient.id}
-                  businessId={patient.business_id}
-                  appointments={appointments.map((a) => ({ id: a.id, start_at: a.start_at }))}
-                />
-              )}
-            </TabsContent>
-            <TabsContent value="appointments" className="mt-4">
-              {appointmentsSection}
-            </TabsContent>
-            <TabsContent value="docs" className="mt-4">
-              {patient && (
-                <PatientDocuments
-                  patientId={patient.id}
-                  businessId={patient.business_id}
-                />
-              )}
-            </TabsContent>
-            <TabsContent value="payments" className="mt-4">
-              {paymentsSection}
-            </TabsContent>
-          </Tabs>
-        </div>
+
+                <p className="text-xs text-muted-foreground pt-2 border-t border-border">
+                  Paciente desde el {formatDate(patient.created_at)}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="rounded-2xl border-border/50">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between gap-2">
+                  <CardTitle className="text-base font-bold flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-primary" />
+                    Próximas citas
+                  </CardTitle>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowCreateAppointment(true)}
+                    className="rounded-xl gap-1.5 h-8"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Agendar
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {upcomingAppointments.length === 0 ? (
+                  <p className="text-muted-foreground text-sm text-center py-4">
+                    Sin citas agendadas. Usá "Agendar" para crear la próxima.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {upcomingAppointments.map((a) => (
+                      <AppointmentRow key={a.id} a={a} />
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Notas de sesión */}
+          <TabsContent value="notes" className="mt-4">
+            <SessionNotes
+              patientId={patient.id}
+              businessId={patient.business_id}
+              appointments={appointments.map((a) => ({ id: a.id, start_at: a.start_at }))}
+            />
+          </TabsContent>
+
+          {/* Pagos */}
+          <TabsContent value="payments" className="mt-4">
+            <Card className="rounded-2xl border-border/50">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between gap-2">
+                  <CardTitle className="text-base font-bold flex items-center gap-2">
+                    <CreditCard className="h-4 w-4 text-primary" />
+                    Pagos y vencimientos
+                    {payments.length > 0 && (
+                      <Badge variant="secondary" className="rounded-full ml-1">{payments.length}</Badge>
+                    )}
+                  </CardTitle>
+                  {!paymentsError && (
+                    <Button
+                      onClick={() => setShowPaymentForm(true)}
+                      size="sm"
+                      className="rounded-xl gap-1.5 h-8"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      Registrar
+                    </Button>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent>
+                {paymentsError ? (
+                  <p className="text-muted-foreground text-sm text-center py-6">
+                    Pagos no disponibles en este momento.
+                  </p>
+                ) : payments.length === 0 ? (
+                  <p className="text-muted-foreground text-sm text-center py-6">
+                    Sin pagos registrados.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {payments.map((payment) => (
+                      <div
+                        key={payment.id}
+                        className="flex flex-wrap items-center justify-between gap-2 p-3 rounded-xl border bg-card"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="font-bold text-foreground">
+                              {formatCurrency(payment.amount, payment.currency)}
+                            </p>
+                            <Badge className={`${getPaymentStatusColor(payment.status)} rounded-full text-xs`}>
+                              {getPaymentStatusLabel(payment.status)}
+                            </Badge>
+                            {payment.recurrence_type !== "one_time" && (
+                              <Badge variant="outline" className="rounded-full text-xs gap-1">
+                                <RefreshCw className="h-3 w-3" />
+                                {getRecurrenceTypeLabel(payment.recurrence_type)}
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {payment.paid_at
+                              ? `Pagado el ${formatDate(payment.paid_at)}${payment.method ? ` · ${payment.method}` : ""}`
+                              : `Vence: ${formatDate(payment.due_date)}${payment.method ? ` · ${payment.method}` : ""}`}
+                          </p>
+                        </div>
+
+                        <div className="flex items-center gap-1 shrink-0">
+                          {payment.status !== "paid" && payment.status !== "cancelled" && (
+                            <>
+                              <PaymentWhatsAppMenu
+                                patientPhone={patient.whatsapp_phone}
+                                patientName={patient.full_name}
+                              />
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleMarkAsPaid(payment)}
+                                className="rounded-lg h-8 gap-1.5"
+                              >
+                                <Check className="h-3.5 w-3.5" />
+                                <span className="hidden sm:inline">Cobrar</span>
+                              </Button>
+                            </>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setEditingPayment(payment)}
+                            className="rounded-lg h-8 px-2"
+                            title="Editar pago"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setDeletingPaymentId(payment.id)}
+                            className="rounded-lg h-8 px-2 text-destructive hover:text-destructive"
+                            title="Eliminar pago"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Citas */}
+          <TabsContent value="appointments" className="mt-4">
+            <Card className="rounded-2xl border-border/50">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between gap-2">
+                  <CardTitle className="text-base font-bold flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-primary" />
+                    Historial de citas
+                    {appointments.length > 0 && (
+                      <Badge variant="secondary" className="rounded-full ml-1">{appointments.length}</Badge>
+                    )}
+                  </CardTitle>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowCreateAppointment(true)}
+                    className="rounded-xl gap-1.5 h-8"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Agendar
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {appointments.length === 0 ? (
+                  <p className="text-muted-foreground text-sm text-center py-6">
+                    Este paciente todavía no tiene citas registradas.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {appointments.map((a) => (
+                      <AppointmentRow key={a.id} a={a} />
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Documentos */}
+          <TabsContent value="docs" className="mt-4">
+            <PatientDocuments patientId={patient.id} businessId={patient.business_id} />
+          </TabsContent>
+        </Tabs>
       </div>
 
+      {/* Agendar cita (asistente con este paciente preseleccionado) */}
+      <CreateAppointmentModal
+        open={showCreateAppointment}
+        onOpenChange={setShowCreateAppointment}
+        patientId={patient.id}
+        onSuccess={fetchData}
+      />
+
       {/* Payment Form Modal - Create */}
-      {patient && (
-        <PaymentForm
-          open={showPaymentForm}
-          onOpenChange={setShowPaymentForm}
-          patientId={patient.id}
-          businessId={patient.business_id}
-          onSuccess={fetchData}
-        />
-      )}
+      <PaymentForm
+        open={showPaymentForm}
+        onOpenChange={setShowPaymentForm}
+        patientId={patient.id}
+        businessId={patient.business_id}
+        onSuccess={fetchData}
+      />
 
       {/* Payment Form Modal - Edit */}
-      {patient && editingPayment && (
+      {editingPayment && (
         <PaymentForm
           open={!!editingPayment}
           onOpenChange={(open) => !open && setEditingPayment(null)}
@@ -740,7 +870,7 @@ const PatientDetail = () => {
         />
       )}
 
-      {/* Delete Confirmation Dialog */}
+      {/* Delete Payment Confirmation */}
       <AlertDialog open={!!deletingPaymentId} onOpenChange={(open) => !open && setDeletingPaymentId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -759,38 +889,34 @@ const PatientDetail = () => {
       </AlertDialog>
 
       {/* Patient Invite Modal */}
-      {patient && (
-        <PatientInviteModal
-          open={showInviteModal}
-          onOpenChange={setShowInviteModal}
-          patientId={patient.id}
-          patientName={patient.full_name}
-          patientEmail={patient.email}
-        />
-      )}
+      <PatientInviteModal
+        open={showInviteModal}
+        onOpenChange={setShowInviteModal}
+        patientId={patient.id}
+        patientName={patient.full_name}
+        patientEmail={patient.email}
+      />
 
       {/* Edit Patient Modal */}
-      {patient && (
-        <PatientForm
-          open={showEditPatient}
-          onOpenChange={setShowEditPatient}
-          patientId={patient.id}
-          businessId={patient.business_id}
-          initialData={{
-            full_name: patient.full_name,
-            email: patient.email || "",
-            whatsapp_phone: patient.whatsapp_phone || "",
-            reason_for_consultation: patient.reason_for_consultation || "",
-            private_notes: patient.private_notes || "",
-            is_active: patient.is_active,
-            avatar_url: patient.avatar_url,
-          }}
-          onSuccess={() => {
-            setShowEditPatient(false);
-            fetchData();
-          }}
-        />
-      )}
+      <PatientForm
+        open={showEditPatient}
+        onOpenChange={setShowEditPatient}
+        patientId={patient.id}
+        businessId={patient.business_id}
+        initialData={{
+          full_name: patient.full_name,
+          email: patient.email || "",
+          whatsapp_phone: patient.whatsapp_phone || "",
+          reason_for_consultation: patient.reason_for_consultation || "",
+          private_notes: patient.private_notes || "",
+          is_active: patient.is_active,
+          avatar_url: patient.avatar_url,
+        }}
+        onSuccess={() => {
+          setShowEditPatient(false);
+          fetchData();
+        }}
+      />
 
       {/* Delete Patient Confirmation */}
       <AlertDialog
