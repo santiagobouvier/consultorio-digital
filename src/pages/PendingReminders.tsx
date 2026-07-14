@@ -1,11 +1,12 @@
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { HelpTooltip } from "@/components/HelpTooltip";
@@ -36,8 +37,8 @@ import {
 } from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
-  Send, Trash2, Bell, Mail, MessageSquare, Check, Copy, CheckSquare,
-  Search, Pencil, XCircle, Clock, BellRing, MailCheck, X, Plus,
+  Bell, Mail, MessageSquare, Search, Pencil, XCircle, Clock, BellRing,
+  X, Plus, Settings2, AlertTriangle, CheckCircle2, RotateCcw, Loader2,
 } from "lucide-react";
 import { RouteSkeleton } from "@/components/RouteSkeleton";
 import { useBusinessId } from "@/hooks/use-business-id";
@@ -46,9 +47,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
+// Página "Recordatorios": centro de avisos automáticos.
+// Los recordatorios salen SOLOS por email (los manda la base de datos, sin
+// intervención). Acá el profesional ve qué va a salir, qué salió (y qué
+// falló), y configura anticipación y plantilla. El canal WhatsApp aparece
+// cuando se conecte la API oficial — no hay flujo manual.
+
 interface Reminder {
   id: string;
-  appointment_id: string;
+  appointment_id: string | null;
   patient_id: string;
   business_id: string;
   scheduled_for: string;
@@ -70,66 +77,157 @@ interface Reminder {
   };
 }
 
-interface GroupedReminders {
-  patientName: string;
-  patientId: string;
-  reminders: Reminder[];
-  combinedMessage: string;
-  phone: string | null;
-}
+const DEFAULT_TEMPLATE =
+  "Hola {{paciente}}, te recuerdo tu sesión del {{fecha}} a las {{hora}}. Modalidad: {{modalidad}}. {{link}}. Cualquier cosa me escribís por acá.";
 
-const channelConfig: Record<string, { label: string; icon: typeof Mail; color: string }> = {
-  email: { label: "Email", icon: Mail, color: "bg-blue-500/10 text-blue-400 border-blue-500/20" },
-  whatsapp: { label: "WhatsApp", icon: MessageSquare, color: "bg-green-500/10 text-green-400 border-green-500/20" },
-};
+const VARIABLES = [
+  { key: "{{paciente}}", desc: "Nombre del paciente" },
+  { key: "{{fecha}}", desc: "Fecha de la cita" },
+  { key: "{{hora}}", desc: "Hora de la cita" },
+  { key: "{{modalidad}}", desc: "Online o Presencial" },
+  { key: "{{link}}", desc: "Link o ubicación" },
+];
 
-const typeLabels: Record<string, string> = {
-  reminder: "Recordatorio",
-  confirmation: "Confirmación",
-  postsession: "Post-sesión",
-  payment: "Cobro",
-};
+const HOURS_OPTIONS = [
+  { value: "1", label: "1 hora antes" },
+  { value: "3", label: "3 horas antes" },
+  { value: "24", label: "1 día antes" },
+  { value: "48", label: "2 días antes" },
+  { value: "72", label: "3 días antes" },
+  { value: "168", label: "1 semana antes" },
+];
 
 const statusConfig: Record<string, { label: string; color: string }> = {
-  scheduled: { label: "Programado", color: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20" },
-  pending_manual: { label: "Pendiente", color: "bg-orange-500/10 text-orange-400 border-orange-500/20" },
-  sent: { label: "Enviado", color: "bg-green-500/10 text-green-400 border-green-500/20" },
+  scheduled: { label: "Programado", color: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20" },
+  sending: { label: "Saliendo…", color: "bg-blue-500/10 text-blue-400 border-blue-500/20" },
+  sent: { label: "Enviado", color: "bg-green-500/10 text-green-500 border-green-500/20" },
+  failed: { label: "Falló", color: "bg-destructive/10 text-destructive border-destructive/20" },
   cancelled: { label: "Cancelado", color: "bg-muted text-muted-foreground" },
+  pending_manual: { label: "Manual (sistema anterior)", color: "bg-muted text-muted-foreground" },
 };
+
+const channelConfig: Record<string, { label: string; icon: typeof Mail }> = {
+  email: { label: "Email", icon: Mail },
+  whatsapp: { label: "WhatsApp", icon: MessageSquare },
+};
+
+const UPCOMING_STATUSES = ["scheduled", "sending"];
 
 const PendingReminders = () => {
   const { businessId } = useBusinessId();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState("pending");
-  const [showSendAllConfirm, setShowSendAllConfirm] = useState(false);
-  const [selectedForSent, setSelectedForSent] = useState<Set<string>>(new Set());
+  const [activeTab, setActiveTab] = useState("upcoming");
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
-  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [cancelTarget, setCancelTarget] = useState<string | null>(null);
 
-  // Edit modal state
+  // Edición de mensaje
   const [editingReminder, setEditingReminder] = useState<Reminder | null>(null);
   const [editMessage, setEditMessage] = useState("");
   const [editSaving, setEditSaving] = useState(false);
 
-  // WhatsApp send confirmation
-  const [whatsappConfirm, setWhatsappConfirm] = useState<{ ids: string[]; patientName: string } | null>(null);
-
-  // Create manual reminder state
+  // Programar aviso puntual
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createForm, setCreateForm] = useState({
     mode: "appointment" as "appointment" | "free",
     patientId: "",
     appointmentId: "",
-    channel: "whatsapp" as "whatsapp" | "email",
     message: "",
     hoursBefore: "24",
     scheduledAt: "",
   });
   const [createSaving, setCreateSaving] = useState(false);
 
-  // Main reminders query — key matches query-prefetch.ts
+  // ── Configuración (clinic_settings del profesional) ──
+  const [settingsRowId, setSettingsRowId] = useState<string | null>(null);
+  const [settingsLoading, setSettingsLoading] = useState(true);
+  const [autoEmail, setAutoEmail] = useState(true);
+  const [hoursBefore, setHoursBefore] = useState("24");
+  const [template, setTemplate] = useState(DEFAULT_TEMPLATE);
+  const [settingsSnapshot, setSettingsSnapshot] = useState("");
+  const [settingsSaving, setSettingsSaving] = useState(false);
+  const templateRef = useRef<HTMLTextAreaElement>(null);
+
+  const settingsDirty = useMemo(
+    () => JSON.stringify({ autoEmail, hoursBefore, template }) !== settingsSnapshot,
+    [autoEmail, hoursBefore, template, settingsSnapshot]
+  );
+
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        const { data } = await supabase
+          .from("clinic_settings")
+          .select("id, reminder_hours_before, auto_email_reminders, default_reminder_message")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        const loadedAuto = data?.auto_email_reminders ?? true;
+        const loadedHours = String(data?.reminder_hours_before ?? 24);
+        const loadedTemplate = data?.default_reminder_message || DEFAULT_TEMPLATE;
+        setSettingsRowId(data?.id ?? null);
+        setAutoEmail(loadedAuto);
+        setHoursBefore(loadedHours);
+        setTemplate(loadedTemplate);
+        setSettingsSnapshot(JSON.stringify({ autoEmail: loadedAuto, hoursBefore: loadedHours, template: loadedTemplate }));
+      } catch (e) {
+        console.error("Error cargando configuración de recordatorios:", e);
+      } finally {
+        setSettingsLoading(false);
+      }
+    };
+    void loadSettings();
+  }, []);
+
+  const saveSettings = async () => {
+    setSettingsSaving(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const payload = {
+        auto_email_reminders: autoEmail,
+        reminder_hours_before: parseInt(hoursBefore),
+        default_reminder_message: template.trim() || DEFAULT_TEMPLATE,
+      };
+      if (settingsRowId) {
+        const { error } = await supabase.from("clinic_settings").update(payload).eq("id", settingsRowId);
+        if (error) throw error;
+      } else {
+        const { data, error } = await supabase
+          .from("clinic_settings")
+          .insert([{ user_id: user.id, ...payload }])
+          .select("id")
+          .single();
+        if (error) throw error;
+        setSettingsRowId(data.id);
+      }
+      setSettingsSnapshot(JSON.stringify({ autoEmail, hoursBefore, template }));
+      toast({ title: "Configuración guardada", description: "Aplica a los recordatorios de las próximas citas." });
+    } catch (e) {
+      console.error(e);
+      toast({ title: "Error", description: "No se pudo guardar la configuración", variant: "destructive" });
+    } finally {
+      setSettingsSaving(false);
+    }
+  };
+
+  const insertVariable = (variable: string) => {
+    const el = templateRef.current;
+    if (!el) {
+      setTemplate((t) => t + " " + variable);
+      return;
+    }
+    const start = el.selectionStart ?? template.length;
+    const end = el.selectionEnd ?? template.length;
+    setTemplate(template.slice(0, start) + variable + template.slice(end));
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(start + variable.length, start + variable.length);
+    });
+  };
+
+  // ── Recordatorios ──
   const { data: reminders = [], isLoading: loading } = useQuery({
     queryKey: ["reminders", businessId],
     queryFn: async () => {
@@ -151,12 +249,12 @@ const PendingReminders = () => {
     refetchOnWindowFocus: true,
   });
 
-  // Patients & appointments for create modal
+  // Pacientes y citas para "Programar aviso"
   const { data: patientsAndAppts } = useQuery({
     queryKey: ["reminders_create_data", businessId],
     queryFn: async () => {
       const [pRes, aRes] = await Promise.all([
-        supabase.from("patients").select("id, full_name, whatsapp_phone, email").eq("business_id", businessId!).eq("is_active", true).order("full_name"),
+        supabase.from("patients").select("id, full_name, email").eq("business_id", businessId!).eq("is_active", true).order("full_name"),
         supabase.from("appointments").select("id, start_at, patient_id").eq("business_id", businessId!).gte("start_at", new Date().toISOString()).order("start_at", { ascending: true }).limit(100),
       ]);
       return { patients: pRes.data || [], appointments: aRes.data || [] };
@@ -168,132 +266,51 @@ const PendingReminders = () => {
   const patients = patientsAndAppts?.patients || [];
   const upcomingAppointments = patientsAndAppts?.appointments || [];
 
-  const invalidateReminders = useCallback(() => {
+  const invalidateReminders = () =>
     queryClient.invalidateQueries({ queryKey: ["reminders", businessId] });
-  }, [queryClient, businessId]);
 
-  // Local state updaters for optimistic UI (keep same pattern)
-  const updateReminder = useCallback((id: string, updates: Partial<Reminder>) => {
+  const updateReminderLocal = (id: string, updates: Partial<Reminder>) => {
     queryClient.setQueryData(["reminders", businessId], (old: Reminder[] | undefined) =>
-      (old || []).map(r => r.id === id ? { ...r, ...updates } : r)
+      (old || []).map((r) => (r.id === id ? { ...r, ...updates } : r))
     );
-  }, [queryClient, businessId]);
+  };
 
-  const removeReminder = useCallback((id: string) => {
-    queryClient.setQueryData(["reminders", businessId], (old: Reminder[] | undefined) =>
-      (old || []).filter(r => r.id !== id)
-    );
-  }, [queryClient, businessId]);
-
-  // Stats
-  const stats = useMemo(() => {
-    const pending = reminders.filter(r => r.status === "pending_manual" || r.status === "scheduled").length;
-    const sent = reminders.filter(r => r.status === "sent").length;
-    const cancelled = reminders.filter(r => r.status === "cancelled").length;
-    const whatsapp = reminders.filter(r => r.channel === "whatsapp").length;
-    const email = reminders.filter(r => r.channel === "email").length;
-    return { pending, sent, cancelled, whatsapp, email, total: reminders.length };
-  }, [reminders]);
+  const upcoming = useMemo(
+    () => reminders.filter((r) => UPCOMING_STATUSES.includes(r.status)),
+    [reminders]
+  );
+  const history = useMemo(
+    () =>
+      reminders
+        .filter((r) => !UPCOMING_STATUSES.includes(r.status))
+        .sort((a, b) => b.scheduled_for.localeCompare(a.scheduled_for)),
+    [reminders]
+  );
+  const failedCount = useMemo(() => history.filter((r) => r.status === "failed").length, [history]);
 
   const filteredReminders = useMemo(() => {
-    let filtered = reminders;
-    if (activeTab === "pending") filtered = filtered.filter(r => r.status === "pending_manual" || r.status === "scheduled");
-    else if (activeTab === "sent") filtered = filtered.filter(r => r.status === "sent");
-    else if (activeTab === "cancelled") filtered = filtered.filter(r => r.status === "cancelled");
-
+    let list = activeTab === "upcoming" ? upcoming : history;
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      filtered = filtered.filter(r =>
-        (r.patient?.full_name || "").toLowerCase().includes(q) ||
-        r.message.toLowerCase().includes(q)
+      list = list.filter(
+        (r) =>
+          (r.patient?.full_name || "").toLowerCase().includes(q) ||
+          r.message.toLowerCase().includes(q)
       );
     }
-    return filtered;
-  }, [reminders, activeTab, searchQuery]);
+    return list;
+  }, [upcoming, history, activeTab, searchQuery]);
 
   const { paginatedItems: pageReminders, totalPages } = usePagination(filteredReminders, currentPage);
 
   useEffect(() => { setCurrentPage(1); }, [activeTab, searchQuery]);
 
-  // Group WhatsApp reminders by patient
-  const groupedByPatient: GroupedReminders[] = useMemo(() => {
-    const whatsappPending = filteredReminders.filter(
-      r => r.channel === "whatsapp" && (r.status === "pending_manual" || r.status === "scheduled")
-    );
-    const groups = new Map<string, Reminder[]>();
-    for (const r of whatsappPending) {
-      if (!groups.has(r.patient_id)) groups.set(r.patient_id, []);
-      groups.get(r.patient_id)!.push(r);
-    }
-    return Array.from(groups.entries())
-      .filter(([_, rems]) => rems.length > 1)
-      .map(([patientId, rems]) => ({
-        patientId,
-        patientName: rems[0].patient?.full_name || "Sin paciente",
-        reminders: rems,
-        combinedMessage: rems.map(r => r.message).join("\n\n---\n\n"),
-        phone: rems[0].patient?.whatsapp_phone || null,
-      }));
-  }, [filteredReminders]);
-
-  // Actions
-  const copyToClipboard = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      toast({ title: "✓ Copiado al portapapeles" });
-    } catch {
-      toast({ title: "Error", description: "No se pudo copiar", variant: "destructive" });
-    }
-  };
-
-  const sendWhatsApp = async (reminder: Reminder) => {
-    if (!reminder.patient?.whatsapp_phone) {
-      toast({ title: "Error", description: "El paciente no tiene teléfono", variant: "destructive" });
-      return;
-    }
-    const phone = reminder.patient.whatsapp_phone.replace(/\D/g, "");
-    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(reminder.message)}`, "_blank");
-    setWhatsappConfirm({
-      ids: [reminder.id],
-      patientName: reminder.patient?.full_name || "el paciente",
-    });
-  };
-
-  const markAsSent = async (reminderId: string) => {
-    await supabase.from("scheduled_reminders").update({ status: "sent" }).eq("id", reminderId);
-    updateReminder(reminderId, { status: "sent" });
-    setSelectedForSent(prev => { const n = new Set(prev); n.delete(reminderId); return n; });
-    toast({ title: "✓ Marcado como enviado" });
-  };
-
-  const markMultipleAsSent = async (ids: string[]) => {
-    for (const id of ids) {
-      await supabase.from("scheduled_reminders").update({ status: "sent" }).eq("id", id);
-    }
-    queryClient.setQueryData(["reminders", businessId], (old: Reminder[] | undefined) =>
-      (old || []).map(r => ids.includes(r.id) ? { ...r, status: "sent" } : r)
-    );
-    setSelectedForSent(new Set());
-    toast({ title: `✓ ${ids.length} recordatorios marcados como enviados` });
-  };
-
+  // ── Acciones ──
   const cancelReminder = async (reminderId: string) => {
     await supabase.from("scheduled_reminders").update({ status: "cancelled" }).eq("id", reminderId);
-    updateReminder(reminderId, { status: "cancelled" });
+    updateReminderLocal(reminderId, { status: "cancelled" });
     setCancelTarget(null);
-    toast({ title: "Recordatorio cancelado" });
-  };
-
-  const deleteReminder = async (reminderId: string) => {
-    try {
-      const { error } = await supabase.from("scheduled_reminders").delete().eq("id", reminderId);
-      if (error) throw error;
-      removeReminder(reminderId);
-      setDeleteTarget(null);
-      toast({ title: "Recordatorio eliminado" });
-    } catch {
-      toast({ title: "Error", description: "No se pudo eliminar", variant: "destructive" });
-    }
+    toast({ title: "Aviso cancelado", description: "No se va a enviar." });
   };
 
   const saveEditedMessage = async () => {
@@ -305,7 +322,7 @@ const PendingReminders = () => {
         .update({ message: editMessage })
         .eq("id", editingReminder.id);
       if (error) throw error;
-      updateReminder(editingReminder.id, { message: editMessage });
+      updateReminderLocal(editingReminder.id, { message: editMessage });
       setEditingReminder(null);
       toast({ title: "✓ Mensaje actualizado" });
     } catch {
@@ -315,48 +332,19 @@ const PendingReminders = () => {
     }
   };
 
-  const whatsappPendingForSendAll = filteredReminders.filter(
-    r => r.channel === "whatsapp" && r.status === "pending_manual" && r.patient?.whatsapp_phone
-  );
-
-  const sendAllWhatsApp = async () => {
-    setShowSendAllConfirm(false);
-    const ids: string[] = [];
-    for (const reminder of whatsappPendingForSendAll) {
-      const phone = reminder.patient!.whatsapp_phone!.replace(/\D/g, "");
-      window.open(`https://wa.me/${phone}?text=${encodeURIComponent(reminder.message)}`, "_blank");
-      ids.push(reminder.id);
-      await new Promise(resolve => setTimeout(resolve, 1500));
+  const retryFailed = async (reminder: Reminder) => {
+    // Volver a programarlo: el robot lo toma en la próxima pasada (cada 5 min).
+    if (!reminder.patient?.email) {
+      toast({
+        title: "El paciente no tiene email",
+        description: "Cargale un email en su ficha y después reintentá.",
+        variant: "destructive",
+      });
+      return;
     }
-    if (ids.length > 0) {
-      setWhatsappConfirm({ ids, patientName: `${ids.length} pacientes` });
-    }
-  };
-
-  const sendGroupedWhatsApp = async (group: GroupedReminders) => {
-    if (!group.phone) return;
-    const phone = group.phone.replace(/\D/g, "");
-    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(group.combinedMessage)}`, "_blank");
-    setWhatsappConfirm({
-      ids: group.reminders.map(r => r.id),
-      patientName: group.patientName,
-    });
-  };
-
-  const confirmWhatsappSent = async () => {
-    if (!whatsappConfirm) return;
-    const ids = whatsappConfirm.ids;
-    await supabase.from("scheduled_reminders").update({ status: "sent" }).in("id", ids);
-    queryClient.setQueryData(["reminders", businessId], (old: Reminder[] | undefined) =>
-      (old || []).map(r => ids.includes(r.id) ? { ...r, status: "sent" } : r)
-    );
-    setWhatsappConfirm(null);
-    toast({ title: `✓ ${ids.length === 1 ? "Marcado" : `${ids.length} marcados`} como enviado` });
-  };
-
-  const dismissWhatsappConfirm = () => {
-    setWhatsappConfirm(null);
-    toast({ title: "Sin cambios", description: "El recordatorio sigue pendiente" });
+    await supabase.from("scheduled_reminders").update({ status: "scheduled" }).eq("id", reminder.id);
+    updateReminderLocal(reminder.id, { status: "scheduled" });
+    toast({ title: "Reintentando", description: "Sale en los próximos minutos." });
   };
 
   const createManualReminder = async () => {
@@ -369,12 +357,10 @@ const PendingReminders = () => {
       let appointmentId: string | null = null;
 
       if (createForm.mode === "appointment") {
-        const appt = upcomingAppointments.find(a => a.id === createForm.appointmentId);
+        const appt = upcomingAppointments.find((a) => a.id === createForm.appointmentId);
         if (!appt) throw new Error("Cita no encontrada");
-        const apptDate = new Date(appt.start_at);
-        const hours = parseInt(createForm.hoursBefore);
-        scheduledFor = new Date(apptDate);
-        scheduledFor.setHours(scheduledFor.getHours() - hours);
+        scheduledFor = new Date(appt.start_at);
+        scheduledFor.setHours(scheduledFor.getHours() - parseInt(createForm.hoursBefore));
         appointmentId = createForm.appointmentId;
       } else {
         scheduledFor = new Date(createForm.scheduledAt);
@@ -391,27 +377,28 @@ const PendingReminders = () => {
         business_id: businessId,
         scheduled_for: scheduledFor.toISOString(),
         message: createForm.message,
-        channel: createForm.channel,
+        channel: "email",
         type: "reminder",
-        status: createForm.channel === "email" ? "scheduled" : "pending_manual",
-        auto_send: createForm.channel === "email",
+        status: "scheduled",
+        auto_send: true,
       });
       if (error) throw error;
 
       invalidateReminders();
       setShowCreateModal(false);
-      setCreateForm({ mode: "appointment", patientId: "", appointmentId: "", channel: "whatsapp", message: "", hoursBefore: "24", scheduledAt: "" });
-      toast({ title: "✓ Recordatorio creado" });
+      setCreateForm({ mode: "appointment", patientId: "", appointmentId: "", message: "", hoursBefore: "24", scheduledAt: "" });
+      toast({ title: "✓ Aviso programado", description: "Sale solo por email en la fecha elegida." });
     } catch (err) {
       console.error(err);
-      toast({ title: "Error", description: "No se pudo crear el recordatorio", variant: "destructive" });
+      toast({ title: "Error", description: "No se pudo programar el aviso", variant: "destructive" });
     } finally {
       setCreateSaving(false);
     }
   };
 
-  const selectedPatientForCreate = patients.find(p => p.id === createForm.patientId);
-  const appointmentsForPatient = upcomingAppointments.filter(a => a.patient_id === createForm.patientId);
+  const selectedPatientForCreate = patients.find((p) => p.id === createForm.patientId);
+  const appointmentsForPatient = upcomingAppointments.filter((a) => a.patient_id === createForm.patientId);
+  const createPatientHasEmail = !!selectedPatientForCreate?.email;
 
   const formatDateTime = (isoDate: string) => {
     const date = new Date(isoDate);
@@ -421,25 +408,17 @@ const PendingReminders = () => {
     };
   };
 
-  const toggleSelectForSent = (id: string) => {
-    setSelectedForSent(prev => {
-      const n = new Set(prev);
-      if (n.has(id)) n.delete(id); else n.add(id);
-      return n;
-    });
-  };
-
   if (!businessId) return <RouteSkeleton />;
 
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
 
-        {/* ── Hero Header ── */}
+        {/* ── Header ── */}
         <div className="text-center space-y-3">
           <Badge variant="outline" className="rounded-full px-4 py-1 text-xs font-medium border-primary/30 text-primary">
             <BellRing className="h-3 w-3 mr-1.5" />
-            Centro de notificaciones
+            Avisos automáticos
           </Badge>
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight">
             <span className="inline-flex items-center gap-2">
@@ -448,44 +427,122 @@ const PendingReminders = () => {
             </span>
           </h1>
           <p className="text-sm text-muted-foreground max-w-md mx-auto">
-            Gestioná, editá y enviá todos los recordatorios de tus pacientes
+            Tus pacientes reciben el recordatorio solos, sin que hagas nada.
+            Acá ves qué va a salir, qué salió y lo configurás a tu gusto.
           </p>
         </div>
 
-        {/* ── Stats Row ── */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {[
-            { label: "Pendientes", value: stats.pending, icon: Clock, accent: "text-orange-400", helpId: "remindersPendingTab" as const },
-            { label: "Enviados", value: stats.sent, icon: MailCheck, accent: "text-green-400", helpId: undefined },
-            { label: "WhatsApp", value: stats.whatsapp, icon: MessageSquare, accent: "text-emerald-400", helpId: "remindersHowItWorks" as const },
-            { label: "Email", value: stats.email, icon: Mail, accent: "text-blue-400", helpId: "remindersAutoSend" as const },
-          ].map((s, i) => (
-            <Card key={i} className="border-border/50 bg-card/50 backdrop-blur-sm">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className={`p-2 rounded-xl bg-muted/50 ${s.accent}`}>
-                  <s.icon className="h-4 w-4" />
-                </div>
-                <div>
-                  <p className="text-xl font-bold">{s.value}</p>
-                  <p className="text-xs text-muted-foreground inline-flex items-center gap-1">
-                    {s.label}
-                    {s.helpId && <HelpTooltip id={s.helpId} />}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        {/* ── Configuración ── */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Settings2 className="h-4 w-4 text-primary" />
+              Cómo se envían
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            {settingsLoading ? (
+              <div className="py-6 flex items-center justify-center text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin mr-2" /> Cargando...
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Canal email */}
+                  <div className="flex items-center justify-between rounded-lg border p-3">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400">
+                        <Mail className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">Email automático</p>
+                        <p className="text-xs text-muted-foreground">Se envía solo, sin que hagas nada</p>
+                      </div>
+                    </div>
+                    <Switch checked={autoEmail} onCheckedChange={setAutoEmail} />
+                  </div>
 
-        {/* ── Search ── */}
+                  {/* Canal WhatsApp (próximamente) */}
+                  <div className="flex items-center justify-between rounded-lg border border-dashed p-3 opacity-70">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-green-500/10 text-green-500">
+                        <MessageSquare className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">WhatsApp automático</p>
+                        <p className="text-xs text-muted-foreground">Se activa al conectar WhatsApp</p>
+                      </div>
+                    </div>
+                    <Badge variant="outline" className="rounded-full text-xs">Próximamente</Badge>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label>Anticipación</Label>
+                    <Select value={hoursBefore} onValueChange={setHoursBefore}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {HOURS_OPTIONS.map((o) => (
+                          <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">Cuánto antes de la cita sale el aviso.</p>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Mensaje del recordatorio</Label>
+                  <Textarea
+                    ref={templateRef}
+                    value={template}
+                    onChange={(e) => setTemplate(e.target.value)}
+                    rows={3}
+                    className="resize-none text-sm"
+                  />
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {VARIABLES.map((v) => (
+                      <button
+                        key={v.key}
+                        type="button"
+                        onClick={() => insertVariable(v.key)}
+                        title={v.desc}
+                        className="px-2.5 py-1 rounded-full bg-muted border text-xs font-mono hover:bg-primary hover:text-primary-foreground transition-colors"
+                      >
+                        {v.key}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setTemplate(DEFAULT_TEMPLATE)}
+                      className="ml-auto inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+                    >
+                      <RotateCcw className="h-3 w-3" /> Restaurar sugerido
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex justify-end">
+                  <Button onClick={saveSettings} disabled={!settingsDirty || settingsSaving} className="gap-2">
+                    {settingsSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                    Guardar configuración
+                  </Button>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* ── Búsqueda ── */}
         <div className="flex justify-center">
           <div className="relative w-full max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Buscar por paciente o mensaje..."
               value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              className="pl-10 rounded-2xl border-border/50 bg-card/60 backdrop-blur-sm h-11"
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 rounded-2xl h-11"
             />
             {searchQuery && (
               <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
@@ -499,123 +556,65 @@ const PendingReminders = () => {
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <TabsList className="rounded-2xl">
-              <TabsTrigger value="pending" className="gap-1.5 rounded-xl">
-                <Bell className="h-4 w-4" />
-                Pendientes
-                {stats.pending > 0 && (
-                  <Badge variant="secondary" className="ml-1 h-5 min-w-5 text-xs rounded-full">{stats.pending}</Badge>
+              <TabsTrigger value="upcoming" className="gap-1.5 rounded-xl">
+                <Clock className="h-4 w-4" />
+                Próximos
+                {upcoming.length > 0 && (
+                  <Badge variant="secondary" className="ml-1 h-5 min-w-5 text-xs rounded-full">{upcoming.length}</Badge>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="sent" className="gap-1.5 rounded-xl">
-                <Check className="h-4 w-4" />
-                Enviados
-              </TabsTrigger>
-              <TabsTrigger value="cancelled" className="gap-1.5 rounded-xl">
-                <XCircle className="h-4 w-4" />
-                Cancelados
-              </TabsTrigger>
-              <TabsTrigger value="all" className="gap-1.5 rounded-xl">
-                Todos
+              <TabsTrigger value="history" className="gap-1.5 rounded-xl">
+                <CheckCircle2 className="h-4 w-4" />
+                Historial
+                {failedCount > 0 && (
+                  <Badge variant="destructive" className="ml-1 h-5 min-w-5 text-xs rounded-full">{failedCount}</Badge>
+                )}
               </TabsTrigger>
             </TabsList>
 
-            <div className="flex gap-2 flex-wrap">
-              {selectedForSent.size > 0 && (
-                <Button size="sm" variant="outline" onClick={() => markMultipleAsSent(Array.from(selectedForSent))} className="rounded-xl gap-2">
-                  <CheckSquare className="h-4 w-4" />
-                  Marcar {selectedForSent.size} enviados
-                </Button>
-              )}
-              {activeTab === "pending" && whatsappPendingForSendAll.length > 0 && (
-                <Button size="sm" onClick={() => setShowSendAllConfirm(true)} className="rounded-xl gap-2">
-                  <Send className="h-4 w-4" />
-                  Enviar todos
-                </Button>
-              )}
-            </div>
+            <Button size="sm" variant="outline" onClick={() => setShowCreateModal(true)} className="rounded-xl gap-2">
+              <Plus className="h-4 w-4" />
+              Programar aviso
+            </Button>
           </div>
 
           <TabsContent value={activeTab} className="mt-4 space-y-4">
-            {/* Grouped reminders */}
-            {activeTab === "pending" && groupedByPatient.length > 0 && (
-              <div className="space-y-3">
-                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                  Agrupados por paciente
-                </h3>
-                {groupedByPatient.map((group, i) => (
-                  <Card key={group.patientId} className="border-primary/20 bg-primary/5 animate-fade-in" style={{ animationDelay: `${i * 60}ms` }}>
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0 space-y-1.5">
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="rounded-full text-xs">{group.reminders.length} msgs</Badge>
-                            <p className="font-semibold">{group.patientName}</p>
-                          </div>
-                          <p className="text-sm text-muted-foreground line-clamp-2">{group.combinedMessage.slice(0, 120)}...</p>
-                        </div>
-                        <div className="flex gap-2 shrink-0">
-                          <Button size="sm" variant="outline" className="rounded-xl gap-1.5 h-8" onClick={() => copyToClipboard(group.combinedMessage)}>
-                            <Copy className="h-3.5 w-3.5" />
-                          </Button>
-                          {group.phone && (
-                            <Button size="sm" className="rounded-xl gap-1.5 h-8" onClick={() => sendGroupedWhatsApp(group)}>
-                              <Send className="h-3.5 w-3.5" />
-                              Enviar junto
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-
-            {/* List */}
-            {filteredReminders.length === 0 ? (
+            {loading ? (
+              <Card>
+                <CardContent className="py-16 flex items-center justify-center text-muted-foreground">
+                  <Loader2 className="h-5 w-5 animate-spin mr-2" /> Cargando...
+                </CardContent>
+              </Card>
+            ) : filteredReminders.length === 0 ? (
               <Card className="border-dashed">
                 <CardContent className="py-16 text-center">
                   <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-muted/50 flex items-center justify-center">
                     <Bell className="h-8 w-8 text-muted-foreground" />
                   </div>
                   <p className="text-muted-foreground font-medium">
-                    {activeTab === "pending" ? "No hay recordatorios pendientes"
-                      : activeTab === "sent" ? "No hay recordatorios enviados"
-                      : activeTab === "cancelled" ? "No hay recordatorios cancelados"
-                      : "No hay recordatorios"}
+                    {activeTab === "upcoming" ? "No hay avisos programados" : "Todavía no salió ningún aviso"}
                   </p>
-                  <p className="text-xs text-muted-foreground mt-1">Los recordatorios se crean automáticamente con cada cita</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Se crean solos cuando se agenda o confirma una cita.
+                  </p>
                 </CardContent>
               </Card>
             ) : (
               <div className="space-y-3">
-                {pageReminders.map((reminder, i) => {
+                {pageReminders.map((reminder) => {
                   const apptDt = reminder.appointment?.start_at ? formatDateTime(reminder.appointment.start_at) : null;
                   const schedDt = formatDateTime(reminder.scheduled_for);
-                  const chConf = channelConfig[reminder.channel] || channelConfig.whatsapp;
+                  const chConf = channelConfig[reminder.channel] || channelConfig.email;
                   const stConf = statusConfig[reminder.status] || statusConfig.scheduled;
                   const ChannelIcon = chConf.icon;
-                  const isPending = reminder.status === "pending_manual" || reminder.status === "scheduled";
-                  const isCancelled = reminder.status === "cancelled";
+                  const isUpcoming = UPCOMING_STATUSES.includes(reminder.status);
+                  const isFailed = reminder.status === "failed";
 
                   return (
-                    <Card
-                      key={reminder.id}
-                      className={`overflow-hidden transition-all duration-300 hover:shadow-md animate-fade-in ${isCancelled ? "opacity-60" : ""}`}
-                      style={{ animationDelay: `${i * 50}ms` }}
-                    >
+                    <Card key={reminder.id} className={`overflow-hidden transition-all hover:shadow-md ${reminder.status === "cancelled" ? "opacity-60" : ""}`}>
                       <CardContent className="p-4">
                         <div className="flex items-start gap-3">
-                          {isPending && (
-                            <div className="pt-1">
-                              <Checkbox
-                                checked={selectedForSent.has(reminder.id)}
-                                onCheckedChange={() => toggleSelectForSent(reminder.id)}
-                              />
-                            </div>
-                          )}
-
-                          <div className={`p-2.5 rounded-xl shrink-0 ${chConf.color}`}>
+                          <div className="p-2.5 rounded-xl shrink-0 bg-muted/50 text-muted-foreground">
                             <ChannelIcon className="h-4 w-4" />
                           </div>
 
@@ -629,77 +628,62 @@ const PendingReminders = () => {
                                   </p>
                                 )}
                               </div>
-                              <div className="flex items-center gap-1.5 shrink-0">
-                                <Badge variant="outline" className={`rounded-full text-xs ${stConf.color}`}>{stConf.label}</Badge>
-                                <Badge variant="outline" className="rounded-full text-xs">{typeLabels[reminder.type] || reminder.type}</Badge>
-                              </div>
+                              <Badge variant="outline" className={`rounded-full text-xs shrink-0 ${stConf.color}`}>
+                                {stConf.label}
+                              </Badge>
                             </div>
 
                             <p className="text-sm text-muted-foreground line-clamp-2">{reminder.message}</p>
 
+                            {isFailed && (
+                              <div className="flex items-start gap-2 rounded-lg bg-destructive/5 border border-destructive/20 p-2.5 text-xs text-destructive">
+                                <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                                <span>
+                                  No se pudo enviar. Lo más común: el paciente no tiene email cargado en su ficha
+                                  {reminder.patient?.email ? "" : " (este paciente no tiene)"}.
+                                </span>
+                              </div>
+                            )}
+
                             <div className="flex items-center justify-between gap-2 flex-wrap">
                               <p className="text-xs text-muted-foreground">
-                                {reminder.auto_send ? "⚡ Auto" : "✋ Manual"} · {schedDt.date} {schedDt.time}
+                                {isUpcoming ? "Sale el" : "Programado para el"} {schedDt.date} a las {schedDt.time} · {chConf.label}
                               </p>
 
                               <div className="flex gap-1.5">
-                                {/* Edit message */}
-                                {isPending && (
+                                {isUpcoming && (
+                                  <>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="rounded-xl h-8 gap-1.5"
+                                      onClick={() => { setEditingReminder(reminder); setEditMessage(reminder.message); }}
+                                    >
+                                      <Pencil className="h-3.5 w-3.5" />
+                                      <span className="hidden sm:inline">Editar</span>
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="rounded-xl h-8 gap-1.5 text-muted-foreground hover:text-destructive"
+                                      onClick={() => setCancelTarget(reminder.id)}
+                                    >
+                                      <XCircle className="h-3.5 w-3.5" />
+                                      <span className="hidden sm:inline">Cancelar</span>
+                                    </Button>
+                                  </>
+                                )}
+                                {isFailed && (
                                   <Button
                                     size="sm"
-                                    variant="ghost"
-                                    className="rounded-xl h-8 w-8 p-0"
-                                    onClick={() => { setEditingReminder(reminder); setEditMessage(reminder.message); }}
-                                    title="Editar mensaje"
+                                    variant="outline"
+                                    className="rounded-xl h-8 gap-1.5"
+                                    onClick={() => retryFailed(reminder)}
                                   >
-                                    <Pencil className="h-3.5 w-3.5" />
+                                    <RotateCcw className="h-3.5 w-3.5" />
+                                    Reintentar
                                   </Button>
                                 )}
-
-                                {/* Copy */}
-                                <Button size="sm" variant="ghost" className="rounded-xl h-8 w-8 p-0" onClick={() => copyToClipboard(reminder.message)} title="Copiar">
-                                  <Copy className="h-3.5 w-3.5" />
-                                </Button>
-
-                                {/* Send WhatsApp */}
-                                {isPending && reminder.channel === "whatsapp" && (
-                                  <Button size="sm" variant="outline" className="rounded-xl gap-1.5 h-8" onClick={() => sendWhatsApp(reminder)}>
-                                    <Send className="h-3.5 w-3.5" />
-                                    <span className="hidden sm:inline">WhatsApp</span>
-                                  </Button>
-                                )}
-
-                                {/* Mark as sent */}
-                                {isPending && (
-                                  <Button size="sm" variant="outline" className="rounded-xl gap-1.5 h-8" onClick={() => markAsSent(reminder.id)}>
-                                    <Check className="h-3.5 w-3.5" />
-                                    <span className="hidden sm:inline">Enviado</span>
-                                  </Button>
-                                )}
-
-                                {/* Cancel */}
-                                {isPending && (
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    className="rounded-xl h-8 w-8 p-0 text-muted-foreground hover:text-orange-400"
-                                    onClick={() => setCancelTarget(reminder.id)}
-                                    title="Cancelar"
-                                  >
-                                    <XCircle className="h-3.5 w-3.5" />
-                                  </Button>
-                                )}
-
-                                {/* Delete */}
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="rounded-xl h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                                  onClick={() => setDeleteTarget(reminder.id)}
-                                  title="Eliminar"
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </Button>
                               </div>
                             </div>
                           </div>
@@ -722,21 +706,16 @@ const PendingReminders = () => {
         </Tabs>
       </div>
 
-      {/* ── Edit Message Dialog ── */}
-      <Dialog open={!!editingReminder} onOpenChange={open => !open && setEditingReminder(null)}>
+      {/* ── Editar mensaje ── */}
+      <Dialog open={!!editingReminder} onOpenChange={(open) => !open && setEditingReminder(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Editar mensaje</DialogTitle>
             <DialogDescription>
-              Modificá el texto del recordatorio para {editingReminder?.patient?.full_name}
+              Solo cambia este aviso puntual para {editingReminder?.patient?.full_name}.
             </DialogDescription>
           </DialogHeader>
-          <Textarea
-            value={editMessage}
-            onChange={e => setEditMessage(e.target.value)}
-            rows={6}
-            className="rounded-xl"
-          />
+          <Textarea value={editMessage} onChange={(e) => setEditMessage(e.target.value)} rows={6} className="rounded-xl" />
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditingReminder(null)} className="rounded-xl">Cancelar</Button>
             <Button onClick={saveEditedMessage} disabled={editSaving || !editMessage.trim()} className="rounded-xl">
@@ -746,93 +725,40 @@ const PendingReminders = () => {
         </DialogContent>
       </Dialog>
 
-      {/* ── Cancel Confirmation ── */}
-      <AlertDialog open={!!cancelTarget} onOpenChange={open => !open && setCancelTarget(null)}>
+      {/* ── Confirmar cancelación ── */}
+      <AlertDialog open={!!cancelTarget} onOpenChange={(open) => !open && setCancelTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Cancelar recordatorio</AlertDialogTitle>
+            <AlertDialogTitle>Cancelar este aviso</AlertDialogTitle>
             <AlertDialogDescription>
-              El recordatorio se marcará como cancelado y no se enviará. Podés eliminarlo después si querés.
+              El paciente no va a recibir este recordatorio. La cita no se toca.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Volver</AlertDialogCancel>
             <AlertDialogAction onClick={() => cancelTarget && cancelReminder(cancelTarget)}>
-              Cancelar recordatorio
+              Sí, cancelar aviso
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* ── Delete Confirmation ── */}
-      <AlertDialog open={!!deleteTarget} onOpenChange={open => !open && setDeleteTarget(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Eliminar recordatorio</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta acción es permanente. ¿Estás seguro de que querés eliminar este recordatorio?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Volver</AlertDialogCancel>
-            <AlertDialogAction onClick={() => deleteTarget && deleteReminder(deleteTarget)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Eliminar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* ── Send All Confirmation ── */}
-      <AlertDialog open={showSendAllConfirm} onOpenChange={setShowSendAllConfirm}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Enviar todos los WhatsApp</AlertDialogTitle>
-            <AlertDialogDescription>
-              Se abrirán <strong>{whatsappPendingForSendAll.length}</strong> ventanas de WhatsApp de forma secuencial con 1.5s de intervalo.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={sendAllWhatsApp}>
-              Enviar {whatsappPendingForSendAll.length} mensajes
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* ── WhatsApp Sent Confirmation ── */}
-      <AlertDialog open={!!whatsappConfirm} onOpenChange={open => !open && dismissWhatsappConfirm()}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Enviaste el WhatsApp?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Confirmá si efectivamente enviaste el mensaje a <strong>{whatsappConfirm?.patientName}</strong>.
-              Si lo enviaste, lo marco como enviado. Si no, queda pendiente para enviarlo más tarde.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={dismissWhatsappConfirm}>No, sigue pendiente</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmWhatsappSent}>Sí, marcar como enviado</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* ── Create Manual Reminder ── */}
+      {/* ── Programar aviso puntual ── */}
       <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Crear recordatorio</DialogTitle>
-            <DialogDescription>Creá un recordatorio manual para un paciente</DialogDescription>
+            <DialogTitle>Programar un aviso</DialogTitle>
+            <DialogDescription>Sale solo por email en la fecha que elijas.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Tipo de recordatorio</label>
+              <Label>Tipo</Label>
               <ToggleGroup
                 type="single"
                 value={createForm.mode}
                 onValueChange={(v) => {
                   if (!v) return;
-                  setCreateForm(f => ({ ...f, mode: v as "appointment" | "free" }));
+                  setCreateForm((f) => ({ ...f, mode: v as "appointment" | "free" }));
                 }}
                 className="grid grid-cols-2 gap-2 w-full"
               >
@@ -846,29 +772,34 @@ const PendingReminders = () => {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Paciente</label>
-              <Select value={createForm.patientId} onValueChange={v => setCreateForm(f => ({ ...f, patientId: v, appointmentId: "" }))}>
+              <Label>Paciente</Label>
+              <Select value={createForm.patientId} onValueChange={(v) => setCreateForm((f) => ({ ...f, patientId: v, appointmentId: "" }))}>
                 <SelectTrigger className="rounded-xl"><SelectValue placeholder="Seleccionar paciente" /></SelectTrigger>
                 <SelectContent>
-                  {patients.map(p => (
+                  {patients.map((p) => (
                     <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              {selectedPatientForCreate && !createPatientHasEmail && (
+                <p className="text-xs text-destructive">
+                  Este paciente no tiene email cargado — el aviso no le va a llegar. Cargale un email en su ficha primero.
+                </p>
+              )}
             </div>
 
             {createForm.mode === "appointment" && createForm.patientId && (
               <div className="space-y-2">
-                <label className="text-sm font-medium">Cita próxima</label>
+                <Label>Cita próxima</Label>
                 {appointmentsForPatient.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
-                    Este paciente no tiene citas próximas. Cambiá a <span className="font-medium text-foreground">"Mensaje libre"</span> para enviarle un recordatorio.
+                    Este paciente no tiene citas próximas. Cambiá a <span className="font-medium text-foreground">"Mensaje libre"</span>.
                   </p>
                 ) : (
-                  <Select value={createForm.appointmentId} onValueChange={v => setCreateForm(f => ({ ...f, appointmentId: v }))}>
+                  <Select value={createForm.appointmentId} onValueChange={(v) => setCreateForm((f) => ({ ...f, appointmentId: v }))}>
                     <SelectTrigger className="rounded-xl"><SelectValue placeholder="Seleccionar cita" /></SelectTrigger>
                     <SelectContent>
-                      {appointmentsForPatient.map(a => (
+                      {appointmentsForPatient.map((a) => (
                         <SelectItem key={a.id} value={a.id}>
                           {format(new Date(a.start_at), "d MMM yyyy · HH:mm", { locale: es })}
                         </SelectItem>
@@ -879,54 +810,39 @@ const PendingReminders = () => {
               </div>
             )}
 
-            {createForm.mode === "free" && (
+            {createForm.mode === "appointment" ? (
               <div className="space-y-2">
-                <label className="text-sm font-medium">Fecha y hora de envío</label>
+                <Label>Anticipación</Label>
+                <Select value={createForm.hoursBefore} onValueChange={(v) => setCreateForm((f) => ({ ...f, hoursBefore: v }))}>
+                  <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {HOURS_OPTIONS.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Label>Fecha y hora de envío</Label>
                 <Input
                   type="datetime-local"
                   value={createForm.scheduledAt}
                   min={new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)}
-                  onChange={e => setCreateForm(f => ({ ...f, scheduledAt: e.target.value }))}
+                  onChange={(e) => setCreateForm((f) => ({ ...f, scheduledAt: e.target.value }))}
                   className="rounded-xl"
                 />
               </div>
             )}
 
-            <div className={createForm.mode === "appointment" ? "grid grid-cols-1 sm:grid-cols-2 gap-3" : ""}>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Canal</label>
-                <Select value={createForm.channel} onValueChange={(v: "whatsapp" | "email") => setCreateForm(f => ({ ...f, channel: v }))}>
-                  <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="whatsapp">WhatsApp</SelectItem>
-                    <SelectItem value="email">Email</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              {createForm.mode === "appointment" && (
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Anticipación</label>
-                  <Select value={createForm.hoursBefore} onValueChange={v => setCreateForm(f => ({ ...f, hoursBefore: v }))}>
-                    <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1">1 hora antes</SelectItem>
-                      <SelectItem value="24">1 día antes</SelectItem>
-                      <SelectItem value="48">2 días antes</SelectItem>
-                      <SelectItem value="168">1 semana antes</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-            </div>
-
             <div className="space-y-2">
-              <label className="text-sm font-medium">Mensaje</label>
+              <Label>Mensaje</Label>
               <Textarea
                 value={createForm.message}
-                onChange={e => setCreateForm(f => ({ ...f, message: e.target.value }))}
+                onChange={(e) => setCreateForm((f) => ({ ...f, message: e.target.value }))}
                 rows={4}
                 className="rounded-xl"
-                placeholder={selectedPatientForCreate ? `Hola ${selectedPatientForCreate.full_name}, te recuerdo tu próxima sesión...` : "Escribí el mensaje del recordatorio..."}
+                placeholder={selectedPatientForCreate ? `Hola ${selectedPatientForCreate.full_name}, te recuerdo...` : "Escribí el mensaje del aviso..."}
               />
             </div>
           </div>
@@ -937,26 +853,18 @@ const PendingReminders = () => {
               disabled={
                 createSaving ||
                 !createForm.patientId ||
+                !createPatientHasEmail ||
                 !createForm.message.trim() ||
                 (createForm.mode === "appointment" && !createForm.appointmentId) ||
                 (createForm.mode === "free" && !createForm.scheduledAt)
               }
               className="rounded-xl"
             >
-              {createSaving ? "Creando..." : "Crear recordatorio"}
+              {createSaving ? "Programando..." : "Programar aviso"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* ── FAB ── */}
-      <Button
-        onClick={() => setShowCreateModal(true)}
-        className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg z-50"
-        size="icon"
-      >
-        <Plus className="h-6 w-6" />
-      </Button>
     </div>
   );
 };
