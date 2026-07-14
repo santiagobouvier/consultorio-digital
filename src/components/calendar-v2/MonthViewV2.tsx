@@ -258,7 +258,10 @@ export const MonthViewV2 = ({
                   </div>
                 )}
 
-                {/* Desktop: appointment + payment previews */}
+                {/* Desktop: appointment + payment previews.
+                    Son SOLO visuales: el click en cualquier parte del casillero
+                    abre el panel del día (ahí se toca la cita puntual con
+                    botones grandes). Evita abrir el detalle por error. */}
                 {!isMobile && (hasAppointments || hasPayments) && (
                   <div className="space-y-0.5 overflow-hidden">
                     {dayAppointments.slice(0, 2).map((apt) => {
@@ -267,13 +270,9 @@ export const MonthViewV2 = ({
                       return (
                         <div
                           key={apt.id}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onAppointmentClick(apt);
-                          }}
                           className={cn(
-                            "text-xs px-1.5 py-1 rounded-md cursor-pointer transition-all",
-                            "hover:shadow-sm border-l-[3px] overflow-hidden",
+                            "text-xs px-1.5 py-1 rounded-md transition-all",
+                            "border-l-[3px] overflow-hidden",
                             sc.bgTint,
                             sc.border
                           )}
@@ -302,13 +301,9 @@ export const MonthViewV2 = ({
                       return (
                         <div
                           key={`pay-${p.id}`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onPaymentClick?.(p);
-                          }}
                           className={cn(
-                            "text-xs p-1.5 rounded-lg truncate cursor-pointer transition-all",
-                            "hover:scale-[1.02] hover:shadow-sm flex items-center gap-1",
+                            "text-xs p-1.5 rounded-lg truncate transition-all",
+                            "flex items-center gap-1",
                             st === "overdue"
                               ? "bg-rose-50 dark:bg-rose-500/10 border-l-2 border-l-rose-500"
                               : st === "due_soon"
