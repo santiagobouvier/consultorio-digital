@@ -342,10 +342,10 @@ const PortalCustomization = () => {
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
-              <LinkIcon className="h-4 w-4 text-primary" /> URL del portal de pacientes
+              <LinkIcon className="h-4 w-4 text-primary" /> Tu dirección en internet
             </CardTitle>
             <CardDescription>
-              Esta es la dirección que tus pacientes usan para entrar a su portal. Podés personalizar el identificador.
+              El identificador define las DOS direcciones de tu consultorio: la web pública de reservas y el portal de pacientes.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -387,22 +387,39 @@ const PortalCustomization = () => {
               {slugStatus === "checking" && (
                 <p className="text-xs text-muted-foreground">Verificando disponibilidad...</p>
               )}
+              {publicSlug !== initialSlug && (slugStatus === "available" || slugStatus === "checking") && (
+                <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-600 dark:text-amber-400">
+                  ⚠️ Al cambiar el identificador, <strong>los links que ya compartiste dejan de funcionar</strong> (la
+                  web de reservas y el portal). Vas a tener que volver a compartir los nuevos con tus pacientes.
+                </div>
+              )}
             </div>
 
             {portalUrl && (
               <div className="space-y-2">
-                <Label>URL completa</Label>
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <Input value={portalUrl} readOnly className="font-mono text-xs h-11 flex-1" />
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={copyPortalUrl} className="h-11 gap-2 flex-1 sm:flex-initial">
-                      {copied ? <Check className="h-4 w-4 text-primary" /> : <Copy className="h-4 w-4" />}
-                      {copied ? "Copiada" : "Copiar"}
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={openPortal} className="h-11 gap-2 flex-1 sm:flex-initial">
-                      <ExternalLink className="h-4 w-4" /> Ver portal
-                    </Button>
+                <Label>Tus direcciones</Label>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground w-24 shrink-0">Web pública</span>
+                    <Input
+                      value={buildShareUrl(`/consultorio/${publicSlug}`)}
+                      readOnly
+                      className="font-mono text-xs h-10 flex-1"
+                    />
                   </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground w-24 shrink-0">Portal</span>
+                    <Input value={portalUrl} readOnly className="font-mono text-xs h-10 flex-1" />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={copyPortalUrl} className="h-10 gap-2 flex-1 sm:flex-initial">
+                    {copied ? <Check className="h-4 w-4 text-primary" /> : <Copy className="h-4 w-4" />}
+                    {copied ? "Copiada" : "Copiar link del portal"}
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={openPortal} className="h-10 gap-2 flex-1 sm:flex-initial">
+                    <ExternalLink className="h-4 w-4" /> Ver portal
+                  </Button>
                 </div>
               </div>
             )}
