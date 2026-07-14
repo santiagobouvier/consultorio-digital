@@ -208,42 +208,18 @@ const PatientDetail = () => {
 
       if (error) throw error;
 
-      // If recurring, create next payment
-      if (payment.recurrence_type !== "one_time" && patient) {
+      // El vencimiento siguiente de un pago recurrente lo genera la base de
+      // datos (trigger generate_next_recurring_payment) — no el navegador.
+      if (payment.recurrence_type !== "one_time") {
         const nextDueDate = calculateNextDueDate(
           new Date(payment.due_date),
           payment.recurrence_type,
           payment.anchor_day
         );
-
-        const { error: insertError } = await supabase
-          .from("payments")
-          .insert({
-            business_id: patient.business_id,
-            patient_id: patient.id,
-            amount: payment.amount,
-            currency: payment.currency,
-            due_date: nextDueDate.toISOString(),
-            status: "pending",
-            recurrence_type: payment.recurrence_type,
-            anchor_day: payment.anchor_day,
-            method: payment.method,
-            notes: payment.notes,
-          });
-
-        if (insertError) {
-          console.error("Error creating next payment:", insertError);
-          toast({
-            title: "Aviso",
-            description: "Pago marcado como pagado, pero no se pudo crear el próximo vencimiento",
-            variant: "destructive",
-          });
-        } else {
-          toast({
-            title: "Éxito",
-            description: `Pago marcado como pagado. Próximo vencimiento: ${formatDate(nextDueDate.toISOString())}`,
-          });
-        }
+        toast({
+          title: "Éxito",
+          description: `Pago marcado como pagado. Próximo vencimiento: ${formatDate(nextDueDate.toISOString())}`,
+        });
       } else {
         toast({
           title: "Éxito",
