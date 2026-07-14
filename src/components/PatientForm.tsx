@@ -139,27 +139,18 @@ export function PatientForm({
         ? `business-avatars/${businessId}/${fileId}.${ext}`
         : `${user.id}/patient-avatars/${fileId}.${ext}`;
 
-      // DEBUG: mostrar info de upload
-      toast({
-        title: "📋 Debug Upload",
-        description: `UUID: ${fileId} | businessId: ${businessId ?? "null"} | path: ${path}`,
-      });
-
-      const { error: uploadError, data: uploadData } = await supabase.storage
+      // upsert: la ruta es determinística por paciente, así cambiar la foto
+      // reemplaza la anterior en vez de fallar por duplicado.
+      const { error: uploadError } = await supabase.storage
         .from("avatars")
-        .upload(path, file, { cacheControl: "3600", upsert: false });
+        .upload(path, file, { cacheControl: "3600", upsert: true });
 
-      if (uploadError) {
-        toast({
-          title: "❌ Error Storage",
-          description: `Code: ${(uploadError as any).statusCode ?? "?"} | ${uploadError.message}`,
-          variant: "destructive",
-        });
-        throw uploadError;
-      }
+      if (uploadError) throw uploadError;
 
       const { data: pub } = supabase.storage.from("avatars").getPublicUrl(path);
-      setAvatarUrl(pub.publicUrl);
+      // Cache-buster: al reemplazar la foto la URL es la misma; sin esto el
+      // navegador seguiría mostrando la imagen vieja.
+      setAvatarUrl(`${pub.publicUrl}?v=${Date.now()}`);
       toast({ title: "Foto cargada", description: "Se guardará al confirmar." });
     } catch (err: any) {
       console.error("Error subiendo avatar:", err);
