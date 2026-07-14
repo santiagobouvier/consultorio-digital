@@ -320,14 +320,36 @@ const AppointmentRequests = () => {
         .eq("id", item.appointmentId);
       if (error) throw error;
 
+      const d = new Date(item.datetime);
       if (item.patientId) {
-        const d = new Date(item.datetime);
         notifyPatient({
           patientId: item.patientId,
           title: "¡Tu cita fue confirmada!",
           body: `Tu reserva del ${d.toLocaleDateString("es-UY", { day: "2-digit", month: "long" })} a las ${d.toLocaleTimeString("es-UY", { hour: "2-digit", minute: "2-digit" })} fue confirmada.`,
           url: "/portal",
         });
+      }
+
+      // Best-effort: mail de confirmación al paciente (además de campana/push)
+      if (item.email) {
+        try {
+          await supabase.functions.invoke("send-resend-email", {
+            body: {
+              to: item.email,
+              template: "appointment_confirmation",
+              businessId,
+              data: {
+                patientName: item.name,
+                date: d.toLocaleDateString("es-UY", { weekday: "long", day: "2-digit", month: "long", year: "numeric" }),
+                time: d.toLocaleTimeString("es-UY", { hour: "2-digit", minute: "2-digit" }),
+                modality: item.modality || "presencial",
+                location: null,
+              },
+            },
+          });
+        } catch (mailErr) {
+          console.warn("Confirmation email failed:", mailErr);
+        }
       }
 
       toast({ title: "Cita confirmada", description: `${item.name} fue notificado.` });
@@ -362,6 +384,29 @@ const AppointmentRequests = () => {
         });
       }
 
+      // Best-effort: mail al paciente para que no quede esperando
+      if (item.email) {
+        try {
+          const d = new Date(item.datetime);
+          await supabase.functions.invoke("send-resend-email", {
+            body: {
+              to: item.email,
+              template: "raw",
+              businessId,
+              data: {
+                subject: "Sobre tu reserva",
+                message:
+                  `Hola ${item.name},\n\n` +
+                  `Tu reserva del ${d.toLocaleDateString("es-UY", { day: "2-digit", month: "long" })} a las ${d.toLocaleTimeString("es-UY", { hour: "2-digit", minute: "2-digit" })} no pudo ser confirmada.\n\n` +
+                  `Podés elegir otro horario desde tu portal, o contactar directamente al consultorio.`,
+              },
+            },
+          });
+        } catch (mailErr) {
+          console.warn("Rejection email failed:", mailErr);
+        }
+      }
+
       toast({ title: "Reserva rechazada" });
       invalidate();
     } catch (e) {
@@ -390,6 +435,7 @@ const AppointmentRequests = () => {
       if (existing) {
         patientId = existing.id;
       } else {
+        const { data: { user: creator } } = await supabase.auth.getUser();
         const { data: created, error } = await supabase
           .from("patients")
           .insert({
@@ -398,6 +444,10 @@ const AppointmentRequests = () => {
             email: request.email,
             whatsapp_phone: request.phone,
             reason_for_consultation: request.message,
+            // Sin esto la ficha queda "huérfana" y el RLS la esconde
+            // ("Sin paciente" en la agenda).
+            assigned_professional_id: creator?.id ?? null,
+            created_by: creator?.id ?? null,
           })
           .select()
           .single();
@@ -482,14 +532,36 @@ const AppointmentRequests = () => {
         throw new Error(result.message || "No se pudo aprobar");
       }
 
+      const dNew = new Date(item.newStartAt);
       if (item.patientId) {
-        const d = new Date(item.newStartAt);
         notifyPatient({
           patientId: item.patientId,
           title: "Tu reprogramación fue aprobada",
-          body: `Tu nuevo horario: ${d.toLocaleDateString("es-UY", { day: "2-digit", month: "long" })} a las ${d.toLocaleTimeString("es-UY", { hour: "2-digit", minute: "2-digit" })}.`,
+          body: `Tu nuevo horario: ${dNew.toLocaleDateString("es-UY", { day: "2-digit", month: "long" })} a las ${dNew.toLocaleTimeString("es-UY", { hour: "2-digit", minute: "2-digit" })}.`,
           url: "/portal",
         });
+      }
+
+      // Best-effort: mail con el nuevo horario
+      if (item.email) {
+        try {
+          await supabase.functions.invoke("send-resend-email", {
+            body: {
+              to: item.email,
+              template: "raw",
+              businessId,
+              data: {
+                subject: "Tu reprogramación fue aprobada",
+                message:
+                  `Hola ${item.name},\n\n` +
+                  `Tu cita fue reprogramada. Nuevo horario: ${dNew.toLocaleDateString("es-UY", { weekday: "long", day: "2-digit", month: "long" })} a las ${dNew.toLocaleTimeString("es-UY", { hour: "2-digit", minute: "2-digit" })}.\n\n` +
+                  `Antes de la sesión te va a llegar el recordatorio de siempre.`,
+              },
+            },
+          });
+        } catch (mailErr) {
+          console.warn("Reschedule email failed:", mailErr);
+        }
       }
 
       toast({
@@ -525,6 +597,31 @@ const AppointmentRequests = () => {
             : "Tu cita original sigue agendada. Contactá al consultorio.",
           url: "/portal",
         });
+      }
+
+      // Best-effort: mail para que sepa que su cita original sigue en pie
+      if (item.email) {
+        try {
+          const dOrig = new Date(item.currentStartAt);
+          await supabase.functions.invoke("send-resend-email", {
+            body: {
+              to: item.email,
+              template: "raw",
+              businessId,
+              data: {
+                subject: "Sobre tu pedido de reprogramación",
+                message:
+                  `Hola ${item.name},\n\n` +
+                  `No fue posible reprogramar tu cita.` +
+                  (rejectReason.trim() ? ` Motivo: ${rejectReason.trim()}.` : "") +
+                  `\n\nTu cita original sigue agendada: ${dOrig.toLocaleDateString("es-UY", { weekday: "long", day: "2-digit", month: "long" })} a las ${dOrig.toLocaleTimeString("es-UY", { hour: "2-digit", minute: "2-digit" })}.\n\n` +
+                  `Cualquier cosa, contactá al consultorio.`,
+              },
+            },
+          });
+        } catch (mailErr) {
+          console.warn("Reschedule rejection email failed:", mailErr);
+        }
       }
 
       toast({
