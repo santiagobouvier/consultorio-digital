@@ -29,8 +29,6 @@ import {
   Repeat, CalendarIcon, ArrowLeft, Search, Clock, Video, MapPin,
   Loader2, CheckCircle2, User, PencilLine,
 } from "lucide-react";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
 // Crear cita desde el panel, con la misma experiencia que la web pública:
@@ -39,33 +37,27 @@ import { cn } from "@/lib/utils";
 // profesional puede agendar fuera de su semana tipo) → 4) confirmar.
 
 type RecurrenceFrequency = "weekly" | "biweekly" | "monthly";
-type RecurrenceEndType = "count" | "date";
+type ChargeMode = "per_session" | "monthly" | "none";
 type Step = "patient" | "service" | "schedule" | "confirm";
 
 function generateRecurrenceDates(
   startDate: Date,
   frequency: RecurrenceFrequency,
-  endType: RecurrenceEndType,
-  count: number,
-  endDate: Date | undefined
+  count: number
 ): Date[] {
   const dates: Date[] = [];
-  const maxDates = 52;
-  let current = startDate;
-
-  for (let i = 0; i < maxDates; i++) {
-    if (i > 0) {
-      if (frequency === "weekly") current = addWeeks(startDate, i);
-      else if (frequency === "biweekly") current = addWeeks(startDate, i * 2);
-      else current = addMonths(startDate, i);
+  const capped = Math.min(count, 52);
+  for (let i = 0; i < capped; i++) {
+    if (i === 0) {
+      dates.push(startDate);
+    } else if (frequency === "weekly") {
+      dates.push(addWeeks(startDate, i));
+    } else if (frequency === "biweekly") {
+      dates.push(addWeeks(startDate, i * 2));
+    } else {
+      dates.push(addMonths(startDate, i));
     }
-
-    if (endType === "count" && dates.length >= count) break;
-    if (endType === "date" && endDate && current > endDate) break;
-
-    dates.push(current);
   }
-
   return dates;
 }
 
@@ -164,9 +156,15 @@ export function CreateAppointmentModal({
   const [sessionPrice, setSessionPrice] = useState<string>("");
   const [isRecurrent, setIsRecurrent] = useState(false);
   const [recurrenceFrequency, setRecurrenceFrequency] = useState<RecurrenceFrequency>("weekly");
-  const [recurrenceEndType, setRecurrenceEndType] = useState<RecurrenceEndType>("count");
-  const [recurrenceCount, setRecurrenceCount] = useState(4);
-  const [recurrenceEndDate, setRecurrenceEndDate] = useState<Date | undefined>();
+  const [countChoice, setCountChoice] = useState<"4" | "8" | "12" | "custom">("8");
+  const [customCount, setCustomCount] = useState(6);
+  const [showDates, setShowDates] = useState(false);
+  // Cómo se cobra la serie: por sesión / mensualidad / sin cobro
+  const [chargeMode, setChargeMode] = useState<ChargeMode>("per_session");
+  const [monthlyAmount, setMonthlyAmount] = useState("");
+  const [monthlyDay, setMonthlyDay] = useState("1");
+
+  const recurrenceCount = countChoice === "custom" ? customCount : parseInt(countChoice);
 
   const selectedService = services.find((s) => s.id === selectedServiceId) ?? null;
   const selectedPatient = patients.find((p) => p.id === selectedPatientId) ?? null;
@@ -219,9 +217,12 @@ export function CreateAppointmentModal({
     setSessionPrice("");
     setIsRecurrent(false);
     setRecurrenceFrequency("weekly");
-    setRecurrenceEndType("count");
-    setRecurrenceCount(4);
-    setRecurrenceEndDate(undefined);
+    setCountChoice("8");
+    setCustomCount(6);
+    setShowDates(false);
+    setChargeMode("per_session");
+    setMonthlyAmount("");
+    setMonthlyDay("1");
     if (prefilledDate) {
       const yyyy = prefilledDate.getFullYear();
       const mm = String(prefilledDate.getMonth() + 1).padStart(2, "0");
@@ -337,14 +338,8 @@ export function CreateAppointmentModal({
     if (!isRecurrent || !date) return [];
     const startDate = new Date(`${date}T00:00:00`);
     if (isNaN(startDate.getTime())) return [];
-    return generateRecurrenceDates(
-      startDate,
-      recurrenceFrequency,
-      recurrenceEndType,
-      recurrenceCount,
-      recurrenceEndDate
-    );
-  }, [isRecurrent, date, recurrenceFrequency, recurrenceEndType, recurrenceCount, recurrenceEndDate]);
+    return generateRecurrenceDates(startDate, recurrenceFrequency, recurrenceCount);
+  }, [isRecurrent, date, recurrenceFrequency, recurrenceCount]);
 
   // ── Crear la cita ──
   const handleSubmit = async () => {
@@ -370,6 +365,12 @@ export function CreateAppointmentModal({
       const serviceId = selectedServiceId !== CUSTOM_SERVICE ? selectedServiceId : null;
 
       if (isRecurrent && recurrenceDates.length > 1) {
+        // Cobro de la serie: por sesión = precio en cada cita (genera un pago
+        // c/u); mensualidad o sin cobro = precio 0 (la base NO crea pagos por
+        // cita; la mensualidad se registra aparte, una sola por mes).
+        const seriesPrice =
+          chargeMode === "per_session" ? (sessionPrice ? Number(sessionPrice) : null) : 0;
+
         const groupId = crypto.randomUUID();
         const durationMs = parseInt(duration) * 60 * 1000;
         const rows = recurrenceDates.map((d) => {
@@ -389,11 +390,56 @@ export function CreateAppointmentModal({
             status: "pending" as const,
             payment_status: "pendiente",
             recurrence_group_id: groupId,
-            session_price: sessionPrice ? Number(sessionPrice) : null,
+            session_price: seriesPrice,
           };
         });
         const { error } = await supabase.from("appointments").insert(rows as any);
         if (error) throw error;
+
+        // Mensualidad: un solo cobro por mes (si el paciente no tiene ya una)
+        if (chargeMode === "monthly" && monthlyAmount && Number(monthlyAmount) > 0) {
+          const { data: existing } = await supabase
+            .from("payments")
+            .select("id")
+            .eq("business_id", businessId)
+            .eq("patient_id", selectedPatientId)
+            .eq("recurrence_type", "monthly")
+            .is("paid_at", null)
+            .neq("status", "cancelled")
+            .limit(1)
+            .maybeSingle();
+
+          if (existing) {
+            toast({
+              title: "Mensualidad ya activa",
+              description: "Este paciente ya tiene una mensualidad pendiente; no se creó otra.",
+            });
+          } else {
+            const day = Math.min(28, Math.max(1, parseInt(monthlyDay) || 1));
+            const now = new Date();
+            let due = new Date(now.getFullYear(), now.getMonth(), day, 12, 0, 0);
+            if (due < now) due = new Date(now.getFullYear(), now.getMonth() + 1, day, 12, 0, 0);
+            const { error: payError } = await supabase.from("payments").insert({
+              business_id: businessId,
+              patient_id: selectedPatientId,
+              amount: Number(monthlyAmount),
+              currency: "UYU",
+              due_date: due.toISOString(),
+              status: "pending",
+              recurrence_type: "monthly",
+              anchor_day: day,
+              notes: "Mensualidad",
+            } as any);
+            if (payError) {
+              console.error("Error creando mensualidad:", payError);
+              toast({
+                title: "Aviso",
+                description: "Las citas se crearon, pero no se pudo crear la mensualidad. Creala desde Pagos.",
+                variant: "destructive",
+              });
+            }
+          }
+        }
       } else {
         const { error } = await supabase.from("appointments").insert({
           business_id: businessId,
@@ -830,26 +876,32 @@ export function CreateAppointmentModal({
               />
             </div>
 
-            {/* Precio */}
-            <div className="space-y-1.5">
-              <Label htmlFor="session_price" className="text-sm font-semibold">Monto de la sesión (UYU)</Label>
-              <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                <Input
-                  id="session_price"
-                  type="number"
-                  min="0"
-                  step="1"
-                  value={sessionPrice}
-                  onChange={(e) => setSessionPrice(e.target.value)}
-                  placeholder={defaultPrice ? String(defaultPrice) : "0"}
-                  className="h-11 rounded-xl pl-8"
-                />
+            {/* Precio (para cita única o serie cobrada por sesión) */}
+            {(!isRecurrent || chargeMode === "per_session") && (
+              <div className="space-y-1.5">
+                <Label htmlFor="session_price" className="text-sm font-semibold">
+                  Monto {isRecurrent ? "de cada sesión" : "de la sesión"} (UYU)
+                </Label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                  <Input
+                    id="session_price"
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={sessionPrice}
+                    onChange={(e) => setSessionPrice(e.target.value)}
+                    placeholder={defaultPrice ? String(defaultPrice) : "0"}
+                    className="h-11 rounded-xl pl-8"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {isRecurrent
+                    ? "Cada cita de la serie genera su cobro pendiente."
+                    : "Se genera un pago pendiente vinculado a esta cita."}
+                </p>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Se genera un pago pendiente vinculado a esta cita. Dejá en blanco si no querés cobrar.
-              </p>
-            </div>
+            )}
 
             {/* Notas */}
             <div className="space-y-1.5">
@@ -864,7 +916,7 @@ export function CreateAppointmentModal({
               />
             </div>
 
-            {/* Recurrencia */}
+            {/* Recurrencia: una frase con fichas grandes */}
             <div className="space-y-3 p-3.5 border rounded-xl bg-muted/30">
               <div className="flex items-center gap-3">
                 <Checkbox
@@ -874,107 +926,204 @@ export function CreateAppointmentModal({
                 />
                 <Label htmlFor="recurrent" className="text-sm font-semibold flex items-center gap-2 cursor-pointer">
                   <Repeat className="h-4 w-4" />
-                  Turno recurrente
+                  Repetir este turno
                 </Label>
               </div>
 
               {isRecurrent && (
                 <div className="space-y-4 pt-1">
-                  <div className="space-y-2">
-                    <Label className="text-sm font-semibold">Frecuencia</Label>
-                    <Select value={recurrenceFrequency} onValueChange={(v) => setRecurrenceFrequency(v as RecurrenceFrequency)}>
-                      <SelectTrigger className="h-11 rounded-xl">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="weekly">Semanal</SelectItem>
-                        <SelectItem value="biweekly">Quincenal</SelectItem>
-                        <SelectItem value="monthly">Mensual</SelectItem>
-                      </SelectContent>
-                    </Select>
+                  {/* Se repite... */}
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Se repite</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {([
+                        ["weekly", "Todas las semanas"],
+                        ["biweekly", "Cada 15 días"],
+                        ["monthly", "Una vez al mes"],
+                      ] as const).map(([value, label]) => (
+                        <button
+                          key={value}
+                          type="button"
+                          onClick={() => setRecurrenceFrequency(value)}
+                          className={cn(
+                            "rounded-xl border-2 py-2.5 px-2 text-xs font-medium transition-all",
+                            recurrenceFrequency === value
+                              ? "border-primary bg-primary/10 text-primary"
+                              : "border-border bg-card text-muted-foreground"
+                          )}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label className="text-sm font-semibold">Termina</Label>
-                    <Select value={recurrenceEndType} onValueChange={(v) => setRecurrenceEndType(v as RecurrenceEndType)}>
-                      <SelectTrigger className="h-11 rounded-xl">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="count">Después de X sesiones</SelectItem>
-                        <SelectItem value="date">En una fecha límite</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {recurrenceEndType === "count" ? (
-                    <div className="space-y-2">
-                      <Label className="text-sm font-semibold">Cantidad de sesiones</Label>
+                  {/* Durante... */}
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Durante</p>
+                    <div className="grid grid-cols-4 gap-2">
+                      {(["4", "8", "12"] as const).map((c) => (
+                        <button
+                          key={c}
+                          type="button"
+                          onClick={() => setCountChoice(c)}
+                          className={cn(
+                            "rounded-xl border-2 py-2.5 text-sm font-semibold transition-all",
+                            countChoice === c
+                              ? "border-primary bg-primary/10 text-primary"
+                              : "border-border bg-card text-muted-foreground"
+                          )}
+                        >
+                          {c} <span className="font-normal text-[10px]">ses.</span>
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => setCountChoice("custom")}
+                        className={cn(
+                          "rounded-xl border-2 py-2.5 text-sm font-medium transition-all",
+                          countChoice === "custom"
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-border bg-card text-muted-foreground"
+                        )}
+                      >
+                        Otra
+                      </button>
+                    </div>
+                    {countChoice === "custom" && (
                       <Input
                         type="number"
                         min={2}
                         max={52}
-                        value={recurrenceCount}
-                        onChange={(e) => setRecurrenceCount(Math.min(52, Math.max(2, parseInt(e.target.value) || 2)))}
+                        value={customCount}
+                        onChange={(e) => setCustomCount(Math.min(52, Math.max(2, parseInt(e.target.value) || 2)))}
                         className="h-11 rounded-xl"
+                        placeholder="Cantidad de sesiones"
                       />
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <Label className="text-sm font-semibold">Fecha límite</Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "w-full h-11 justify-start text-left rounded-xl",
-                              !recurrenceEndDate && "text-muted-foreground"
-                            )}
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {recurrenceEndDate
-                              ? format(recurrenceEndDate, "PPP", { locale: es })
-                              : "Elegir fecha"}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={recurrenceEndDate}
-                            onSelect={setRecurrenceEndDate}
-                            disabled={(d) => d < new Date()}
-                            locale={es}
-                            className="p-3 pointer-events-auto"
-                          />
-                        </PopoverContent>
-                      </Popover>
+                    )}
+                  </div>
+
+                  {/* Resumen en una línea */}
+                  {recurrenceDates.length > 1 && (
+                    <div className="text-xs text-muted-foreground">
+                      <button
+                        type="button"
+                        onClick={() => setShowDates((v) => !v)}
+                        className="hover:text-foreground underline underline-offset-4"
+                      >
+                        {recurrenceDates.length} sesiones · del {format(recurrenceDates[0], "d MMM", { locale: es })} al {format(recurrenceDates[recurrenceDates.length - 1], "d MMM", { locale: es })} · {showDates ? "ocultar fechas" : "ver fechas"}
+                      </button>
+                      {showDates && (
+                        <div className="max-h-28 overflow-y-auto space-y-0.5 rounded-xl border p-2.5 bg-background mt-2">
+                          {recurrenceDates.map((d, i) => (
+                            <div key={i} className="flex items-center gap-2 text-xs">
+                              <span className="text-muted-foreground w-5 text-right">{i + 1}.</span>
+                              <span className="capitalize">{format(d, "EEEE d 'de' MMMM", { locale: es })}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
 
-                  {recurrenceDates.length > 0 && (
+                  {/* ¿Cómo lo cobrás? */}
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">¿Cómo lo cobrás?</p>
                     <div className="space-y-2">
-                      <Label className="text-sm font-semibold">
-                        Vista previa ({recurrenceDates.length} sesiones)
-                      </Label>
-                      <div className="max-h-32 overflow-y-auto space-y-1 rounded-xl border p-3 bg-background">
-                        {recurrenceDates.map((d, i) => (
-                          <div key={i} className="flex items-center gap-2 text-sm">
-                            <span className="text-muted-foreground w-6 text-right">{i + 1}.</span>
-                            <span className="capitalize">
-                              {format(d, "EEEE d 'de' MMMM", { locale: es })}
-                            </span>
+                      <button
+                        type="button"
+                        onClick={() => setChargeMode("per_session")}
+                        className={cn(
+                          "w-full text-left rounded-xl border-2 p-3 transition-all",
+                          chargeMode === "per_session"
+                            ? "border-primary bg-primary/5"
+                            : "border-border bg-card"
+                        )}
+                      >
+                        <p className="text-sm font-semibold">💵 Por sesión</p>
+                        <p className="text-xs text-muted-foreground">
+                          Cada cita genera su cobro individual.
+                        </p>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setChargeMode("monthly")}
+                        className={cn(
+                          "w-full text-left rounded-xl border-2 p-3 transition-all",
+                          chargeMode === "monthly"
+                            ? "border-primary bg-primary/5"
+                            : "border-border bg-card"
+                        )}
+                      >
+                        <p className="text-sm font-semibold">📅 Mensualidad</p>
+                        <p className="text-xs text-muted-foreground">
+                          Un solo cobro por mes. Al cobrarlo, el del mes siguiente se genera solo.
+                        </p>
+                      </button>
+
+                      {chargeMode === "monthly" && (
+                        <div className="grid grid-cols-2 gap-2 pl-1">
+                          <div className="space-y-1">
+                            <Label className="text-xs">Monto mensual (UYU)</Label>
+                            <div className="relative">
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                              <Input
+                                type="number"
+                                min="1"
+                                value={monthlyAmount}
+                                onChange={(e) => setMonthlyAmount(e.target.value)}
+                                placeholder="Ej: 4800"
+                                className="h-10 rounded-xl pl-7"
+                              />
+                            </div>
                           </div>
-                        ))}
-                      </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">Día de cobro</Label>
+                            <Select value={monthlyDay} onValueChange={setMonthlyDay}>
+                              <SelectTrigger className="h-10 rounded-xl">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Array.from({ length: 28 }, (_, i) => String(i + 1)).map((d) => (
+                                  <SelectItem key={d} value={d}>El {d} de cada mes</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => setChargeMode("none")}
+                        className={cn(
+                          "w-full text-left rounded-xl border-2 p-3 transition-all",
+                          chargeMode === "none"
+                            ? "border-primary bg-primary/5"
+                            : "border-border bg-card"
+                        )}
+                      >
+                        <p className="text-sm font-semibold">🚫 Sin cobro</p>
+                        <p className="text-xs text-muted-foreground">
+                          Las citas no generan pagos (bonificado, convenio, etc.).
+                        </p>
+                      </button>
                     </div>
-                  )}
+                  </div>
                 </div>
               )}
             </div>
 
             <Button
               onClick={handleSubmit}
-              disabled={loading || !date || !time || !selectedPatientId}
+              disabled={
+                loading ||
+                !date ||
+                !time ||
+                !selectedPatientId ||
+                (isRecurrent && chargeMode === "monthly" && (!monthlyAmount || Number(monthlyAmount) <= 0))
+              }
               className="w-full h-12 rounded-xl text-base font-semibold gap-2"
             >
               {loading ? (
