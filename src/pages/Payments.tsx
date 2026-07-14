@@ -187,15 +187,54 @@ const Payments = () => {
     return true;
   });
 
+  // Orden por urgencia: vencidos primero (la deuda más vieja arriba), después
+  // por vencer y pendientes por fecha, lo pagado al final (reciente primero).
+  const STATUS_PRIORITY: Record<PaymentStatus, number> = {
+    overdue: 0, due_soon: 1, pending: 2, paid: 3, cancelled: 4,
+  };
+  const sortedPayments = [...filteredPayments].sort((a, b) => {
+    const pa = STATUS_PRIORITY[a.status];
+    const pb = STATUS_PRIORITY[b.status];
+    if (pa !== pb) return pa - pb;
+    if (a.status === "paid") return (b.paid_at || "").localeCompare(a.paid_at || "");
+    if (a.status === "cancelled") return b.due_date.localeCompare(a.due_date);
+    return a.due_date.localeCompare(b.due_date);
+  });
+
+  // Números del mes en curso (lo cancelado no cuenta)
   const stats = useMemo(() => {
-    const totalAmount = payments.reduce((sum, p) => sum + p.amount, 0);
-    const paidAmount = payments.filter((p) => p.status === "paid").reduce((sum, p) => sum + p.amount, 0);
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const inMonth = (d: string | null) => !!d && new Date(d) >= monthStart;
+    const active = payments.filter((p) => p.status !== "cancelled");
+    const totalAmount = active.filter((p) => inMonth(p.due_date)).reduce((sum, p) => sum + p.amount, 0);
+    const paidAmount = active.filter((p) => p.paid_at && inMonth(p.paid_at)).reduce((sum, p) => sum + p.amount, 0);
     const overdueCount = payments.filter((p) => p.status === "overdue").length;
     const pendingCount = payments.filter((p) => p.status === "pending" || p.status === "due_soon").length;
     return { totalAmount, paidAmount, overdueCount, pendingCount };
   }, [payments]);
 
-  const { paginatedItems: pagePayments, totalPages } = usePagination(filteredPayments, currentPage);
+  // Deudores: pagos vencidos agrupados por paciente, el que más debe primero
+  const debtors = useMemo(() => {
+    const map = new Map<string, { name: string; phone: string | null; total: number; count: number }>();
+    for (const p of payments) {
+      if (p.status !== "overdue") continue;
+      const cur = map.get(p.patient_id) ?? {
+        name: p.patients?.full_name || "Paciente",
+        phone: p.patients?.whatsapp_phone || null,
+        total: 0,
+        count: 0,
+      };
+      cur.total += p.amount;
+      cur.count += 1;
+      map.set(p.patient_id, cur);
+    }
+    return Array.from(map.entries())
+      .map(([patientId, d]) => ({ patientId, ...d }))
+      .sort((a, b) => b.total - a.total);
+  }, [payments]);
+
+  const { paginatedItems: pagePayments, totalPages } = usePagination(sortedPayments, currentPage);
 
   if (!businessId && businessLoading) return <RouteSkeleton />;
 
@@ -224,7 +263,7 @@ const Payments = () => {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
             {
-              label: "Facturado",
+              label: "Facturado (mes)",
               value: formatCurrency(stats.totalAmount, "UYU"),
               icon: DollarSign,
               color: "text-primary",
@@ -232,7 +271,7 @@ const Payments = () => {
               helpId: "paymentsTotalBilled" as const,
             },
             {
-              label: "Cobrado",
+              label: "Cobrado (mes)",
               value: formatCurrency(stats.paidAmount, "UYU"),
               icon: CheckCircle2,
               color: "text-emerald-600",
@@ -337,6 +376,61 @@ const Payments = () => {
             <span className="hidden sm:inline">Exportar CSV</span>
           </Button>
         </div>
+
+        {/* Deudores: siempre a la vista, el que más debe primero */}
+        {debtors.length > 0 && statusFilter !== "paid" && statusFilter !== "cancelled" && (
+          <Card className="border-destructive/30 bg-destructive/5">
+            <CardContent className="p-4 space-y-3">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <p className="font-semibold text-sm inline-flex items-center gap-2 text-destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  Te deben {formatCurrency(debtors.reduce((s, d) => s + d.total, 0), "UYU")}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {debtors.length} paciente{debtors.length !== 1 ? "s" : ""} con pagos vencidos
+                </p>
+              </div>
+              <div className="space-y-1.5">
+                {debtors.slice(0, 5).map((d) => (
+                  <div
+                    key={d.patientId}
+                    className="flex items-center justify-between gap-3 rounded-lg bg-background/60 border border-border/50 px-3 py-2"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPatientFilter(d.patientId);
+                        setStatusFilter("overdue");
+                      }}
+                      className="text-sm font-medium text-left truncate hover:text-primary transition-colors"
+                      title="Ver sus pagos vencidos"
+                    >
+                      {d.name}
+                      <span className="text-xs text-muted-foreground font-normal ml-2">
+                        {d.count} pago{d.count !== 1 ? "s" : ""}
+                      </span>
+                    </button>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="font-bold text-sm text-destructive">
+                        {formatCurrency(d.total, "UYU")}
+                      </span>
+                      <PaymentWhatsAppMenu patientPhone={d.phone} patientName={d.name} />
+                    </div>
+                  </div>
+                ))}
+                {debtors.length > 5 && (
+                  <button
+                    type="button"
+                    onClick={() => setStatusFilter("overdue")}
+                    className="text-xs text-muted-foreground hover:text-foreground px-1"
+                  >
+                    Ver los {debtors.length - 5} restantes…
+                  </button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Payment List */}
         {paymentsError ? (
@@ -445,6 +539,25 @@ const Payments = () => {
                     <Badge className={`${getPaymentStatusColor(payment.status)} rounded-full text-xs`}>
                       {getPaymentStatusLabel(payment.status)}
                     </Badge>
+                    {payment.status !== "paid" && payment.status !== "cancelled" && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setConfirmPaymentData({
+                            id: payment.id,
+                            amount: payment.amount,
+                            patientName: payment.patients?.full_name || "Paciente",
+                          });
+                        }}
+                        className="rounded-lg h-8 gap-1.5"
+                        title="Marcar como pagado"
+                      >
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        <span className="hidden md:inline">Cobrar</span>
+                      </Button>
+                    )}
                     <div className="hidden sm:flex items-center gap-1">
                       <Button
                         variant="ghost"
