@@ -18,6 +18,10 @@ interface ChecklistState {
   services: boolean;
   mp: boolean;
   shared: boolean;
+  // "Para dejarlo perfecto" (opcionales, no bloquean la activación)
+  portalCustomized: boolean;
+  invited: boolean;
+  push: boolean;
   slug: string | null;
   loading: boolean;
 }
@@ -28,17 +32,41 @@ const initial: ChecklistState = {
   services: false,
   mp: false,
   shared: false,
+  portalCustomized: false,
+  invited: false,
+  push: false,
   slug: null,
   loading: true,
 };
+
+const DEFAULT_PORTAL_COLOR = "176 100% 32%";
+const extrasHiddenKey = (businessId: string) => `activation_extras_hidden_${businessId}`;
 
 export const ActivationChecklist = ({ businessId, onAllDone }: Props) => {
   const navigate = useNavigate();
   const [state, setState] = useState<ChecklistState>(initial);
   const [sharing, setSharing] = useState(false);
+  const [extrasHidden, setExtrasHidden] = useState(() => {
+    try {
+      return localStorage.getItem(extrasHiddenKey(businessId)) === "1";
+    } catch {
+      return false;
+    }
+  });
 
   const fetchState = useCallback(async () => {
-    const [tpl, svcs, pol, biz] = await Promise.all([
+    const { data: { user } } = await supabase.auth.getUser();
+    // Push por separado: mezclarla en el Promise.all hace explotar la
+    // inferencia de tipos de supabase-js (TS2589).
+    let pushCount = 0;
+    if (user) {
+      const { count } = await (supabase as any)
+        .from("push_subscriptions")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id);
+      pushCount = count ?? 0;
+    }
+    const [tpl, svcs, pol, biz, invites, portalPatients] = await Promise.all([
       supabase
         .from("availability_templates")
         .select("id", { count: "exact", head: true })
@@ -56,19 +84,34 @@ export const ActivationChecklist = ({ businessId, onAllDone }: Props) => {
         .maybeSingle(),
       supabase
         .from("businesses")
-        .select("public_slug, onboarding_link_shared_at, contact_email")
+        .select("public_slug, onboarding_link_shared_at, contact_email, portal_logo_url, portal_primary_color")
         .eq("id", businessId)
         .maybeSingle(),
+      (supabase as any)
+        .from("patient_portal_invites")
+        .select("id", { count: "exact", head: true })
+        .eq("business_id", businessId),
+      supabase
+        .from("patients")
+        .select("id", { count: "exact", head: true })
+        .eq("business_id", businessId)
+        .not("auth_user_id", "is", null),
     ]);
+    const bizData = biz.data as any;
     setState({
       // El email de contacto es adonde llegan los avisos de reservas:
       // sin él, el profesional no se entera de nada.
-      contact: !!biz.data?.contact_email?.trim(),
+      contact: !!bizData?.contact_email?.trim(),
       template: (tpl.count ?? 0) > 0,
       services: (svcs.count ?? 0) > 0,
       mp: !!pol.data?.mp_access_token,
-      shared: !!biz.data?.onboarding_link_shared_at,
-      slug: biz.data?.public_slug ?? null,
+      shared: !!bizData?.onboarding_link_shared_at,
+      portalCustomized:
+        !!bizData?.portal_logo_url ||
+        (!!bizData?.portal_primary_color && bizData.portal_primary_color !== DEFAULT_PORTAL_COLOR),
+      invited: (invites.count ?? 0) > 0 || (portalPatients.count ?? 0) > 0,
+      push: pushCount > 0,
+      slug: bizData?.public_slug ?? null,
       loading: false,
     });
   }, [businessId]);
@@ -77,14 +120,25 @@ export const ActivationChecklist = ({ businessId, onAllDone }: Props) => {
     fetchState();
   }, [fetchState]);
 
-  const allDone =
+  const essentialsDone =
     !state.loading && state.contact && state.template && state.services && state.mp && state.shared;
+  const extrasDone = state.portalCustomized && state.invited && state.push;
 
   useEffect(() => {
-    if (allDone) onAllDone?.();
-  }, [allDone, onAllDone]);
+    if (essentialsDone) onAllDone?.();
+  }, [essentialsDone, onAllDone]);
 
-  if (state.loading || allDone) return null;
+  const hideExtras = () => {
+    setExtrasHidden(true);
+    try {
+      localStorage.setItem(extrasHiddenKey(businessId), "1");
+    } catch {
+      /* ignore */
+    }
+  };
+
+  if (state.loading) return null;
+  if (essentialsDone && (extrasDone || extrasHidden)) return null;
 
   const publicUrl = state.slug
     ? buildShareUrl(`/consultorio/${state.slug}`)
@@ -202,47 +256,107 @@ export const ActivationChecklist = ({ businessId, onAllDone }: Props) => {
     },
   ];
 
+  // "Para dejarlo perfecto": opcionales que completan consultorio + portal
+  const extraItems = [
+    {
+      key: "portal",
+      done: state.portalCustomized,
+      title: "Personalizá tu portal",
+      desc: "Subí tu logo y elegí tus colores: tu marca en la web y el portal.",
+      action: (
+        <Button size="sm" variant="outline" onClick={() => navigate("/personalizar-portal")}>
+          Personalizar <ArrowRight className="h-4 w-4 ml-1" />
+        </Button>
+      ),
+    },
+    {
+      key: "invited",
+      done: state.invited,
+      title: "Invitá a tu primer paciente al portal",
+      desc: "Desde su ficha: va a poder ver sus citas, pagar y reservar solo.",
+      action: (
+        <Button size="sm" variant="outline" onClick={() => navigate("/patients")}>
+          Ir a pacientes <ArrowRight className="h-4 w-4 ml-1" />
+        </Button>
+      ),
+    },
+    {
+      key: "push",
+      done: state.push,
+      title: "Activá las notificaciones",
+      desc: "Enterate al instante de cada reserva, incluso con la app cerrada.",
+      action: (
+        <Button size="sm" variant="outline" onClick={() => navigate("/mi-consultorio?tab=notificaciones")}>
+          Activar <ArrowRight className="h-4 w-4 ml-1" />
+        </Button>
+      ),
+    },
+  ];
+
   const doneCount = items.filter((i) => i.done).length;
+  const extrasDoneCount = extraItems.filter((i) => i.done).length;
+
+  const renderItem = (it: (typeof items)[number]) => (
+    <li
+      key={it.key}
+      className="flex items-center gap-3 rounded-md border border-border/50 bg-card px-3 py-2"
+    >
+      {it.done ? (
+        <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0" />
+      ) : (
+        <Circle className="h-5 w-5 text-muted-foreground shrink-0" />
+      )}
+      <div className="flex-1 min-w-0">
+        <p
+          className={`text-sm font-medium ${
+            it.done ? "line-through text-muted-foreground" : ""
+          }`}
+        >
+          {it.title}
+        </p>
+        <p className="text-xs text-muted-foreground truncate">{it.desc}</p>
+      </div>
+      {!it.done && it.action}
+    </li>
+  );
 
   return (
     <Card className="border-primary/40 bg-primary/5">
       <CardContent className="p-4 sm:p-5 space-y-3">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-base sm:text-lg font-semibold">Activá tu consultorio</h2>
+            <h2 className="text-base sm:text-lg font-semibold">
+              {essentialsDone ? "Para dejarlo perfecto" : "Activá tu consultorio"}
+            </h2>
             <p className="text-xs sm:text-sm text-muted-foreground">
-              Configurá → Reservá → Cobrá → Fidelizá
+              {essentialsDone
+                ? "Lo esencial ya está ✓ — estos toques completan tu consultorio."
+                : "Configurá → Reservá → Cobrá → Fidelizá"}
             </p>
           </div>
           <span className="text-sm font-medium text-muted-foreground">
-            {doneCount}/{items.length}
+            {essentialsDone
+              ? `${extrasDoneCount}/${extraItems.length}`
+              : `${doneCount}/${items.length}`}
           </span>
         </div>
-        <ul className="space-y-2">
-          {items.map((it) => (
-            <li
-              key={it.key}
-              className="flex items-center gap-3 rounded-md border border-border/50 bg-card px-3 py-2"
-            >
-              {it.done ? (
-                <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0" />
-              ) : (
-                <Circle className="h-5 w-5 text-muted-foreground shrink-0" />
-              )}
-              <div className="flex-1 min-w-0">
-                <p
-                  className={`text-sm font-medium ${
-                    it.done ? "line-through text-muted-foreground" : ""
-                  }`}
-                >
-                  {it.title}
-                </p>
-                <p className="text-xs text-muted-foreground truncate">{it.desc}</p>
-              </div>
-              {!it.done && it.action}
-            </li>
-          ))}
-        </ul>
+
+        {!essentialsDone && <ul className="space-y-2">{items.map(renderItem)}</ul>}
+
+        {!essentialsDone && (
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide pt-1">
+            Para dejarlo perfecto (opcional) · {extrasDoneCount}/{extraItems.length}
+          </p>
+        )}
+        <ul className="space-y-2">{extraItems.map(renderItem)}</ul>
+
+        {essentialsDone && (
+          <div className="flex justify-end">
+            <Button variant="ghost" size="sm" onClick={hideExtras} className="text-xs text-muted-foreground h-7">
+              Ocultar guía
+            </Button>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
