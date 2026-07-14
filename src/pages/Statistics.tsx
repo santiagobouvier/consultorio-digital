@@ -22,6 +22,10 @@ import {
   Minus,
   MessageCircle,
   FileDown,
+  Target,
+  Timer,
+  Globe,
+  CalendarDays,
 } from "lucide-react";
 import LoadingPage from "@/components/LoadingPage";
 import { useBusinessId } from "@/hooks/use-business-id";
@@ -108,7 +112,7 @@ const Statistics = () => {
   const reportRef = useRef<HTMLDivElement>(null);
 
   // Raw data
-  const [appointments, setAppointments] = useState<Array<{ start_at: string; end_at: string | null; status: string; professional_id: string | null }>>([]);
+  const [appointments, setAppointments] = useState<Array<{ start_at: string; end_at: string | null; status: string; professional_id: string | null; patient_id: string | null; source: string | null }>>([]);
   const [payments, setPayments] = useState<Array<{ amount: number; status: string; due_date: string; paid_at: string | null; patient_id: string }>>([]);
   // Semana tipo activa: la capacidad de agenda sale de acá (Horarios 2.0),
   // ya no de casilleros pregenerados.
@@ -127,7 +131,7 @@ const Statistics = () => {
       const [{ data: appts }, { data: pays }, { data: tpls }, { data: pts }, { data: biz }] = await Promise.all([
         supabase
           .from("appointments")
-          .select("start_at, end_at, status, professional_id")
+          .select("start_at, end_at, status, professional_id, patient_id, source")
           .eq("business_id", businessId!),
         supabase
           .from("payments")
@@ -258,6 +262,92 @@ const Statistics = () => {
       : 0;
     return { totalCitas, cobrado, pendiente, noShowRate, activePatients, occupancy };
   }, [apptsInPeriod, paymentsInPeriod, payments, allPatients, occupancyData]);
+
+  // === Tendencias vs el período anterior de igual duración ===
+  const trends = useMemo(() => {
+    if (period === "all") return null;
+    const now = new Date();
+    const len = now.getTime() - periodStart.getTime();
+    const prevStart = new Date(periodStart.getTime() - len);
+    const inPrev = (iso: string) => {
+      const t = new Date(iso).getTime();
+      return t >= prevStart.getTime() && t < periodStart.getTime();
+    };
+
+    const prevAppts = appointments.filter((a) => a.status !== "cancelled" && inPrev(a.start_at));
+    const prevCitas = prevAppts.length;
+    const prevNoShow = prevAppts.filter((a) => a.status === "no_show").length;
+    const prevNoShowRate = prevCitas > 0 ? (prevNoShow / prevCitas) * 100 : 0;
+    const prevCobrado = payments
+      .filter((p) => p.status === "paid" && p.paid_at && inPrev(p.paid_at))
+      .reduce((s, p) => s + p.amount, 0);
+
+    const pct = (cur: number, prev: number) =>
+      prev > 0 ? Math.round(((cur - prev) / prev) * 100) : null;
+
+    return {
+      citas: pct(kpis.totalCitas, prevCitas),
+      cobrado: pct(kpis.cobrado, prevCobrado),
+      // Ausencias: diferencia en puntos porcentuales (subir es malo)
+      ausencias: prevCitas > 0 ? Math.round((kpis.noShowRate - prevNoShowRate) * 10) / 10 : null,
+    };
+  }, [period, periodStart, appointments, payments, kpis]);
+
+  // === Proyección del mes en curso: cobrado + lo que vence este mes ===
+  const monthProjection = useMemo(() => {
+    const now = new Date();
+    const mStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const mEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    const inMonth = (iso: string | null) => {
+      if (!iso) return false;
+      const d = new Date(iso);
+      return d >= mStart && d < mEnd;
+    };
+    const cobrado = payments
+      .filter((p) => p.status === "paid" && inMonth(p.paid_at))
+      .reduce((s, p) => s + p.amount, 0);
+    const porCobrar = payments
+      .filter((p) => !p.paid_at && p.status !== "cancelled" && inMonth(p.due_date))
+      .reduce((s, p) => s + p.amount, 0);
+    return { cobrado, porCobrar, total: cobrado + porCobrar };
+  }, [payments]);
+
+  // === Demora promedio de cobro (días entre vencimiento y pago) ===
+  const collectionDelay = useMemo(() => {
+    const paid = paymentsInPeriod.filter((p) => p.paid_at);
+    if (!paid.length) return null;
+    const avg =
+      paid.reduce(
+        (s, p) => s + Math.max(0, (new Date(p.paid_at!).getTime() - new Date(p.due_date).getTime()) / 86400000),
+        0
+      ) / paid.length;
+    return Math.round(avg * 10) / 10;
+  }, [paymentsInPeriod]);
+
+  // === Origen de las reservas del período ===
+  const sourceData = useMemo(() => {
+    const counts = { panel: 0, publica: 0, portal: 0 };
+    for (const a of apptsInPeriod) {
+      if (a.status === "cancelled") continue;
+      if (a.source === "public_booking" || a.source === "web") counts.publica++;
+      else if (a.source === "patient_portal") counts.portal++;
+      else counts.panel++;
+    }
+    const total = counts.panel + counts.publica + counts.portal;
+    return { ...counts, total };
+  }, [apptsInPeriod]);
+
+  // === Distribución por día de la semana ===
+  const weekdayData = useMemo(() => {
+    const labels = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+    const counts = [0, 0, 0, 0, 0, 0, 0];
+    for (const a of apptsInPeriod) {
+      if (a.status === "cancelled") continue;
+      counts[new Date(a.start_at).getDay()]++;
+    }
+    const order = [1, 2, 3, 4, 5, 6, 0]; // lunes primero
+    return order.map((i) => ({ day: labels[i], count: counts[i] }));
+  }, [apptsInPeriod]);
 
   // === Revenue by month ===
   const revenueData: RevenueMonth[] = useMemo(() => {
@@ -412,33 +502,37 @@ const Statistics = () => {
     });
   }, [professionals, apptsInPeriod]);
 
-  // === Inactive patients (90 days) — kept from previous version ===
+  // === Pacientes en riesgo: activos SIN próxima cita agendada ===
+  // (los que hace más que no vienen, arriba — plata que se va por la puerta)
   const inactivePatients: InactivePatient[] = useMemo(() => {
-    const lastApptByPatient = new Map<string, Date>();
-    // Need patient_id on appointments — we didn't request it. Re-derive from payments (paid+linked appts not available either).
-    // Simpler: use payments due_date as a proxy of patient activity.
-    for (const p of payments) {
-      const ref = p.paid_at ? new Date(p.paid_at) : new Date(p.due_date);
-      const prev = lastApptByPatient.get(p.patient_id);
-      if (!prev || ref > prev) lastApptByPatient.set(p.patient_id, ref);
-    }
     const now = Date.now();
+    const lastByPatient = new Map<string, number>();
+    const hasFuture = new Set<string>();
+    for (const a of appointments) {
+      if (!a.patient_id) continue;
+      if (a.status === "cancelled" || a.status === "cancelled_by_patient") continue;
+      const t = new Date(a.start_at).getTime();
+      if (t > now) {
+        hasFuture.add(a.patient_id);
+      } else {
+        const prev = lastByPatient.get(a.patient_id) ?? 0;
+        if (t > prev) lastByPatient.set(a.patient_id, t);
+      }
+    }
     return allPatients
-      .filter((p) => p.is_active)
+      .filter((p) => p.is_active && !hasFuture.has(p.id))
       .map((p) => {
-        const last = lastApptByPatient.get(p.id) || null;
-        const daysSince = last ? Math.floor((now - last.getTime()) / 86400000) : 999;
+        const last = lastByPatient.get(p.id) ?? null;
         return {
           id: p.id,
           full_name: p.full_name,
           email: p.email,
-          lastAppointment: last ? last.toISOString() : null,
-          daysSinceLast: daysSince,
+          lastAppointment: last ? new Date(last).toISOString() : null,
+          daysSinceLast: last ? Math.floor((now - last) / 86400000) : 9999,
         };
       })
-      .filter((p) => p.daysSinceLast >= 90)
       .sort((a, b) => b.daysSinceLast - a.daysSinceLast);
-  }, [allPatients, payments]);
+  }, [allPatients, appointments]);
 
   const [inactivePage, setInactivePage] = useState(1);
   const { paginatedItems: pageInactive, totalPages: inactiveTotalPages } = usePagination(inactivePatients, inactivePage);
@@ -453,6 +547,12 @@ const Statistics = () => {
       ["Resumen", "Tasa de ausencias (%)", String(kpis.noShowRate)],
       ["Resumen", "Ocupación de agenda (%)", String(kpis.occupancy)],
       ["Resumen", "Pacientes activos", String(kpis.activePatients)],
+      ["Resumen", "Proyección del mes (UYU)", String(monthProjection.total)],
+      ["Resumen", "Demora promedio de cobro (días)", collectionDelay === null ? "—" : String(collectionDelay)],
+      ["Origen", "Panel", String(sourceData.panel)],
+      ["Origen", "Web pública", String(sourceData.publica)],
+      ["Origen", "Portal", String(sourceData.portal)],
+      ["Riesgo", "Pacientes sin próxima cita", String(inactivePatients.length)],
       ...revenueData.flatMap((r) => [
         ["Ingresos", `${r.month} - cobrado`, String(r.cobrado)],
         ["Ingresos", `${r.month} - pendiente`, String(r.pendiente)],
@@ -589,7 +689,10 @@ const Statistics = () => {
                   <DollarSign className="h-4 w-4 text-primary" />
                   <p className="text-xs sm:text-sm text-muted-foreground">Cobrado en el período</p>
                 </div>
-                <p className="text-2xl sm:text-3xl font-bold text-primary">{formatCurrency(kpis.cobrado)}</p>
+                <p className="text-2xl sm:text-3xl font-bold text-primary">
+                  {formatCurrency(kpis.cobrado)}
+                  <TrendBadge value={trends?.cobrado ?? null} className="ml-2 align-middle" />
+                </p>
               </div>
               <div>
                 <div className="flex items-center gap-2 mb-1">
@@ -613,12 +716,84 @@ const Statistics = () => {
           </CardContent>
         </Card>
 
-        {/* KPI row complementario */}
+        {/* KPI row complementario (con tendencia vs período anterior) */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <KpiCard icon={CalendarCheck} label="Citas" value={String(kpis.totalCitas)} color="text-primary" />
+          <KpiCard
+            icon={CalendarCheck}
+            label="Citas"
+            value={String(kpis.totalCitas)}
+            color="text-primary"
+            trend={<TrendBadge value={trends?.citas ?? null} />}
+          />
           <KpiCard icon={Users} label="Pacientes activos" value={String(kpis.activePatients)} color="text-primary" />
           <KpiCard icon={Activity} label="Ocupación" value={`${kpis.occupancy}%`} color="text-primary" />
-          <KpiCard icon={TrendingDown} label="Ausencias" value={`${kpis.noShowRate}%`} color="text-destructive" />
+          <KpiCard
+            icon={TrendingDown}
+            label="Ausencias"
+            value={`${kpis.noShowRate}%`}
+            color="text-destructive"
+            trend={<TrendBadge value={trends?.ausencias ?? null} suffix=" pts" invert />}
+          />
+        </div>
+
+        {/* Fila inteligente: proyección, demora de cobro y origen */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-1">
+                <Target className="h-4 w-4 text-primary" />
+                <p className="text-xs text-muted-foreground">Proyección de este mes</p>
+              </div>
+              <p className="text-xl sm:text-2xl font-bold">{formatCurrency(monthProjection.total)}</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {formatCurrency(monthProjection.cobrado)} cobrado + {formatCurrency(monthProjection.porCobrar)} por cobrar
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-1">
+                <Timer className="h-4 w-4 text-primary" />
+                <p className="text-xs text-muted-foreground">Demora promedio de cobro</p>
+              </div>
+              <p className="text-xl sm:text-2xl font-bold">
+                {collectionDelay === null ? "—" : collectionDelay === 0 ? "Al día" : `${collectionDelay} días`}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                entre el vencimiento y el pago efectivo
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Globe className="h-4 w-4 text-primary" />
+                <p className="text-xs text-muted-foreground">Origen de las reservas</p>
+              </div>
+              {sourceData.total === 0 ? (
+                <p className="text-sm text-muted-foreground py-2">Sin citas en el período</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {([
+                    ["Vos (panel)", sourceData.panel, "bg-muted-foreground/50"],
+                    ["Web pública", sourceData.publica, "bg-primary"],
+                    ["Portal", sourceData.portal, "bg-emerald-500"],
+                  ] as const).map(([label, count, color]) => {
+                    const pctVal = Math.round((count / sourceData.total) * 100);
+                    return (
+                      <div key={label} className="flex items-center gap-2">
+                        <span className="text-xs w-20 shrink-0 text-muted-foreground">{label}</span>
+                        <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
+                          <div className={`h-full rounded-full ${color}`} style={{ width: `${pctVal}%` }} />
+                        </div>
+                        <span className="text-xs font-semibold w-10 text-right tabular-nums">{pctVal}%</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         {/* Revenue */}
@@ -754,6 +929,41 @@ const Statistics = () => {
           </Card>
         )}
 
+        {/* Días de la semana */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <CalendarDays className="h-5 w-5 text-primary" />
+              Tu semana: días con más sesiones
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {weekdayData.every((d) => d.count === 0) ? (
+              <p className="text-sm text-muted-foreground py-8 text-center">No hay datos de citas en el período</p>
+            ) : (
+              (() => {
+                const maxDay = Math.max(...weekdayData.map((d) => d.count), 1);
+                return (
+                  <div className="space-y-2">
+                    {weekdayData.map((d) => (
+                      <div key={d.day} className="flex items-center gap-3">
+                        <span className="text-xs w-8 shrink-0 text-muted-foreground font-medium">{d.day}</span>
+                        <div className="flex-1 h-5 rounded-md bg-muted overflow-hidden">
+                          <div
+                            className={`h-full rounded-md ${d.count >= maxDay * 0.8 ? "bg-primary" : "bg-primary/40"}`}
+                            style={{ width: `${(d.count / maxDay) * 100}%` }}
+                          />
+                        </div>
+                        <span className="text-xs font-semibold w-8 text-right tabular-nums">{d.count}</span>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()
+            )}
+          </CardContent>
+        </Card>
+
         {/* Hours */}
         <Card>
           <CardHeader className="pb-2">
@@ -844,19 +1054,22 @@ const Statistics = () => {
         {/* Inactive patients */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
+            <CardTitle className="text-base flex items-center gap-2 flex-wrap">
               <UserX className="h-5 w-5 text-orange-500" />
-              Pacientes sin actividad en los últimos 90 días
+              Pacientes en riesgo · sin próxima cita
               <HelpTooltip id="statsInactivePatients" />
               {inactivePatients.length > 0 && (
                 <span className="text-sm font-normal text-muted-foreground">({inactivePatients.length})</span>
               )}
             </CardTitle>
+            <p className="text-xs text-muted-foreground">
+              Pacientes activos que no tienen ninguna cita agendada a futuro. Tocá para abrir su ficha, o escribiles directo.
+            </p>
           </CardHeader>
           <CardContent>
             {inactivePatients.length === 0 ? (
               <p className="text-sm text-muted-foreground py-8 text-center">
-                🎉 Todos tus pacientes activos tuvieron actividad reciente
+                🎉 Todos tus pacientes activos tienen su próxima cita agendada
               </p>
             ) : (
               <div className="space-y-2">
@@ -875,11 +1088,13 @@ const Statistics = () => {
                         <p className="text-xs text-muted-foreground">{p.email || "Sin email"}</p>
                       </div>
                       <div className="text-right shrink-0">
-                        <p className="text-sm font-semibold text-[hsl(var(--warning))]">{p.daysSinceLast} días</p>
+                        <p className="text-sm font-semibold text-[hsl(var(--warning))]">
+                          {p.daysSinceLast >= 9999 ? "Sin sesiones" : `hace ${p.daysSinceLast} días`}
+                        </p>
                         <p className="text-xs text-muted-foreground">
                           {p.lastAppointment
-                            ? new Date(p.lastAppointment).toLocaleDateString("es-UY", { day: "2-digit", month: "2-digit", year: "2-digit" })
-                            : "Sin actividad"}
+                            ? `Última: ${new Date(p.lastAppointment).toLocaleDateString("es-UY", { day: "2-digit", month: "2-digit", year: "2-digit" })}`
+                            : "Nunca tuvo cita"}
                         </p>
                       </div>
                       {phone ? (
@@ -923,17 +1138,52 @@ interface KpiCardProps {
   label: string;
   value: string;
   color?: string;
+  trend?: React.ReactNode;
 }
-const KpiCard = ({ icon: Icon, label, value, color = "text-primary" }: KpiCardProps) => (
+const KpiCard = ({ icon: Icon, label, value, color = "text-primary", trend }: KpiCardProps) => (
   <Card>
     <CardContent className="p-3 sm:p-4">
       <div className="flex items-center gap-2 mb-1">
         <Icon className={`h-4 w-4 ${color}`} />
         <p className="text-xs text-muted-foreground truncate">{label}</p>
       </div>
-      <p className="text-lg sm:text-xl font-bold truncate">{value}</p>
+      <p className="text-lg sm:text-xl font-bold truncate">
+        {value}
+        {trend && <span className="ml-1.5 align-middle">{trend}</span>}
+      </p>
     </CardContent>
   </Card>
 );
+
+// Flechita de tendencia vs el período anterior. `invert`: subir es malo
+// (ej: ausencias). Sin datos del período anterior → no se muestra nada.
+const TrendBadge = ({
+  value,
+  suffix = "%",
+  invert = false,
+  className = "",
+}: {
+  value: number | null;
+  suffix?: string;
+  invert?: boolean;
+  className?: string;
+}) => {
+  if (value === null || value === 0) return null;
+  const isUp = value > 0;
+  const good = invert ? !isUp : isUp;
+  const Icon = isUp ? ArrowUpRight : ArrowDownRight;
+  return (
+    <span
+      className={`inline-flex items-center gap-0.5 text-xs font-semibold ${
+        good ? "text-emerald-500" : "text-destructive"
+      } ${className}`}
+    >
+      <Icon className="h-3.5 w-3.5" />
+      {isUp ? "+" : ""}
+      {value}
+      {suffix}
+    </span>
+  );
+};
 
 export default Statistics;
