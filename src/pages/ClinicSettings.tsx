@@ -81,6 +81,7 @@ const ClinicSettings = () => {
   const [autoAcceptBookings, setAutoAcceptBookings] = useState(false);
   const [publicSlug, setPublicSlug] = useState("");
   const [isPrivateClinic, setIsPrivateClinic] = useState(false);
+  const [contactEmail, setContactEmail] = useState("");
   const [cancellationHoursNotice, setCancellationHoursNotice] = useState<number>(24);
   const [lateCancellationMessage, setLateCancellationMessage] = useState<string>("");
   const [defaultSessionPrice, setDefaultSessionPrice] = useState<string>("");
@@ -116,6 +117,7 @@ const ClinicSettings = () => {
       ownerName,
       specialty,
       welcomeMessage,
+      contactEmail,
       confirmationMessage,
       postsessionMessage,
       autoAcceptBookings,
@@ -152,7 +154,7 @@ const ClinicSettings = () => {
 
       let { data: business } = await supabase
         .from("businesses")
-        .select("id, public_slug, owner_user_id, is_private_clinic, cancellation_hours_notice, late_cancellation_message, default_session_price")
+        .select("id, public_slug, owner_user_id, is_private_clinic, cancellation_hours_notice, late_cancellation_message, default_session_price, contact_email")
         .eq("owner_user_id", user.id)
         .maybeSingle();
 
@@ -167,7 +169,7 @@ const ClinicSettings = () => {
         if (userRole?.business_id) {
           const { data: memberBusiness } = await supabase
             .from("businesses")
-            .select("id, public_slug, owner_user_id, is_private_clinic, cancellation_hours_notice, late_cancellation_message, default_session_price")
+            .select("id, public_slug, owner_user_id, is_private_clinic, cancellation_hours_notice, late_cancellation_message, default_session_price, contact_email")
             .eq("id", userRole.business_id)
             .single();
           business = memberBusiness;
@@ -207,6 +209,7 @@ const ClinicSettings = () => {
         setBusinessId(business.id);
         setIsOwner(business.owner_user_id === user.id);
         setIsPrivateClinic((business as any).is_private_clinic || false);
+        setContactEmail((business as any).contact_email || "");
         setCancellationHoursNotice((business as any).cancellation_hours_notice ?? 24);
         setLateCancellationMessage((business as any).late_cancellation_message ?? "");
         const dsp = (business as any).default_session_price;
@@ -328,6 +331,7 @@ const ClinicSettings = () => {
         const businessUpdate: Record<string, any> = {
           specialty: specialty || null,
           is_private_clinic: isPrivateClinic,
+          contact_email: contactEmail.trim() || null,
           cancellation_hours_notice: Number.isFinite(cancellationHoursNotice) ? cancellationHoursNotice : 24,
           late_cancellation_message: lateCancellationMessage.trim() || null,
           default_session_price: defaultSessionPrice.trim() === "" ? null : Number(defaultSessionPrice),
@@ -461,6 +465,17 @@ const ClinicSettings = () => {
                     id="specialty" value={specialty} onChange={(e) => setSpecialty(e.target.value)}
                     placeholder="Ej: Psicología Clínica" className="h-11"
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="contactEmail">Email de avisos</Label>
+                  <Input
+                    id="contactEmail" type="email" value={contactEmail}
+                    onChange={(e) => setContactEmail(e.target.value)}
+                    placeholder="tu@email.com" className="h-11"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    A esta casilla te llegan los avisos de cada reserva, solicitud y reprogramación.
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="welcomeMessage">Descripción</Label>
