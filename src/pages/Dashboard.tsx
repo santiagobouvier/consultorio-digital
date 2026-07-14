@@ -8,14 +8,12 @@ import { toast } from "@/hooks/use-toast";
 import { Users, CalendarPlus, CalendarDays, UserPlus, Bell, LogOut, Camera, CreditCard, AlertTriangle, Clock, Plus, EyeOff, Eye, Smartphone, Building2, ChevronDown, Shield, Settings, ArrowRight, Palette } from "lucide-react";
 import { MonthlyHighlights } from "@/components/MonthlyHighlights";
 import LoadingPage from "@/components/LoadingPage";
-import { PlanUsageCard } from "@/components/PlanUsageCard";
 import { PublicLinkCard } from "@/components/PublicLinkCard";
 import { PatientForm } from "@/components/PatientForm";
 import { CreateAppointmentModal } from "@/components/CreateAppointmentModal";
 import { GlobalPaymentForm } from "@/components/GlobalPaymentForm";
 import { calculatePaymentStatus, formatCurrency } from "@/lib/payments";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { NotificationActivationCard } from "@/components/NotificationActivationCard";
 import { InstallPromptCard } from "@/components/pwa/InstallPromptCard";
 import { ActivationChecklist } from "@/components/ActivationChecklist";
 import { PendingRequestsBanner } from "@/components/PendingRequestsBanner";
@@ -820,11 +818,11 @@ const Dashboard = () => {
           </Card>
         )}
 
-        {/* ── Zona de sistema: útil pero no urgente ── */}
+        {/* ── Zona de sistema: útil pero no urgente ──
+            Plan y notificaciones viven en Mi consultorio (y la guía de
+            activación apunta ahí); acá solo lo que se usa a diario. */}
         <PublicLinkCard businessId={businessId} />
-        <NotificationActivationCard variant="full" />
         <InstallPromptCard />
-        <PlanUsageCard businessId={businessId} />
 
         {/* Monthly Highlights - at the bottom */}
         <MonthlyHighlights businessId={businessId} className="mt-2" />
