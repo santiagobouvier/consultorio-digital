@@ -65,6 +65,16 @@ interface Patient {
   full_name: string;
 }
 
+interface ServiceOption {
+  id: string;
+  name: string;
+  duration_minutes: number;
+  mode: string; // 'online' | 'presencial' | 'ambas'
+  suggested_price: number | null;
+}
+
+const CUSTOM_SERVICE = "custom";
+
 interface CreateAppointmentModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -103,6 +113,8 @@ export function CreateAppointmentModal({
   const [recurrenceEndDate, setRecurrenceEndDate] = useState<Date | undefined>();
   const [sessionPrice, setSessionPrice] = useState<string>("");
   const [defaultPrice, setDefaultPrice] = useState<number | null>(null);
+  const [services, setServices] = useState<ServiceOption[]>([]);
+  const [selectedServiceId, setSelectedServiceId] = useState<string>(CUSTOM_SERVICE);
 
   // Prefill date when modal opens with a prefilledDate
   useEffect(() => {
@@ -130,24 +142,58 @@ export function CreateAppointmentModal({
     }
   }, [open, patientId]);
 
-  // Cargar tarifa default del consultorio y precargar input
+  // Aplica un tipo de sesión: autocompleta duración, modalidad y precio
+  // (todo queda editable por si se quiere hacer una excepción).
+  const applyService = (svc: ServiceOption, fallbackPrice: number | null) => {
+    setDuration(String(svc.duration_minutes));
+    if (svc.mode === "online") setModality("online");
+    else if (svc.mode === "presencial") setModality("presencial");
+    const price = svc.suggested_price ?? fallbackPrice;
+    setSessionPrice(price != null ? String(price) : "");
+  };
+
+  const handleServiceChange = (value: string) => {
+    setSelectedServiceId(value);
+    if (value === CUSTOM_SERVICE) return;
+    const svc = services.find((s) => s.id === value);
+    if (svc) applyService(svc, defaultPrice);
+  };
+
+  // Cargar tipos de sesión + tarifa default y precargar el formulario
   useEffect(() => {
     if (!open || !businessId) return;
     (async () => {
-      const { data } = await supabase
-        .from("businesses")
-        .select("default_session_price")
-        .eq("id", businessId)
-        .maybeSingle();
-      const v = (data as any)?.default_session_price;
-      if (v != null) {
-        setDefaultPrice(Number(v));
-        setSessionPrice(String(v));
+      const [bizRes, svcRes] = await Promise.all([
+        supabase
+          .from("businesses")
+          .select("default_session_price")
+          .eq("id", businessId)
+          .maybeSingle(),
+        (supabase as any)
+          .from("services")
+          .select("id, name, duration_minutes, mode, suggested_price")
+          .eq("business_id", businessId)
+          .eq("is_active", true)
+          .order("created_at", { ascending: true }),
+      ]);
+
+      const v = (bizRes.data as any)?.default_session_price;
+      const fallback = v != null ? Number(v) : null;
+      setDefaultPrice(fallback);
+
+      const svcs = (svcRes.data ?? []) as ServiceOption[];
+      setServices(svcs);
+
+      if (svcs.length > 0) {
+        // Preseleccionar el primer tipo de sesión (la mayoría tiene uno solo)
+        setSelectedServiceId(svcs[0].id);
+        applyService(svcs[0], fallback);
       } else {
-        setDefaultPrice(null);
-        setSessionPrice("");
+        setSelectedServiceId(CUSTOM_SERVICE);
+        setSessionPrice(fallback != null ? String(fallback) : "");
       }
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, businessId]);
 
   const fetchPatients = async () => {
@@ -233,6 +279,7 @@ export function CreateAppointmentModal({
             business_id: businessId,
             patient_id: selectedPatientId,
             professional_id: finalProfessionalId,
+            service_id: selectedServiceId !== CUSTOM_SERVICE ? selectedServiceId : null,
             start_at: s.toISOString(),
             end_at: e.toISOString(),
             modality,
@@ -251,6 +298,7 @@ export function CreateAppointmentModal({
           business_id: businessId,
           patient_id: selectedPatientId,
           professional_id: finalProfessionalId,
+          service_id: selectedServiceId !== CUSTOM_SERVICE ? selectedServiceId : null,
           start_at: startAt.toISOString(),
           end_at: endAt.toISOString(),
           modality,
@@ -389,6 +437,30 @@ export function CreateAppointmentModal({
               </div>
             )}
 
+            {/* Tipo de sesión: autocompleta duración, modalidad y precio */}
+            {services.length > 0 && (
+              <div className="space-y-2">
+                <Label htmlFor="service" className="text-sm font-semibold">Tipo de sesión</Label>
+                <Select value={selectedServiceId} onValueChange={handleServiceChange}>
+                  <SelectTrigger id="service" className="h-12 text-base rounded-xl">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {services.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.name} · {s.duration_minutes} min
+                        {s.suggested_price != null ? ` · $${s.suggested_price.toLocaleString("es-UY")}` : ""}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value={CUSTOM_SERVICE}>Personalizada (sin tipo)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Completa duración, modalidad y precio solos. Podés ajustarlos abajo.
+                </p>
+              </div>
+            )}
+
             {/* Fecha */}
             <div className="space-y-2">
               <Label htmlFor="date" className="text-sm font-semibold">Fecha *</Label>
@@ -433,6 +505,7 @@ export function CreateAppointmentModal({
                   <SelectItem value="45">45 minutos</SelectItem>
                   <SelectItem value="60">60 minutos</SelectItem>
                   <SelectItem value="90">90 minutos</SelectItem>
+                  <SelectItem value="120">120 minutos</SelectItem>
                 </SelectContent>
               </Select>
             </div>
