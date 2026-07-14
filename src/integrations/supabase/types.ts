@@ -1726,19 +1726,6 @@ export type Database = {
         Args: { p_business_id: string }
         Returns: number
       }
-      generate_slots_from_template: {
-        Args: {
-          p_conflict_strategy?: string
-          p_from_date: string
-          p_template_id: string
-          p_to_date: string
-        }
-        Returns: {
-          created: number
-          replaced: number
-          skipped: number
-        }[]
-      }
       get_agenda_view: {
         Args: { p_business_id: string; p_from: string; p_to: string }
         Returns: {
@@ -1830,13 +1817,6 @@ export type Database = {
           conflicts: number
           days_with_slots: number
           total_slots: number
-        }[]
-      }
-      refill_template_slots: {
-        Args: { p_days_ahead?: number }
-        Returns: {
-          created: number
-          template_id: string
         }[]
       }
       reject_reschedule_request: {
