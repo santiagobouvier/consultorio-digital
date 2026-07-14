@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -23,15 +23,24 @@ import { toast } from "@/hooks/use-toast";
 import { useBusinessId } from "@/hooks/use-business-id";
 import { useProfessionals } from "@/hooks/use-professionals";
 import { notifyPatient } from "@/lib/push-notifications";
-import { addDays, addWeeks, addMonths, format } from "date-fns";
+import { addWeeks, addMonths, format } from "date-fns";
 import { es } from "date-fns/locale";
-import { Repeat, CalendarIcon } from "lucide-react";
+import {
+  Repeat, CalendarIcon, ArrowLeft, Search, Clock, Video, MapPin,
+  Loader2, CheckCircle2, User, PencilLine,
+} from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
+// Crear cita desde el panel, con la misma experiencia que la web pública:
+// 1) paciente → 2) tipo de sesión → 3) día y horario (horarios libres
+// calculados por el motor, con opción "Otro horario" manual porque el
+// profesional puede agendar fuera de su semana tipo) → 4) confirmar.
+
 type RecurrenceFrequency = "weekly" | "biweekly" | "monthly";
 type RecurrenceEndType = "count" | "date";
+type Step = "patient" | "service" | "schedule" | "confirm";
 
 function generateRecurrenceDates(
   startDate: Date,
@@ -73,7 +82,37 @@ interface ServiceOption {
   suggested_price: number | null;
 }
 
+interface Start {
+  day: string;        // YYYY-MM-DD
+  start_time: string; // HH:MM:SS
+}
+
 const CUSTOM_SERVICE = "custom";
+
+const DAY_SHORT = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+const MONTH_SHORT = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+const DAY_NAMES = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+const MONTH_NAMES = [
+  "enero", "febrero", "marzo", "abril", "mayo", "junio",
+  "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+];
+
+const parseDay = (dateStr: string) => {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return { date: new Date(y, m - 1, d), d, m };
+};
+
+const formatDayLong = (dateStr: string) => {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const dd = new Date(y, m - 1, d);
+  return `${DAY_NAMES[dd.getDay()]} ${d} de ${MONTH_NAMES[m - 1]}`;
+};
+
+const MODE_LABEL: Record<string, string> = {
+  online: "Online",
+  presencial: "Presencial",
+  ambas: "Online o presencial",
+};
 
 interface CreateAppointmentModalProps {
   open: boolean;
@@ -94,76 +133,49 @@ export function CreateAppointmentModal({
 }: CreateAppointmentModalProps) {
   const navigate = useNavigate();
   const { businessId } = useBusinessId();
-  const { professionals, currentUserId, isOwner } = useProfessionals(businessId);
+  const { currentUserId } = useProfessionals(businessId);
 
+  const [step, setStep] = useState<Step>("patient");
   const [loading, setLoading] = useState(false);
+
+  // Paso 1: paciente
   const [patients, setPatients] = useState<Patient[]>([]);
   const [selectedPatientId, setSelectedPatientId] = useState(patientId || "");
-  const [selectedProfessionalId, setSelectedProfessionalId] = useState("");
+  const [patientSearch, setPatientSearch] = useState("");
+
+  // Paso 2: tipo de sesión
+  const [services, setServices] = useState<ServiceOption[]>([]);
+  const [selectedServiceId, setSelectedServiceId] = useState<string>(CUSTOM_SERVICE);
+  const [duration, setDuration] = useState("60");
+  const [defaultPrice, setDefaultPrice] = useState<number | null>(null);
+
+  // Paso 3: día y horario
+  const [scheduleMode, setScheduleMode] = useState<"slots" | "manual">("slots");
+  const [starts, setStarts] = useState<Start[]>([]);
+  const [startsLoading, setStartsLoading] = useState(false);
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
-  const [duration, setDuration] = useState("60");
+
+  // Paso 4: confirmar
   const [modality, setModality] = useState("presencial");
   const [location, setLocation] = useState("");
   const [notes, setNotes] = useState("");
+  const [sessionPrice, setSessionPrice] = useState<string>("");
   const [isRecurrent, setIsRecurrent] = useState(false);
   const [recurrenceFrequency, setRecurrenceFrequency] = useState<RecurrenceFrequency>("weekly");
   const [recurrenceEndType, setRecurrenceEndType] = useState<RecurrenceEndType>("count");
   const [recurrenceCount, setRecurrenceCount] = useState(4);
   const [recurrenceEndDate, setRecurrenceEndDate] = useState<Date | undefined>();
-  const [sessionPrice, setSessionPrice] = useState<string>("");
-  const [defaultPrice, setDefaultPrice] = useState<number | null>(null);
-  const [services, setServices] = useState<ServiceOption[]>([]);
-  const [selectedServiceId, setSelectedServiceId] = useState<string>(CUSTOM_SERVICE);
 
-  // Prefill date when modal opens with a prefilledDate
-  useEffect(() => {
-    if (open && prefilledDate) {
-      const yyyy = prefilledDate.getFullYear();
-      const mm = String(prefilledDate.getMonth() + 1).padStart(2, "0");
-      const dd = String(prefilledDate.getDate()).padStart(2, "0");
-      setDate(`${yyyy}-${mm}-${dd}`);
-    }
-  }, [open, prefilledDate]);
+  const selectedService = services.find((s) => s.id === selectedServiceId) ?? null;
+  const selectedPatient = patients.find((p) => p.id === selectedPatientId) ?? null;
 
-  // Cada profesional crea SOLO sus propias citas.
-  // Forzamos professional_id = auth.uid() siempre.
-  useEffect(() => {
-    if (!open) return;
-    if (currentUserId) setSelectedProfessionalId(currentUserId);
-  }, [open, currentUserId]);
-
-  useEffect(() => {
-    if (open && !patientId) {
-      fetchPatients();
-    }
-    if (patientId) {
-      setSelectedPatientId(patientId);
-    }
-  }, [open, patientId]);
-
-  // Aplica un tipo de sesión: autocompleta duración, modalidad y precio
-  // (todo queda editable por si se quiere hacer una excepción).
-  const applyService = (svc: ServiceOption, fallbackPrice: number | null) => {
-    setDuration(String(svc.duration_minutes));
-    if (svc.mode === "online") setModality("online");
-    else if (svc.mode === "presencial") setModality("presencial");
-    const price = svc.suggested_price ?? fallbackPrice;
-    setSessionPrice(price != null ? String(price) : "");
-  };
-
-  const handleServiceChange = (value: string) => {
-    setSelectedServiceId(value);
-    if (value === CUSTOM_SERVICE) return;
-    const svc = services.find((s) => s.id === value);
-    if (svc) applyService(svc, defaultPrice);
-  };
-
-  // Cargar tipos de sesión + tarifa default y precargar el formulario
+  // ── Carga inicial al abrir ──
   useEffect(() => {
     if (!open || !businessId) return;
     (async () => {
-      const [bizRes, svcRes] = await Promise.all([
+      const [bizRes, svcRes, patRes] = await Promise.all([
         supabase
           .from("businesses")
           .select("default_session_price")
@@ -175,42 +187,150 @@ export function CreateAppointmentModal({
           .eq("business_id", businessId)
           .eq("is_active", true)
           .order("created_at", { ascending: true }),
+        supabase
+          .from("patients")
+          .select("id, full_name")
+          .eq("business_id", businessId)
+          .eq("is_active", true)
+          .order("full_name"),
       ]);
 
       const v = (bizRes.data as any)?.default_session_price;
-      const fallback = v != null ? Number(v) : null;
-      setDefaultPrice(fallback);
-
-      const svcs = (svcRes.data ?? []) as ServiceOption[];
-      setServices(svcs);
-
-      if (svcs.length > 0) {
-        // Preseleccionar el primer tipo de sesión (la mayoría tiene uno solo)
-        setSelectedServiceId(svcs[0].id);
-        applyService(svcs[0], fallback);
-      } else {
-        setSelectedServiceId(CUSTOM_SERVICE);
-        setSessionPrice(fallback != null ? String(fallback) : "");
-      }
+      setDefaultPrice(v != null ? Number(v) : null);
+      setServices((svcRes.data ?? []) as ServiceOption[]);
+      setPatients((patRes.data ?? []) as Patient[]);
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, businessId]);
 
-  const fetchPatients = async () => {
-    try {
-      if (!businessId) return;
-
-      const { data } = await supabase
-        .from("patients")
-        .select("id, full_name")
-        .eq("business_id", businessId)
-        .eq("is_active", true)
-        .order("full_name");
-
-      setPatients(data || []);
-    } catch (error) {
-      console.error("Error fetching patients:", error);
+  // Reset al abrir
+  useEffect(() => {
+    if (!open) return;
+    setStep(patientId ? "service" : "patient");
+    setSelectedPatientId(patientId || "");
+    setPatientSearch("");
+    setSelectedServiceId(CUSTOM_SERVICE);
+    setScheduleMode("slots");
+    setStarts([]);
+    setSelectedDay(null);
+    setTime("");
+    setModality("presencial");
+    setLocation("");
+    setNotes("");
+    setSessionPrice("");
+    setIsRecurrent(false);
+    setRecurrenceFrequency("weekly");
+    setRecurrenceEndType("count");
+    setRecurrenceCount(4);
+    setRecurrenceEndDate(undefined);
+    if (prefilledDate) {
+      const yyyy = prefilledDate.getFullYear();
+      const mm = String(prefilledDate.getMonth() + 1).padStart(2, "0");
+      const dd = String(prefilledDate.getDate()).padStart(2, "0");
+      setDate(`${yyyy}-${mm}-${dd}`);
+    } else {
+      setDate("");
     }
+  }, [open, patientId, prefilledDate]);
+
+  const filteredPatients = useMemo(() => {
+    if (!patientSearch.trim()) return patients;
+    const q = patientSearch.toLowerCase();
+    return patients.filter((p) => p.full_name.toLowerCase().includes(q));
+  }, [patients, patientSearch]);
+
+  // ── Horarios libres del motor (semana tipo + sueltos − citas) ──
+  const loadStarts = useCallback(async (durationMinutes: number) => {
+    if (!businessId || !currentUserId) return;
+    setStartsLoading(true);
+    try {
+      const today = new Date();
+      const from = today.toISOString().slice(0, 10);
+      const toDate = new Date(today.getTime() + 30 * 86400000).toISOString().slice(0, 10);
+      const { data, error } = await (supabase as any).rpc("get_available_starts", {
+        p_business_id: businessId,
+        p_professional_user_id: currentUserId,
+        p_duration_minutes: durationMinutes,
+        p_from: from,
+        p_to: toDate,
+      });
+      if (error) throw error;
+      setStarts((data ?? []) as Start[]);
+    } catch (e) {
+      console.error("Error cargando horarios libres:", e);
+      setStarts([]);
+    } finally {
+      setStartsLoading(false);
+    }
+  }, [businessId, currentUserId]);
+
+  // ── Elegir tipo de sesión ──
+  // Tocar un tipo avanza directo al horario (como la web pública);
+  // "Personalizada" pide la duración y sigue con el botón Continuar.
+  const pickService = (svcId: string) => {
+    setSelectedServiceId(svcId);
+    if (svcId !== CUSTOM_SERVICE) {
+      const svc = services.find((s) => s.id === svcId);
+      if (svc) {
+        setDuration(String(svc.duration_minutes));
+        if (svc.mode === "online") setModality("online");
+        else if (svc.mode === "presencial") setModality("presencial");
+        const price = svc.suggested_price ?? defaultPrice;
+        setSessionPrice(price != null ? String(price) : "");
+        setScheduleMode("slots");
+        setSelectedDay(null);
+        setStep("schedule");
+        void loadStarts(svc.duration_minutes);
+      }
+    } else {
+      setSessionPrice(defaultPrice != null ? String(defaultPrice) : "");
+    }
+  };
+
+  const goToSchedule = () => {
+    setScheduleMode("slots");
+    setSelectedDay(null);
+    setStep("schedule");
+    void loadStarts(parseInt(duration));
+  };
+
+  const startsByDate = useMemo(() => {
+    const map = new Map<string, Start[]>();
+    for (const s of starts) {
+      const list = map.get(s.day) ?? [];
+      list.push(s);
+      map.set(s.day, list);
+    }
+    return Array.from(map.entries())
+      .map(([day, items]) => ({
+        day,
+        items: [...items].sort((a, b) => a.start_time.localeCompare(b.start_time)),
+      }))
+      .sort((a, b) => a.day.localeCompare(b.day));
+  }, [starts]);
+
+  // Día por defecto en la tira: el prefijado desde la agenda si tiene lugar,
+  // sino el primero con disponibilidad.
+  useEffect(() => {
+    if (step !== "schedule" || scheduleMode !== "slots") return;
+    if (startsByDate.length === 0) {
+      setSelectedDay(null);
+      return;
+    }
+    if (!selectedDay || !startsByDate.some((d) => d.day === selectedDay)) {
+      const prefilled = date && startsByDate.some((d) => d.day === date) ? date : startsByDate[0].day;
+      setSelectedDay(prefilled);
+    }
+  }, [step, scheduleMode, startsByDate, selectedDay, date]);
+
+  const timesForSelectedDay = useMemo(
+    () => startsByDate.find((d) => d.day === selectedDay)?.items ?? [],
+    [startsByDate, selectedDay]
+  );
+
+  const pickStart = (s: Start) => {
+    setDate(s.day);
+    setTime(s.start_time.slice(0, 5));
+    setStep("confirm");
   };
 
   const recurrenceDates = useMemo(() => {
@@ -226,30 +346,11 @@ export function CreateAppointmentModal({
     );
   }, [isRecurrent, date, recurrenceFrequency, recurrenceEndType, recurrenceCount, recurrenceEndDate]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // ── Crear la cita ──
+  const handleSubmit = async () => {
+    if (!date || !time || !selectedPatientId) return;
 
-    if (!date || !time) {
-      toast({
-        title: "Error",
-        description: "Por favor completa fecha y hora",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!selectedPatientId) {
-      toast({
-        title: "Error",
-        description: "Por favor selecciona un paciente",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Cada profesional solo puede crear citas para sí mismo
     const finalProfessionalId = currentUserId;
-
     if (!finalProfessionalId) {
       toast({
         title: "Sin profesional asignado",
@@ -261,12 +362,12 @@ export function CreateAppointmentModal({
 
     try {
       setLoading(true);
-
       if (!businessId) throw new Error("No se encontró el consultorio");
 
       const startAt = new Date(`${date}T${time}`);
       const endAt = new Date(startAt);
       endAt.setMinutes(endAt.getMinutes() + parseInt(duration));
+      const serviceId = selectedServiceId !== CUSTOM_SERVICE ? selectedServiceId : null;
 
       if (isRecurrent && recurrenceDates.length > 1) {
         const groupId = crypto.randomUUID();
@@ -279,7 +380,7 @@ export function CreateAppointmentModal({
             business_id: businessId,
             patient_id: selectedPatientId,
             professional_id: finalProfessionalId,
-            service_id: selectedServiceId !== CUSTOM_SERVICE ? selectedServiceId : null,
+            service_id: serviceId,
             start_at: s.toISOString(),
             end_at: e.toISOString(),
             modality,
@@ -298,7 +399,7 @@ export function CreateAppointmentModal({
           business_id: businessId,
           patient_id: selectedPatientId,
           professional_id: finalProfessionalId,
-          service_id: selectedServiceId !== CUSTOM_SERVICE ? selectedServiceId : null,
+          service_id: serviceId,
           start_at: startAt.toISOString(),
           end_at: endAt.toISOString(),
           modality,
@@ -362,19 +463,6 @@ export function CreateAppointmentModal({
           : "Cita creada correctamente",
       });
 
-      setDate("");
-      setTime("");
-      setDuration("60");
-      setModality("presencial");
-      setLocation("");
-      setNotes("");
-      setIsRecurrent(false);
-      setRecurrenceFrequency("weekly");
-      setRecurrenceEndType("count");
-      setRecurrenceCount(4);
-      setRecurrenceEndDate(undefined);
-      setSelectedPatientId(patientId || "");
-
       onOpenChange(false);
       onSuccess();
       navigate("/agenda");
@@ -390,142 +478,341 @@ export function CreateAppointmentModal({
     }
   };
 
-  const showProfessionalSelector = false;
-  const singleProfessional = professionals.find((p) => p.userId === currentUserId) ?? null;
+  const handleBack = () => {
+    if (step === "confirm") setStep("schedule");
+    else if (step === "schedule") setStep("service");
+    else if (step === "service" && !patientId) setStep("patient");
+  };
+
+  const showBack =
+    step === "confirm" || step === "schedule" || (step === "service" && !patientId);
+
+  const STEP_TITLES: Record<Step, string> = {
+    patient: "¿Para qué paciente?",
+    service: "Tipo de sesión",
+    schedule: "Día y horario",
+    confirm: "Confirmá la cita",
+  };
+
+  const stepNumber = { patient: 1, service: patientId ? 1 : 2, schedule: patientId ? 2 : 3, confirm: patientId ? 3 : 4 }[step];
+  const totalSteps = patientId ? 3 : 4;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto">
-        <form onSubmit={handleSubmit}>
-          <DialogHeader className="pb-2">
-            <DialogTitle className="text-xl font-bold">Crear nueva cita</DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-5 py-4">
-            {/* Paciente */}
-            {!patientId && (
-              <div className="space-y-2">
-                <Label htmlFor="patient" className="text-sm font-semibold">Paciente *</Label>
-                <Select value={selectedPatientId} onValueChange={setSelectedPatientId}>
-                  <SelectTrigger id="patient" className="h-12 text-base rounded-xl">
-                    <SelectValue placeholder="Selecciona un paciente" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {patients.map((patient) => (
-                      <SelectItem key={patient.id} value={patient.id}>
-                        {patient.full_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
+        <DialogHeader className="pb-1">
+          <div className="flex items-center gap-2">
+            {showBack && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={handleBack}
+                className="h-8 w-8 rounded-lg -ml-2"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
             )}
+            <DialogTitle className="text-lg font-bold flex-1">{STEP_TITLES[step]}</DialogTitle>
+            <span className="text-xs text-muted-foreground shrink-0">
+              {stepNumber}/{totalSteps}
+            </span>
+          </div>
+        </DialogHeader>
 
-            {/* Asignación automática: cada profesional crea solo sus propias citas */}
-            {singleProfessional && (
-              <div className="flex items-center gap-3 rounded-xl border border-dashed border-border bg-muted/30 px-3 py-2.5">
-                <span
-                  className="w-3 h-3 rounded-full shrink-0"
-                  style={{ backgroundColor: singleProfessional.color }}
-                />
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-muted-foreground">Profesional asignado</p>
-                  <p className="text-sm font-medium text-foreground truncate">
-                    {singleProfessional.name}
-                  </p>
-                </div>
-              </div>
+        {/* ── Paso: paciente ── */}
+        {step === "patient" && (
+          <div className="space-y-3 py-2">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar paciente..."
+                value={patientSearch}
+                onChange={(e) => setPatientSearch(e.target.value)}
+                className="pl-10 h-11 rounded-xl"
+              />
+            </div>
+            <div className="space-y-1.5 max-h-[45vh] overflow-y-auto">
+              {filteredPatients.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  No se encontraron pacientes.
+                </p>
+              ) : (
+                filteredPatients.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedPatientId(p.id);
+                      setStep("service");
+                    }}
+                    className="w-full flex items-center gap-3 rounded-xl border p-3 text-left transition-all hover:border-primary hover:bg-primary/5 active:scale-[0.99]"
+                  >
+                    <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                      <User className="h-4 w-4 text-primary" />
+                    </div>
+                    <span className="font-medium text-sm">{p.full_name}</span>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── Paso: tipo de sesión ── */}
+        {step === "service" && (
+          <div className="space-y-3 py-2">
+            {selectedPatient && (
+              <p className="text-xs text-muted-foreground">
+                Paciente: <span className="font-medium text-foreground">{selectedPatient.full_name}</span>
+              </p>
             )}
+            <div className="grid grid-cols-1 gap-2.5">
+              {services.map((s) => {
+                const isSelected = selectedServiceId === s.id;
+                return (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => pickService(s.id)}
+                    className={cn(
+                      "text-left rounded-xl border-2 p-3.5 transition-all",
+                      isSelected
+                        ? "border-primary bg-primary/5"
+                        : "border-border bg-card hover:border-primary/40"
+                    )}
+                  >
+                    <p className="font-semibold text-sm">{s.name}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-2 flex-wrap">
+                      <span className="inline-flex items-center gap-1">
+                        <Clock className="h-3.5 w-3.5" /> {s.duration_minutes} min
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        {s.mode === "online" ? <Video className="h-3.5 w-3.5" /> : s.mode === "presencial" ? <MapPin className="h-3.5 w-3.5" /> : null}
+                        {MODE_LABEL[s.mode] ?? s.mode}
+                      </span>
+                      {s.suggested_price != null && (
+                        <span className="font-semibold text-primary">
+                          ${s.suggested_price.toLocaleString("es-UY")}
+                        </span>
+                      )}
+                    </p>
+                  </button>
+                );
+              })}
 
-            {/* Tipo de sesión: autocompleta duración, modalidad y precio */}
-            {services.length > 0 && (
+              {/* Personalizada */}
+              <button
+                type="button"
+                onClick={() => pickService(CUSTOM_SERVICE)}
+                className={cn(
+                  "text-left rounded-xl border-2 border-dashed p-3.5 transition-all",
+                  selectedServiceId === CUSTOM_SERVICE
+                    ? "border-primary bg-primary/5"
+                    : "border-border bg-card hover:border-primary/40"
+                )}
+              >
+                <p className="font-semibold text-sm inline-flex items-center gap-2">
+                  <PencilLine className="h-4 w-4" /> Personalizada
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Duración y precio a medida, sin tipo de sesión.
+                </p>
+              </button>
+            </div>
+
+            {selectedServiceId === CUSTOM_SERVICE && (
               <div className="space-y-2">
-                <Label htmlFor="service" className="text-sm font-semibold">Tipo de sesión</Label>
-                <Select value={selectedServiceId} onValueChange={handleServiceChange}>
-                  <SelectTrigger id="service" className="h-12 text-base rounded-xl">
+                <Label className="text-sm font-semibold">Duración</Label>
+                <Select value={duration} onValueChange={setDuration}>
+                  <SelectTrigger className="h-11 rounded-xl">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {services.map((s) => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.name} · {s.duration_minutes} min
-                        {s.suggested_price != null ? ` · $${s.suggested_price.toLocaleString("es-UY")}` : ""}
-                      </SelectItem>
-                    ))}
-                    <SelectItem value={CUSTOM_SERVICE}>Personalizada (sin tipo)</SelectItem>
+                    <SelectItem value="30">30 minutos</SelectItem>
+                    <SelectItem value="45">45 minutos</SelectItem>
+                    <SelectItem value="60">60 minutos</SelectItem>
+                    <SelectItem value="90">90 minutos</SelectItem>
+                    <SelectItem value="120">120 minutos</SelectItem>
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-muted-foreground">
-                  Completa duración, modalidad y precio solos. Podés ajustarlos abajo.
-                </p>
               </div>
             )}
 
-            {/* Fecha */}
-            <div className="space-y-2">
-              <Label htmlFor="date" className="text-sm font-semibold">Fecha *</Label>
-              <Input
-                id="date"
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                required
-                disabled={lockDate && !!prefilledDate}
-                className="h-12 text-base rounded-xl disabled:opacity-100 disabled:cursor-not-allowed"
-              />
-              {lockDate && !!prefilledDate && (
+            {selectedServiceId === CUSTOM_SERVICE && (
+              <Button onClick={goToSchedule} className="w-full h-11 rounded-xl font-semibold">
+                Continuar
+              </Button>
+            )}
+          </div>
+        )}
+
+        {/* ── Paso: día y horario ── */}
+        {step === "schedule" && (
+          <div className="space-y-4 py-2">
+            {scheduleMode === "slots" ? (
+              <>
+                {startsLoading ? (
+                  <div className="py-10 flex items-center justify-center text-muted-foreground">
+                    <Loader2 className="h-5 w-5 animate-spin mr-2" /> Buscando horarios libres...
+                  </div>
+                ) : startsByDate.length === 0 ? (
+                  <div className="py-8 text-center space-y-2">
+                    <Clock className="h-8 w-8 mx-auto text-muted-foreground" />
+                    <p className="text-sm font-medium">No hay horarios libres en los próximos 30 días</p>
+                    <p className="text-xs text-muted-foreground">
+                      Podés elegir el horario a mano igual.
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    {/* Tira de días con lugar */}
+                    <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 snap-x">
+                      {startsByDate.map(({ day }) => {
+                        const { date: d, d: dayNum, m } = parseDay(day);
+                        const isSelected = selectedDay === day;
+                        return (
+                          <button
+                            key={day}
+                            type="button"
+                            onClick={() => setSelectedDay(day)}
+                            className={cn(
+                              "flex flex-col items-center justify-center rounded-xl border-2 px-3 py-2 min-w-[60px] snap-start transition-all",
+                              isSelected
+                                ? "border-primary bg-primary text-primary-foreground"
+                                : "border-border bg-card"
+                            )}
+                          >
+                            <span className={cn("text-[10px] uppercase tracking-wide", !isSelected && "text-muted-foreground")}>
+                              {DAY_SHORT[d.getDay()]}
+                            </span>
+                            <span className="text-base font-bold leading-tight">{dayNum}</span>
+                            <span className={cn("text-[10px]", !isSelected && "text-muted-foreground")}>
+                              {MONTH_SHORT[m - 1]}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Horarios del día */}
+                    {selectedDay && (
+                      <div className="space-y-2">
+                        <p className="text-sm font-semibold">{formatDayLong(selectedDay)}</p>
+                        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                          {timesForSelectedDay.map((s) => (
+                            <button
+                              key={`${s.day}-${s.start_time}`}
+                              type="button"
+                              onClick={() => pickStart(s)}
+                              className="px-2 py-2.5 rounded-md border-2 border-primary/30 bg-primary/5 text-primary text-sm font-medium transition-all hover:bg-primary hover:text-primary-foreground"
+                            >
+                              {s.start_time.slice(0, 5)}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setScheduleMode("manual")}
+                  className="w-full text-center text-sm text-muted-foreground hover:text-foreground underline underline-offset-4 py-1"
+                >
+                  Otro horario (elegir a mano)
+                </button>
+              </>
+            ) : (
+              <>
                 <p className="text-xs text-muted-foreground">
-                  Fecha fijada desde la agenda. Para elegir otra, usá "+ Nuevo" en el encabezado.
+                  Elegí cualquier fecha y hora, incluso fuera de tu semana tipo.
                 </p>
-              )}
-            </div>
+                <div className="space-y-2">
+                  <Label htmlFor="manual-date" className="text-sm font-semibold">Fecha *</Label>
+                  <Input
+                    id="manual-date"
+                    type="date"
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                    disabled={lockDate && !!prefilledDate}
+                    className="h-11 rounded-xl disabled:opacity-100"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="manual-time" className="text-sm font-semibold">Hora de inicio *</Label>
+                  <Input
+                    id="manual-time"
+                    type="time"
+                    value={time}
+                    onChange={(e) => setTime(e.target.value)}
+                    className="h-11 rounded-xl"
+                  />
+                </div>
+                <Button
+                  onClick={() => setStep("confirm")}
+                  disabled={!date || !time}
+                  className="w-full h-11 rounded-xl font-semibold"
+                >
+                  Continuar
+                </Button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setScheduleMode("slots");
+                    if (starts.length === 0) void loadStarts(parseInt(duration));
+                  }}
+                  className="w-full text-center text-sm text-muted-foreground hover:text-foreground underline underline-offset-4 py-1"
+                >
+                  Volver a los horarios libres
+                </button>
+              </>
+            )}
+          </div>
+        )}
 
-            {/* Hora */}
-            <div className="space-y-2">
-              <Label htmlFor="time" className="text-sm font-semibold">Hora de inicio *</Label>
-              <Input
-                id="time"
-                type="time"
-                value={time}
-                onChange={(e) => setTime(e.target.value)}
-                required
-                className="h-12 text-base rounded-xl"
-              />
-            </div>
-
-            {/* Duración */}
-            <div className="space-y-2">
-              <Label htmlFor="duration" className="text-sm font-semibold">Duración</Label>
-              <Select value={duration} onValueChange={setDuration}>
-                <SelectTrigger id="duration" className="h-12 text-base rounded-xl">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="30">30 minutos</SelectItem>
-                  <SelectItem value="45">45 minutos</SelectItem>
-                  <SelectItem value="60">60 minutos</SelectItem>
-                  <SelectItem value="90">90 minutos</SelectItem>
-                  <SelectItem value="120">120 minutos</SelectItem>
-                </SelectContent>
-              </Select>
+        {/* ── Paso: confirmar ── */}
+        {step === "confirm" && (
+          <div className="space-y-4 py-2">
+            {/* Resumen */}
+            <div className="rounded-xl bg-primary/5 border border-primary/20 p-3.5 space-y-1">
+              <p className="text-sm font-semibold inline-flex items-center gap-2">
+                <CalendarIcon className="h-4 w-4 text-primary" />
+                {date ? formatDayLong(date) : ""} · {time} hs
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {selectedPatient?.full_name}
+                {" · "}
+                {selectedService ? `${selectedService.name} (${duration} min)` : `Personalizada (${duration} min)`}
+              </p>
             </div>
 
             {/* Modalidad */}
-            <div className="space-y-2">
-              <Label htmlFor="modality" className="text-sm font-semibold">Modalidad</Label>
-              <Select value={modality} onValueChange={setModality}>
-                <SelectTrigger id="modality" className="h-12 text-base rounded-xl">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="presencial">Presencial</SelectItem>
-                  <SelectItem value="online">Online</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="space-y-1.5">
+              <Label className="text-sm font-semibold">Modalidad</Label>
+              <div className="flex gap-2">
+                {(["presencial", "online"] as const).map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => setModality(m)}
+                    className={cn(
+                      "flex-1 inline-flex items-center justify-center gap-2 rounded-xl border-2 py-2.5 text-sm font-medium transition-all",
+                      modality === m
+                        ? "border-primary text-primary bg-primary/5"
+                        : "border-border text-muted-foreground"
+                    )}
+                  >
+                    {m === "online" ? <Video className="h-4 w-4" /> : <MapPin className="h-4 w-4" />}
+                    {m === "online" ? "Online" : "Presencial"}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Ubicación/Link */}
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label htmlFor="location" className="text-sm font-semibold">
                 {modality === "online" ? "Link de videollamada" : "Dirección"}
               </Label>
@@ -539,25 +826,12 @@ export function CreateAppointmentModal({
                     ? "https://meet.google.com/..."
                     : "Dirección del consultorio"
                 }
-                className="h-12 text-base rounded-xl"
+                className="h-11 rounded-xl"
               />
             </div>
 
-            {/* Notas */}
-            <div className="space-y-2">
-              <Label htmlFor="notes" className="text-sm font-semibold">Notas internas</Label>
-              <Textarea
-                id="notes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={3}
-                placeholder="Notas solo visibles para el profesional"
-                className="text-base rounded-xl resize-none"
-              />
-            </div>
-
-            {/* Monto de la sesión */}
-            <div className="space-y-2">
+            {/* Precio */}
+            <div className="space-y-1.5">
               <Label htmlFor="session_price" className="text-sm font-semibold">Monto de la sesión (UYU)</Label>
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
@@ -569,7 +843,7 @@ export function CreateAppointmentModal({
                   value={sessionPrice}
                   onChange={(e) => setSessionPrice(e.target.value)}
                   placeholder={defaultPrice ? String(defaultPrice) : "0"}
-                  className="h-12 text-base rounded-xl pl-8"
+                  className="h-11 rounded-xl pl-8"
                 />
               </div>
               <p className="text-xs text-muted-foreground">
@@ -577,8 +851,21 @@ export function CreateAppointmentModal({
               </p>
             </div>
 
+            {/* Notas */}
+            <div className="space-y-1.5">
+              <Label htmlFor="notes" className="text-sm font-semibold">Notas internas</Label>
+              <Textarea
+                id="notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={2}
+                placeholder="Notas solo visibles para el profesional"
+                className="rounded-xl resize-none"
+              />
+            </div>
+
             {/* Recurrencia */}
-            <div className="space-y-3 p-4 border rounded-xl bg-muted/30">
+            <div className="space-y-3 p-3.5 border rounded-xl bg-muted/30">
               <div className="flex items-center gap-3">
                 <Checkbox
                   id="recurrent"
@@ -592,12 +879,11 @@ export function CreateAppointmentModal({
               </div>
 
               {isRecurrent && (
-                <div className="space-y-4 pt-2">
-                  {/* Frecuencia */}
+                <div className="space-y-4 pt-1">
                   <div className="space-y-2">
                     <Label className="text-sm font-semibold">Frecuencia</Label>
                     <Select value={recurrenceFrequency} onValueChange={(v) => setRecurrenceFrequency(v as RecurrenceFrequency)}>
-                      <SelectTrigger className="h-12 text-base rounded-xl">
+                      <SelectTrigger className="h-11 rounded-xl">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -608,11 +894,10 @@ export function CreateAppointmentModal({
                     </Select>
                   </div>
 
-                  {/* Fin de recurrencia */}
                   <div className="space-y-2">
                     <Label className="text-sm font-semibold">Termina</Label>
                     <Select value={recurrenceEndType} onValueChange={(v) => setRecurrenceEndType(v as RecurrenceEndType)}>
-                      <SelectTrigger className="h-12 text-base rounded-xl">
+                      <SelectTrigger className="h-11 rounded-xl">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -631,7 +916,7 @@ export function CreateAppointmentModal({
                         max={52}
                         value={recurrenceCount}
                         onChange={(e) => setRecurrenceCount(Math.min(52, Math.max(2, parseInt(e.target.value) || 2)))}
-                        className="h-12 text-base rounded-xl"
+                        className="h-11 rounded-xl"
                       />
                     </div>
                   ) : (
@@ -642,7 +927,7 @@ export function CreateAppointmentModal({
                           <Button
                             variant="outline"
                             className={cn(
-                              "w-full h-12 justify-start text-left text-base rounded-xl",
+                              "w-full h-11 justify-start text-left rounded-xl",
                               !recurrenceEndDate && "text-muted-foreground"
                             )}
                           >
@@ -666,13 +951,12 @@ export function CreateAppointmentModal({
                     </div>
                   )}
 
-                  {/* Preview de fechas */}
                   {recurrenceDates.length > 0 && (
                     <div className="space-y-2">
                       <Label className="text-sm font-semibold">
                         Vista previa ({recurrenceDates.length} sesiones)
                       </Label>
-                      <div className="max-h-40 overflow-y-auto space-y-1 rounded-xl border p-3 bg-background">
+                      <div className="max-h-32 overflow-y-auto space-y-1 rounded-xl border p-3 bg-background">
                         {recurrenceDates.map((d, i) => (
                           <div key={i} className="flex items-center gap-2 text-sm">
                             <span className="text-muted-foreground w-6 text-right">{i + 1}.</span>
@@ -687,31 +971,28 @@ export function CreateAppointmentModal({
                 </div>
               )}
             </div>
-          </div>
 
-          <div className="flex flex-col-reverse sm:flex-row gap-3 pt-2">
             <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={loading}
-              className="h-12 rounded-xl text-base font-semibold flex-1"
+              onClick={handleSubmit}
+              disabled={loading || !date || !time || !selectedPatientId}
+              className="w-full h-12 rounded-xl text-base font-semibold gap-2"
             >
-              Cancelar
-            </Button>
-            <Button
-              type="submit"
-              disabled={loading}
-              className="h-12 rounded-xl text-base font-semibold flex-1"
-            >
-              {loading
-                ? "Creando..."
-                : isRecurrent && recurrenceDates.length > 1
-                  ? `Crear ${recurrenceDates.length} citas`
-                  : "Crear cita"}
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Creando...
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="h-4 w-4" />
+                  {isRecurrent && recurrenceDates.length > 1
+                    ? `Crear ${recurrenceDates.length} citas`
+                    : "Crear cita"}
+                </>
+              )}
             </Button>
           </div>
-        </form>
+        )}
       </DialogContent>
     </Dialog>
   );

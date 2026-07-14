@@ -24,6 +24,7 @@ import {
 import { es } from "date-fns/locale";
 
 import { CalendarHeader } from "@/components/calendar-v2/CalendarHeader";
+import { AgendaLegend } from "@/components/calendar-v2/AgendaLegend";
 import { ProfessionalFilter } from "@/components/calendar-v2/ProfessionalFilter";
 import { ProfessionalColorLegend } from "@/components/calendar-v2/ProfessionalColorLegend";
 import { CalendarFiltersPanel } from "@/components/calendar-v2/CalendarFiltersPanel";
@@ -536,6 +537,14 @@ const CalendarV2 = () => {
             exportCSV(headers, rows, `citas_${todayDateString()}.csv`);
           }}
         />
+
+        {/* Referencias de colores (se abre sola la primera vez) */}
+        <div className="flex justify-end">
+          <AgendaLegend
+            showProfessionalColors={showProfessionalColors}
+            professionals={professionals}
+          />
+        </div>
 
         {/* Professional filter chips (for shared calendar) */}
         <ProfessionalFilter
