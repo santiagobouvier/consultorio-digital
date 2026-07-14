@@ -221,6 +221,10 @@ const Billing = () => {
     : PUBLIC_PLAN_ORDER;
   const status = subscription ? statusConfig[subscription.status] || statusConfig.expired : null;
   const StatusIcon = status?.icon || Clock;
+  // Cuenta activada a mano desde el superadmin (sin débito de Mercado Pago):
+  // no hay "próximo cobro", hay "acceso hasta".
+  const isManualActivation =
+    !!subscription && subscription.status === "active" && !subscription.mercadopago_preapproval_id;
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return "—";
@@ -306,8 +310,17 @@ const Billing = () => {
                     <p className="text-white/50 text-sm">{plan?.description}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-2xl font-bold text-white">{formatPrice(subscription.amount)}</p>
-                    <p className="text-white/50 text-xs">/ mes ({subscription.billing_period === "annual" ? "pago anual" : "pago mensual"})</p>
+                    {isManualActivation ? (
+                      <>
+                        <p className="text-lg font-bold text-white">Gestión manual</p>
+                        <p className="text-white/50 text-xs">sin cobro automático</p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-2xl font-bold text-white">{formatPrice(subscription.amount)}</p>
+                        <p className="text-white/50 text-xs">/ mes ({subscription.billing_period === "annual" ? "pago anual" : "pago mensual"})</p>
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -348,7 +361,9 @@ const Billing = () => {
                   <div className="flex items-start gap-3">
                     <CreditCard className="w-4 h-4 mt-0.5 text-white/30" />
                     <div>
-                      <p className="text-xs text-white/50">Próximo cobro</p>
+                      <p className="text-xs text-white/50">
+                        {isManualActivation ? "Acceso hasta" : "Próximo cobro"}
+                      </p>
                       <p className="text-sm text-white">{formatDate(subscription.current_period_end)}</p>
                     </div>
                   </div>

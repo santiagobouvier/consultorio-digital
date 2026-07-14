@@ -162,6 +162,7 @@ const SaasAdmin = () => {
   const [businessToActivate, setBusinessToActivate] = useState<BusinessWithDetails | null>(null);
   const [activatePlan, setActivatePlan] = useState<string>("esencial");
   const [activateType, setActivateType] = useState<"trial" | "active">("trial");
+  const [activateDays, setActivateDays] = useState("15");
   const [activating, setActivating] = useState(false);
   const [activeSection, setActiveSection] = useState<SaasSection>("home");
 
@@ -390,6 +391,7 @@ const SaasAdmin = () => {
     const valid = ["emprendedor", "esencial", "profesional", "consultorio"].includes(normalized) ? normalized : "esencial";
     setActivatePlan(valid);
     setActivateType("trial");
+    setActivateDays("15");
     setShowActivateModal(true);
   };
 
@@ -400,7 +402,10 @@ const SaasAdmin = () => {
       // "trial" → prueba de 15 días que vence sola. "active" → cuenta activa
       // (acceso pleno, sin cobro automático; se cobra manual hasta que se suscriba por MP).
       const newStatus = activateType === "trial" ? "trial" : "active";
-      const trialEnd = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString();
+      // Duración elegible: activar de nuevo con más días = extender el acceso
+      // (Billing lee esta misma ficha, así que se refleja al instante).
+      const days = Math.max(1, parseInt(activateDays) || 15);
+      const trialEnd = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
       const periodEnd = trialEnd;
 
       // Buscar suscripción actual
@@ -446,7 +451,11 @@ const SaasAdmin = () => {
         .eq("id", businessToActivate.id);
       if (bizErr) throw bizErr;
 
-      toast({ title: activateType === "trial" ? "Prueba de 15 días activada" : "Cuenta activada (sin cobro automático)" });
+      toast({
+        title: activateType === "trial"
+          ? `Prueba de ${days} días activada`
+          : `Cuenta activada por ${days} días (sin cobro automático)`,
+      });
       setShowActivateModal(false);
       setBusinessToActivate(null);
       await loadData();
@@ -998,10 +1007,28 @@ const SaasAdmin = () => {
               <Select value={activateType} onValueChange={(v) => setActivateType(v as "trial" | "active")}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="trial">Prueba 15 días (vence sola)</SelectItem>
+                  <SelectItem value="trial">Prueba (vence sola)</SelectItem>
                   <SelectItem value="active">Cuenta activa (acceso pleno, sin cobro)</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Duración del acceso</Label>
+              <Select value={activateDays} onValueChange={setActivateDays}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="7">7 días</SelectItem>
+                  <SelectItem value="15">15 días</SelectItem>
+                  <SelectItem value="30">30 días</SelectItem>
+                  <SelectItem value="60">60 días</SelectItem>
+                  <SelectItem value="90">90 días</SelectItem>
+                  <SelectItem value="180">180 días</SelectItem>
+                  <SelectItem value="365">1 año</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Volver a activar con más días extiende el acceso; Billing lo refleja al instante.
+              </p>
             </div>
             <div className="space-y-2">
               <Label>Plan a asignar</Label>
@@ -1018,8 +1045,8 @@ const SaasAdmin = () => {
             <Alert>
               <AlertDescription className="text-xs">
                 {activateType === "trial"
-                  ? "Crea una prueba gratuita de 15 días. Al vencer, la cuenta se bloquea y la persona paga por Mercado Pago."
-                  : "Deja la cuenta activa con acceso pleno y SIN cobro automático. La vas a tener que cobrar manualmente (aparece como \"Activa (manual)\" en la lista) hasta que la persona se suscriba por Mercado Pago."}
+                  ? `Crea una prueba gratuita de ${activateDays} días. Al vencer, la cuenta se bloquea y la persona paga por Mercado Pago.`
+                  : `Deja la cuenta activa ${activateDays} días con acceso pleno y SIN cobro automático. Al vencer se bloquea; la cobrás manualmente y la volvés a extender desde acá, hasta que se suscriba por Mercado Pago.`}
               </AlertDescription>
             </Alert>
           </div>
