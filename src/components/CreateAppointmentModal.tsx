@@ -539,7 +539,11 @@ export function CreateAppointmentModal({
 
       onOpenChange(false);
       onSuccess();
-      navigate("/agenda");
+      // Solo navegar a la agenda si no estamos ya en otra pantalla con
+      // contexto (ej: la ficha del paciente refresca sola con onSuccess).
+      if (window.location.pathname.startsWith("/agenda")) {
+        navigate("/agenda");
+      }
     } catch (error) {
       console.error("Error creating appointment:", error);
       toast({
