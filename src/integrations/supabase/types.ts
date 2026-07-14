@@ -1652,6 +1652,8 @@ export type Database = {
     Views: {
       businesses_public_branding: {
         Row: {
+          cancellation_hours_notice: number | null
+          contact_email: string | null
           custom_domain: string | null
           custom_subdomain: string | null
           dashboard_display_name: string | null
@@ -1659,7 +1661,10 @@ export type Database = {
           dashboard_primary_color: string | null
           id: string | null
           is_private_clinic: boolean | null
+          late_cancellation_message: string | null
           name: string | null
+          owner_user_id: string | null
+          plan_code: string | null
           portal_clinic_display_name: string | null
           portal_dark_primary_color: string | null
           portal_logo_url: string | null
@@ -1670,6 +1675,8 @@ export type Database = {
           specialty: string | null
         }
         Insert: {
+          cancellation_hours_notice?: number | null
+          contact_email?: string | null
           custom_domain?: string | null
           custom_subdomain?: string | null
           dashboard_display_name?: string | null
@@ -1677,7 +1684,10 @@ export type Database = {
           dashboard_primary_color?: string | null
           id?: string | null
           is_private_clinic?: boolean | null
+          late_cancellation_message?: string | null
           name?: string | null
+          owner_user_id?: string | null
+          plan_code?: string | null
           portal_clinic_display_name?: string | null
           portal_dark_primary_color?: string | null
           portal_logo_url?: string | null
@@ -1688,6 +1698,8 @@ export type Database = {
           specialty?: string | null
         }
         Update: {
+          cancellation_hours_notice?: number | null
+          contact_email?: string | null
           custom_domain?: string | null
           custom_subdomain?: string | null
           dashboard_display_name?: string | null
@@ -1695,7 +1707,10 @@ export type Database = {
           dashboard_primary_color?: string | null
           id?: string | null
           is_private_clinic?: boolean | null
+          late_cancellation_message?: string | null
           name?: string | null
+          owner_user_id?: string | null
+          plan_code?: string | null
           portal_clinic_display_name?: string | null
           portal_dark_primary_color?: string | null
           portal_logo_url?: string | null
