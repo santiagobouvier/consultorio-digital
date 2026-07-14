@@ -76,7 +76,6 @@ const ClinicSettings = () => {
   const [ownerName, setOwnerName] = useState("");
   const [specialty, setSpecialty] = useState("");
   const [welcomeMessage, setWelcomeMessage] = useState("");
-  const [reminderMessage, setReminderMessage] = useState(DEFAULT_TEMPLATES.reminder);
   const [confirmationMessage, setConfirmationMessage] = useState(DEFAULT_TEMPLATES.confirmation);
   const [postsessionMessage, setPostsessionMessage] = useState(DEFAULT_TEMPLATES.postsession);
   const [autoAcceptBookings, setAutoAcceptBookings] = useState(false);
@@ -96,10 +95,9 @@ const ClinicSettings = () => {
   const [registrationLinkCopied, setRegistrationLinkCopied] = useState(false);
 
   // Refs to know which textarea is focused for variable insertion
-  const reminderRef = useRef<HTMLTextAreaElement>(null);
   const confirmationRef = useRef<HTMLTextAreaElement>(null);
   const postsessionRef = useRef<HTMLTextAreaElement>(null);
-  const lastFocused = useRef<"reminder" | "confirmation" | "postsession">("reminder");
+  const lastFocused = useRef<"confirmation" | "postsession">("confirmation");
 
   const { refetch: refetchBranding } = useDashboardBranding();
 
@@ -118,7 +116,6 @@ const ClinicSettings = () => {
       ownerName,
       specialty,
       welcomeMessage,
-      reminderMessage,
       confirmationMessage,
       postsessionMessage,
       autoAcceptBookings,
@@ -201,7 +198,6 @@ const ClinicSettings = () => {
       let loadedClinicName = "";
       let loadedSpecialty = "";
       let loadedWelcome = "";
-      let loadedReminder = DEFAULT_TEMPLATES.reminder;
       let loadedConfirmation = DEFAULT_TEMPLATES.confirmation;
       let loadedPostsession = DEFAULT_TEMPLATES.postsession;
       let loadedAuto = false;
@@ -228,7 +224,6 @@ const ClinicSettings = () => {
         loadedClinicName = settings.clinic_name || "";
         loadedSpecialty = settings.specialty || "";
         loadedWelcome = settings.welcome_message || "";
-        loadedReminder = settings.default_reminder_message || DEFAULT_TEMPLATES.reminder;
         loadedConfirmation = settings.default_confirmation_message || DEFAULT_TEMPLATES.confirmation;
         loadedPostsession = settings.default_postsession_message || DEFAULT_TEMPLATES.postsession;
         loadedAuto = settings.auto_accept_bookings || false;
@@ -244,7 +239,6 @@ const ClinicSettings = () => {
       setOwnerName(ownProfile?.name || "");
       setSpecialty(loadedSpecialty);
       setWelcomeMessage(loadedWelcome);
-      setReminderMessage(loadedReminder);
       setConfirmationMessage(loadedConfirmation);
       setPostsessionMessage(loadedPostsession);
       setAutoAcceptBookings(loadedAuto);
@@ -307,7 +301,6 @@ const ClinicSettings = () => {
         clinic_name: clinicName,
         specialty,
         welcome_message: welcomeMessage,
-        default_reminder_message: reminderMessage,
         default_confirmation_message: confirmationMessage,
         default_postsession_message: postsessionMessage,
         auto_accept_bookings: autoAcceptBookings,
@@ -361,7 +354,6 @@ const ClinicSettings = () => {
   };
 
   const handleResetMessages = () => {
-    setReminderMessage(DEFAULT_TEMPLATES.reminder);
     setConfirmationMessage(DEFAULT_TEMPLATES.confirmation);
     setPostsessionMessage(DEFAULT_TEMPLATES.postsession);
     toast({ title: "Mensajes restablecidos", description: "Acordate de guardar para aplicar los cambios." });
@@ -369,7 +361,6 @@ const ClinicSettings = () => {
 
   const insertVariable = (variable: string) => {
     const map = {
-      reminder: { ref: reminderRef, value: reminderMessage, setter: setReminderMessage },
       confirmation: { ref: confirmationRef, value: confirmationMessage, setter: setConfirmationMessage },
       postsession: { ref: postsessionRef, value: postsessionMessage, setter: setPostsessionMessage },
     };
@@ -671,15 +662,11 @@ const ClinicSettings = () => {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader><CardTitle className="text-base">Recordatorio</CardTitle></CardHeader>
-              <CardContent>
-                <Textarea
-                  ref={reminderRef} value={reminderMessage}
-                  onChange={(e) => setReminderMessage(e.target.value)}
-                  onFocus={() => (lastFocused.current = "reminder")}
-                  rows={4} className="resize-none text-sm"
-                />
+            <Card className="border-dashed">
+              <CardContent className="py-4 text-sm text-muted-foreground">
+                El mensaje del <span className="font-medium text-foreground">recordatorio automático</span> ahora
+                se configura en la página <span className="font-medium text-foreground">Recordatorios</span>, junto
+                con la anticipación y los canales de envío.
               </CardContent>
             </Card>
 
