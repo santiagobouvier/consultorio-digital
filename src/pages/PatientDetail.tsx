@@ -460,14 +460,9 @@ const PatientDetail = () => {
                     Portal activo
                   </Badge>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={() => setShowInviteModal(true)}
-                    className="inline-flex items-center gap-1 rounded-full border border-dashed border-border px-2.5 py-0.5 text-xs text-muted-foreground hover:text-foreground hover:border-foreground/40 transition-colors"
-                  >
-                    <UserPlus className="h-3 w-3" />
-                    Invitar al portal
-                  </button>
+                  <Badge variant="secondary" className="rounded-full text-xs text-muted-foreground">
+                    Sin portal
+                  </Badge>
                 )}
               </div>
             </div>
@@ -497,11 +492,22 @@ const PatientDetail = () => {
           </div>
 
           {/* Acciones principales */}
-          <div className="grid grid-cols-3 sm:flex gap-2 mt-4 sm:pl-[4.5rem]">
+          <div className={cn("grid sm:flex gap-2 mt-4 sm:pl-[4.5rem]", hasPortal ? "grid-cols-3" : "grid-cols-2")}>
             <Button onClick={() => setShowCreateAppointment(true)} className="rounded-xl gap-2 h-10">
               <CalendarPlus className="h-4 w-4" />
               <span className="text-xs sm:text-sm">Agendar cita</span>
             </Button>
+            {/* Sin portal: invitar es la acción que más valor agrega — bien visible */}
+            {!hasPortal && (
+              <Button
+                variant="outline"
+                onClick={() => setShowInviteModal(true)}
+                className="rounded-xl gap-2 h-10 border-primary/50 text-primary hover:bg-primary/10 hover:text-primary"
+              >
+                <UserPlus className="h-4 w-4" />
+                <span className="text-xs sm:text-sm">Invitar al portal</span>
+              </Button>
+            )}
             <Button
               variant="outline"
               onClick={openWhatsApp}
