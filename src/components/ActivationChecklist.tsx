@@ -4,7 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, Circle, ArrowRight, Copy, MessageCircle, Loader2 } from "lucide-react";
+import { CheckCircle2, Circle, ArrowRight, Copy, MessageCircle, Loader2, ChevronDown, ListChecks } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 
 interface Props {
@@ -41,6 +42,7 @@ const initial: ChecklistState = {
 
 const DEFAULT_PORTAL_COLOR = "176 100% 32%";
 const extrasHiddenKey = (businessId: string) => `activation_extras_hidden_${businessId}`;
+const collapsedKey = (businessId: string) => `activation_checklist_collapsed_${businessId}`;
 
 export const ActivationChecklist = ({ businessId, onAllDone }: Props) => {
   const navigate = useNavigate();
@@ -53,6 +55,25 @@ export const ActivationChecklist = ({ businessId, onAllDone }: Props) => {
       return false;
     }
   });
+  // Acordeón: la guía se puede achicar a una barrita con el progreso
+  const [collapsed, setCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem(collapsedKey(businessId)) === "1";
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleCollapsed = () => {
+    setCollapsed((c) => {
+      try {
+        localStorage.setItem(collapsedKey(businessId), c ? "0" : "1");
+      } catch {
+        /* ignore */
+      }
+      return !c;
+    });
+  };
 
   const fetchState = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -323,39 +344,63 @@ export const ActivationChecklist = ({ businessId, onAllDone }: Props) => {
   return (
     <Card className="border-primary/40 bg-primary/5">
       <CardContent className="p-4 sm:p-5 space-y-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-base sm:text-lg font-semibold">
-              {essentialsDone ? "Para dejarlo perfecto" : "Activá tu consultorio"}
-            </h2>
-            <p className="text-xs sm:text-sm text-muted-foreground">
+        {/* Cabecera: siempre visible, toca para expandir/achicar */}
+        <button
+          type="button"
+          onClick={toggleCollapsed}
+          className="w-full flex items-center justify-between gap-3 text-left"
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+              <ListChecks className="h-4.5 w-4.5 text-primary" />
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-base sm:text-lg font-semibold truncate">
+                {essentialsDone ? "Para dejarlo perfecto" : "Activá tu consultorio"}
+              </h2>
+              {!collapsed && (
+                <p className="text-xs sm:text-sm text-muted-foreground">
+                  {essentialsDone
+                    ? "Lo esencial ya está ✓ — estos toques completan tu consultorio."
+                    : "Configurá → Reservá → Cobrá → Fidelizá"}
+                </p>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-sm font-medium text-muted-foreground">
               {essentialsDone
-                ? "Lo esencial ya está ✓ — estos toques completan tu consultorio."
-                : "Configurá → Reservá → Cobrá → Fidelizá"}
-            </p>
+                ? `${extrasDoneCount}/${extraItems.length}`
+                : `${doneCount}/${items.length}`}
+            </span>
+            <ChevronDown
+              className={cn(
+                "h-4 w-4 text-muted-foreground transition-transform",
+                !collapsed && "rotate-180"
+              )}
+            />
           </div>
-          <span className="text-sm font-medium text-muted-foreground">
-            {essentialsDone
-              ? `${extrasDoneCount}/${extraItems.length}`
-              : `${doneCount}/${items.length}`}
-          </span>
-        </div>
+        </button>
 
-        {!essentialsDone && <ul className="space-y-2">{items.map(renderItem)}</ul>}
+        {!collapsed && (
+          <>
+            {!essentialsDone && <ul className="space-y-2">{items.map(renderItem)}</ul>}
 
-        {!essentialsDone && (
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide pt-1">
-            Para dejarlo perfecto (opcional) · {extrasDoneCount}/{extraItems.length}
-          </p>
-        )}
-        <ul className="space-y-2">{extraItems.map(renderItem)}</ul>
+            {!essentialsDone && (
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide pt-1">
+                Para dejarlo perfecto (opcional) · {extrasDoneCount}/{extraItems.length}
+              </p>
+            )}
+            <ul className="space-y-2">{extraItems.map(renderItem)}</ul>
 
-        {essentialsDone && (
-          <div className="flex justify-end">
-            <Button variant="ghost" size="sm" onClick={hideExtras} className="text-xs text-muted-foreground h-7">
-              Ocultar guía
-            </Button>
-          </div>
+            {essentialsDone && (
+              <div className="flex justify-end">
+                <Button variant="ghost" size="sm" onClick={hideExtras} className="text-xs text-muted-foreground h-7">
+                  Ocultar guía
+                </Button>
+              </div>
+            )}
+          </>
         )}
       </CardContent>
     </Card>
