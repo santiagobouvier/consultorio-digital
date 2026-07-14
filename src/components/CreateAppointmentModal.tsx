@@ -458,7 +458,9 @@ export function CreateAppointmentModal({
         if (error) throw error;
       }
 
-      // Best-effort confirmation email (does not block flow)
+      // Best-effort confirmation email (does not block flow).
+      // Serie: UN solo mail listando todas las fechas (no un mail por cita).
+      const isSeries = isRecurrent && recurrenceDates.length > 1;
       try {
         const { data: pat } = await supabase
           .from("patients")
@@ -467,26 +469,50 @@ export function CreateAppointmentModal({
           .maybeSingle();
 
         if (pat?.email) {
-          const fmtDate = startAt.toLocaleDateString("es-UY", {
-            weekday: "long", day: "2-digit", month: "long", year: "numeric",
-          });
           const fmtTime = startAt.toLocaleTimeString("es-UY", {
             hour: "2-digit", minute: "2-digit",
           });
-          await supabase.functions.invoke("send-resend-email", {
-            body: {
-              to: pat.email,
-              template: "appointment_confirmation",
-              businessId,
-              data: {
-                patientName: pat.full_name,
-                date: fmtDate,
-                time: fmtTime,
-                modality,
-                location: location.trim() || null,
+
+          if (isSeries) {
+            const modLabel = modality === "online" ? "Online" : "Presencial";
+            const dateLines = recurrenceDates
+              .map((d, i) => `${i + 1}. ${format(d, "EEEE d 'de' MMMM", { locale: es })} a las ${fmtTime}`)
+              .join("\n");
+            await supabase.functions.invoke("send-resend-email", {
+              body: {
+                to: pat.email,
+                template: "raw",
+                businessId,
+                data: {
+                  subject: `Tus ${recurrenceDates.length} citas fueron agendadas`,
+                  message:
+                    `Hola ${pat.full_name},\n\n` +
+                    `Se agendaron tus próximas ${recurrenceDates.length} sesiones (${modLabel}):\n\n` +
+                    dateLines +
+                    (location.trim() ? `\n\n${modality === "online" ? "Link" : "Dirección"}: ${location.trim()}` : "") +
+                    `\n\nAntes de cada sesión te va a llegar un recordatorio. Si necesitás reprogramar alguna, contactá al consultorio.`,
+                },
               },
-            },
-          });
+            });
+          } else {
+            const fmtDate = startAt.toLocaleDateString("es-UY", {
+              weekday: "long", day: "2-digit", month: "long", year: "numeric",
+            });
+            await supabase.functions.invoke("send-resend-email", {
+              body: {
+                to: pat.email,
+                template: "appointment_confirmation",
+                businessId,
+                data: {
+                  patientName: pat.full_name,
+                  date: fmtDate,
+                  time: fmtTime,
+                  modality,
+                  location: location.trim() || null,
+                },
+              },
+            });
+          }
         }
       } catch (mailErr) {
         console.warn("Confirmation email failed:", mailErr);
@@ -497,8 +523,10 @@ export function CreateAppointmentModal({
       const fmtPushTime = startAt.toLocaleTimeString("es-UY", { hour: "2-digit", minute: "2-digit" });
       notifyPatient({
         patientId: selectedPatientId,
-        title: "Nueva cita agendada",
-        body: `Tenés una cita el ${fmtPushDate} a las ${fmtPushTime}.`,
+        title: isSeries ? `${recurrenceDates.length} citas agendadas` : "Nueva cita agendada",
+        body: isSeries
+          ? `Tenés ${recurrenceDates.length} citas agendadas, la primera el ${fmtPushDate} a las ${fmtPushTime}.`
+          : `Tenés una cita el ${fmtPushDate} a las ${fmtPushTime}.`,
         url: "/portal",
       });
 
