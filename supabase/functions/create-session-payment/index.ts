@@ -87,7 +87,7 @@ serve(async (req) => {
     // Get appointment
     const { data: appointment, error: apptErr } = await supabase
       .from("appointments")
-      .select("id, business_id, patient_id, start_at, status")
+      .select("id, business_id, patient_id, start_at, status, session_price")
       .eq("id", appointmentId)
       .eq("business_id", businessId)
       .single();
@@ -138,8 +138,10 @@ serve(async (req) => {
       });
     }
 
-    // Calculate amount
-    const sessionPrice = policy.session_price || 0;
+    // Calculate amount: el precio de la CITA (tipo de sesión elegido) manda;
+    // el de la política queda como respaldo para citas sin precio propio.
+    const apptPrice = Number(appointment.session_price);
+    const sessionPrice = apptPrice > 0 ? apptPrice : (policy.session_price || 0);
     if (sessionPrice <= 0) {
       return new Response(JSON.stringify({ error: "Session price not configured" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
