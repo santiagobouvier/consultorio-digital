@@ -199,7 +199,7 @@ const PublicBooking = ({ demo = false }: { demo?: boolean }) => {
 
         let businessData: any = null;
         const bySlug = await supabase
-          .from("businesses")
+          .from("businesses_public_branding")
           .select(columns)
           .eq("public_slug", slug)
           .maybeSingle();
@@ -208,7 +208,7 @@ const PublicBooking = ({ demo = false }: { demo?: boolean }) => {
 
         if (!businessData) {
           const bySubdomain = await supabase
-            .from("businesses")
+            .from("businesses_public_branding")
             .select(columns)
             .eq("custom_subdomain", slug)
             .maybeSingle();
