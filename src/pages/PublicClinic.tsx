@@ -73,7 +73,7 @@ const PublicClinic = () => {
         // Buscar primero por public_slug (caso más común), luego fallback a custom_subdomain.
         let businessData: any = null;
         const bySlug = await supabase
-          .from("businesses")
+          .from("businesses_public_branding")
           .select(columns)
           .eq("public_slug", slug)
           .maybeSingle();
@@ -82,7 +82,7 @@ const PublicClinic = () => {
 
         if (!businessData) {
           const bySubdomain = await supabase
-            .from("businesses")
+            .from("businesses_public_branding")
             .select(columns)
             .eq("custom_subdomain", slug)
             .maybeSingle();
