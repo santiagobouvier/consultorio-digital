@@ -281,7 +281,7 @@ const ClinicPortal = () => {
     if (!slug) return;
     (async () => {
       const { data, error } = await supabase
-        .from("businesses")
+        .from("businesses_public_branding")
         .select("id, name, specialty, contact_email, portal_logo_url, portal_clinic_display_name, portal_primary_color, portal_dark_primary_color, public_slug, custom_subdomain, cancellation_hours_notice, late_cancellation_message")
         .or(`public_slug.eq.${slug},custom_subdomain.eq.${slug}`)
         .limit(1).maybeSingle();
