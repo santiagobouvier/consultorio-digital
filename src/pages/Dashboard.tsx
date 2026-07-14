@@ -18,6 +18,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { NotificationActivationCard } from "@/components/NotificationActivationCard";
 import { InstallPromptCard } from "@/components/pwa/InstallPromptCard";
 import { ActivationChecklist } from "@/components/ActivationChecklist";
+import { PendingRequestsBanner } from "@/components/PendingRequestsBanner";
 import {
   ActivationCompleteModal,
   wasActivationCelebrated,
@@ -420,21 +421,10 @@ const Dashboard = () => {
     );
   }
 
-  // Mobile: original dashboard layout
+  // Mobile: lo urgente arriba (solicitudes, hoy, deuda), lo de sistema abajo.
   return (
       <div className="min-h-screen bg-background">
       <div className="max-w-2xl mx-auto p-4 sm:p-6 space-y-6">
-        <InstallPromptCard />
-        {businessId && (
-          <ActivationChecklist
-            businessId={businessId}
-            onAllDone={() => {
-              if (!wasActivationCelebrated(businessId)) {
-                setShowActivationDone(true);
-              }
-            }}
-          />
-        )}
         {businessId && (
           <ActivationCompleteModal
             businessId={businessId}
@@ -541,14 +531,20 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Push Notification Activation */}
-        <NotificationActivationCard variant="full" />
+        {/* Guía de activación (solo hasta dejar el consultorio pronto) */}
+        {businessId && (
+          <ActivationChecklist
+            businessId={businessId}
+            onAllDone={() => {
+              if (!wasActivationCelebrated(businessId)) {
+                setShowActivationDone(true);
+              }
+            }}
+          />
+        )}
 
-        {/* Plan Usage Card */}
-        <PlanUsageCard businessId={businessId} />
-
-        {/* Link de la web pública — siempre a mano */}
-        <PublicLinkCard businessId={businessId} />
+        {/* Lo primero: ¿alguien espera tu respuesta? */}
+        <PendingRequestsBanner />
 
         {/* KPI Metrics Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -802,94 +798,33 @@ const Dashboard = () => {
             </Button>
             <Button
               variant="outline"
-              className="h-20 flex flex-col items-center justify-center gap-1.5 rounded-xl"
-              onClick={() => navigate("/pagos")}
+              className="h-20 flex flex-col items-center justify-center gap-1.5 rounded-xl border-primary/30 bg-primary/5"
+              onClick={() => navigate("/patients?portal=true")}
             >
-              <CreditCard className="h-5 w-5 text-muted-foreground" />
-              <span className="text-xs font-medium">Pagos</span>
+              <Smartphone className="h-5 w-5 text-primary" />
+              <span className="text-xs font-medium">Portal</span>
+              <span className="text-[10px] text-muted-foreground leading-none">{portalPatientsCount} activos</span>
             </Button>
           </div>
         </div>
 
-        {/* Main Navigation */}
-        <div className="grid grid-cols-2 gap-3">
-          <Card 
-            className="mobile-card-compact hover:shadow-md transition-all cursor-pointer group active:scale-[0.98]"
-            onClick={() => navigate("/patients")}
+        {isDemo && (
+          <Card
+            className="mobile-card-compact hover:shadow-md transition-all cursor-pointer group active:scale-[0.98] border-accent bg-accent/10"
+            onClick={() => navigate("/portal-paciente/demo")}
           >
-            <CardContent className="p-4 flex flex-col items-center justify-center text-center min-h-[90px]">
-              <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center mb-2 group-hover:bg-secondary/80 transition-colors">
-                <Users className="h-5 w-5 text-secondary-foreground" />
-              </div>
-              <p className="font-semibold text-sm text-foreground">Pacientes</p>
+            <CardContent className="p-4 flex items-center justify-center gap-2 text-center">
+              <Eye className="h-4 w-4 text-accent-foreground" />
+              <p className="font-semibold text-sm text-foreground">Ver portal como paciente (demo)</p>
             </CardContent>
           </Card>
+        )}
 
-          <Card 
-            className="mobile-card-compact hover:shadow-md transition-all cursor-pointer group active:scale-[0.98]"
-            onClick={() => navigate("/agenda")}
-          >
-            <CardContent className="p-4 flex flex-col items-center justify-center text-center min-h-[90px]">
-              <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center mb-2 group-hover:bg-secondary/80 transition-colors">
-                <CalendarDays className="h-5 w-5 text-secondary-foreground" />
-              </div>
-              <p className="font-semibold text-sm text-foreground">Agenda</p>
-            </CardContent>
-          </Card>
-
-          <Card 
-            className="mobile-card-compact hover:shadow-md transition-all cursor-pointer group active:scale-[0.98] border-primary/30 bg-primary/5"
-            onClick={() => navigate("/patients?portal=true")}
-          >
-            <CardContent className="p-4 flex flex-col items-center justify-center text-center min-h-[90px]">
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mb-2 group-hover:bg-primary/20 transition-colors">
-                <Smartphone className="h-5 w-5 text-primary" />
-              </div>
-              <p className="font-semibold text-sm text-foreground">Portal</p>
-              <p className="text-xs text-muted-foreground">{portalPatientsCount} activos</p>
-            </CardContent>
-          </Card>
-
-          <Card 
-            className="mobile-card-compact hover:shadow-md transition-all cursor-pointer group active:scale-[0.98]"
-            onClick={() => navigate("/mi-consultorio")}
-          >
-            <CardContent className="p-4 flex flex-col items-center justify-center text-center min-h-[90px]">
-              <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center mb-2 group-hover:bg-secondary/80 transition-colors">
-                <Settings className="h-5 w-5 text-secondary-foreground" />
-              </div>
-              <p className="font-semibold text-sm text-foreground">Consultorio</p>
-            </CardContent>
-          </Card>
-
-          {isDemo && (
-            <Card 
-              className="mobile-card-compact hover:shadow-md transition-all cursor-pointer group active:scale-[0.98] border-accent bg-accent/10 col-span-2 sm:col-span-1"
-              onClick={() => navigate("/portal-paciente/demo")}
-            >
-              <CardContent className="p-4 flex flex-col items-center justify-center text-center min-h-[90px]">
-                <div className="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center mb-2 group-hover:bg-accent/30 transition-colors">
-                  <Eye className="h-5 w-5 text-accent-foreground" />
-                </div>
-                <p className="font-semibold text-sm text-foreground">Demo Paciente</p>
-                <p className="text-xs text-muted-foreground">Ver portal</p>
-              </CardContent>
-            </Card>
-          )}
-
-          <Card 
-            className="mobile-card-compact hover:shadow-md transition-all cursor-pointer group active:scale-[0.98] border-primary/20 bg-primary/5 col-span-2 sm:col-span-1"
-            onClick={() => navigate("/personalizar-portal")}
-          >
-            <CardContent className="p-4 flex flex-col items-center justify-center text-center min-h-[90px]">
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mb-2 group-hover:bg-primary/20 transition-colors">
-                <Palette className="h-5 w-5 text-primary" />
-              </div>
-              <p className="font-semibold text-sm text-foreground">Personalizar Portal</p>
-              <p className="text-xs text-muted-foreground">Logo y colores</p>
-            </CardContent>
-          </Card>
-        </div>
+        {/* ── Zona de sistema: útil pero no urgente ── */}
+        <PublicLinkCard businessId={businessId} />
+        <NotificationActivationCard variant="full" />
+        <InstallPromptCard />
+        <PlanUsageCard businessId={businessId} />
 
         {/* Monthly Highlights - at the bottom */}
         <MonthlyHighlights businessId={businessId} className="mt-2" />

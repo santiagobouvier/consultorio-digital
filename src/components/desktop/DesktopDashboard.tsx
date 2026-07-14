@@ -15,6 +15,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { MonthlyHighlights } from "@/components/MonthlyHighlights";
 import { ActivationChecklist } from "@/components/ActivationChecklist";
 import { PublicLinkCard } from "@/components/PublicLinkCard";
+import { PendingRequestsBanner } from "@/components/PendingRequestsBanner";
 import {
   ActivationCompleteModal,
   wasActivationCelebrated,
@@ -352,6 +353,9 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
           open={showActivationDone}
           onClose={() => setShowActivationDone(false)}
         />
+
+        {/* Lo primero: ¿alguien espera tu respuesta? */}
+        <PendingRequestsBanner />
 
         {/* Link de la web pública — siempre a mano */}
         <PublicLinkCard businessId={businessId} />

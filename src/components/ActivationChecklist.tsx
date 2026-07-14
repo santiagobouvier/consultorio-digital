@@ -13,6 +13,7 @@ interface Props {
 }
 
 interface ChecklistState {
+  contact: boolean;
   template: boolean;
   services: boolean;
   mp: boolean;
@@ -22,6 +23,7 @@ interface ChecklistState {
 }
 
 const initial: ChecklistState = {
+  contact: false,
   template: false,
   services: false,
   mp: false,
@@ -54,11 +56,14 @@ export const ActivationChecklist = ({ businessId, onAllDone }: Props) => {
         .maybeSingle(),
       supabase
         .from("businesses")
-        .select("public_slug, onboarding_link_shared_at")
+        .select("public_slug, onboarding_link_shared_at, contact_email")
         .eq("id", businessId)
         .maybeSingle(),
     ]);
     setState({
+      // El email de contacto es adonde llegan los avisos de reservas:
+      // sin él, el profesional no se entera de nada.
+      contact: !!biz.data?.contact_email?.trim(),
       template: (tpl.count ?? 0) > 0,
       services: (svcs.count ?? 0) > 0,
       mp: !!pol.data?.mp_access_token,
@@ -73,7 +78,7 @@ export const ActivationChecklist = ({ businessId, onAllDone }: Props) => {
   }, [fetchState]);
 
   const allDone =
-    !state.loading && state.template && state.services && state.mp && state.shared;
+    !state.loading && state.contact && state.template && state.services && state.mp && state.shared;
 
   useEffect(() => {
     if (allDone) onAllDone?.();
@@ -133,6 +138,17 @@ export const ActivationChecklist = ({ businessId, onAllDone }: Props) => {
   };
 
   const items = [
+    {
+      key: "contact",
+      done: state.contact,
+      title: "Completá los datos del consultorio",
+      desc: "El email de contacto es adonde te llegan los avisos de cada reserva.",
+      action: (
+        <Button size="sm" variant="outline" onClick={() => navigate("/mi-consultorio")}>
+          Completar <ArrowRight className="h-4 w-4 ml-1" />
+        </Button>
+      ),
+    },
     {
       key: "services",
       done: state.services,
