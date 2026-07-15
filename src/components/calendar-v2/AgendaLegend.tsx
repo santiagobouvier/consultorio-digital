@@ -8,6 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { supabase } from "@/integrations/supabase/client";
 import type { Professional } from "./types";
 
 const SEEN_KEY = "agenda_legend_seen_v1";
@@ -25,30 +26,72 @@ const Chip = ({ swatchClass, label }: { swatchClass: string; label: string }) =>
 );
 
 /**
- * Referencia de colores de la agenda. Se abre sola la primera vez que el
- * profesional entra (y nunca más); después queda el botón "Referencias".
+ * Referencia de colores de la agenda. Se abre sola la primera vez y el "ya la
+ * vi" se guarda en la cuenta del usuario (profiles.ui_prefs), así no reaparece
+ * al cambiar de dispositivo ni al limpiar datos del navegador. El botón
+ * "Referencias" queda siempre disponible.
  */
 export const AgendaLegend = ({ showProfessionalColors, professionals }: AgendaLegendProps) => {
   const [open, setOpen] = useState(false);
+  const [autoOpened, setAutoOpened] = useState(false);
 
   useEffect(() => {
-    try {
-      if (!localStorage.getItem(SEEN_KEY)) {
+    let cancelled = false;
+    const check = async () => {
+      try {
+        // Atajo local: si este navegador ya la marcó vista, ni consultamos.
+        if (localStorage.getItem(SEEN_KEY)) return;
+
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user || cancelled) return;
+
+        const { data, error } = await (supabase as any)
+          .from("profiles")
+          .select("ui_prefs")
+          .eq("id", user.id)
+          .maybeSingle();
+        if (cancelled || error) return; // ante la duda, no molestamos
+
+        if (data?.ui_prefs?.agenda_legend_seen) {
+          try { localStorage.setItem(SEEN_KEY, "1"); } catch { /* ignore */ }
+          return;
+        }
+
+        setAutoOpened(true);
         setOpen(true);
+      } catch {
+        /* ignore: nunca abrir por un error */
       }
-    } catch {
-      /* ignore */
-    }
+    };
+    void check();
+    return () => { cancelled = true; };
   }, []);
+
+  const markSeen = async () => {
+    try { localStorage.setItem(SEEN_KEY, "1"); } catch { /* ignore */ }
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await (supabase as any)
+        .from("profiles")
+        .select("ui_prefs")
+        .eq("id", user.id)
+        .maybeSingle();
+      const prefs = { ...(data?.ui_prefs ?? {}), agenda_legend_seen: true };
+      await (supabase as any)
+        .from("profiles")
+        .update({ ui_prefs: prefs })
+        .eq("id", user.id);
+    } catch {
+      /* ignore: el atajo local ya evita que reaparezca en este navegador */
+    }
+  };
 
   const handleOpenChange = (o: boolean) => {
     setOpen(o);
     if (!o) {
-      try {
-        localStorage.setItem(SEEN_KEY, "1");
-      } catch {
-        /* ignore */
-      }
+      setAutoOpened(false);
+      void markSeen();
     }
   };
 
@@ -125,8 +168,13 @@ export const AgendaLegend = ({ showProfessionalColors, professionals }: AgendaLe
             )}
 
             <Button onClick={() => handleOpenChange(false)} className="w-full rounded-xl">
-              Entendido
+              {autoOpened ? "Entendido, no volver a mostrar" : "Entendido"}
             </Button>
+            {autoOpened && (
+              <p className="text-xs text-muted-foreground text-center -mt-2">
+                Podés volver a verla cuando quieras con el botón "Referencias".
+              </p>
+            )}
           </div>
         </DialogContent>
       </Dialog>
