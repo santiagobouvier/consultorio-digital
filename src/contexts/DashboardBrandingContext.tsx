@@ -40,14 +40,18 @@ export function DashboardBrandingProvider({ children }: { children: ReactNode })
     try {
       const { data } = await supabase
         .from("businesses")
-        .select("dashboard_primary_color, dashboard_logo_url, dashboard_display_name, name")
+        .select("dashboard_primary_color, dashboard_logo_url, dashboard_display_name, name, portal_logo_url, portal_clinic_display_name, portal_primary_color")
         .eq("id", businessId)
         .maybeSingle();
 
       if (data) {
-        setPrimaryColor((data as any).dashboard_primary_color || DEFAULT_COLOR);
-        setLogoUrl((data as any).dashboard_logo_url || null);
-        setDisplayName((data as any).dashboard_display_name || data.name || null);
+        // La marca del panel reutiliza lo que el consultorio configura en
+        // "Personalizar portal": un solo logo/nombre/color para todo el producto.
+        // Los campos dashboard_* quedan como override manual si algún día se exponen.
+        const d = data as any;
+        setPrimaryColor(d.dashboard_primary_color || d.portal_primary_color || DEFAULT_COLOR);
+        setLogoUrl(d.dashboard_logo_url || d.portal_logo_url || null);
+        setDisplayName(d.dashboard_display_name || d.portal_clinic_display_name || data.name || null);
       }
     } catch (err) {
       console.error("Error loading dashboard branding:", err);

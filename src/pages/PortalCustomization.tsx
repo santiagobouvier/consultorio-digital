@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { HelpTooltip } from "@/components/HelpTooltip";
 import { buildShareUrl } from "@/config/app";
+import { useDashboardBranding } from "@/contexts/DashboardBrandingContext";
 import { PortalInviteBatch } from "@/components/PortalInviteBatch";
 import { PWAIconEditor, generatePwaIconBlob } from "@/components/PWAIconEditor";
 import type { Area } from "react-easy-crop";
@@ -67,6 +68,7 @@ const PortalCustomization = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { businessId, loading: bizLoading } = useBusinessId();
+  const { refetch: refetchBranding } = useDashboardBranding();
 
   const [clinicName, setClinicName] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
@@ -241,7 +243,9 @@ const PortalCustomization = () => {
         setInitialSlug(publicSlug);
         setSlugStatus("idle");
       }
-      toast({ title: "Personalización guardada", description: "Los cambios se reflejarán en el portal del paciente." });
+      // El panel usa la misma marca (logo/nombre/color) que el portal
+      await refetchBranding();
+      toast({ title: "Personalización guardada", description: "Tu marca se aplica al portal, la web pública y tu panel." });
     } catch (err: any) {
       toast({ title: "Error al guardar", description: err.message, variant: "destructive" });
     } finally {
