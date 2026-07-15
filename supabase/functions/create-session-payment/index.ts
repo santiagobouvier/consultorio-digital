@@ -138,10 +138,20 @@ serve(async (req) => {
       });
     }
 
+    // Get business (slug for back_url + tarifa única como respaldo de precio)
+    const { data: business } = await supabase
+      .from("businesses")
+      .select("public_slug, name, default_session_price")
+      .eq("id", businessId)
+      .single();
+
     // Calculate amount: el precio de la CITA (tipo de sesión elegido) manda;
-    // el de la política queda como respaldo para citas sin precio propio.
+    // la tarifa única del consultorio es el respaldo para citas sin precio propio
+    // (y el viejo precio de la política queda como último recurso).
     const apptPrice = Number(appointment.session_price);
-    const sessionPrice = apptPrice > 0 ? apptPrice : (policy.session_price || 0);
+    const sessionPrice = apptPrice > 0
+      ? apptPrice
+      : (Number(business?.default_session_price) || policy.session_price || 0);
     if (sessionPrice <= 0) {
       return new Response(JSON.stringify({ error: "Session price not configured" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -152,13 +162,6 @@ serve(async (req) => {
     if (policy.deposit_percentage !== null && policy.deposit_percentage < 100) {
       amount = Math.round(sessionPrice * policy.deposit_percentage / 100);
     }
-
-    // Get business slug for back_url
-    const { data: business } = await supabase
-      .from("businesses")
-      .select("public_slug, name")
-      .eq("id", businessId)
-      .single();
 
     const slug = business?.public_slug || "";
     const clinicName = business?.name || "Consultorio";

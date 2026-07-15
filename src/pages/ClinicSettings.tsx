@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,53 +13,14 @@ import { toast } from "@/hooks/use-toast";
 import {
   ArrowLeft,
   Save,
-  Copy,
-  RotateCcw,
-  UserPlus,
-  Users,
-  Crown,
-  User,
-  Link as LinkIcon,
-  Check,
   Bell,
   Building2,
-  MessageSquare,
   CreditCard,
-  DoorOpen,
 } from "lucide-react";
 import { NotificationActivationCard } from "@/components/NotificationActivationCard";
 import { useDashboardBranding } from "@/contexts/DashboardBrandingContext";
-import { ProfessionalInviteModal } from "@/components/ProfessionalInviteModal";
-import { PlanUsageCard } from "@/components/PlanUsageCard";
 import LoadingPage from "@/components/LoadingPage";
-import { buildShareUrl } from "@/config/app";
 import { PaymentPolicySettings } from "@/components/PaymentPolicySettings";
-import { SpacesManagementSection } from "@/components/settings/SpacesManagementSection";
-import { ProfessionalsCoordinationSection } from "@/components/settings/ProfessionalsCoordinationSection";
-
-const DEFAULT_TEMPLATES = {
-  reminder:
-    "Hola {{paciente}}, te recuerdo tu sesión del {{fecha}} a las {{hora}}. Modalidad: {{modalidad}}. {{link}}. Cualquier cosa me escribís por acá.",
-  confirmation:
-    "Hola {{paciente}}, confirmo tu sesión del {{fecha}} a las {{hora}}. Modalidad: {{modalidad}}. {{link}}. Te espero!",
-  postsession:
-    "Hola {{paciente}}, gracias por tu sesión de hoy. Quedamos en contacto para la próxima. Saludos!",
-};
-
-const VARIABLES = [
-  { key: "{{paciente}}", desc: "Nombre del paciente" },
-  { key: "{{fecha}}", desc: "Fecha de la cita" },
-  { key: "{{hora}}", desc: "Hora de la cita" },
-  { key: "{{modalidad}}", desc: "Online o Presencial" },
-  { key: "{{link}}", desc: "Link o ubicación" },
-];
-
-interface TeamMember {
-  userId: string;
-  role: string;
-  name: string;
-  email: string;
-}
 
 const ClinicSettings = () => {
   const navigate = useNavigate();
@@ -68,7 +29,6 @@ const ClinicSettings = () => {
   const [saving, setSaving] = useState(false);
   const [settingsId, setSettingsId] = useState<string | null>(null);
   const [businessId, setBusinessId] = useState<string | null>(null);
-  const [isOwner, setIsOwner] = useState(false);
   const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "general");
 
   // Form state
@@ -76,10 +36,6 @@ const ClinicSettings = () => {
   const [ownerName, setOwnerName] = useState("");
   const [specialty, setSpecialty] = useState("");
   const [welcomeMessage, setWelcomeMessage] = useState("");
-  const [confirmationMessage, setConfirmationMessage] = useState(DEFAULT_TEMPLATES.confirmation);
-  const [postsessionMessage, setPostsessionMessage] = useState(DEFAULT_TEMPLATES.postsession);
-  const [autoAcceptBookings, setAutoAcceptBookings] = useState(false);
-  const [publicSlug, setPublicSlug] = useState("");
   const [isPrivateClinic, setIsPrivateClinic] = useState(false);
   const [contactEmail, setContactEmail] = useState("");
   const [cancellationHoursNotice, setCancellationHoursNotice] = useState<number>(24);
@@ -89,27 +45,12 @@ const ClinicSettings = () => {
   // Initial snapshot to detect dirty state
   const [initialSnapshot, setInitialSnapshot] = useState<string>("");
 
-  // Team
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
-  const [loadingTeam, setLoadingTeam] = useState(false);
-  const [inviteModalOpen, setInviteModalOpen] = useState(false);
-  const [registrationLinkCopied, setRegistrationLinkCopied] = useState(false);
-
-  // Refs to know which textarea is focused for variable insertion
-  const confirmationRef = useRef<HTMLTextAreaElement>(null);
-  const postsessionRef = useRef<HTMLTextAreaElement>(null);
-  const lastFocused = useRef<"confirmation" | "postsession">("confirmation");
-
   const { refetch: refetchBranding } = useDashboardBranding();
 
   useEffect(() => {
     checkAuth();
     loadSettings();
   }, []);
-
-  useEffect(() => {
-    if (businessId && isOwner) loadTeamMembers();
-  }, [businessId, isOwner]);
 
   const buildSnapshot = () =>
     JSON.stringify({
@@ -118,9 +59,6 @@ const ClinicSettings = () => {
       specialty,
       welcomeMessage,
       contactEmail,
-      confirmationMessage,
-      postsessionMessage,
-      autoAcceptBookings,
       isPrivateClinic,
       cancellationHoursNotice,
       lateCancellationMessage,
@@ -200,14 +138,9 @@ const ClinicSettings = () => {
       let loadedClinicName = "";
       let loadedSpecialty = "";
       let loadedWelcome = "";
-      let loadedConfirmation = DEFAULT_TEMPLATES.confirmation;
-      let loadedPostsession = DEFAULT_TEMPLATES.postsession;
-      let loadedAuto = false;
 
       if (business) {
-        setPublicSlug(business.public_slug);
         setBusinessId(business.id);
-        setIsOwner(business.owner_user_id === user.id);
         setIsPrivateClinic((business as any).is_private_clinic || false);
         setContactEmail((business as any).contact_email || "");
         setCancellationHoursNotice((business as any).cancellation_hours_notice ?? 24);
@@ -227,9 +160,6 @@ const ClinicSettings = () => {
         loadedClinicName = settings.clinic_name || "";
         loadedSpecialty = settings.specialty || "";
         loadedWelcome = settings.welcome_message || "";
-        loadedConfirmation = settings.default_confirmation_message || DEFAULT_TEMPLATES.confirmation;
-        loadedPostsession = settings.default_postsession_message || DEFAULT_TEMPLATES.postsession;
-        loadedAuto = settings.auto_accept_bookings || false;
       }
 
       setClinicName(loadedClinicName);
@@ -242,9 +172,6 @@ const ClinicSettings = () => {
       setOwnerName(ownProfile?.name || "");
       setSpecialty(loadedSpecialty);
       setWelcomeMessage(loadedWelcome);
-      setConfirmationMessage(loadedConfirmation);
-      setPostsessionMessage(loadedPostsession);
-      setAutoAcceptBookings(loadedAuto);
 
       setTimeout(() => setInitialSnapshot(buildSnapshot()), 0);
       // cache-bust: ensure HMR drops stale slug references
@@ -253,43 +180,6 @@ const ClinicSettings = () => {
       toast({ title: "Error", description: "No se pudo cargar la configuración", variant: "destructive" });
     } finally {
       setLoading(false);
-    }
-  };
-
-  const loadTeamMembers = async () => {
-    if (!businessId) return;
-    try {
-      setLoadingTeam(true);
-      const { data: business } = await supabase
-        .from("businesses").select("owner_user_id").eq("id", businessId).single();
-      if (!business) return;
-
-      const { data: ownerProfile } = await supabase
-        .from("profiles").select("id, name, email").eq("id", business.owner_user_id).maybeSingle();
-
-      const members: TeamMember[] = [];
-      if (ownerProfile) {
-        members.push({ userId: ownerProfile.id, role: "owner", name: ownerProfile.name, email: ownerProfile.email });
-      }
-
-      const { data: roles } = await supabase
-        .from("user_roles").select("user_id, role").eq("business_id", businessId).eq("role", "professional");
-
-      if (roles && roles.length > 0) {
-        const userIds = roles.map((r) => r.user_id);
-        const { data: profiles } = await supabase
-          .from("profiles").select("id, name, email").in("id", userIds);
-        if (profiles) {
-          for (const profile of profiles) {
-            members.push({ userId: profile.id, role: "professional", name: profile.name, email: profile.email });
-          }
-        }
-      }
-      setTeamMembers(members);
-    } catch (error) {
-      console.error("Error loading team:", error);
-    } finally {
-      setLoadingTeam(false);
     }
   };
 
@@ -304,9 +194,6 @@ const ClinicSettings = () => {
         clinic_name: clinicName,
         specialty,
         welcome_message: welcomeMessage,
-        default_confirmation_message: confirmationMessage,
-        default_postsession_message: postsessionMessage,
-        auto_accept_bookings: autoAcceptBookings,
       };
 
       if (settingsId) {
@@ -357,36 +244,7 @@ const ClinicSettings = () => {
     }
   };
 
-  const handleResetMessages = () => {
-    setConfirmationMessage(DEFAULT_TEMPLATES.confirmation);
-    setPostsessionMessage(DEFAULT_TEMPLATES.postsession);
-    toast({ title: "Mensajes restablecidos", description: "Acordate de guardar para aplicar los cambios." });
-  };
-
-  const insertVariable = (variable: string) => {
-    const map = {
-      confirmation: { ref: confirmationRef, value: confirmationMessage, setter: setConfirmationMessage },
-      postsession: { ref: postsessionRef, value: postsessionMessage, setter: setPostsessionMessage },
-    };
-    const target = map[lastFocused.current];
-    const el = target.ref.current;
-    if (!el) {
-      target.setter(target.value + " " + variable);
-      return;
-    }
-    const start = el.selectionStart ?? target.value.length;
-    const end = el.selectionEnd ?? target.value.length;
-    const newValue = target.value.slice(0, start) + variable + target.value.slice(end);
-    target.setter(newValue);
-    requestAnimationFrame(() => {
-      el.focus();
-      el.setSelectionRange(start + variable.length, start + variable.length);
-    });
-  };
-
   if (loading) return <LoadingPage />;
-
-  const registrationUrl = buildShareUrl(`/registrarse-profesional?business=${publicSlug}`);
 
   return (
     <div className="min-h-screen bg-background pb-32">
@@ -411,23 +269,10 @@ const ClinicSettings = () => {
           )}
         </div>
 
-        <PlanUsageCard businessId={businessId} />
-
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className={`grid w-full h-auto p-1 ${isOwner ? "grid-cols-3 sm:grid-cols-6" : "grid-cols-3 sm:grid-cols-5"}`}>
+          <TabsList className="grid w-full h-auto p-1 grid-cols-3">
             <TabsTrigger value="general" className="gap-1.5 text-xs sm:text-sm py-2">
               <Building2 className="h-3.5 w-3.5" /> General
-            </TabsTrigger>
-            <TabsTrigger value="equipo" className="gap-1.5 text-xs sm:text-sm py-2">
-              <Users className="h-3.5 w-3.5" /> Equipo
-            </TabsTrigger>
-            {isOwner && (
-              <TabsTrigger value="consultorio" className="gap-1.5 text-xs sm:text-sm py-2">
-                <DoorOpen className="h-3.5 w-3.5" /> Consultorio
-              </TabsTrigger>
-            )}
-            <TabsTrigger value="mensajes" className="gap-1.5 text-xs sm:text-sm py-2">
-              <MessageSquare className="h-3.5 w-3.5" /> Mensajes
             </TabsTrigger>
             <TabsTrigger value="notificaciones" className="gap-1.5 text-xs sm:text-sm py-2">
               <Bell className="h-3.5 w-3.5" /> Avisos
@@ -485,7 +330,7 @@ const ClinicSettings = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="defaultSessionPrice">Tarifa default por sesión (UYU)</Label>
+                  <Label htmlFor="defaultSessionPrice">Tarifa por sesión (UYU)</Label>
                   <div className="relative max-w-[200px]">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
                     <Input
@@ -500,7 +345,8 @@ const ClinicSettings = () => {
                     />
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Monto sugerido al crear una nueva cita desde el panel. Genera automáticamente un pago pendiente vinculado.
+                    Es tu tarifa única: se usa al crear citas desde el panel y para los cobros online,
+                    salvo que la cita o el tipo de sesión tengan su propio precio.
                   </p>
                 </div>
               </CardContent>
@@ -515,18 +361,6 @@ const ClinicSettings = () => {
                   </p>
                 </div>
                 <Switch checked={isPrivateClinic} onCheckedChange={setIsPrivateClinic} />
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-5 flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-sm font-semibold">Auto-aceptar reservas</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Las reservas de pacientes ya registrados se confirman automáticamente.
-                  </p>
-                </div>
-                <Switch checked={autoAcceptBookings} onCheckedChange={setAutoAcceptBookings} />
               </CardContent>
             </Card>
 
@@ -566,153 +400,6 @@ const ClinicSettings = () => {
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
-
-          {/* TAB: EQUIPO */}
-          <TabsContent value="equipo" className="space-y-5 mt-5">
-            {!isOwner ? (
-              <Card><CardContent className="p-8 text-center text-sm text-muted-foreground">
-                Solo el propietario del consultorio puede gestionar el equipo.
-              </CardContent></Card>
-            ) : (
-              <>
-                <Card>
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-base flex items-center gap-2">
-                        <Users className="h-4 w-4" /> Profesionales
-                      </CardTitle>
-                      <Button size="sm" onClick={() => setInviteModalOpen(true)} className="gap-2">
-                        <UserPlus className="h-4 w-4" /> Invitar
-                      </Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    {loadingTeam ? (
-                      <p className="text-sm text-muted-foreground">Cargando equipo...</p>
-                    ) : teamMembers.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">No hay profesionales registrados.</p>
-                    ) : (
-                      <div className="space-y-2">
-                        {teamMembers.map((m) => (
-                          <div key={m.userId} className="flex items-center justify-between p-3 bg-muted/50 rounded-xl">
-                            <div className="flex items-center gap-3">
-                              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                                {m.role === "owner" ? <Crown className="h-5 w-5 text-primary" /> : <User className="h-5 w-5 text-muted-foreground" />}
-                              </div>
-                              <div>
-                                <p className="font-medium text-sm">{m.name}</p>
-                                <p className="text-xs text-muted-foreground">{m.email}</p>
-                              </div>
-                            </div>
-                            <Badge variant={m.role === "owner" ? "default" : "secondary"}>
-                              {m.role === "owner" ? "Propietario" : "Profesional"}
-                            </Badge>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                {publicSlug && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base flex items-center gap-2">
-                        <LinkIcon className="h-4 w-4" /> Enlace de auto-registro
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-2">
-                      <p className="text-xs text-muted-foreground">
-                        Compartí este enlace para que profesionales creen su propia cuenta en tu consultorio.
-                      </p>
-                      <div className="flex gap-2">
-                        <Input value={registrationUrl} readOnly className="font-mono text-xs h-11 flex-1" />
-                        <Button
-                          variant="outline" size="icon" className="h-11 w-11 shrink-0"
-                          onClick={() => {
-                            navigator.clipboard.writeText(registrationUrl);
-                            setRegistrationLinkCopied(true);
-                            toast({ title: "Enlace copiado" });
-                            setTimeout(() => setRegistrationLinkCopied(false), 2000);
-                          }}
-                        >
-                          {registrationLinkCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-              </>
-            )}
-          </TabsContent>
-
-          {/* TAB: CONSULTORIO (solo owner) */}
-          {isOwner && businessId && (
-            <TabsContent value="consultorio" className="space-y-5 mt-5">
-              <SpacesManagementSection businessId={businessId} />
-              <ProfessionalsCoordinationSection businessId={businessId} />
-            </TabsContent>
-          )}
-
-          {/* TAB: MENSAJES */}
-          <TabsContent value="mensajes" className="space-y-5 mt-5">
-            <Card className="border-primary/20 bg-primary/5">
-              <CardContent className="p-4 space-y-2">
-                <p className="text-xs font-semibold">Variables disponibles</p>
-                <p className="text-xs text-muted-foreground">
-                  Hacé click para insertarlas en el mensaje activo. Se reemplazan automáticamente al enviarse.
-                </p>
-                <div className="flex flex-wrap gap-1.5 pt-1">
-                  {VARIABLES.map((v) => (
-                    <button
-                      key={v.key} type="button" onClick={() => insertVariable(v.key)}
-                      title={v.desc}
-                      className="px-2.5 py-1 rounded-full bg-background border text-xs font-mono hover:bg-primary hover:text-primary-foreground transition-colors"
-                    >
-                      {v.key}
-                    </button>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-dashed">
-              <CardContent className="py-4 text-sm text-muted-foreground">
-                El mensaje del <span className="font-medium text-foreground">recordatorio automático</span> ahora
-                se configura en la página <span className="font-medium text-foreground">Recordatorios</span>, junto
-                con la anticipación y los canales de envío.
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader><CardTitle className="text-base">Confirmación</CardTitle></CardHeader>
-              <CardContent>
-                <Textarea
-                  ref={confirmationRef} value={confirmationMessage}
-                  onChange={(e) => setConfirmationMessage(e.target.value)}
-                  onFocus={() => (lastFocused.current = "confirmation")}
-                  rows={4} className="resize-none text-sm"
-                />
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader><CardTitle className="text-base">Post-sesión</CardTitle></CardHeader>
-              <CardContent>
-                <Textarea
-                  ref={postsessionRef} value={postsessionMessage}
-                  onChange={(e) => setPostsessionMessage(e.target.value)}
-                  onFocus={() => (lastFocused.current = "postsession")}
-                  rows={4} className="resize-none text-sm"
-                />
-              </CardContent>
-            </Card>
-
-            <Button variant="outline" onClick={handleResetMessages} className="gap-2">
-              <RotateCcw className="h-4 w-4" />
-              Restablecer mensajes por defecto
-            </Button>
           </TabsContent>
 
           {/* TAB: NOTIFICACIONES */}
@@ -760,14 +447,6 @@ const ClinicSettings = () => {
         </div>
       )}
 
-      {businessId && (
-        <ProfessionalInviteModal
-          open={inviteModalOpen}
-          onOpenChange={setInviteModalOpen}
-          businessId={businessId}
-          onInviteCreated={loadTeamMembers}
-        />
-      )}
     </div>
   );
 };

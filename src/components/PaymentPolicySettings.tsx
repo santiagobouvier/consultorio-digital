@@ -2,8 +2,6 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "@/hooks/use-toast";
@@ -14,7 +12,6 @@ import {
   Loader2,
   Save,
   Unlink,
-  DollarSign,
   ShieldCheck,
 } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
@@ -26,7 +23,6 @@ interface PaymentPolicy {
   business_id: string;
   policy_type: PolicyType;
   deposit_percentage: number | null;
-  session_price: number;
   mp_access_token: string | null;
   mp_public_key: string | null;
 }
@@ -45,6 +41,8 @@ export const PaymentPolicySettings = ({ businessId }: Props) => {
   const [processingOAuth, setProcessingOAuth] = useState(false);
 
   const [policyType, setPolicyType] = useState<PolicyType>("none");
+  // Tarifa única del consultorio (se configura en la pestaña General);
+  // acá solo se usa para mostrar cuánto pagaría el paciente de seña.
   const [sessionPrice, setSessionPrice] = useState(0);
   const [depositPercentage, setDepositPercentage] = useState(50);
   const [chargeType, setChargeType] = useState<"full" | "deposit">("full");
@@ -93,7 +91,6 @@ export const PaymentPolicySettings = ({ businessId }: Props) => {
       if (data) {
         setPolicyId(data.id);
         setPolicyType((data.policy_type as PolicyType) || "none");
-        setSessionPrice(data.session_price || 0);
         setMpConnected(!!data.mp_access_token);
 
         if (data.deposit_percentage !== null && data.deposit_percentage < 100) {
@@ -104,6 +101,13 @@ export const PaymentPolicySettings = ({ businessId }: Props) => {
           setDepositPercentage(50);
         }
       }
+
+      const { data: biz } = await supabase
+        .from("businesses")
+        .select("default_session_price")
+        .eq("id", businessId)
+        .maybeSingle();
+      setSessionPrice(Number((biz as any)?.default_session_price) || 0);
     } catch (err) {
       console.error("Error loading payment policy:", err);
     } finally {
@@ -179,7 +183,6 @@ export const PaymentPolicySettings = ({ businessId }: Props) => {
       const payload = {
         business_id: businessId,
         policy_type: policyType,
-        session_price: sessionPrice,
         deposit_percentage: depositPct,
       };
 
@@ -260,34 +263,7 @@ export const PaymentPolicySettings = ({ businessId }: Props) => {
         </CardContent>
       </Card>
 
-      {/* 2. Precio de sesión */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <DollarSign className="h-4 w-4" /> Precio de la sesión
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2 max-w-xs">
-            <Label htmlFor="sessionPrice">Precio en UYU</Label>
-            <Input
-              id="sessionPrice"
-              type="number"
-              min={0}
-              max={99999}
-              value={sessionPrice || ""}
-              onChange={(e) => setSessionPrice(Math.max(0, parseInt(e.target.value) || 0))}
-              placeholder="Ej: 1500"
-              className="h-11"
-            />
-            <p className="text-xs text-muted-foreground">
-              Este precio se usa como referencia para los cobros online.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* 3. Política de cobro */}
+      {/* 2. Política de cobro */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
@@ -379,9 +355,15 @@ export const PaymentPolicySettings = ({ businessId }: Props) => {
                           <span>10%</span>
                           <span>90%</span>
                         </div>
-                        {sessionPrice > 0 && (
+                        {sessionPrice > 0 ? (
                           <p className="text-xs text-muted-foreground mt-1">
-                            El paciente pagaría <span className="font-semibold">${Math.round(sessionPrice * depositPercentage / 100)} UYU</span> de seña.
+                            Con tu tarifa actual (${sessionPrice} UYU), el paciente pagaría{" "}
+                            <span className="font-semibold">${Math.round(sessionPrice * depositPercentage / 100)} UYU</span> de seña.
+                          </p>
+                        ) : (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Definí tu tarifa por sesión en la pestaña <span className="font-medium">General</span> para
+                            ver cuánto pagaría el paciente.
                           </p>
                         )}
                       </div>
