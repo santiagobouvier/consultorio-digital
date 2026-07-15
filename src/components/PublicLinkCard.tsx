@@ -1,15 +1,19 @@
 // Tarjeta fija para que el profesional tenga SIEMPRE a mano el link de su web
-// pública (reservas): copiar, abrir y compartir por WhatsApp.
+// pública (reservas): copiar, abrir y compartir por WhatsApp. Se puede
+// minimizar a una barrita (la preferencia se guarda en la cuenta del usuario).
 import { buildShareUrl } from "@/config/app";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Globe, Copy, ExternalLink, MessageCircle } from "lucide-react";
+import { Globe, Copy, ExternalLink, MessageCircle, ChevronDown } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useUiPref } from "@/hooks/use-ui-pref";
 
 export function PublicLinkCard({ businessId }: { businessId: string }) {
   const { toast } = useToast();
   const [slug, setSlug] = useState<string | null>(null);
+  const [collapsed, setCollapsed] = useUiPref(`public_link_collapsed_${businessId}`);
 
   useEffect(() => {
     let cancelled = false;
@@ -43,34 +47,56 @@ export function PublicLinkCard({ businessId }: { businessId: string }) {
 
   return (
     <div className="rounded-xl border bg-card p-4">
-      <div className="flex items-start gap-3">
-        <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 bg-primary/10 text-primary">
-          <Globe className="w-5 h-5" />
+      {/* Cabecera: siempre visible, toca para expandir/minimizar */}
+      <button
+        type="button"
+        onClick={() => setCollapsed(!collapsed)}
+        className="w-full flex items-center justify-between gap-3 text-left"
+      >
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 bg-primary/10 text-primary">
+            <Globe className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-foreground">Tu web pública</p>
+            {!collapsed && (
+              <p className="text-xs text-muted-foreground">
+                Compartí este link para que tus pacientes reserven solos.
+              </p>
+            )}
+          </div>
         </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-foreground">Tu web pública</p>
-          <p className="text-xs text-muted-foreground mb-2">Compartí este link para que tus pacientes reserven solos.</p>
+        <ChevronDown
+          className={cn(
+            "h-4 w-4 text-muted-foreground transition-transform shrink-0",
+            !collapsed && "rotate-180"
+          )}
+        />
+      </button>
+
+      {!collapsed && (
+        <>
           <button
             onClick={copy}
             title="Copiar"
-            className="block w-full text-left text-xs font-mono text-foreground/80 bg-muted/50 rounded-md px-2.5 py-1.5 truncate hover:bg-muted transition-colors"
+            className="block w-full text-left text-xs font-mono text-foreground/80 bg-muted/50 rounded-md px-2.5 py-1.5 truncate hover:bg-muted transition-colors mt-3"
           >
             {display}
           </button>
-        </div>
-      </div>
 
-      <div className="flex flex-wrap gap-2 mt-3">
-        <Button size="sm" onClick={copy} className="gap-1.5">
-          <Copy className="w-3.5 h-3.5" /> Copiar
-        </Button>
-        <Button size="sm" variant="outline" onClick={open} className="gap-1.5">
-          <ExternalLink className="w-3.5 h-3.5" /> Abrir
-        </Button>
-        <Button size="sm" variant="outline" onClick={whatsapp} className="gap-1.5">
-          <MessageCircle className="w-3.5 h-3.5 text-[#25d366]" /> Compartir
-        </Button>
-      </div>
+          <div className="flex flex-wrap gap-2 mt-3">
+            <Button size="sm" onClick={copy} className="gap-1.5">
+              <Copy className="w-3.5 h-3.5" /> Copiar
+            </Button>
+            <Button size="sm" variant="outline" onClick={open} className="gap-1.5">
+              <ExternalLink className="w-3.5 h-3.5" /> Abrir
+            </Button>
+            <Button size="sm" variant="outline" onClick={whatsapp} className="gap-1.5">
+              <MessageCircle className="w-3.5 h-3.5 text-[#25d366]" /> Compartir
+            </Button>
+          </div>
+        </>
+      )}
     </div>
   );
 }

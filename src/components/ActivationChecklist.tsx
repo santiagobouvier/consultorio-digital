@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle2, Circle, ArrowRight, Copy, MessageCircle, Loader2, ChevronDown, ListChecks } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
+import { useUiPref } from "@/hooks/use-ui-pref";
 
 interface Props {
   businessId: string;
@@ -41,39 +42,18 @@ const initial: ChecklistState = {
 };
 
 const DEFAULT_PORTAL_COLOR = "176 100% 32%";
-const extrasHiddenKey = (businessId: string) => `activation_extras_hidden_${businessId}`;
-const collapsedKey = (businessId: string) => `activation_checklist_collapsed_${businessId}`;
 
 export const ActivationChecklist = ({ businessId, onAllDone }: Props) => {
   const navigate = useNavigate();
   const [state, setState] = useState<ChecklistState>(initial);
   const [sharing, setSharing] = useState(false);
-  const [extrasHidden, setExtrasHidden] = useState(() => {
-    try {
-      return localStorage.getItem(extrasHiddenKey(businessId)) === "1";
-    } catch {
-      return false;
-    }
-  });
+  // Preferencias guardadas en la cuenta del usuario (no se pierden al
+  // cambiar de dispositivo ni al limpiar el navegador)
+  const [extrasHidden, setExtrasHidden] = useUiPref(`activation_extras_hidden_${businessId}`);
   // Acordeón: la guía se puede achicar a una barrita con el progreso
-  const [collapsed, setCollapsed] = useState(() => {
-    try {
-      return localStorage.getItem(collapsedKey(businessId)) === "1";
-    } catch {
-      return false;
-    }
-  });
+  const [collapsed, setCollapsed] = useUiPref(`activation_checklist_collapsed_${businessId}`);
 
-  const toggleCollapsed = () => {
-    setCollapsed((c) => {
-      try {
-        localStorage.setItem(collapsedKey(businessId), c ? "0" : "1");
-      } catch {
-        /* ignore */
-      }
-      return !c;
-    });
-  };
+  const toggleCollapsed = () => setCollapsed(!collapsed);
 
   const fetchState = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -149,14 +129,7 @@ export const ActivationChecklist = ({ businessId, onAllDone }: Props) => {
     if (essentialsDone) onAllDone?.();
   }, [essentialsDone, onAllDone]);
 
-  const hideExtras = () => {
-    setExtrasHidden(true);
-    try {
-      localStorage.setItem(extrasHiddenKey(businessId), "1");
-    } catch {
-      /* ignore */
-    }
-  };
+  const hideExtras = () => setExtrasHidden(true);
 
   if (state.loading) return null;
   if (essentialsDone && (extrasDone || extrasHidden)) return null;
@@ -394,9 +367,12 @@ export const ActivationChecklist = ({ businessId, onAllDone }: Props) => {
             <ul className="space-y-2">{extraItems.map(renderItem)}</ul>
 
             {essentialsDone && (
-              <div className="flex justify-end">
-                <Button variant="ghost" size="sm" onClick={hideExtras} className="text-xs text-muted-foreground h-7">
-                  Ocultar guía
+              <div className="flex items-center justify-end gap-2">
+                <p className="text-[11px] text-muted-foreground">
+                  Lo esencial ya está pronto, esta guía es opcional.
+                </p>
+                <Button variant="outline" size="sm" onClick={hideExtras} className="text-xs h-7 shrink-0">
+                  Quitar del dashboard
                 </Button>
               </div>
             )}
