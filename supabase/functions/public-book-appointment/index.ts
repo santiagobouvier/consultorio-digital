@@ -60,17 +60,25 @@ serve(async (req) => {
     const cleanMessage = typeof message === "string" ? message.slice(0, 500) : "";
 
     // Negocio por slug público (fallback: subdominio)
-    type Biz = { id: string; owner_user_id: string; name: string; contact_email: string | null };
+    type Biz = {
+      id: string; owner_user_id: string; name: string; contact_email: string | null;
+      is_private_clinic: boolean | null; default_session_price: number | null;
+      public_slug: string | null;
+    };
+    const bizColumns = "id, owner_user_id, name, contact_email, is_private_clinic, default_session_price, public_slug";
     let business: Biz | null = null;
     const bySlug = await supabase
-      .from("businesses").select("id, owner_user_id, name, contact_email").eq("public_slug", slug).maybeSingle();
+      .from("businesses").select(bizColumns).eq("public_slug", slug).maybeSingle();
     business = bySlug.data;
     if (!business) {
       const bySub = await supabase
-        .from("businesses").select("id, owner_user_id, name, contact_email").eq("custom_subdomain", slug).maybeSingle();
+        .from("businesses").select(bizColumns).eq("custom_subdomain", slug).maybeSingle();
       business = bySub.data;
     }
     if (!business) return json({ error: "business_not_found" }, 404);
+
+    // Agenda privada: no se aceptan reservas públicas (solo pacientes invitados vía portal)
+    if (business.is_private_clinic) return json({ error: "private_clinic" }, 403);
 
     // Servicio activo del negocio
     const { data: service } = await supabase
@@ -135,6 +143,22 @@ serve(async (req) => {
         ? (rawModality === "presencial" ? "presencial" : "online")
         : service.mode;
 
+    // Política de cobro: si es "required" y hay Mercado Pago conectado y un
+    // precio para cobrar, la reserva nace pendiente de pago y se confirma
+    // recién cuando el webhook de MP aprueba el pago.
+    const { data: policy } = await supabase
+      .from("payment_policies")
+      .select("policy_type, deposit_percentage, mp_access_token")
+      .eq("business_id", business.id)
+      .maybeSingle();
+
+    const servicePrice = Number(service.suggested_price);
+    const chargeBase = servicePrice > 0
+      ? servicePrice
+      : (Number(business.default_session_price) || 0);
+    const requiresPayment =
+      policy?.policy_type === "required" && !!policy.mp_access_token && chargeBase > 0;
+
     // Horario en hora de Uruguay (UTC-3 fijo, sin DST desde 2015)
     const startAt = new Date(`${date}T${startTime}:00-03:00`);
     const endAt = new Date(startAt.getTime() + service.duration_minutes * 60 * 1000);
@@ -154,7 +178,7 @@ serve(async (req) => {
         contact_email: cleanEmail,
         contact_phone: cleanPhone,
         notes: cleanMessage || null,
-        status: "confirmed",
+        status: requiresPayment ? "pending_payment" : "confirmed",
         source: "public_booking",
       })
       .select("id")
@@ -163,6 +187,82 @@ serve(async (req) => {
     if (appointmentError || !appointment) {
       console.error("Error creating appointment:", appointmentError);
       return json({ error: "appointment_creation_failed" }, 500);
+    }
+
+    // Pago requerido: crear la preferencia de Mercado Pago y devolver el
+    // checkout. Los mails de confirmación los manda el webhook al aprobarse.
+    if (requiresPayment && policy) {
+      try {
+        const isDeposit = policy.deposit_percentage !== null && policy.deposit_percentage < 100;
+        const amount = isDeposit
+          ? Math.round(chargeBase * (policy.deposit_percentage as number) / 100)
+          : chargeBase;
+        const [y, m, d] = date.split("-").map(Number);
+        const fmtDate = `${String(d).padStart(2, "0")}/${String(m).padStart(2, "0")}/${y}`;
+        const title = isDeposit
+          ? `Seña sesión ${fmtDate} ${startTime} - ${business.name}`
+          : `Sesión ${fmtDate} ${startTime} - ${business.name}`;
+
+        const backSlug = business.public_slug || slug;
+        const backBase = `https://consultoriodigital.app/consultorio/${backSlug}`;
+        const mpResponse = await fetch("https://api.mercadopago.com/checkout/preferences", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${policy.mp_access_token}`,
+          },
+          body: JSON.stringify({
+            items: [{ title, quantity: 1, unit_price: amount, currency_id: "UYU" }],
+            back_urls: {
+              success: `${backBase}?payment=success`,
+              failure: `${backBase}?payment=failure`,
+              pending: `${backBase}?payment=pending`,
+            },
+            auto_return: "approved",
+            external_reference: JSON.stringify({
+              type: "session_payment",
+              appointment_id: appointment.id,
+              business_id: business.id,
+              patient_id: patientId,
+            }),
+            notification_url: `${supabaseUrl}/functions/v1/mercadopago-webhook`,
+          }),
+        });
+
+        if (!mpResponse.ok) {
+          throw new Error(`MP preference failed: ${mpResponse.status} ${await mpResponse.text()}`);
+        }
+        const mpPref = await mpResponse.json();
+
+        // Vincular la preferencia al cobro pendiente creado por el trigger
+        // (el monto pasa a ser lo que se cobra online: total o seña).
+        const { data: pendingPayment } = await supabase
+          .from("payments")
+          .select("id")
+          .eq("appointment_id", appointment.id)
+          .eq("status", "pending")
+          .maybeSingle();
+        if (pendingPayment) {
+          await supabase
+            .from("payments")
+            .update({ mp_preference_id: mpPref.id, amount, method: "mercadopago", notes: title })
+            .eq("id", pendingPayment.id);
+        }
+        await supabase
+          .from("appointments")
+          .update({ payment_status: "pendiente" })
+          .eq("id", appointment.id);
+
+        return json({ success: true, payment_required: true, init_point: mpPref.init_point });
+      } catch (mpErr) {
+        // Si Mercado Pago falla, no perdemos la reserva: se confirma como
+        // siempre y el cobro queda pendiente para gestionar por otro canal.
+        console.error("Required payment setup failed, confirming without payment:", mpErr);
+        await supabase
+          .from("appointments")
+          .update({ status: "confirmed" })
+          .eq("id", appointment.id);
+      }
     }
 
     // Best-effort: mail de confirmación al paciente

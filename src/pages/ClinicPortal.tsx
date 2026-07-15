@@ -311,10 +311,11 @@ const ClinicPortal = () => {
     (async () => {
       const { data } = await supabase
         .from("payment_policies")
-        .select("mp_access_token")
+        .select("mp_access_token, policy_type")
         .eq("business_id", branding.id)
         .maybeSingle();
-      setMpConnected(!!data?.mp_access_token);
+      // Con política "Sin pago previo" no se ofrece pagar online, aunque MP esté conectado
+      setMpConnected(!!data?.mp_access_token && (data as any)?.policy_type !== "none");
     })();
   }, [branding?.id]);
 

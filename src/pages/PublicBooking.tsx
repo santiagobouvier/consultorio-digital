@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -112,10 +112,13 @@ const demoStarts = (durationMinutes: number): Start[] => {
 const PublicBooking = ({ demo = false }: { demo?: boolean }) => {
   const { slug } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [loading, setLoading] = useState(true);
   const [business, setBusiness] = useState<any>(null);
   const [planAllowsPublicWeb, setPlanAllowsPublicWeb] = useState(true);
+  // Vuelta del checkout de Mercado Pago (política "pago requerido")
+  const [paidReturn, setPaidReturn] = useState(false);
 
   const [services, setServices] = useState<Service[]>([]);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
@@ -141,6 +144,23 @@ const PublicBooking = ({ demo = false }: { demo?: boolean }) => {
 
   const [form, setForm] = useState({ name: "", email: "", phone: "", message: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Vuelta de Mercado Pago: ?payment=success|failure|pending
+  useEffect(() => {
+    const payment = searchParams.get("payment");
+    if (!payment) return;
+    if (payment === "success") {
+      setPaidReturn(true);
+      setSuccess(true);
+    } else if (payment === "pending") {
+      toast.info("Tu pago está en proceso. Cuando se acredite, te llega la confirmación por email.");
+    } else {
+      toast.error("El pago no se completó. Si no se paga, la reserva se libera a los 45 minutos.");
+    }
+    searchParams.delete("payment");
+    setSearchParams(searchParams, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const loadStarts = useCallback(async (service: Service) => {
     setStartsLoading(true);
@@ -195,7 +215,7 @@ const PublicBooking = ({ demo = false }: { demo?: boolean }) => {
         }
 
         const columns =
-          "id, name, specialty, public_slug, custom_subdomain, portal_logo_url, portal_primary_color, portal_dark_primary_color, portal_clinic_display_name, plan_code";
+          "id, name, specialty, public_slug, custom_subdomain, portal_logo_url, portal_primary_color, portal_dark_primary_color, portal_clinic_display_name, plan_code, is_private_clinic";
 
         let businessData: any = null;
         const bySlug = await supabase
@@ -359,6 +379,13 @@ const PublicBooking = ({ demo = false }: { demo?: boolean }) => {
         return;
       }
 
+      // Política "pago requerido": el checkout de Mercado Pago confirma la reserva
+      if ((data as any)?.payment_required && (data as any)?.init_point) {
+        toast.info("Te llevamos a Mercado Pago para confirmar tu reserva...");
+        window.location.href = (data as any).init_point;
+        return;
+      }
+
       setSuccess(true);
     } catch (err) {
       console.error("[PublicBooking] submit error", err);
@@ -398,6 +425,46 @@ const PublicBooking = ({ demo = false }: { demo?: boolean }) => {
     business.portal_clinic_display_name || business.name || "Consultorio";
   const targetSlug = business.public_slug || slug;
 
+  // Agenda privada: sin reserva pública, solo pacientes con acceso al portal
+  if (business.is_private_clinic && !demo && !success) {
+    return (
+      <div
+        className="min-h-screen flex items-center justify-center bg-background p-4"
+        style={brandStyle}
+      >
+        <Card className="w-full max-w-md">
+          <CardContent className="pt-8 pb-6 text-center space-y-4">
+            <div
+              className="w-16 h-16 mx-auto rounded-full flex items-center justify-center"
+              style={{ background: `hsl(var(--brand) / 0.15)` }}
+            >
+              <Stethoscope className="h-8 w-8" style={{ color: `hsl(var(--brand))` }} />
+            </div>
+            <div className="space-y-2">
+              <h1 className="text-2xl font-bold text-foreground">{clinicName}</h1>
+              <p className="text-sm text-muted-foreground">
+                Este consultorio atiende con agenda privada: los turnos se coordinan
+                directamente con el profesional y no se pueden reservar desde esta página.
+              </p>
+            </div>
+            <div className="pt-2 space-y-2">
+              <p className="text-xs text-muted-foreground px-2">
+                ¿Ya sos paciente? Ingresá a tu portal para ver y gestionar tus citas.
+              </p>
+              <Button
+                className="w-full"
+                style={{ background: `hsl(var(--brand))`, color: "white" }}
+                onClick={() => navigate(`/portal/${targetSlug}`)}
+              >
+                Ir a mi portal
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (success) {
     return (
       <div
@@ -413,9 +480,13 @@ const PublicBooking = ({ demo = false }: { demo?: boolean }) => {
               <CheckCircle2 className="h-8 w-8" style={{ color: `hsl(var(--brand))` }} />
             </div>
             <div className="space-y-2">
-              <h1 className="text-2xl font-bold text-foreground">¡Reserva confirmada!</h1>
+              <h1 className="text-2xl font-bold text-foreground">
+                {paidReturn ? "¡Pago recibido y reserva confirmada!" : "¡Reserva confirmada!"}
+              </h1>
               <p className="text-sm text-muted-foreground">
-                Te enviamos los detalles a tu email. El consultorio se pondrá en contacto si necesita algo más.
+                {paidReturn
+                  ? "Recibimos tu pago y tu cita quedó confirmada. Te enviamos los detalles a tu email."
+                  : "Te enviamos los detalles a tu email. El consultorio se pondrá en contacto si necesita algo más."}
               </p>
             </div>
             {selectedStart && (
