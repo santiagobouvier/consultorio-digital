@@ -47,6 +47,8 @@ import {
   Legend,
 } from "recharts";
 import { exportCSV, todayDateString } from "@/lib/csv-export";
+import { buildStatisticsPdf } from "@/lib/statistics-pdf";
+import { useDashboardBranding } from "@/contexts/DashboardBrandingContext";
 
 type PeriodKey = "30d" | "90d" | "year" | "all";
 
@@ -106,6 +108,7 @@ const Statistics = () => {
   const navigate = useNavigate();
   const { businessId, loading: bizLoading } = useBusinessId();
   const { professionals } = useProfessionals(businessId);
+  const { displayName, primaryColor } = useDashboardBranding();
   const [period, setPeriod] = useState<PeriodKey>("90d");
   const [loading, setLoading] = useState(true);
   const [exportingPDF, setExportingPDF] = useState(false);
@@ -564,73 +567,27 @@ const Statistics = () => {
   };
 
   const handleExportPDF = async () => {
-    if (!reportRef.current) return;
     try {
       setExportingPDF(true);
-      // Dynamic import to keep initial bundle light
-      const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
-        import("jspdf"),
-        import("html2canvas"),
-      ]);
-
-      const pdf = new jsPDF("p", "mm", "a4");
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      const margin = 8;
-      const usableWidth = pageWidth - margin * 2;
-      const maxBlockHeight = pageHeight - margin * 2;
-
-      // Cover header
-      pdf.setFontSize(16);
-      pdf.text("Estadísticas", margin, 14);
-      pdf.setFontSize(10);
-      pdf.setTextColor(120);
-      pdf.text(`Período: ${PERIOD_LABELS[period]}`, margin, 20);
-      pdf.text(`Generado: ${new Date().toLocaleDateString("es-UY")}`, margin, 25);
-      pdf.setTextColor(0);
-
-      // Se captura BLOQUE por BLOQUE (cada tarjeta/fila del reporte) y se
-      // acomodan enteros: si un bloque no entra en lo que queda de página,
-      // salta a la siguiente. Así nada queda cortado al medio.
-      const blocks = (Array.from(reportRef.current.children) as HTMLElement[])
-        .filter((el) => el.offsetHeight > 0);
-
-      let y = 30;
-      for (const block of blocks) {
-        const canvas = await html2canvas(block, {
-          scale: 2,
-          backgroundColor: "#ffffff",
-          useCORS: true,
-          logging: false,
-          onclone: (doc) => {
-            // El PDF siempre sale en modo claro, aunque la app esté en oscuro
-            doc.documentElement.classList.remove("dark");
-            doc.documentElement.style.colorScheme = "light";
-          },
-        });
-
-        let drawWidth = usableWidth;
-        let drawHeight = (canvas.height * usableWidth) / canvas.width;
-        let x = margin;
-        // Bloque más alto que una página entera: se achica para que entre
-        // completo (mejor un poco más chico que cortado).
-        if (drawHeight > maxBlockHeight) {
-          const ratio = maxBlockHeight / drawHeight;
-          drawHeight = maxBlockHeight;
-          drawWidth = drawWidth * ratio;
-          x = (pageWidth - drawWidth) / 2;
-        }
-
-        if (y + drawHeight > pageHeight - margin) {
-          pdf.addPage();
-          y = margin;
-        }
-
-        pdf.addImage(canvas.toDataURL("image/png"), "PNG", x, y, drawWidth, drawHeight);
-        y += drawHeight + 4;
-      }
-
-      pdf.save(`estadisticas_${todayDateString()}.pdf`);
+      // El reporte se DIBUJA como documento (no es una captura de pantalla):
+      // encabezado con el color de marca, cajas de KPIs, gráficos y tablas
+      // nativas. Nunca sale cortado ni depende del tema de la app.
+      await buildStatisticsPdf({
+        clinicName: displayName || "Mi consultorio",
+        periodLabel: PERIOD_LABELS[period],
+        primaryColor,
+        kpis,
+        trends,
+        monthProjection,
+        collectionDelay,
+        sourceData,
+        weekdayData,
+        revenueData,
+        noShowData,
+        professionalRows,
+        inactivePatients,
+        fileName: `estadisticas_${todayDateString()}.pdf`,
+      });
       toast({ title: "PDF generado", description: "El reporte se descargó correctamente" });
     } catch (e) {
       console.error("PDF export error:", e);
