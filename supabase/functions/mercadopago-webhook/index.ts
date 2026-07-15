@@ -205,6 +205,16 @@ serve(async (req) => {
         console.log("Session payment approved:", sessionRef);
 
         if (sessionRef.appointment_id) {
+          // Estado previo: si la cita esperaba el pago para confirmarse
+          // (reserva pública con política "required"), acá van los avisos
+          // que la reserva no mandó.
+          const { data: appt } = await supabase
+            .from("appointments")
+            .select("id, status, business_id, start_at, modality, contact_name, contact_email, contact_phone")
+            .eq("id", sessionRef.appointment_id)
+            .maybeSingle();
+          const wasAwaitingPayment = appt?.status === "pending_payment";
+
           // Update payment record to paid
           await supabase
             .from("payments")
@@ -226,6 +236,102 @@ serve(async (req) => {
             .eq("id", sessionRef.appointment_id);
 
           console.log(`Session payment confirmed for appointment ${sessionRef.appointment_id}`);
+
+          if (wasAwaitingPayment && appt) {
+            const { data: biz } = await supabase
+              .from("businesses")
+              .select("id, name, contact_email, owner_user_id")
+              .eq("id", appt.business_id)
+              .maybeSingle();
+
+            const startAt = new Date(appt.start_at);
+            const dateStr = startAt.toLocaleDateString("es-UY", {
+              day: "2-digit", month: "2-digit", year: "numeric",
+              timeZone: "America/Montevideo",
+            });
+            const timeStr = startAt.toLocaleTimeString("es-UY", {
+              hour: "2-digit", minute: "2-digit",
+              timeZone: "America/Montevideo",
+            });
+            const modLabel = appt.modality === "online" ? "Online" : "Presencial";
+
+            // Mail de confirmación al paciente
+            try {
+              if (appt.contact_email) {
+                await fetch(`${supabaseUrl}/functions/v1/send-resend-email`, {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${supabaseServiceKey}`,
+                  },
+                  body: JSON.stringify({
+                    to: appt.contact_email,
+                    template: "appointment_confirmation",
+                    businessId: appt.business_id,
+                    data: {
+                      patientName: appt.contact_name || "",
+                      date: dateStr,
+                      time: timeStr,
+                      modality: appt.modality,
+                      location: null,
+                    },
+                  }),
+                });
+              }
+            } catch (mailErr) {
+              console.warn("Paid-booking patient email failed:", mailErr);
+            }
+
+            // Mail "Nueva reserva pagada" al profesional
+            try {
+              if (biz?.contact_email) {
+                await fetch(`${supabaseUrl}/functions/v1/send-resend-email`, {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${supabaseServiceKey}`,
+                  },
+                  body: JSON.stringify({
+                    to: biz.contact_email,
+                    template: "raw",
+                    businessId: appt.business_id,
+                    data: {
+                      subject: `Nueva reserva pagada: ${appt.contact_name || "Paciente"} · ${dateStr} ${timeStr}`,
+                      message:
+                        `Tenés una nueva reserva online con el pago ya realizado.\n\n` +
+                        `Paciente: ${appt.contact_name || "-"}\n` +
+                        `Fecha: ${dateStr} a las ${timeStr} · ${modLabel}\n` +
+                        `Teléfono: ${appt.contact_phone || "-"}\nEmail: ${appt.contact_email || "-"}` +
+                        `\n\nLa cita quedó confirmada en tu agenda y el cobro figura como pagado.`,
+                    },
+                  }),
+                });
+              }
+            } catch (ownerMailErr) {
+              console.warn("Paid-booking owner email failed:", ownerMailErr);
+            }
+
+            // Push al dueño
+            try {
+              if (biz?.owner_user_id) {
+                await fetch(`${supabaseUrl}/functions/v1/send-push-notification`, {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${supabaseServiceKey}`,
+                  },
+                  body: JSON.stringify({
+                    user_id: biz.owner_user_id,
+                    title: "Nueva reserva pagada",
+                    body: `${appt.contact_name || "Un paciente"} reservó y pagó la sesión del ${dateStr} ${timeStr}.`,
+                    url: "/agenda",
+                  }),
+                });
+              }
+            } catch (pushErr) {
+              console.warn("Paid-booking push failed:", pushErr);
+            }
+          }
         }
       }
       // PATIENT PAYMENT BATCH: external_reference has type "payment_batch"
