@@ -309,13 +309,14 @@ const ClinicPortal = () => {
   useEffect(() => {
     if (!branding?.id) return;
     (async () => {
-      const { data } = await supabase
-        .from("payment_policies")
-        .select("mp_access_token, policy_type")
-        .eq("business_id", branding.id)
-        .maybeSingle();
+      // RPC segura: los pacientes no pueden leer payment_policies (ahí vive el
+      // token secreto de MP); esta función devuelve solo conectado + política.
+      const { data } = await (supabase as any).rpc("get_portal_payment_config", {
+        p_business_id: branding.id,
+      });
+      const config = Array.isArray(data) ? data[0] : data;
       // Con política "Sin pago previo" no se ofrece pagar online, aunque MP esté conectado
-      setMpConnected(!!data?.mp_access_token && (data as any)?.policy_type !== "none");
+      setMpConnected(!!config?.mp_connected && config?.policy_type !== "none");
     })();
   }, [branding?.id]);
 
