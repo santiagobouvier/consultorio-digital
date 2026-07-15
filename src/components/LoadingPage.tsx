@@ -1,104 +1,64 @@
-import { useEffect, useState } from "react";
-
-// Si el LoadingPage llega a montarse, lo dejamos visible al menos este tiempo
-// para que no "parpadee" cuando el contenido carga inmediatamente después.
-const MIN_VISIBLE_MS = 300;
-
+// Pantalla de carga global. La usan todas las páginas del panel, el portal y
+// la web pública, así que respeta el modo claro/oscuro del usuario en vez de
+// forzar un fondo oscuro. El logo va sobre un disco oscuro fijo (como ícono de
+// app) porque el PNG está diseñado para fondo oscuro.
 const LoadingPage = () => {
-  const [holdDone, setHoldDone] = useState(false);
-
-  useEffect(() => {
-    const t = window.setTimeout(() => setHoldDone(true), MIN_VISIBLE_MS);
-    return () => window.clearTimeout(t);
-  }, []);
-
-  // El componente padre desmonta este loader cuando termina de cargar.
-  // Si el padre intenta desmontarlo antes del MIN_VISIBLE_MS, igual lo
-  // habrá visto el usuario porque ya está pintado en pantalla — el hold
-  // sólo asegura que la animación de entrada (0.6s) alcance a ejecutarse.
-  void holdDone;
-
   return (
-    <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "hsl(180 12% 16%)" }}>
+    <div className="min-h-screen flex items-center justify-center bg-background">
       <style>{`
-        @keyframes logoEntrance {
-          from { 
-            opacity: 0; 
-            transform: translateY(20px); 
-          }
-          to { 
-            opacity: 1; 
-            transform: translateY(0); 
-          }
+        @keyframes loadingFadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
         }
 
-        @keyframes glowPulse {
-          0%, 100% { 
-            box-shadow: 0 0 0 0 hsl(180 12% 8% / 0); 
-          }
-          50% { 
-            box-shadow: 0 0 0 0 hsl(180 12% 8% / 0); 
-          }
+        @keyframes loadingBreathe {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.05); }
         }
 
-        @keyframes dotBounce {
-          0%, 80%, 100% { 
-            opacity: 0.3; 
-            transform: scale(0.8); 
-          }
-          40% { 
-            opacity: 1; 
-            transform: scale(1.2); 
-          }
+        @keyframes loadingRing {
+          0% { transform: scale(1); opacity: 0.45; }
+          100% { transform: scale(1.9); opacity: 0; }
         }
 
-        @keyframes fadeOut {
-          from { opacity: 1; }
-          to { opacity: 0; }
+        .loading-stage {
+          animation: loadingFadeIn 0.5s ease-out both;
         }
 
-        .logo-entrance {
-          animation: logoEntrance 0.6s ease-out forwards;
+        .loading-breathe {
+          animation: loadingBreathe 2.8s ease-in-out infinite;
         }
 
-        .glow-pulse {
-          animation: glowPulse 2s ease-in-out infinite;
+        .loading-ring {
+          position: absolute;
+          inset: 0;
+          border-radius: 9999px;
+          border: 2px solid hsl(var(--primary) / 0.5);
+          animation: loadingRing 2.4s ease-out infinite;
         }
 
-        .dot-bounce {
-          animation: dotBounce 1.4s ease-in-out infinite;
+        .loading-ring-late {
+          animation-delay: 1.2s;
         }
 
-        .dot-delay-1 {
-          animation-delay: 0ms;
-        }
-
-        .dot-delay-2 {
-          animation-delay: 150ms;
-        }
-
-        .dot-delay-3 {
-          animation-delay: 300ms;
+        @media (prefers-reduced-motion: reduce) {
+          .loading-breathe, .loading-ring { animation: none; }
+          .loading-ring { display: none; }
         }
       `}</style>
-      
-      <div className="flex flex-col items-center gap-8">
+
+      <div className="loading-stage relative flex items-center justify-center">
+        <span className="loading-ring" aria-hidden="true" />
+        <span className="loading-ring loading-ring-late" aria-hidden="true" />
         <div
-          className="logo-entrance flex h-[124px] w-[124px] items-center justify-center overflow-hidden rounded-full"
-          style={{ backgroundColor: "hsl(180 12% 8%)" }}
+          className="loading-breathe relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-full shadow-lg"
+          style={{ backgroundColor: "hsl(180 12% 10%)" }}
         >
           <img
             src="/logo-loading.png"
             alt="Cargando..."
-            className="h-[74px] w-[74px] object-contain"
+            className="h-14 w-14 object-contain"
           />
-        </div>
-        
-        {/* Dots de carga */}
-        <div className="flex items-center gap-2">
-          <div className="dot-bounce dot-delay-1 w-2 h-2 rounded-full bg-[#00a5a0]"></div>
-          <div className="dot-bounce dot-delay-2 w-2 h-2 rounded-full bg-[#00a5a0]"></div>
-          <div className="dot-bounce dot-delay-3 w-2 h-2 rounded-full bg-[#00a5a0]"></div>
         </div>
       </div>
     </div>
