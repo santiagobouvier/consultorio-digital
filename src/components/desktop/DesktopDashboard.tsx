@@ -21,6 +21,8 @@ import {
   wasActivationCelebrated,
 } from "@/components/ActivationCompleteModal";
 import { HelpTooltip } from "@/components/HelpTooltip";
+import { useDashboardBranding } from "@/contexts/DashboardBrandingContext";
+import { usePendingRequestsCount } from "@/hooks/use-pending-requests-count";
 
 import {
   Select,
@@ -85,6 +87,8 @@ interface DesktopDashboardProps {
 export const DesktopDashboard = ({ businessId, userName: propUserName }: DesktopDashboardProps) => {
   const navigate = useNavigate();
   const { professionals, loading: professionalsLoading, isOwner } = useProfessionals(businessId);
+  const { logoUrl: brandLogoUrl } = useDashboardBranding();
+  const pendingRequestsCount = usePendingRequestsCount();
 
   // Data state
   const [businessName, setBusinessName] = useState("");
@@ -280,22 +284,50 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30">
-      {/* Header Superior */}
-      <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm">
-        <div className="max-w-[1400px] mx-auto px-10 py-6">
+      {/* Header Superior: hero con la marca del consultorio */}
+      <header className="relative overflow-hidden border-b border-border/50">
+        <div className="absolute inset-0 bg-card/50 backdrop-blur-sm" />
+        {/* Degradado de marca, sutil, que se funde con el fondo */}
+        <div
+          className="absolute -top-28 -left-20 w-[520px] h-[340px] pointer-events-none"
+          style={{ background: "radial-gradient(ellipse at center, hsl(var(--primary) / 0.16), transparent 70%)" }}
+        />
+        <div
+          className="absolute -top-24 left-[38%] w-[420px] h-[280px] pointer-events-none"
+          style={{ background: "radial-gradient(ellipse at center, hsl(var(--primary) / 0.07), transparent 70%)" }}
+        />
+        <div className="relative max-w-[1400px] mx-auto px-10 py-7">
           <div className="flex items-center justify-between">
-            {/* Left: Clinic Icon + Greeting + Clinic Name */}
-            <div className="flex items-center gap-4">
-              <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                <Building2 className="h-6 w-6 text-primary" />
-              </div>
+            {/* Left: Logo del consultorio + saludo + nombre + fecha */}
+            <div className="flex items-center gap-5">
+              {brandLogoUrl ? (
+                <img
+                  src={brandLogoUrl}
+                  alt="Logo"
+                  className="h-16 w-16 rounded-2xl object-cover ring-2 ring-primary/25"
+                  style={{ boxShadow: "0 10px 34px -8px hsl(var(--primary) / 0.45)" }}
+                />
+              ) : (
+                <div
+                  className="h-16 w-16 rounded-2xl bg-primary/10 ring-2 ring-primary/25 flex items-center justify-center"
+                  style={{ boxShadow: "0 10px 34px -8px hsl(var(--primary) / 0.35)" }}
+                >
+                  <Building2 className="h-8 w-8 text-primary" />
+                </div>
+              )}
               <div>
                 <p className="text-muted-foreground text-sm font-medium">
                   {getGreeting()}, {userName.split(" ")[0]}
                 </p>
-                <h1 className="text-xl font-bold text-foreground tracking-tight">
+                <h1 className="text-3xl font-bold text-foreground tracking-tight leading-tight">
                   {businessName}
                 </h1>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {(() => {
+                    const d = format(new Date(), "EEEE d 'de' MMMM", { locale: es });
+                    return d.charAt(0).toUpperCase() + d.slice(1);
+                  })()}
+                </p>
               </div>
             </div>
 
@@ -325,15 +357,31 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
               </div>
             )}
 
-            {/* Right: Primary CTA */}
-            <Button
-              size="lg"
-              className="h-12 px-8 gap-3 text-base font-semibold shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all"
-              onClick={() => navigate("/agenda")}
-            >
-              <CalendarDays className="h-5 w-5" />
-              Ver agenda
-            </Button>
+            {/* Right: aviso de solicitudes + CTA principal */}
+            <div className="flex items-center gap-3">
+              {pendingRequestsCount > 0 && (
+                <button
+                  onClick={() => navigate("/solicitudes")}
+                  className="flex items-center gap-2 h-11 px-4 rounded-full border border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 transition-colors"
+                >
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-500 opacity-60" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
+                  </span>
+                  <span className="text-sm font-semibold">
+                    {pendingRequestsCount} solicitud{pendingRequestsCount !== 1 ? "es" : ""} esperando
+                  </span>
+                </button>
+              )}
+              <Button
+                size="lg"
+                className="h-12 px-8 gap-3 text-base font-semibold shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all"
+                onClick={() => navigate("/agenda")}
+              >
+                <CalendarDays className="h-5 w-5" />
+                Ver agenda
+              </Button>
+            </div>
           </div>
         </div>
       </header>
