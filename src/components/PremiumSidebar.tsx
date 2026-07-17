@@ -204,13 +204,13 @@ export function PremiumSidebar() {
         {/* Ícono en cuadradito tintado (mismo lenguaje que el lanzador mobile) */}
         <div className="relative shrink-0">
           <span
-            className="flex items-center justify-center w-9 h-9 rounded-xl transition-all duration-200"
+            className="flex items-center justify-center w-10 h-10 rounded-xl transition-all duration-200 group-hover:scale-[1.06]"
             style={{
-              background: tintHsla(active ? 0.22 : 0.13),
-              boxShadow: `inset 0 0 0 1px ${tintHsla(active ? 0.38 : 0.2)}`,
+              background: tintHsla(active ? 0.26 : 0.16),
+              boxShadow: `inset 0 0 0 1px ${tintHsla(active ? 0.45 : 0.26)}${active ? `, 0 6px 18px -6px ${tintHsla(0.5)}` : ""}`,
             }}
           >
-            <item.icon className="h-[17px] w-[17px]" style={{ color: tintHsl }} strokeWidth={2} />
+            <item.icon className="h-[18px] w-[18px]" style={{ color: tintHsl }} strokeWidth={2} />
           </span>
           {/* Mini badge dot when collapsed */}
           {showBadge && !expanded && (
@@ -288,28 +288,38 @@ export function PremiumSidebar() {
 
         {/* Content */}
         <div className="relative flex flex-col h-full">
-          {/* Logo area */}
-          <div className="flex items-center h-16 px-3">
-            <div className="flex items-center gap-2 min-w-0">
+          {/* Logo area: la marca del consultorio con presencia */}
+          <div className={cn("flex items-center h-[72px]", expanded ? "px-3" : "justify-center px-0")}>
+            <div className="flex items-center gap-3 min-w-0">
               {logoUrl ? (
                 <img
                   src={logoUrl}
                   alt="Logo"
                   loading="lazy"
                   decoding="async"
-                  className="w-8 h-8 rounded-lg object-cover shrink-0"
-                  style={{ boxShadow: `0 4px 12px ${brandHsla(0.2)}` }}
+                  className="w-11 h-11 rounded-xl object-cover shrink-0"
+                  style={{
+                    boxShadow: `0 0 0 2px ${brandHsla(0.35)}, 0 8px 24px -6px ${brandHsla(0.5)}`,
+                  }}
                 />
               ) : (
-                <img
-                  src={consultorioLogo}
-                  alt="Consultorio Digital"
-                  className="h-12 w-12 object-contain shrink-0 -my-1"
-                />
+                <span
+                  className="w-11 h-11 rounded-xl shrink-0 flex items-center justify-center"
+                  style={{
+                    background: brandHsla(0.12),
+                    boxShadow: `0 0 0 2px ${brandHsla(0.3)}, 0 8px 24px -6px ${brandHsla(0.4)}`,
+                  }}
+                >
+                  <img
+                    src={consultorioLogo}
+                    alt="Consultorio Digital"
+                    className="h-8 w-8 object-contain"
+                  />
+                </span>
               )}
               <span
                 className={cn(
-                  "text-sm font-semibold text-white/80 whitespace-nowrap tracking-tight transition-all duration-200",
+                  "text-sm font-semibold text-white/85 whitespace-nowrap tracking-tight transition-all duration-200",
                   expanded
                     ? "opacity-100 translate-x-0"
                     : "opacity-0 -translate-x-2 absolute pointer-events-none"

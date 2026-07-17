@@ -168,8 +168,8 @@ export function MobileHeader() {
             alt="Logo"
             loading="lazy"
             decoding="async"
-            className="w-8 h-8 rounded-lg object-cover"
-            style={{ boxShadow: `0 2px 10px ${brandHsla(0.3)}` }}
+            className="w-9 h-9 rounded-xl object-cover"
+            style={{ boxShadow: `0 0 0 2px ${brandHsla(0.35)}, 0 6px 18px -4px ${brandHsla(0.5)}` }}
           />
         ) : (
           <img
