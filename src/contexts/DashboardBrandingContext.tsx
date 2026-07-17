@@ -45,13 +45,22 @@ export function DashboardBrandingProvider({ children }: { children: ReactNode })
         .maybeSingle();
 
       if (data) {
-        // La marca del panel reutiliza lo que el consultorio configura en
-        // "Personalizar portal": un solo logo/nombre/color para todo el producto.
-        // Los campos dashboard_* quedan como override manual si algún día se exponen.
+        // La marca del panel es lo que el consultorio configura en
+        // "Personalizar portal": un solo logo/nombre/color para todo el
+        // producto. Lo que se elige ahí MANDA (los campos dashboard_* viejos
+        // quedan solo como respaldo). Sin marca propia -> Consultorio Digital.
         const d = data as any;
-        setPrimaryColor(d.dashboard_primary_color || d.portal_primary_color || DEFAULT_COLOR);
-        setLogoUrl(d.dashboard_logo_url || d.portal_logo_url || null);
-        setDisplayName(d.dashboard_display_name || d.portal_clinic_display_name || data.name || null);
+        const color = d.portal_primary_color || d.dashboard_primary_color || DEFAULT_COLOR;
+        const logo = d.portal_logo_url || d.dashboard_logo_url || null;
+        setPrimaryColor(color);
+        setLogoUrl(logo);
+        setDisplayName(d.portal_clinic_display_name || d.dashboard_display_name || data.name || null);
+        // La pantalla de carga del panel usa esta marca en las próximas visitas
+        try {
+          localStorage.setItem("panel_brand", JSON.stringify({ logoUrl: logo, color }));
+        } catch {
+          /* ignore */
+        }
       }
     } catch (err) {
       console.error("Error loading dashboard branding:", err);

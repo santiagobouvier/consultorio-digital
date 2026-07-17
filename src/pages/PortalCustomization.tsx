@@ -479,7 +479,10 @@ const PortalCustomization = () => {
               <Sparkles className="h-4 w-4 text-primary" /> Tema de colores
               <HelpTooltip id="portalThemeColor" />
             </CardTitle>
-            <CardDescription>Elegí una paleta predefinida o personalizá los colores del portal</CardDescription>
+            <CardDescription>
+              Elegí una paleta o personalizá tu color. Es la identidad de tu consultorio:
+              pinta el portal del paciente, tu web pública y también tu panel interno.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div>
