@@ -266,7 +266,7 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
   if (loading || dataLoading) {
     return (
       <div className="min-h-screen bg-background p-10">
-        <div className="max-w-[1400px] mx-auto space-y-10">
+        <div className="max-w-screen-2xl mx-auto space-y-10">
           <Skeleton className="h-24 w-full rounded-2xl" />
           <div className="grid grid-cols-4 gap-6">
             {[...Array(4)].map((_, i) => (
@@ -296,7 +296,7 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
           className="absolute -top-24 left-[38%] w-[420px] h-[280px] pointer-events-none"
           style={{ background: "radial-gradient(ellipse at center, hsl(var(--primary) / 0.07), transparent 70%)" }}
         />
-        <div className="relative max-w-[1400px] mx-auto px-10 py-7">
+        <div className="relative max-w-screen-2xl mx-auto px-10 py-7">
           <div className="flex items-center justify-between">
             {/* Left: Logo del consultorio + saludo + nombre + fecha */}
             <div className="flex items-center gap-5">
@@ -387,7 +387,7 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
       </header>
 
       {/* Main Content */}
-      <main className="max-w-[1400px] mx-auto px-10 py-10 space-y-10">
+      <main className="max-w-screen-2xl mx-auto px-10 py-10 space-y-10">
         <ActivationChecklist
           businessId={businessId}
           onAllDone={() => {
