@@ -186,7 +186,7 @@ export const WeekViewV2 = ({
           si la pantalla no alcanza (tablet), se scrollea horizontal en vez
           de cortar el contenido. */}
       <div className="hidden md:block overflow-x-auto pb-2 -mx-1 px-1">
-        <div className="grid grid-cols-7 gap-3 min-w-[1060px] 2xl:min-w-0">
+        <div className="grid grid-cols-7 gap-3 min-w-[980px] xl:min-w-0">
         {days.map((day) => {
           const dayAppointments = getAppointmentsForDay(day);
           const dayPayments = getPaymentsForDay(day);

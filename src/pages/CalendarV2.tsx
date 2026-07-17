@@ -493,7 +493,9 @@ const CalendarV2 = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-4 animate-fade-in">
+      {/* La agenda usa TODO el ancho disponible (con tope solo en ultra-wide):
+          los calendarios necesitan espacio, no márgenes decorativos. */}
+      <div className="w-full max-w-[1900px] mx-auto p-4 sm:p-6 space-y-4 animate-fade-in">
         {/* Header */}
         <CalendarHeader
           currentDate={currentDate}
