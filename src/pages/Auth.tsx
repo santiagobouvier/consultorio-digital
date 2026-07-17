@@ -647,6 +647,18 @@ const Auth = () => {
                   >
                     {loading ? "Aguardá un momento..." : isSignUp ? "Enviar link de activación" : "Iniciar sesión"}
                   </Button>
+                  {isSignUp && (
+                    <p className="text-[11px] text-white/40 text-center leading-relaxed">
+                      Al crear tu cuenta aceptás los{" "}
+                      <a href="/terminos" target="_blank" rel="noopener noreferrer" className="underline hover:text-white/70">
+                        Términos y Condiciones
+                      </a>{" "}
+                      y la{" "}
+                      <a href="/privacidad" target="_blank" rel="noopener noreferrer" className="underline hover:text-white/70">
+                        Política de Privacidad
+                      </a>.
+                    </p>
+                  )}
                 </form>
 
                 <div className="mt-5 text-center text-sm">
