@@ -68,6 +68,10 @@ export function DashboardBrandingProvider({ children }: { children: ReactNode })
   useEffect(() => {
     const root = document.documentElement;
     root.style.setProperty("--brand-primary", primaryColor);
+    // El color de marca pinta TODO el panel (botones, acentos, focus):
+    // se sobreescribe --primary mientras el panel está montado; al salir
+    // (portal, web pública) se limpia y vuelve el color del stylesheet.
+    root.style.setProperty("--primary", primaryColor);
 
     // Parse HSL to generate variations
     const parts = primaryColor.split(" ");
@@ -85,6 +89,7 @@ export function DashboardBrandingProvider({ children }: { children: ReactNode })
 
     return () => {
       root.style.removeProperty("--brand-primary");
+      root.style.removeProperty("--primary");
       root.style.removeProperty("--brand-primary-h");
       root.style.removeProperty("--brand-primary-s");
       root.style.removeProperty("--brand-primary-l");
