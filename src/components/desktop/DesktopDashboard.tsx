@@ -15,7 +15,6 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { MonthlyHighlights } from "@/components/MonthlyHighlights";
 import { ActivationChecklist } from "@/components/ActivationChecklist";
 import { PublicLinkCard } from "@/components/PublicLinkCard";
-import { PendingRequestsBanner } from "@/components/PendingRequestsBanner";
 import {
   ActivationCompleteModal,
   wasActivationCelebrated,
@@ -46,8 +45,17 @@ import {
   CalendarCheck,
   AlertCircle,
   Eye,
-  Palette,
+  FileText,
+  CheckCircle2,
 } from "lucide-react";
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  Tooltip as ChartTooltip,
+} from "recharts";
 
 interface Appointment {
   id: string;
@@ -105,7 +113,10 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
   // Lists
   const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>([]);
   const [pendingPayments, setPendingPayments] = useState<Payment[]>([]);
-  const [todayAppointments, setTodayAppointments] = useState<Appointment[]>([]);
+  const [todayAppointments, setTodayAppointments] = useState<(Appointment & { end_at?: string | null })[]>([]);
+  // Series para mini-gráficos y el gráfico del mes
+  const [paidRecent, setPaidRecent] = useState<Array<{ amount: number; paid_at: string }>>([]);
+  const [apptsRecent, setApptsRecent] = useState<Array<{ start_at: string }>>([]);
   
   const [dataLoading, setDataLoading] = useState(true);
   const [showActivationDone, setShowActivationDone] = useState(false);
@@ -127,6 +138,9 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
       const monthEnd = endOfMonth(new Date());
 
       // ── Parallelizar todas las consultas independientes ──
+      const last35 = addDays(today, -35);
+      const last42 = addDays(today, -42);
+
       const [
         businessRes,
         todayApptsRes,
@@ -134,13 +148,18 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
         patientsCountRes,
         paidPaymentsRes,
         pendingPaymentsRes,
+        paidRecentRes,
+        apptsRecentRes,
       ] = await Promise.all([
         supabase.from("businesses").select("name, is_demo").eq("id", businessId).single(),
-        supabase.from("appointments").select(`id, start_at, status, patient_id, professional_id, patients (full_name), services (name)`, { count: 'exact' }).eq("business_id", businessId).gte("start_at", today.toISOString()).lt("start_at", tomorrow.toISOString()).not("status", "in", '("cancelled")').order("start_at", { ascending: true }),
+        supabase.from("appointments").select(`id, start_at, end_at, status, patient_id, professional_id, patients (full_name), services (name)`, { count: 'exact' }).eq("business_id", businessId).gte("start_at", today.toISOString()).lt("start_at", tomorrow.toISOString()).not("status", "in", '("cancelled")').order("start_at", { ascending: true }),
         supabase.from("appointments").select(`id, start_at, status, patient_id, professional_id, patients (full_name), services (name)`).eq("business_id", businessId).gte("start_at", new Date().toISOString()).lt("start_at", dayAfterTomorrow.toISOString()).not("status", "in", '("cancelled","attended")').order("start_at", { ascending: true }).limit(5),
         supabase.from("patients").select("id", { count: 'exact', head: true }).eq("business_id", businessId).eq("is_active", true),
         supabase.from("payments").select("amount").eq("business_id", businessId).not("paid_at", "is", null).gte("paid_at", monthStart.toISOString()).lte("paid_at", monthEnd.toISOString()),
         supabase.from("payments").select("id, patient_id, due_date, paid_at, status, amount").eq("business_id", businessId).neq("status", "cancelled").is("paid_at", null),
+        // Series livianas para mini-gráficos y el gráfico del mes
+        (supabase as any).from("payments").select("amount, paid_at").eq("business_id", businessId).not("paid_at", "is", null).gte("paid_at", last35.toISOString()),
+        (supabase as any).from("appointments").select("start_at").eq("business_id", businessId).gte("start_at", last42.toISOString()).lt("start_at", tomorrow.toISOString()).not("status", "in", '("cancelled")'),
       ]);
 
       // Process results
@@ -150,10 +169,12 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
       }
 
       setTodayAppointmentsCount(todayApptsRes.count || 0);
-      setTodayAppointments(todayApptsRes.data || []);
+      setTodayAppointments((todayApptsRes.data || []) as any);
       setUpcomingAppointments(upcomingApptsRes.data || []);
       setActivePatientsCount(patientsCountRes.count || 0);
       setCollectedThisMonth(paidPaymentsRes.data?.reduce((sum, p) => sum + (p.amount || 0), 0) || 0);
+      setPaidRecent(((paidRecentRes as any).data || []) as Array<{ amount: number; paid_at: string }>);
+      setApptsRecent(((apptsRecentRes as any).data || []) as Array<{ start_at: string }>);
 
       // Process pending payments
       const payments = pendingPaymentsRes.data;
@@ -233,6 +254,148 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
     const occupiedSlots = todayAppointmentsCount;
     return Math.min(Math.round((occupiedSlots / totalSlots) * 100), 100);
   }, [todayAppointmentsCount]);
+
+  // ── Línea de tiempo de HOY: bloques posicionados sobre una regla horaria ──
+  const timeline = useMemo(() => {
+    const valid = todayAppointments.filter((a) => a.status !== "cancelled");
+    let startHour = 8;
+    let endHour = 20;
+    for (const a of valid) {
+      const s = new Date(a.start_at);
+      const e = a.end_at ? new Date(a.end_at) : new Date(s.getTime() + 60 * 60000);
+      startHour = Math.min(startHour, s.getHours());
+      endHour = Math.max(endHour, e.getMinutes() > 0 ? e.getHours() + 1 : e.getHours());
+    }
+    const totalMin = (endHour - startHour) * 60;
+    const toPct = (d: Date) =>
+      Math.max(0, Math.min(100, (((d.getHours() - startHour) * 60 + d.getMinutes()) / totalMin) * 100));
+
+    const blocks = valid.map((a) => {
+      const s = new Date(a.start_at);
+      const e = a.end_at ? new Date(a.end_at) : new Date(s.getTime() + 60 * 60000);
+      const prof = professionals.find((p) => p.userId === a.professional_id);
+      return {
+        id: a.id,
+        left: toPct(s),
+        width: Math.max(3.5, toPct(e) - toPct(s)),
+        time: format(s, "HH:mm"),
+        name: (a.patients?.full_name || "Sin paciente").split(" ")[0],
+        service: a.services?.name || null,
+        attended: a.status === "attended",
+        past: e.getTime() < Date.now(),
+        color: prof?.color || null,
+      };
+    });
+
+    const now = new Date();
+    const nowPct =
+      now.getHours() >= startHour && now.getHours() < endHour ? toPct(now) : null;
+    const hours: number[] = [];
+    for (let h = startHour; h <= endHour; h += 2) hours.push(h);
+
+    const next = blocks.find((b) => !b.past && !b.attended);
+    return { blocks, nowPct, hours, startHour, endHour, next };
+  }, [todayAppointments, professionals]);
+
+  // ── Mini-series de los KPIs ──
+  const collectedSpark = useMemo(() => {
+    const days = 14;
+    const byDay = new Map<string, number>();
+    for (const p of paidRecent) {
+      const k = new Date(p.paid_at).toDateString();
+      byDay.set(k, (byDay.get(k) || 0) + (p.amount || 0));
+    }
+    const out: number[] = [];
+    for (let i = days - 1; i >= 0; i--) {
+      const d = addDays(new Date(), -i);
+      out.push(byDay.get(d.toDateString()) || 0);
+    }
+    const max = Math.max(...out, 1);
+    return out.map((v) => v / max);
+  }, [paidRecent]);
+
+  const citasSpark = useMemo(() => {
+    const weeks = 6;
+    const counts = new Array(weeks).fill(0);
+    const now = Date.now();
+    for (const a of apptsRecent) {
+      const diffDays = Math.floor((now - new Date(a.start_at).getTime()) / 86400000);
+      const w = weeks - 1 - Math.floor(diffDays / 7);
+      if (w >= 0 && w < weeks) counts[w]++;
+    }
+    const max = Math.max(...counts, 1);
+    return counts.map((v) => v / max);
+  }, [apptsRecent]);
+
+  // ── Gráfico del mes: cobrado acumulado + proyección (por cobrar) ──
+  const monthChart = useMemo(() => {
+    const now = new Date();
+    const todayDay = now.getDate();
+    const daysInMonth = endOfMonth(now).getDate();
+    const monthIdx = now.getMonth();
+    const year = now.getFullYear();
+
+    const paidByDay = new Array(daysInMonth + 1).fill(0);
+    for (const p of paidRecent) {
+      const d = new Date(p.paid_at);
+      if (d.getMonth() === monthIdx && d.getFullYear() === year) {
+        paidByDay[d.getDate()] += p.amount || 0;
+      }
+    }
+    const pendingByDay = new Array(daysInMonth + 1).fill(0);
+    for (const p of pendingPayments) {
+      if (p.paid_at) continue;
+      const d = new Date(p.due_date);
+      if (d.getMonth() === monthIdx && d.getFullYear() === year) {
+        // Vencidos de días pasados: se proyectan como cobrables desde hoy
+        pendingByDay[Math.max(d.getDate(), todayDay)] += p.amount || 0;
+      }
+    }
+
+    // Cobrado acumulado hasta hoy; desde hoy, proyección = cobrado de hoy +
+    // pendientes acumulados según su vencimiento.
+    const data: Array<{ day: number; cobrado: number | null; proyeccion: number | null }> = [];
+    let cum = 0;
+    for (let d = 1; d <= todayDay; d++) cum += paidByDay[d];
+    const cobradoHoy = cum;
+
+    let running = 0;
+    let projCum = 0;
+    for (let d = 1; d <= daysInMonth; d++) {
+      running += paidByDay[d];
+      let proyeccion: number | null = null;
+      if (d >= todayDay) {
+        projCum += pendingByDay[d];
+        proyeccion = cobradoHoy + projCum;
+      }
+      data.push({ day: d, cobrado: d <= todayDay ? running : null, proyeccion });
+    }
+    const projectedTotal = data[daysInMonth - 1]?.proyeccion ?? cobradoHoy;
+    return { data, projectedTotal };
+  }, [paidRecent, pendingPayments]);
+
+  // ── "Requiere tu atención": alertas unificadas y priorizadas ──
+  const overdueTop = useMemo(
+    () =>
+      pendingPayments
+        .filter((p) => p.calculatedStatus === "overdue")
+        .sort((a, b) => (b.amount || 0) - (a.amount || 0))
+        .slice(0, 3),
+    [pendingPayments],
+  );
+
+  const tomorrowUnconfirmed = useMemo(
+    () =>
+      upcomingAppointments.filter(
+        (a) => isTomorrow(new Date(a.start_at)) && (a.status === "pending" || a.status === "scheduled"),
+      ),
+    [upcomingAppointments],
+  );
+
+  const attentionCount =
+    (pendingRequestsCount > 0 ? 1 : 0) +
+    (overduePaymentsCount > 0 ? 1 : 0) +
+    (tomorrowUnconfirmed.length > 0 ? 1 : 0);
 
   const formatTime = (datetime: string) => {
     return format(new Date(datetime), "HH:mm", { locale: es });
@@ -402,9 +565,6 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
           onClose={() => setShowActivationDone(false)}
         />
 
-        {/* Lo primero: ¿alguien espera tu respuesta? */}
-        <PendingRequestsBanner />
-
         {/* Link de la web pública — siempre a mano */}
         <PublicLinkCard businessId={businessId} />
 
@@ -415,9 +575,19 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
             <div aria-hidden className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary/70 via-primary to-primary/70" />
             <div className="absolute -top-10 -right-10 w-40 h-40 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/10 transition-colors" />
             <div className="relative">
-              <div className="flex items-center justify-between mb-5">
+              <div className="flex items-start justify-between mb-5">
                 <div className="h-12 w-12 rounded-2xl bg-primary/10 ring-1 ring-primary/15 flex items-center justify-center">
                   <CalendarCheck className="h-6 w-6 text-primary" />
+                </div>
+                {/* Mini-barras: citas por semana (últimas 6) */}
+                <div className="flex items-end gap-1 h-9" aria-hidden>
+                  {citasSpark.map((v, i) => (
+                    <span
+                      key={i}
+                      className={`w-1.5 rounded-full ${i === citasSpark.length - 1 ? "bg-primary" : "bg-primary/25"}`}
+                      style={{ height: `${Math.max(12, v * 100)}%` }}
+                    />
+                  ))}
                 </div>
               </div>
               <p className="text-[2.5rem] leading-none font-bold text-foreground tracking-tight tabular-nums">
@@ -455,9 +625,19 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
             <div aria-hidden className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-green-500/60 via-green-500 to-green-500/60" />
             <div className="absolute -top-10 -right-10 w-40 h-40 bg-green-500/10 rounded-full blur-2xl group-hover:bg-green-500/15 transition-colors" />
             <div className="relative">
-              <div className="flex items-center justify-between mb-5">
+              <div className="flex items-start justify-between mb-5">
                 <div className="h-12 w-12 rounded-2xl bg-green-500/10 ring-1 ring-green-500/20 flex items-center justify-center">
                   <TrendingUp className="h-6 w-6 text-green-600" />
+                </div>
+                {/* Mini-barras: cobrado por día (últimos 14) */}
+                <div className="flex items-end gap-[3px] h-9" aria-hidden>
+                  {collectedSpark.map((v, i) => (
+                    <span
+                      key={i}
+                      className={`w-1 rounded-full ${v > 0 ? "bg-green-500/70" : "bg-muted-foreground/15"}`}
+                      style={{ height: `${Math.max(10, v * 100)}%` }}
+                    />
+                  ))}
                 </div>
               </div>
               <p className="text-[2.25rem] leading-none font-bold text-foreground tracking-tight tabular-nums">
@@ -498,7 +678,7 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
 
         {/* Central Block - 2 Columns */}
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 lg:gap-8">
-          {/* Left: Próximas citas */}
+          {/* Left: Tu día (línea de tiempo) + Próximas citas */}
           <Card className="lg:col-span-3 rounded-2xl border border-border/60 bg-card shadow-[0_1px_3px_rgba(0,0,0,0.04),0_8px_24px_-12px_rgba(0,0,0,0.08)] overflow-hidden">
             <CardHeader className="pb-4 border-b border-border/50 bg-gradient-to-r from-card to-muted/20">
               <div className="flex items-center justify-between">
@@ -506,14 +686,102 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
                   <span className="h-9 w-9 rounded-xl bg-primary/10 ring-1 ring-primary/15 flex items-center justify-center">
                     <Clock className="h-4.5 w-4.5 text-primary" />
                   </span>
-                  Próximas citas
+                  Tu día
                 </CardTitle>
-                <Badge variant="secondary" className="text-[11px] font-medium px-2.5 py-1 rounded-full">
-                  Hoy y mañana
-                </Badge>
+                {timeline.next ? (
+                  <Badge className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-primary/10 text-primary border border-primary/20">
+                    Próxima: {timeline.next.time} · {timeline.next.name}
+                  </Badge>
+                ) : timeline.blocks.length > 0 ? (
+                  <Badge variant="secondary" className="text-[11px] font-medium px-2.5 py-1 rounded-full">
+                    Día completado ✓
+                  </Badge>
+                ) : null}
               </div>
             </CardHeader>
-            <CardContent className="p-6">
+            <CardContent className="p-6 pb-4">
+              {/* Línea de tiempo de hoy */}
+              {timeline.blocks.length === 0 ? (
+                <div className="flex items-center justify-between rounded-xl border border-dashed border-border/60 bg-muted/20 px-5 py-4 mb-5">
+                  <div>
+                    <p className="font-medium text-foreground">Hoy no tenés citas</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Día libre en la agenda</p>
+                  </div>
+                  <Button size="sm" variant="outline" className="gap-1.5" onClick={() => navigate("/agenda")}>
+                    <Plus className="h-3.5 w-3.5" /> Agendar
+                  </Button>
+                </div>
+              ) : (
+                <div className="mb-6">
+                  <div className="relative h-[76px]">
+                    {/* Guías de horas */}
+                    {timeline.hours.map((h) => {
+                      const left = ((h - timeline.startHour) / (timeline.endHour - timeline.startHour)) * 100;
+                      return (
+                        <div key={h} className="absolute top-0 bottom-0" style={{ left: `${left}%` }}>
+                          <div className="h-full w-px bg-border/40" />
+                        </div>
+                      );
+                    })}
+                    {/* Bloques de citas */}
+                    {timeline.blocks.map((b) => (
+                      <button
+                        key={b.id}
+                        onClick={() => navigate("/agenda")}
+                        title={`${b.time} · ${b.name}${b.service ? ` · ${b.service}` : ""}`}
+                        className={`absolute top-1.5 bottom-1.5 rounded-lg border px-2 text-left overflow-hidden transition-all hover:shadow-md hover:-translate-y-0.5 ${
+                          b.attended || b.past
+                            ? "bg-muted/60 border-border/60"
+                            : "bg-primary/12 border-primary/30"
+                        }`}
+                        style={{
+                          left: `${b.left}%`,
+                          width: `${b.width}%`,
+                          borderLeftWidth: 3,
+                          borderLeftColor: b.color || (b.attended || b.past ? "hsl(var(--muted-foreground) / 0.4)" : "hsl(var(--primary))"),
+                          background: !b.attended && !b.past ? "hsl(var(--primary) / 0.12)" : undefined,
+                        }}
+                      >
+                        <span className={`block text-[10px] font-bold tabular-nums leading-tight mt-1 ${b.attended || b.past ? "text-muted-foreground" : "text-primary"}`}>
+                          {b.time}
+                        </span>
+                        <span className={`block text-[11px] font-medium truncate leading-tight ${b.attended || b.past ? "text-muted-foreground" : "text-foreground"}`}>
+                          {b.name}
+                        </span>
+                        {b.attended && (
+                          <CheckCircle2 className="h-3 w-3 text-muted-foreground mt-0.5" />
+                        )}
+                      </button>
+                    ))}
+                    {/* Ahora */}
+                    {timeline.nowPct !== null && (
+                      <div className="absolute top-0 bottom-0 z-10 pointer-events-none" style={{ left: `${timeline.nowPct}%` }}>
+                        <div className="h-full w-[2px] bg-primary shadow-[0_0_8px_hsl(var(--primary)/0.6)]" />
+                        <div className="absolute -top-1 -translate-x-1/2 left-[1px] w-2.5 h-2.5 rounded-full bg-primary ring-2 ring-card" />
+                      </div>
+                    )}
+                  </div>
+                  {/* Etiquetas de horas */}
+                  <div className="relative h-4 mt-1">
+                    {timeline.hours.map((h) => {
+                      const left = ((h - timeline.startHour) / (timeline.endHour - timeline.startHour)) * 100;
+                      return (
+                        <span
+                          key={h}
+                          className="absolute -translate-x-1/2 text-[10px] text-muted-foreground tabular-nums"
+                          style={{ left: `${left}%` }}
+                        >
+                          {String(h).padStart(2, "0")}:00
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              <p className="text-[11px] font-semibold text-muted-foreground/80 mb-3 uppercase tracking-wider">
+                Próximas citas · hoy y mañana
+              </p>
               {upcomingAppointments.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                   <div className="h-16 w-16 rounded-2xl bg-muted/50 flex items-center justify-center mb-4">
@@ -587,8 +855,102 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
             </CardContent>
           </Card>
 
-          {/* Right: Estado del consultorio */}
-          <Card className="lg:col-span-2 rounded-2xl border border-border/60 bg-card shadow-[0_1px_3px_rgba(0,0,0,0.04),0_8px_24px_-12px_rgba(0,0,0,0.08)] overflow-hidden">
+          {/* Right: Requiere tu atención + Estado del consultorio */}
+          <div className="lg:col-span-2 space-y-6">
+          <Card className={`rounded-2xl border overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.04),0_8px_24px_-12px_rgba(0,0,0,0.08)] ${attentionCount > 0 ? "border-amber-500/30" : "border-border/60"}`}>
+            <CardHeader className="pb-4 border-b border-border/50 bg-gradient-to-r from-card to-muted/20">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg font-semibold flex items-center gap-3 tracking-tight">
+                  <span className={`h-9 w-9 rounded-xl flex items-center justify-center ring-1 ${attentionCount > 0 ? "bg-amber-500/10 ring-amber-500/20" : "bg-green-500/10 ring-green-500/20"}`}>
+                    {attentionCount > 0 ? (
+                      <AlertCircle className="h-4.5 w-4.5 text-amber-600 dark:text-amber-400" />
+                    ) : (
+                      <CheckCircle2 className="h-4.5 w-4.5 text-green-600" />
+                    )}
+                  </span>
+                  Requiere tu atención
+                </CardTitle>
+                {attentionCount > 0 && (
+                  <Badge className="rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[11px] font-bold">
+                    {attentionCount}
+                  </Badge>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent className="p-4 space-y-2.5">
+              {attentionCount === 0 ? (
+                <div className="flex items-center gap-3 p-3.5 rounded-xl bg-green-500/[0.08] border border-green-500/25">
+                  <div className="h-9 w-9 rounded-lg bg-green-500/15 flex items-center justify-center shrink-0">
+                    <div className="h-2.5 w-2.5 rounded-full bg-green-500 shadow-[0_0_0_4px_rgba(34,197,94,0.18)]" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-green-700 dark:text-green-400">Todo en orden</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Nada espera tu respuesta</p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {pendingRequestsCount > 0 && (
+                    <button
+                      onClick={() => navigate("/solicitudes")}
+                      className="w-full flex items-center gap-3 p-3.5 rounded-xl bg-amber-500/[0.08] border border-amber-500/30 hover:bg-amber-500/[0.14] transition-all group text-left"
+                    >
+                      <div className="h-9 w-9 rounded-lg bg-amber-500/15 flex items-center justify-center shrink-0">
+                        <FileText className="h-4.5 w-4.5 text-amber-600 dark:text-amber-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">
+                          {pendingRequestsCount} solicitud{pendingRequestsCount !== 1 ? "es" : ""} esperando
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-0.5">Pacientes aguardan tu respuesta</p>
+                      </div>
+                      <ArrowRight className="h-4 w-4 text-amber-600 dark:text-amber-400 group-hover:translate-x-0.5 transition-transform shrink-0" />
+                    </button>
+                  )}
+                  {overduePaymentsCount > 0 && (
+                    <button
+                      onClick={() => navigate("/pagos")}
+                      className="w-full flex items-center gap-3 p-3.5 rounded-xl bg-destructive/[0.08] border border-destructive/25 hover:bg-destructive/[0.12] transition-all group text-left"
+                    >
+                      <div className="h-9 w-9 rounded-lg bg-destructive/15 flex items-center justify-center shrink-0">
+                        <AlertCircle className="h-4.5 w-4.5 text-destructive" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-destructive">
+                          Te deben {formatCurrency(overdueAmount)}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                          {overdueTop.map((p) => (p.patientName || "").split(" ")[0]).join(", ")}
+                          {overduePaymentsCount > overdueTop.length ? ` y ${overduePaymentsCount - overdueTop.length} más` : ""}
+                        </p>
+                      </div>
+                      <ArrowRight className="h-4 w-4 text-destructive group-hover:translate-x-0.5 transition-transform shrink-0" />
+                    </button>
+                  )}
+                  {tomorrowUnconfirmed.length > 0 && (
+                    <button
+                      onClick={() => navigate("/agenda")}
+                      className="w-full flex items-center gap-3 p-3.5 rounded-xl bg-primary/[0.06] border border-primary/25 hover:bg-primary/[0.1] transition-all group text-left"
+                    >
+                      <div className="h-9 w-9 rounded-lg bg-primary/12 flex items-center justify-center shrink-0">
+                        <CalendarDays className="h-4.5 w-4.5 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-foreground">
+                          {tomorrowUnconfirmed.length} cita{tomorrowUnconfirmed.length !== 1 ? "s" : ""} de mañana sin confirmar
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-0.5">Revisalas en la agenda</p>
+                      </div>
+                      <ArrowRight className="h-4 w-4 text-primary group-hover:translate-x-0.5 transition-transform shrink-0" />
+                    </button>
+                  )}
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Estado del consultorio */}
+          <Card className="rounded-2xl border border-border/60 bg-card shadow-[0_1px_3px_rgba(0,0,0,0.04),0_8px_24px_-12px_rgba(0,0,0,0.08)] overflow-hidden">
             <CardHeader className="pb-4 border-b border-border/50 bg-gradient-to-r from-card to-muted/20">
               <CardTitle className="text-lg font-semibold flex items-center gap-3 tracking-tight">
                 <span className="h-9 w-9 rounded-xl bg-primary/10 ring-1 ring-primary/15 flex items-center justify-center">
@@ -660,45 +1022,90 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
                 </div>
               </div>
 
-              {/* Alertas */}
-              <div>
-                <p className="text-[11px] font-semibold text-muted-foreground/80 mb-3 uppercase tracking-wider">
-                  Alertas
-                </p>
-                <div className="space-y-2">
-                  {overduePaymentsCount > 0 ? (
-                    <div 
-                      className="flex items-center gap-3 p-3.5 rounded-xl bg-destructive/[0.08] border border-destructive/25 cursor-pointer hover:bg-destructive/[0.12] hover:border-destructive/40 transition-all group"
-                      onClick={() => navigate("/pagos")}
-                    >
-                      <div className="h-9 w-9 rounded-lg bg-destructive/15 flex items-center justify-center flex-shrink-0">
-                        <AlertCircle className="h-5 w-5 text-destructive" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-semibold text-destructive">
-                          {overduePaymentsCount} pago{overduePaymentsCount !== 1 ? "s" : ""} vencido{overduePaymentsCount !== 1 ? "s" : ""}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          Total: {formatCurrency(overdueAmount)}
-                        </p>
-                      </div>
-                      <ArrowRight className="h-4 w-4 text-destructive group-hover:translate-x-0.5 transition-transform" />
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-3 p-3.5 rounded-xl bg-green-500/[0.08] border border-green-500/25">
-                      <div className="h-9 w-9 rounded-lg bg-green-500/15 flex items-center justify-center flex-shrink-0">
-                        <div className="h-2.5 w-2.5 rounded-full bg-green-500 shadow-[0_0_0_4px_rgba(34,197,94,0.18)]" />
-                      </div>
-                      <p className="text-sm font-semibold text-green-700 dark:text-green-400">
-                        Sin alertas pendientes
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
             </CardContent>
           </Card>
+          </div>
         </div>
+
+        {/* Ingresos del mes: cobrado acumulado + proyección */}
+        <Card className="rounded-2xl border border-border/60 bg-card shadow-[0_1px_3px_rgba(0,0,0,0.04),0_8px_24px_-12px_rgba(0,0,0,0.08)] overflow-hidden">
+          <CardHeader className="pb-2 border-b border-border/50 bg-gradient-to-r from-card to-muted/20">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <CardTitle className="text-lg font-semibold flex items-center gap-3 tracking-tight">
+                <span className="h-9 w-9 rounded-xl bg-primary/10 ring-1 ring-primary/15 flex items-center justify-center">
+                  <TrendingUp className="h-4.5 w-4.5 text-primary" />
+                </span>
+                Ingresos del mes
+              </CardTitle>
+              <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="w-3 h-[3px] rounded-full bg-primary inline-block" /> Cobrado
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="w-3 h-[3px] rounded-full inline-block" style={{ background: "hsl(var(--primary) / 0.45)" }} /> Proyección
+                </span>
+                <Badge variant="secondary" className="rounded-full text-[11px] font-semibold tabular-nums">
+                  Proyectado: {formatCurrency(monthChart.projectedTotal)}
+                </Badge>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-4 pt-5">
+            <div className="h-[220px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={monthChart.data} margin={{ top: 5, right: 10, left: 10, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="gradCobrado" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <XAxis
+                    dataKey="day"
+                    tickLine={false}
+                    axisLine={false}
+                    tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                    interval={4}
+                  />
+                  <YAxis hide />
+                  <ChartTooltip
+                    formatter={(value: number, name: string) => [
+                      formatCurrency(Number(value)),
+                      name === "cobrado" ? "Cobrado" : "Proyección",
+                    ]}
+                    labelFormatter={(d) => `Día ${d}`}
+                    contentStyle={{
+                      background: "hsl(var(--card))",
+                      border: "1px solid hsl(var(--border))",
+                      borderRadius: 12,
+                      fontSize: 12,
+                      color: "hsl(var(--foreground))",
+                    }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="proyeccion"
+                    stroke="hsl(var(--primary) / 0.45)"
+                    strokeWidth={2}
+                    strokeDasharray="6 4"
+                    fill="none"
+                    dot={false}
+                    connectNulls={false}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="cobrado"
+                    stroke="hsl(var(--primary))"
+                    strokeWidth={2.5}
+                    fill="url(#gradCobrado)"
+                    dot={false}
+                    connectNulls={false}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Demo Patient Portal Banner */}
         {isDemo && (
@@ -720,25 +1127,6 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
             </CardContent>
           </Card>
         )}
-
-        {/* Portal Customization Banner */}
-        <Card 
-          className="border-primary/20 bg-primary/5 hover:bg-primary/10 transition-all cursor-pointer"
-          onClick={() => navigate("/personalizar-portal")}
-        >
-          <CardContent className="p-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <Palette className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="font-semibold text-foreground">Personalizar Portal del Paciente</p>
-                <p className="text-sm text-muted-foreground">Configurá logo, nombre y colores del portal</p>
-              </div>
-            </div>
-            <ArrowRight className="h-5 w-5 text-muted-foreground" />
-          </CardContent>
-        </Card>
 
         {/* Quick Actions Row */}
         <div className="grid grid-cols-3 gap-6">
