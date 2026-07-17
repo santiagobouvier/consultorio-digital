@@ -63,6 +63,7 @@ const AccessSelector = lazy(() => import("./pages/AccessSelector"));
 const PatientAccess = lazy(() => import("./pages/PatientAccess"));
 const Terms = lazy(() => import("./pages/Terms"));
 const Privacy = lazy(() => import("./pages/Privacy"));
+const HelpCenter = lazy(() => import("./pages/HelpCenter"));
 const SubscriptionGuard = lazy(() => import("./components/SubscriptionGuard"));
 const SuperAdminGuard = lazy(() => import("./components/SuperAdminGuard"));
 
@@ -139,6 +140,7 @@ const PROTECTED_ROUTE_PREFIXES = [
   "/personalizar-portal",
   "/billing",
   "/estadisticas",
+  "/ayuda",
   "/saas-admin",
 ];
 
@@ -239,6 +241,7 @@ const App = () => {
                 <Route path="/personalizar-portal" element={<Protected><PortalCustomization /></Protected>} />
                 <Route path="/billing" element={<Protected><Billing /></Protected>} />
                 <Route path="/estadisticas" element={<Protected><Statistics /></Protected>} />
+                <Route path="/ayuda" element={<Protected><HelpCenter /></Protected>} />
                 <Route path="/saas-admin" element={<AdminProtected><SaasAdmin /></AdminProtected>} />
 
                 {/* Catch-all */}
