@@ -39,14 +39,13 @@
     <!-- Preconnect to critical origins -->
     <link rel="preconnect" href="https://sfvuuzpmsgepooeamkin.supabase.co" crossorigin />
 
-    <!-- Theme bootstrap: apply saved/system theme before paint to avoid flash -->
+    <!-- Theme bootstrap: aplica el tema guardado antes del primer paint.
+         El modo OSCURO es el default; el claro solo si la persona lo eligió. -->
     <script>
       (function () {
         try {
           var stored = localStorage.getItem('theme-preference');
-          var theme = (stored === 'light' || stored === 'dark')
-            ? stored
-            : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+          var theme = (stored === 'light' || stored === 'dark') ? stored : 'dark';
           if (theme === 'dark') document.documentElement.classList.add('dark');
           document.documentElement.style.colorScheme = theme;
         } catch (e) {}
