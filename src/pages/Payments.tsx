@@ -96,7 +96,9 @@ const Payments = () => {
   const [patientFilter, setPatientFilter] = useState<string>("all");
   // Período: preset o rango personalizado (sobre la fecha de vencimiento;
   // "Cobrado" usa la fecha de pago dentro del mismo rango)
-  const [periodFilter, setPeriodFilter] = useState<string>("all");
+  const [periodFilter, setPeriodFilter] = useState<string>(
+    searchParams.get("period") || "all"
+  );
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
   const [editingPayment, setEditingPayment] = useState<Payment | null>(null);

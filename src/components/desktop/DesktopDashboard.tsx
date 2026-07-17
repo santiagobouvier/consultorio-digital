@@ -568,10 +568,10 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
         {/* Link de la web pública — siempre a mano */}
         <PublicLinkCard businessId={businessId} />
 
-        {/* KPIs Row - 4 Large Cards */}
+        {/* KPIs Row - 4 Large Cards (cada una lleva a su módulo) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {/* Citas hoy */}
-          <Card className="relative overflow-hidden group p-6 rounded-2xl border border-border/60 bg-card shadow-[0_1px_3px_rgba(0,0,0,0.04),0_8px_24px_-12px_rgba(0,0,0,0.08)] hover:shadow-[0_2px_6px_rgba(0,0,0,0.06),0_16px_40px_-16px_rgba(0,165,160,0.18)] hover:-translate-y-0.5 transition-all duration-300">
+          <Card onClick={() => navigate("/agenda")} className="cursor-pointer relative overflow-hidden group p-6 rounded-2xl border border-border/60 bg-card shadow-[0_1px_3px_rgba(0,0,0,0.04),0_8px_24px_-12px_rgba(0,0,0,0.08)] hover:shadow-[0_2px_6px_rgba(0,0,0,0.06),0_16px_40px_-16px_rgba(0,165,160,0.18)] hover:-translate-y-0.5 transition-all duration-300">
             <div aria-hidden className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary/70 via-primary to-primary/70" />
             <div className="absolute -top-10 -right-10 w-40 h-40 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/10 transition-colors" />
             <div className="relative">
@@ -601,7 +601,7 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
           </Card>
 
           {/* Pacientes activos */}
-          <Card className="relative overflow-hidden group p-6 rounded-2xl border border-border/60 bg-card shadow-[0_1px_3px_rgba(0,0,0,0.04),0_8px_24px_-12px_rgba(0,0,0,0.08)] hover:shadow-[0_2px_6px_rgba(0,0,0,0.06),0_16px_40px_-16px_rgba(0,0,0,0.12)] hover:-translate-y-0.5 transition-all duration-300">
+          <Card onClick={() => navigate("/patients")} className="cursor-pointer relative overflow-hidden group p-6 rounded-2xl border border-border/60 bg-card shadow-[0_1px_3px_rgba(0,0,0,0.04),0_8px_24px_-12px_rgba(0,0,0,0.08)] hover:shadow-[0_2px_6px_rgba(0,0,0,0.06),0_16px_40px_-16px_rgba(0,0,0,0.12)] hover:-translate-y-0.5 transition-all duration-300">
             <div aria-hidden className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-secondary-foreground/30 via-secondary-foreground/50 to-secondary-foreground/30" />
             <div className="absolute -top-10 -right-10 w-40 h-40 bg-secondary/60 rounded-full blur-2xl group-hover:bg-secondary transition-colors" />
             <div className="relative">
@@ -621,7 +621,7 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
           </Card>
 
           {/* Cobrado este mes */}
-          <Card className="relative overflow-hidden group p-6 rounded-2xl border border-border/60 bg-card shadow-[0_1px_3px_rgba(0,0,0,0.04),0_8px_24px_-12px_rgba(0,0,0,0.08)] hover:shadow-[0_2px_6px_rgba(0,0,0,0.06),0_16px_40px_-16px_rgba(34,197,94,0.18)] hover:-translate-y-0.5 transition-all duration-300">
+          <Card onClick={() => navigate("/pagos?status=paid&period=this_month")} className="cursor-pointer relative overflow-hidden group p-6 rounded-2xl border border-border/60 bg-card shadow-[0_1px_3px_rgba(0,0,0,0.04),0_8px_24px_-12px_rgba(0,0,0,0.08)] hover:shadow-[0_2px_6px_rgba(0,0,0,0.06),0_16px_40px_-16px_rgba(34,197,94,0.18)] hover:-translate-y-0.5 transition-all duration-300">
             <div aria-hidden className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-green-500/60 via-green-500 to-green-500/60" />
             <div className="absolute -top-10 -right-10 w-40 h-40 bg-green-500/10 rounded-full blur-2xl group-hover:bg-green-500/15 transition-colors" />
             <div className="relative">
@@ -651,7 +651,7 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
           </Card>
 
           {/* Pagos vencidos */}
-          <Card className={`relative overflow-hidden group p-6 rounded-2xl border bg-card shadow-[0_1px_3px_rgba(0,0,0,0.04),0_8px_24px_-12px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 transition-all duration-300 ${overduePaymentsCount > 0 ? 'border-destructive/30 bg-destructive/[0.04] hover:shadow-[0_2px_6px_rgba(0,0,0,0.06),0_16px_40px_-16px_rgba(239,68,68,0.25)]' : 'border-border/60 hover:shadow-[0_2px_6px_rgba(0,0,0,0.06),0_16px_40px_-16px_rgba(0,0,0,0.12)]'}`}>
+          <Card onClick={() => navigate(overduePaymentsCount > 0 ? "/pagos?status=overdue" : "/pagos")} className={`cursor-pointer relative overflow-hidden group p-6 rounded-2xl border bg-card shadow-[0_1px_3px_rgba(0,0,0,0.04),0_8px_24px_-12px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 transition-all duration-300 ${overduePaymentsCount > 0 ? 'border-destructive/30 bg-destructive/[0.04] hover:shadow-[0_2px_6px_rgba(0,0,0,0.06),0_16px_40px_-16px_rgba(239,68,68,0.25)]' : 'border-border/60 hover:shadow-[0_2px_6px_rgba(0,0,0,0.06),0_16px_40px_-16px_rgba(0,0,0,0.12)]'}`}>
             <div aria-hidden className={`absolute inset-x-0 top-0 h-1 ${overduePaymentsCount > 0 ? 'bg-gradient-to-r from-destructive/70 via-destructive to-destructive/70' : 'bg-gradient-to-r from-muted-foreground/20 via-muted-foreground/30 to-muted-foreground/20'}`} />
             <div className={`absolute -top-10 -right-10 w-40 h-40 rounded-full blur-2xl transition-colors ${overduePaymentsCount > 0 ? 'bg-destructive/10 group-hover:bg-destructive/15' : 'bg-muted/50'}`} />
             <div className="relative">
