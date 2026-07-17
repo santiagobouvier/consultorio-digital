@@ -412,26 +412,33 @@ const PendingReminders = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+      <div className="mx-auto w-full max-w-[1500px] p-4 sm:p-6 lg:p-8 space-y-6">
 
-        {/* ── Header ── */}
-        <div className="text-center space-y-3">
-          <Badge variant="outline" className="rounded-full px-4 py-1 text-xs font-medium border-primary/30 text-primary">
-            <BellRing className="h-3 w-3 mr-1.5" />
-            Avisos automáticos
-          </Badge>
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight">
-            <span className="inline-flex items-center gap-2">
-              Recordatorios
-              <HelpTooltip id="reminders" />
+        {/* ── Encabezado de página ── */}
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="h-11 w-11 rounded-2xl flex items-center justify-center shrink-0" style={{ background: "hsla(22, 90%, 58%, 0.14)" }}>
+              <BellRing className="h-5 w-5" style={{ color: "hsl(22 90% 58%)" }} />
             </span>
-          </h1>
-          <p className="text-sm text-muted-foreground max-w-md mx-auto">
-            Tus pacientes reciben el recordatorio solos, sin que hagas nada.
-            Acá ves qué va a salir, qué salió y lo configurás a tu gusto.
-          </p>
+            <div className="min-w-0">
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight inline-flex items-center gap-2">
+                Recordatorios
+                <HelpTooltip id="reminders" />
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                Tus pacientes reciben el aviso solos — acá ves qué va a salir y qué salió.
+              </p>
+            </div>
+          </div>
+          <Button onClick={() => setShowCreateModal(true)} className="hidden sm:inline-flex gap-2 rounded-xl h-11 px-5 font-semibold shadow-md shadow-primary/20">
+            <Plus className="h-4 w-4" />
+            Programar aviso
+          </Button>
         </div>
 
+        {/* Desktop: listas protagonistas (2/3) + configuración al costado */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        <div className="order-1 lg:order-2 space-y-6">
         {/* ── Configuración ── */}
         <Card>
           <CardHeader className="pb-3">
@@ -534,22 +541,24 @@ const PendingReminders = () => {
           </CardContent>
         </Card>
 
+        </div>
+
+        {/* Columna principal: búsqueda + listas */}
+        <div className="order-2 lg:order-1 lg:col-span-2 space-y-4">
         {/* ── Búsqueda ── */}
-        <div className="flex justify-center">
-          <div className="relative w-full max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por paciente o mensaje..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 rounded-2xl h-11"
-            />
-            {searchQuery && (
-              <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                <X className="h-4 w-4" />
-              </button>
-            )}
-          </div>
+        <div className="relative w-full">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por paciente o mensaje..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 rounded-2xl h-11"
+          />
+          {searchQuery && (
+            <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+              <X className="h-4 w-4" />
+            </button>
+          )}
         </div>
 
         {/* ── Tabs ── */}
@@ -572,7 +581,7 @@ const PendingReminders = () => {
               </TabsTrigger>
             </TabsList>
 
-            <Button size="sm" variant="outline" onClick={() => setShowCreateModal(true)} className="rounded-xl gap-2">
+            <Button size="sm" variant="outline" onClick={() => setShowCreateModal(true)} className="sm:hidden rounded-xl gap-2">
               <Plus className="h-4 w-4" />
               Programar aviso
             </Button>
@@ -704,6 +713,8 @@ const PendingReminders = () => {
             />
           </TabsContent>
         </Tabs>
+        </div>
+        </div>
       </div>
 
       {/* ── Editar mensaje ── */}
