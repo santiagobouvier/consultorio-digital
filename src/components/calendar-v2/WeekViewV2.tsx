@@ -107,8 +107,9 @@ export const WeekViewV2 = ({
 
   return (
     <>
-      {/* Mobile Week View - Vertical scroll */}
-      <div className="md:hidden space-y-3">
+      {/* Mobile/tablet Week View: tarjetas por día (1 columna en mobile,
+          2 en tablet). La grilla de 7 columnas es solo para desktop real. */}
+      <div className="xl:hidden space-y-3 md:space-y-0 md:grid md:grid-cols-2 md:gap-3">
         {days.map((day, dayIndex) => {
           const dayAppointments = getAppointmentsForDay(day);
           const dayPayments = getPaymentsForDay(day);
@@ -182,10 +183,8 @@ export const WeekViewV2 = ({
 
       </div>
 
-      {/* Desktop/tablet Week View - Grid con ancho mínimo por columna:
-          si la pantalla no alcanza (tablet), se scrollea horizontal en vez
-          de cortar el contenido. */}
-      <div className="hidden md:block overflow-x-auto pb-2 -mx-1 px-1">
+      {/* Desktop Week View - Grid de 7 columnas (solo xl+, donde entra bien) */}
+      <div className="hidden xl:block overflow-x-auto pb-2 -mx-1 px-1">
         <div className="grid grid-cols-7 gap-3 min-w-[980px] xl:min-w-0">
         {days.map((day) => {
           const dayAppointments = getAppointmentsForDay(day);
