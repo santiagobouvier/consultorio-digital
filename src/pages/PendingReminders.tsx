@@ -454,37 +454,38 @@ const PendingReminders = () => {
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Canales apilados: la tarjeta vive en un panel angosto */}
+                <div className="space-y-2.5">
                   {/* Canal email */}
-                  <div className="flex items-center justify-between rounded-lg border p-3">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400">
+                  <div className="flex items-center justify-between gap-3 rounded-lg border p-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400 shrink-0">
                         <Mail className="h-4 w-4" />
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <p className="text-sm font-medium">Email automático</p>
                         <p className="text-xs text-muted-foreground">Se envía solo, sin que hagas nada</p>
                       </div>
                     </div>
-                    <Switch checked={autoEmail} onCheckedChange={setAutoEmail} />
+                    <Switch checked={autoEmail} onCheckedChange={setAutoEmail} className="shrink-0" />
                   </div>
 
                   {/* Canal WhatsApp (próximamente) */}
-                  <div className="flex items-center justify-between rounded-lg border border-dashed p-3 opacity-70">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-green-500/10 text-green-500">
+                  <div className="flex items-center justify-between gap-3 rounded-lg border border-dashed p-3 opacity-70">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="p-2 rounded-lg bg-green-500/10 text-green-500 shrink-0">
                         <MessageSquare className="h-4 w-4" />
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <p className="text-sm font-medium">WhatsApp automático</p>
                         <p className="text-xs text-muted-foreground">Se activa al conectar WhatsApp</p>
                       </div>
                     </div>
-                    <Badge variant="outline" className="rounded-full text-xs">Próximamente</Badge>
+                    <Badge variant="outline" className="rounded-full text-[11px] shrink-0 whitespace-nowrap">Próximamente</Badge>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4">
                   <div className="space-y-1.5">
                     <Label>Anticipación</Label>
                     <Select value={hoursBefore} onValueChange={setHoursBefore}>
