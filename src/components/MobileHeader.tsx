@@ -207,32 +207,12 @@ export function MobileHeader() {
           }}
         />
 
-        {/* Top bar with logo + close X */}
+        {/* Top bar: solo el botón de cerrar (el nombre del consultorio ya está
+            en la barra "Ir al inicio" del lanzador) */}
         <div
-          className="relative flex items-center justify-between h-14 px-4 shrink-0"
+          className="relative flex items-center justify-end h-14 px-4 shrink-0"
           style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
         >
-          {/* Logo placeholder (left, for symmetry with header) */}
-          <div className="w-9 h-9" />
-
-          {/* Centered logo */}
-          {logoUrl ? (
-            <img
-              src={logoUrl}
-              alt="Logo"
-              loading="lazy"
-              decoding="async"
-              className="w-9 h-9 rounded-xl object-cover"
-              style={{ boxShadow: `0 4px 16px ${brandHsla(0.4)}` }}
-            />
-          ) : (
-            <img
-              src={consultorioLogo}
-              alt="Consultorio Digital"
-              className="h-11 w-11 object-contain"
-            />
-          )}
-
           {/* Close X */}
           <button
             onClick={() => setOpen(false)}
