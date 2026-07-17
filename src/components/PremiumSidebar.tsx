@@ -41,36 +41,43 @@ type NavItem = {
   title: string;
   url: string;
   icon: typeof LayoutDashboard;
+  /** Tinte HSL propio del módulo ("38 92% 55%"). null = color de marca. */
+  tint: string | null;
   highlight?: boolean;
 };
 
-const dashboardItems: NavItem[] = [
-  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-];
-
-const agendaItems: NavItem[] = [
-  { title: "Agenda", url: "/agenda", icon: CalendarDays },
-  { title: "Horarios", url: "/horarios-disponibles", icon: AlarmClock },
-  { title: "Solicitudes", url: "/solicitudes", icon: FileText, highlight: true },
-];
-
-const pacientesItems: NavItem[] = [
-  { title: "Pacientes", url: "/patients", icon: Users },
-  { title: "Estadísticas", url: "/estadisticas", icon: BarChart3 },
-];
-
-const pagosItems: NavItem[] = [
-  { title: "Pagos", url: "/pagos", icon: Receipt },
-  { title: "Facturación", url: "/billing", icon: CreditCard },
-];
-
-const recordatoriosItems: NavItem[] = [
-  { title: "Recordatorios", url: "/recordatorios-pendientes", icon: Clock },
-];
-
-const configItems: NavItem[] = [
-  { title: "Mi consultorio", url: "/mi-consultorio", icon: Settings },
-  { title: "Portal", url: "/personalizar-portal", icon: Palette },
+// Misma organización y colores que el lanzador de módulos mobile
+// (MobileHeader): una sola identidad en todos los dispositivos.
+const MODULE_GROUPS: { label: string | null; items: NavItem[] }[] = [
+  {
+    label: null,
+    items: [{ title: "Inicio", url: "/dashboard", icon: LayoutDashboard, tint: null }],
+  },
+  {
+    label: "Tu día a día",
+    items: [
+      { title: "Agenda", url: "/agenda", icon: CalendarDays, tint: null },
+      { title: "Solicitudes", url: "/solicitudes", icon: FileText, tint: "38 92% 55%", highlight: true },
+      { title: "Pacientes", url: "/patients", icon: Users, tint: "210 90% 60%" },
+      { title: "Pagos", url: "/pagos", icon: Receipt, tint: "152 70% 45%" },
+    ],
+  },
+  {
+    label: "Configuración",
+    items: [
+      { title: "Horarios", url: "/horarios-disponibles", icon: AlarmClock, tint: "262 80% 66%" },
+      { title: "Recordatorios", url: "/recordatorios-pendientes", icon: Clock, tint: "22 90% 58%" },
+      { title: "Mi consultorio", url: "/mi-consultorio", icon: Settings, tint: "215 15% 65%" },
+      { title: "Portal", url: "/personalizar-portal", icon: Palette, tint: "320 75% 62%" },
+    ],
+  },
+  {
+    label: "Tu negocio",
+    items: [
+      { title: "Estadísticas", url: "/estadisticas", icon: BarChart3, tint: "190 85% 50%" },
+      { title: "Facturación", url: "/billing", icon: CreditCard, tint: "235 75% 66%" },
+    ],
+  },
 ];
 
 const MINI_WIDTH = 64;
@@ -162,13 +169,17 @@ export function PremiumSidebar() {
         .toUpperCase()
     : "U";
 
-  const visiblePagosItems = isSuperAdmin
-    ? pagosItems.filter((item) => item.url !== "/billing")
-    : pagosItems;
+  const visibleGroups = MODULE_GROUPS.map((group) => ({
+    ...group,
+    items: isSuperAdmin ? group.items.filter((item) => item.url !== "/billing") : group.items,
+  })).filter((group) => group.items.length > 0);
 
   const renderItem = (item: NavItem) => {
     const active = isActive(item.url);
     const showBadge = item.highlight && pendingRequests > 0;
+    const tint = item.tint ?? primaryColor;
+    const tintHsl = `hsl(${tint})`;
+    const tintHsla = (alpha: number) => `hsla(${tint}, ${alpha})`;
 
     const button = (
       <button
@@ -177,36 +188,35 @@ export function PremiumSidebar() {
         onFocus={() => handlePrefetch(item.url)}
         className={cn(
           "group relative flex items-center gap-3 w-full rounded-xl transition-all duration-200",
-          expanded ? "px-3 py-2.5" : "px-0 py-2.5 justify-center",
-          active
-            ? "text-white"
-            : showBadge
-            ? "text-white/80 hover:text-white hover:bg-white/[0.05]"
-            : "text-white/40 hover:text-white/80 hover:bg-white/[0.04]"
+          expanded ? "px-2 py-1.5" : "px-0 py-1.5 justify-center",
+          active ? "text-white" : "text-white/55 hover:text-white hover:bg-white/[0.04]"
         )}
-        style={active ? { background: brandHsla(0.12), color: brandHsl } : undefined}
+        style={active ? { background: tintHsla(0.1) } : undefined}
       >
         {/* Active indicator bar */}
         {active && (
           <div
             className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full"
-            style={{ background: brandHsl }}
+            style={{ background: tintHsl }}
           />
         )}
 
+        {/* Ícono en cuadradito tintado (mismo lenguaje que el lanzador mobile) */}
         <div className="relative shrink-0">
-          <item.icon
-            className={cn(
-              "transition-all duration-200",
-              expanded ? "h-[18px] w-[18px]" : "h-5 w-5"
-            )}
-            style={active ? { filter: `drop-shadow(0 0 6px ${brandHsla(0.4)})` } : undefined}
-          />
+          <span
+            className="flex items-center justify-center w-9 h-9 rounded-xl transition-all duration-200"
+            style={{
+              background: tintHsla(active ? 0.22 : 0.13),
+              boxShadow: `inset 0 0 0 1px ${tintHsla(active ? 0.38 : 0.2)}`,
+            }}
+          >
+            <item.icon className="h-[17px] w-[17px]" style={{ color: tintHsl }} strokeWidth={2} />
+          </span>
           {/* Mini badge dot when collapsed */}
           {showBadge && !expanded && (
             <span
               className="absolute -top-1 -right-1 inline-flex items-center justify-center min-w-[14px] h-[14px] px-1 rounded-full bg-red-500 text-white text-[9px] font-bold animate-badge-pulse ring-2 ring-[#0a0a0a]"
-          aria-label={`${pendingRequests} pendientes`}
+              aria-label={`${pendingRequests} pendientes`}
             >
               {pendingRequests > 9 ? "9+" : pendingRequests}
             </span>
@@ -228,7 +238,7 @@ export function PremiumSidebar() {
         {showBadge && expanded && (
           <span
             className="ml-auto inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-[10px] font-semibold animate-badge-pulse"
-          aria-label={`${pendingRequests} pendientes`}
+            aria-label={`${pendingRequests} pendientes`}
           >
             {pendingRequests > 99 ? "99+" : pendingRequests}
           </span>
@@ -310,91 +320,34 @@ export function PremiumSidebar() {
             </div>
           </div>
 
-          {/* Main nav */}
-          <nav className="flex-1 px-2.5 py-2 space-y-0.5 overflow-y-auto overflow-x-hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-            {/* Dashboard */}
-            {dashboardItems.map((item) => (
-              <div key={item.url}>{renderItem(item)}</div>
-            ))}
-
-            {/* Agenda */}
-            <div
-              className={cn(
-                "text-[10px] uppercase tracking-[0.15em] font-medium mb-2 mt-2 transition-all duration-200",
-                expanded
-                  ? "text-white/20 px-3 opacity-100"
-                  : "text-transparent opacity-0 h-0 mb-0"
-              )}
-            >
-              Agenda
-            </div>
-            {agendaItems.map((item) => (
-              <div key={item.url}>{renderItem(item)}</div>
-            ))}
-
-            {/* Pacientes */}
-            <div
-              className={cn(
-                "text-[10px] uppercase tracking-[0.15em] font-medium mb-2 mt-2 transition-all duration-200",
-                expanded
-                  ? "text-white/20 px-3 opacity-100"
-                  : "text-transparent opacity-0 h-0 mb-0"
-              )}
-            >
-              Pacientes
-            </div>
-            {pacientesItems.map((item) => (
-              <div key={item.url}>{renderItem(item)}</div>
-            ))}
-
-            {/* Pagos */}
-            <div
-              className={cn(
-                "text-[10px] uppercase tracking-[0.15em] font-medium mb-2 mt-2 transition-all duration-200",
-                expanded
-                  ? "text-white/20 px-3 opacity-100"
-                  : "text-transparent opacity-0 h-0 mb-0"
-              )}
-            >
-              Pagos
-            </div>
-            {visiblePagosItems.map((item) => (
-              <div key={item.url}>{renderItem(item)}</div>
-            ))}
-
-            {/* Recordatorios */}
-            <div
-              className={cn(
-                "text-[10px] uppercase tracking-[0.15em] font-medium mb-2 mt-2 transition-all duration-200",
-                expanded
-                  ? "text-white/20 px-3 opacity-100"
-                  : "text-transparent opacity-0 h-0 mb-0"
-              )}
-            >
-              Recordatorios
-            </div>
-            {recordatoriosItems.map((item) => (
-              <div key={item.url}>{renderItem(item)}</div>
-            ))}
-
-            <div className="!my-3 mx-2">
-              <div className="h-px bg-gradient-to-r from-transparent via-white/[0.08] to-transparent" />
-            </div>
-
-            {/* Configuración */}
-            <div
-              className={cn(
-                "text-[10px] uppercase tracking-[0.15em] font-medium mb-2 transition-all duration-200",
-                expanded
-                  ? "text-white/20 px-3 opacity-100"
-                  : "text-transparent opacity-0 h-0 mb-0"
-              )}
-            >
-              Configuración
-            </div>
-
-            {configItems.map((item) => (
-              <div key={item.url}>{renderItem(item)}</div>
+          {/* Main nav: mismos grupos que el lanzador mobile */}
+          <nav className="flex-1 px-2.5 py-2 space-y-1 overflow-y-auto overflow-x-hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            {visibleGroups.map((group, groupIndex) => (
+              <div key={group.label ?? "top"}>
+                {group.label && (
+                  <div
+                    className={cn(
+                      "text-[10px] uppercase tracking-[0.15em] font-medium mb-1.5 mt-3 transition-all duration-200",
+                      expanded
+                        ? "text-white/25 px-2 opacity-100"
+                        : "text-transparent opacity-0 h-0 mb-0 mt-2"
+                    )}
+                  >
+                    {group.label}
+                  </div>
+                )}
+                <div className="space-y-1">
+                  {group.items.map((item) => (
+                    <div key={item.url}>{renderItem(item)}</div>
+                  ))}
+                </div>
+                {/* Separador sutil entre grupos cuando está colapsado */}
+                {!expanded && groupIndex < visibleGroups.length - 1 && (
+                  <div className="my-2 mx-3">
+                    <div className="h-px bg-gradient-to-r from-transparent via-white/[0.08] to-transparent" />
+                  </div>
+                )}
+              </div>
             ))}
 
             {isSuperAdmin && !isVisitMode &&
@@ -402,6 +355,7 @@ export function PremiumSidebar() {
                 title: "Panel Admin",
                 url: "/saas-admin",
                 icon: Shield,
+                tint: "0 72% 58%",
               })}
           </nav>
 
