@@ -204,45 +204,65 @@ const Patients = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
+      <div className="mx-auto w-full max-w-[1500px] px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
 
-        {/* Hero Header */}
-        <div className="text-center space-y-2">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-semibold tracking-wide uppercase">
-            <Users className="h-3.5 w-3.5" />
-            Gestión de pacientes
-          </div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">
-            <span className="inline-flex items-center gap-2">
-              Pacientes
-              <HelpTooltip id="patients" />
+        {/* Encabezado de página */}
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="h-11 w-11 rounded-2xl flex items-center justify-center shrink-0" style={{ background: "hsla(210, 90%, 60%, 0.14)" }}>
+              <Users className="h-5 w-5" style={{ color: "hsl(210 90% 60%)" }} />
             </span>
-          </h1>
-          {businessName && (
-            <p className="text-sm text-muted-foreground">{businessName}</p>
-          )}
+            <div className="min-w-0">
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight inline-flex items-center gap-2">
+                Pacientes
+                <HelpTooltip id="patients" />
+              </h1>
+              <p className="text-sm text-muted-foreground truncate">
+                {stats.total} paciente{stats.total !== 1 ? "s" : ""}
+                {businessName ? ` · ${businessName}` : ""}
+              </p>
+            </div>
+          </div>
+          <Button onClick={() => setShowForm(true)} className="hidden sm:inline-flex gap-2 rounded-xl h-11 px-5 font-semibold shadow-md shadow-primary/20">
+            <Plus className="h-4 w-4" />
+            Nuevo paciente
+          </Button>
         </div>
 
-        {/* Stats Row */}
+        {/* Stats Row: cada tarjeta también FILTRA la lista */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: "Total", value: stats.total, icon: Users, color: "text-primary", bg: "bg-primary/10" },
-            { label: "Activos", value: stats.active, icon: UserCheck, color: "text-[hsl(var(--success))]", bg: "bg-[hsl(var(--success))]/10" },
-            { label: "Inactivos", value: stats.inactive, icon: UserX, color: "text-muted-foreground", bg: "bg-muted" },
-            { label: "Portal", value: stats.portal, icon: ShieldCheck, color: "text-[hsl(var(--warning))]", bg: "bg-[hsl(var(--warning))]/10" },
-          ].map((stat) => (
-            <Card key={stat.label} className="border-border/50 shadow-sm hover:shadow-md transition-shadow">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className={cn("p-2.5 rounded-xl", stat.bg)}>
-                  <stat.icon className={cn("h-5 w-5", stat.color)} />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-foreground leading-none">{stat.value}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{stat.label}</p>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+            { label: "Total", value: stats.total, icon: Users, color: "text-primary", bg: "bg-primary/10", filter: "all" },
+            { label: "Activos", value: stats.active, icon: UserCheck, color: "text-[hsl(var(--success))]", bg: "bg-[hsl(var(--success))]/10", filter: "active" },
+            { label: "Inactivos", value: stats.inactive, icon: UserX, color: "text-muted-foreground", bg: "bg-muted", filter: "inactive" },
+            { label: "Portal", value: stats.portal, icon: ShieldCheck, color: "text-[hsl(var(--warning))]", bg: "bg-[hsl(var(--warning))]/10", filter: "portal" },
+          ].map((stat) => {
+            const isActiveFilter = statusFilter === stat.filter;
+            return (
+              <Card
+                key={stat.label}
+                onClick={() => {
+                  setStatusFilter(stat.filter);
+                  if (stat.filter === "portal") setSearchParams({ portal: "true" });
+                  else setSearchParams({});
+                }}
+                className={cn(
+                  "border-border/50 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer",
+                  isActiveFilter && "ring-2 ring-primary/40 border-primary/30"
+                )}
+              >
+                <CardContent className="p-4 flex items-center gap-3">
+                  <div className={cn("p-2.5 rounded-xl", stat.bg)}>
+                    <stat.icon className={cn("h-5 w-5", stat.color)} />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-foreground leading-none">{stat.value}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{stat.label}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
 
         {/* Search + Filters Bar */}
@@ -463,13 +483,12 @@ const Patients = () => {
         )}
       </div>
 
-      {/* FAB - Nuevo Paciente */}
+      {/* FAB - Nuevo Paciente (solo mobile; en desktop está en el encabezado) */}
       <Button
         onClick={() => setShowForm(true)}
-        className="fixed bottom-6 right-6 h-14 w-14 sm:w-auto sm:px-6 rounded-2xl shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 transition-all z-40 group"
+        className="sm:hidden fixed bottom-6 right-6 h-14 w-14 rounded-2xl shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 transition-all z-40"
       >
-        <Plus className="h-6 w-6 sm:h-5 sm:w-5" />
-        <span className="hidden sm:inline ml-1 font-semibold">Nuevo paciente</span>
+        <Plus className="h-6 w-6" />
       </Button>
 
       <PatientForm
