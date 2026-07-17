@@ -297,26 +297,31 @@ const Payments = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
+      <div className="mx-auto w-full max-w-[1500px] px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
 
-        {/* Hero Header */}
-        <div className="text-center space-y-2">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-semibold tracking-wide uppercase">
-            <Receipt className="h-3.5 w-3.5" />
-            Gestión financiera
-          </div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">
-            <span className="inline-flex items-center gap-2">
-              Pagos
-              <HelpTooltip id="payments" />
+        {/* Encabezado de página */}
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="h-11 w-11 rounded-2xl flex items-center justify-center shrink-0" style={{ background: "hsla(152, 70%, 45%, 0.14)" }}>
+              <Receipt className="h-5 w-5" style={{ color: "hsl(152 70% 45%)" }} />
             </span>
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {filteredPayments.length} pago{filteredPayments.length !== 1 ? "s" : ""} registrado{filteredPayments.length !== 1 ? "s" : ""}
-          </p>
+            <div className="min-w-0">
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight inline-flex items-center gap-2">
+                Pagos
+                <HelpTooltip id="payments" />
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                {filteredPayments.length} pago{filteredPayments.length !== 1 ? "s" : ""} en la vista
+              </p>
+            </div>
+          </div>
+          <Button onClick={() => setShowNewPayment(true)} className="hidden sm:inline-flex gap-2 rounded-xl h-11 px-5 font-semibold shadow-md shadow-primary/20">
+            <Plus className="h-4 w-4" />
+            Registrar pago
+          </Button>
         </div>
 
-        {/* Stats Row */}
+        {/* Stats Row: cada tarjeta también FILTRA la lista */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
             {
@@ -326,6 +331,7 @@ const Payments = () => {
               color: "text-primary",
               bg: "bg-primary/10",
               helpId: "paymentsTotalBilled" as const,
+              filter: "all",
             },
             {
               label: rangeActive ? "Cobrado (período)" : "Cobrado (mes)",
@@ -334,6 +340,7 @@ const Payments = () => {
               color: "text-emerald-600",
               bg: "bg-emerald-500/10",
               helpId: "paymentsTotalCollected" as const,
+              filter: "paid",
             },
             {
               label: "Vencidos",
@@ -342,6 +349,7 @@ const Payments = () => {
               color: "text-destructive",
               bg: "bg-destructive/10",
               helpId: "paymentsOverdueCount" as const,
+              filter: "overdue",
             },
             {
               label: "Pendientes",
@@ -350,11 +358,16 @@ const Payments = () => {
               color: "text-amber-600",
               bg: "bg-amber-500/10",
               helpId: "paymentsPendingCount" as const,
+              filter: "pending",
             },
           ].map((stat, i) => (
             <Card
               key={stat.label}
-              className="border-border/50 shadow-sm hover:shadow-md transition-shadow animate-fade-in"
+              onClick={() => setStatusFilter(stat.filter)}
+              className={cn(
+                "border-border/50 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer animate-fade-in",
+                statusFilter === stat.filter && "ring-2 ring-primary/40 border-primary/30"
+              )}
               style={{ animationDelay: `${i * 80}ms` }}
             >
               <CardContent className="p-4 flex items-center gap-3">
@@ -478,6 +491,9 @@ const Payments = () => {
           </div>
         )}
 
+        {/* Layout desktop: lista (2/3) + panel lateral con deudores y cobranza */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        <div className="space-y-4 lg:order-2">
         {/* Deudores: siempre a la vista, el que más debe primero */}
         {debtors.length > 0 && statusFilter !== "paid" && statusFilter !== "cancelled" && (
           <Card className="border-destructive/30 bg-destructive/5">
@@ -533,6 +549,44 @@ const Payments = () => {
           </Card>
         )}
 
+        {/* Tasa de cobranza del período */}
+        {(stats.totalAmount > 0 || stats.paidAmount > 0) && (
+          <Card className="hidden lg:block border-border/50">
+            <CardContent className="p-4 space-y-3">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Tasa de cobranza {rangeActive ? "del período" : "del mes"}
+              </p>
+              {(() => {
+                const rate = stats.totalAmount > 0
+                  ? Math.min(100, Math.round((stats.paidAmount / stats.totalAmount) * 100))
+                  : 100;
+                return (
+                  <>
+                    <div className="flex items-end justify-between">
+                      <span className="text-3xl font-bold text-foreground tabular-nums leading-none">{rate}<span className="text-base text-muted-foreground font-medium">%</span></span>
+                      <span className="text-xs text-muted-foreground">
+                        {formatCurrency(stats.paidAmount, "UYU")} de {formatCurrency(stats.totalAmount, "UYU")}
+                      </span>
+                    </div>
+                    <div className="h-2 rounded-full bg-muted overflow-hidden">
+                      <div
+                        className={cn(
+                          "h-full rounded-full transition-all duration-700",
+                          rate >= 80 ? "bg-emerald-500" : rate >= 50 ? "bg-amber-500" : "bg-destructive"
+                        )}
+                        style={{ width: `${rate}%` }}
+                      />
+                    </div>
+                  </>
+                );
+              })()}
+            </CardContent>
+          </Card>
+        )}
+        </div>
+
+        {/* Columna principal: lista de pagos */}
+        <div className="space-y-4 lg:order-1 lg:col-span-2">
         {/* Payment List */}
         {paymentsError ? (
           <Card className="border-2 border-destructive/40 bg-destructive/5">
@@ -730,12 +784,14 @@ const Payments = () => {
           totalItems={filteredPayments.length}
           pageSize={ITEMS_PER_PAGE}
         />
+        </div>
+        </div>
       </div>
 
-      {/* FAB - New Payment */}
+      {/* FAB - New Payment (solo mobile; en desktop está en el encabezado) */}
       <button
         onClick={() => setShowNewPayment(true)}
-        className="fixed bottom-6 right-6 z-40 w-14 h-14 rounded-2xl bg-primary text-primary-foreground shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:scale-95 transition-all duration-200 flex items-center justify-center"
+        className="sm:hidden fixed bottom-6 right-6 z-40 w-14 h-14 rounded-2xl bg-primary text-primary-foreground shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:scale-95 transition-all duration-200 flex items-center justify-center"
         style={{
           boxShadow: "0 8px 25px -5px hsl(var(--primary) / 0.4)",
         }}
