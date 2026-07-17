@@ -156,14 +156,29 @@ export const PaymentPolicySettings = ({ businessId }: Props) => {
   const handleDisconnect = async () => {
     try {
       setDisconnecting(true);
+      // Sin Mercado Pago no puede quedar activa una política que cobra online:
+      // se vuelve a "Sin pago previo" para que la config nunca mienta.
+      const resetPolicy = policyType !== "none";
       const { error } = await supabase
         .from("payment_policies")
-        .update({ mp_access_token: null, mp_public_key: null })
+        .update({
+          mp_access_token: null,
+          mp_public_key: null,
+          ...(resetPolicy ? { policy_type: "none", deposit_percentage: null } : {}),
+        })
         .eq("business_id", businessId);
 
       if (error) throw error;
       setMpConnected(false);
-      toast({ title: "Mercado Pago desconectado" });
+      if (resetPolicy) {
+        setPolicyType("none");
+        toast({
+          title: "Mercado Pago desconectado",
+          description: "Tu política de cobro volvió a 'Sin pago previo' porque el cobro online necesita Mercado Pago.",
+        });
+      } else {
+        toast({ title: "Mercado Pago desconectado" });
+      }
     } catch (err) {
       console.error("Disconnect error:", err);
       toast({ title: "Error", description: "No se pudo desconectar", variant: "destructive" });
@@ -173,6 +188,16 @@ export const PaymentPolicySettings = ({ businessId }: Props) => {
   };
 
   const handleSave = async () => {
+    // Guarda: sin Mercado Pago conectado no se puede guardar una política
+    // que promete cobrar online (silenciosamente no cobraría nada).
+    if (policyType !== "none" && !mpConnected) {
+      toast({
+        title: "Conectá Mercado Pago primero",
+        description: "Para cobrar online al reservar necesitás tu cuenta de Mercado Pago conectada.",
+        variant: "destructive",
+      });
+      return;
+    }
     try {
       setSaving(true);
 
@@ -271,34 +296,69 @@ export const PaymentPolicySettings = ({ businessId }: Props) => {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Config inconsistente (ej: MP desconectado desde otro lado con una
+              política de cobro activa): avisar fuerte, porque las reservas
+              estarían entrando SIN cobrar. */}
+          {!mpConnected && policyType !== "none" && (
+            <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-300">
+              <p className="font-semibold">Tu política de cobro no puede funcionar</p>
+              <p className="text-xs mt-1">
+                Está configurado el cobro online pero Mercado Pago no está conectado, así que las
+                reservas entran <span className="font-semibold">sin pagar</span>. Conectá Mercado Pago
+                arriba, o cambiá a "Sin pago previo" y guardá.
+              </p>
+            </div>
+          )}
           <div className="space-y-3">
             {([
-              { value: "none" as PolicyType, label: "Sin pago previo", desc: "El paciente reserva sin pagar. Cobrás en la sesión." },
-              { value: "optional" as PolicyType, label: "Pago opcional al reservar", desc: "El paciente puede pagar online o en la sesión." },
-              { value: "required" as PolicyType, label: "Pago requerido para confirmar", desc: "La reserva se confirma solo cuando el paciente paga." },
-            ]).map((opt) => (
-              <label
-                key={opt.value}
-                className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
-                  policyType === opt.value
-                    ? "border-primary bg-primary/5"
-                    : "border-border hover:bg-muted/50"
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="policyType"
-                  value={opt.value}
-                  checked={policyType === opt.value}
-                  onChange={() => setPolicyType(opt.value)}
-                  className="mt-0.5 accent-[hsl(var(--primary))]"
-                />
-                <div>
-                  <p className="text-sm font-medium">{opt.label}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{opt.desc}</p>
-                </div>
-              </label>
-            ))}
+              { value: "none" as PolicyType, label: "Sin pago previo", desc: "El paciente reserva sin pagar. Cobrás en la sesión.", needsMp: false },
+              { value: "optional" as PolicyType, label: "Pago opcional al reservar", desc: "El paciente puede pagar online o en la sesión.", needsMp: true },
+              { value: "required" as PolicyType, label: "Pago requerido para confirmar", desc: "La reserva se confirma solo cuando el paciente paga.", needsMp: true },
+            ]).map((opt) => {
+              const disabled = opt.needsMp && !mpConnected;
+              return (
+                <label
+                  key={opt.value}
+                  className={`flex items-start gap-3 p-3 rounded-xl border transition-colors ${
+                    disabled
+                      ? "border-border/50 opacity-55 cursor-not-allowed"
+                      : policyType === opt.value
+                      ? "border-primary bg-primary/5 cursor-pointer"
+                      : "border-border hover:bg-muted/50 cursor-pointer"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="policyType"
+                    value={opt.value}
+                    checked={policyType === opt.value}
+                    disabled={disabled}
+                    onChange={() => {
+                      if (disabled) {
+                        toast({
+                          title: "Conectá Mercado Pago primero",
+                          description: "Esta opción cobra online: necesita tu cuenta de Mercado Pago conectada.",
+                        });
+                        return;
+                      }
+                      setPolicyType(opt.value);
+                    }}
+                    className="mt-0.5 accent-[hsl(var(--primary))]"
+                  />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium inline-flex items-center gap-2 flex-wrap">
+                      {opt.label}
+                      {disabled && (
+                        <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground border border-border">
+                          Requiere Mercado Pago
+                        </span>
+                      )}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{opt.desc}</p>
+                  </div>
+                </label>
+              );
+            })}
           </div>
 
           {/* Deposit config - only when required */}
