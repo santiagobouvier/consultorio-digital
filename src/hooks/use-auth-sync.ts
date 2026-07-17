@@ -36,7 +36,15 @@ export const useAuthSync = () => {
   }
 
   useEffect(() => {
-    const channels = channelsRef.current!;
+    // En StrictMode/HMR el cleanup del segundo effect puede haber nulleado
+    // la ref sin que el render body vuelva a correr. Re-inicializamos si hace falta.
+    if (channelsRef.current === null) {
+      channelsRef.current = {
+        pro: createAuthSyncChannel("pro"),
+        patient: createAuthSyncChannel("patient"),
+      };
+    }
+    const channels = channelsRef.current;
 
     // Listener de eventos locales de supabase para emitir broadcast.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
