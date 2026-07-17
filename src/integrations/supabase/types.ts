@@ -1248,6 +1248,7 @@ export type Database = {
           email: string
           id: string
           name: string
+          ui_prefs: Json
           updated_at: string
         }
         Insert: {
@@ -1256,6 +1257,7 @@ export type Database = {
           email: string
           id: string
           name: string
+          ui_prefs?: Json
           updated_at?: string
         }
         Update: {
@@ -1264,6 +1266,7 @@ export type Database = {
           email?: string
           id?: string
           name?: string
+          ui_prefs?: Json
           updated_at?: string
         }
         Relationships: []
@@ -1798,6 +1801,13 @@ export type Database = {
         Returns: {
           max_patients: number
           max_professionals: number
+        }[]
+      }
+      get_portal_payment_config: {
+        Args: { p_business_id: string }
+        Returns: {
+          mp_connected: boolean
+          policy_type: string
         }[]
       }
       get_template_day_ranges: {
