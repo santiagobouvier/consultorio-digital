@@ -61,6 +61,8 @@ const DemoReservar = lazy(() => import("./pages/DemoReservar"));
 const DemoAgenda = lazy(() => import("./pages/DemoAgenda"));
 const AccessSelector = lazy(() => import("./pages/AccessSelector"));
 const PatientAccess = lazy(() => import("./pages/PatientAccess"));
+const Terms = lazy(() => import("./pages/Terms"));
+const Privacy = lazy(() => import("./pages/Privacy"));
 const SubscriptionGuard = lazy(() => import("./components/SubscriptionGuard"));
 const SuperAdminGuard = lazy(() => import("./components/SuperAdminGuard"));
 
@@ -219,6 +221,8 @@ const App = () => {
                 <Route path="/demo/agenda" element={<DemoAgenda />} />
                 <Route path="/acceso" element={<AccessSelector />} />
                 <Route path="/acceso/paciente" element={<PatientAccess />} />
+                <Route path="/terminos" element={<Terms />} />
+                <Route path="/privacidad" element={<Privacy />} />
 
                 {/* Protected routes - require active subscription + sidebar */}
                 <Route path="/dashboard" element={<Protected><Dashboard /></Protected>} />

@@ -972,6 +972,15 @@ const Landing = () => {
           <p className="text-center text-gray-600 text-xs sm:text-sm font-light">
             © {new Date().getFullYear()} Sistema de Gestión de Consultorio
           </p>
+          <div className="flex items-center gap-4 text-xs text-gray-500">
+            <a href="/terminos" className="hover:text-gray-300 transition-colors">
+              Términos y Condiciones
+            </a>
+            <span className="text-gray-700">·</span>
+            <a href="/privacidad" className="hover:text-gray-300 transition-colors">
+              Política de Privacidad
+            </a>
+          </div>
           <div className="flex items-center gap-2 text-gray-500 text-xs">
             <span>Sistema desarrollado por</span>
             <a 
