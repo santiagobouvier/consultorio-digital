@@ -36,11 +36,16 @@ const LoadingPage = () => {
       : null;
   const brand = clinicMode ? getCachedClinicBrand(slug) : panelMode ? getPanelBrand() : null;
   const ringColor = brand?.color
-    ? `hsl(${brand.color} / 0.5)`
-    : "hsl(var(--primary) / 0.5)";
+    ? `hsl(${brand.color} / 0.55)`
+    : "hsl(var(--primary) / 0.55)";
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
+    // Fondo SIEMPRE oscuro (igual que el splash de arranque): la pantalla de
+    // carga nunca es blanca, sin importar el tema elegido por el usuario.
+    <div
+      className="min-h-screen flex items-center justify-center"
+      style={{ backgroundColor: "hsl(180 12% 16%)" }}
+    >
       <style>{`
         @keyframes loadingFadeIn {
           from { opacity: 0; }
@@ -90,7 +95,8 @@ const LoadingPage = () => {
           <img
             src={brand.logoUrl}
             alt="Cargando..."
-            className="loading-breathe h-24 w-24 rounded-full object-cover shadow-lg bg-card"
+            className="loading-breathe h-24 w-24 rounded-full object-cover shadow-lg"
+            style={{ backgroundColor: "hsl(180 12% 10%)" }}
           />
         ) : clinicMode ? (
           // Marca del consultorio aún desconocida: disco neutro con el color
