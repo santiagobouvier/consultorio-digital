@@ -132,24 +132,29 @@ export function MobileHeader() {
         className="sticky top-0 z-40 flex items-center justify-between h-14 px-4 md:hidden"
         style={{
           background: "#000000",
-          borderBottom: "1px solid rgba(255,255,255,0.06)",
+          borderBottom: `1px solid ${brandHsla(0.14)}`,
+          boxShadow: `0 6px 24px -18px ${brandHsla(0.6)}`,
         }}
       >
-        {/* Minimalist toggle — opens fullscreen drawer */}
+        {/* Botón de módulos: abre el lanzador (grilla, como los bloques) */}
         <button
           onClick={() => setOpen(true)}
-          className="relative h-9 w-9 rounded-xl flex items-center justify-center transition-all duration-300 active:scale-90"
+          className="relative h-10 w-10 rounded-xl flex items-center justify-center transition-all duration-300 active:scale-90"
           style={{
-            background: "rgba(255,255,255,0.06)",
-            border: "1px solid rgba(255,255,255,0.08)",
+            background: brandHsla(0.14),
+            border: `1px solid ${brandHsla(0.28)}`,
           }}
-          aria-label="Abrir menú"
+          aria-label="Abrir menú de módulos"
         >
-          <ChevronRight
-            className="h-4 w-4"
-            style={{ color: "rgba(255,255,255,0.9)" }}
-            strokeWidth={2.4}
-          />
+          <span className="grid grid-cols-2 gap-[3px]" aria-hidden="true">
+            {[0, 1, 2, 3].map((i) => (
+              <span
+                key={i}
+                className="w-[6px] h-[6px] rounded-[2px]"
+                style={{ background: brandHsl, opacity: i === 3 ? 0.55 : 1 }}
+              />
+            ))}
+          </span>
           {pendingRequests > 0 && (
             <span
               className="absolute -top-1 -right-1 inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[9px] font-bold animate-badge-pulse ring-2 ring-black"
@@ -159,6 +164,11 @@ export function MobileHeader() {
             </span>
           )}
         </button>
+
+        {/* Centro: nombre del consultorio */}
+        <p className="absolute left-1/2 -translate-x-1/2 max-w-[45%] truncate text-[13px] font-semibold text-white/85 tracking-tight pointer-events-none">
+          {displayName || ""}
+        </p>
 
         {/* Right: theme toggle + clinic logo */}
         <div className="flex items-center gap-2">

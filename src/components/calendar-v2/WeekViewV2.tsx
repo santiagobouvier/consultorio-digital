@@ -91,7 +91,7 @@ export const WeekViewV2 = ({
           onPaymentClick?.(p);
         }}
         className={cn(
-          "w-full text-left rounded-lg border-l-2 transition-all hover:shadow-sm hover:scale-[1.01] flex items-center gap-1.5",
+          "w-full text-left rounded-lg border-l-2 transition-all hover:shadow-sm hover:scale-[1.01] flex items-center gap-1.5 overflow-hidden",
           compact ? "p-1.5 text-xs" : "p-2 text-xs",
           st === "overdue" && "bg-rose-50 dark:bg-rose-500/10 border-l-rose-500",
           st === "due_soon" && "bg-amber-50 dark:bg-amber-500/10 border-l-amber-500",
@@ -99,8 +99,8 @@ export const WeekViewV2 = ({
         )}
       >
         <CreditCard className="h-3 w-3 shrink-0" />
-        <span className="font-medium">{formatCurrency(p.amount, p.currency)}</span>
-        <span className="text-muted-foreground truncate">{p.patient_name.split(" ")[0]}</span>
+        <span className="font-medium shrink-0">{formatCurrency(p.amount, p.currency)}</span>
+        <span className="text-muted-foreground truncate min-w-0">{p.patient_name.split(" ")[0]}</span>
       </button>
     );
   };
@@ -182,8 +182,11 @@ export const WeekViewV2 = ({
 
       </div>
 
-      {/* Desktop Week View - Grid */}
-      <div className="hidden md:grid grid-cols-7 gap-3">
+      {/* Desktop/tablet Week View - Grid con ancho mínimo por columna:
+          si la pantalla no alcanza (tablet), se scrollea horizontal en vez
+          de cortar el contenido. */}
+      <div className="hidden md:block overflow-x-auto pb-2 -mx-1 px-1">
+        <div className="grid grid-cols-7 gap-3 min-w-[1060px] 2xl:min-w-0">
         {days.map((day) => {
           const dayAppointments = getAppointmentsForDay(day);
           const dayPayments = getPaymentsForDay(day);
@@ -194,7 +197,7 @@ export const WeekViewV2 = ({
             <div
               key={day.toISOString()}
               className={cn(
-                "bg-card rounded-2xl border p-3 min-h-[200px] flex flex-col",
+                "bg-card rounded-2xl border p-3 min-h-[200px] flex flex-col min-w-0",
                 isCurrentDay && "ring-2 ring-primary"
               )}
             >
@@ -244,6 +247,7 @@ export const WeekViewV2 = ({
             </div>
           );
         })}
+        </div>
       </div>
     </>
   );
