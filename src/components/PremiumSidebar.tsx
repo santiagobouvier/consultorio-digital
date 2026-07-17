@@ -11,6 +11,7 @@ import {
   Palette,
   CreditCard,
   BarChart3,
+  LifeBuoy,
   Shield,
   LogOut,
   ChevronRight,
@@ -76,6 +77,7 @@ const MODULE_GROUPS: { label: string | null; items: NavItem[] }[] = [
     items: [
       { title: "Estadísticas", url: "/estadisticas", icon: BarChart3, tint: "190 85% 50%" },
       { title: "Facturación", url: "/billing", icon: CreditCard, tint: "235 75% 66%" },
+      { title: "Ayuda", url: "/ayuda", icon: LifeBuoy, tint: "150 65% 45%" },
     ],
   },
 ];
