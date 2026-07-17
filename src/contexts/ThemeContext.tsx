@@ -4,15 +4,17 @@ export type Theme = "light" | "dark";
 
 const STORAGE_KEY = "theme-preference";
 
+// El modo OSCURO es el default en toda la app: el claro solo aparece si la
+// persona lo eligió explícitamente (queda guardado por navegador).
 const getInitialTheme = (): Theme => {
-  if (typeof window === "undefined") return "light";
+  if (typeof window === "undefined") return "dark";
   try {
     const stored = window.localStorage.getItem(STORAGE_KEY);
     if (stored === "light" || stored === "dark") return stored;
   } catch {
     /* ignore */
   }
-  return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  return "dark";
 };
 
 const applyTheme = (t: Theme) => {
@@ -39,19 +41,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     applyTheme(theme);
   }, [theme]);
-
-  // Sync with system preference if the user has not made an explicit choice.
-  useEffect(() => {
-    const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    const handler = (e: MediaQueryListEvent) => {
-      const stored = window.localStorage.getItem(STORAGE_KEY);
-      if (stored !== "light" && stored !== "dark") {
-        setThemeState(e.matches ? "dark" : "light");
-      }
-    };
-    mq.addEventListener?.("change", handler);
-    return () => mq.removeEventListener?.("change", handler);
-  }, []);
 
   const setTheme = useCallback((t: Theme) => {
     try {
