@@ -2,20 +2,39 @@ import { getCachedClinicBrand } from "@/lib/clinic-brand-cache";
 
 // Pantalla de carga global. Respeta el modo claro/oscuro y es consciente de
 // DÓNDE se está mostrando:
-// - En el panel del profesional y páginas propias: logo de Consultorio Digital.
-// - En superficies del CONSULTORIO (portal del paciente, web pública): identidad
-//   100% del consultorio — su logo y su color si ya los conocemos (caché local),
+// - Superficies del CONSULTORIO (portal del paciente, web pública): identidad
+//   100% del consultorio — su logo y color si ya los conocemos (caché local),
 //   y si no, solo la animación neutra. Nunca el logo de Consultorio Digital.
-const CLINIC_PREFIXES = ["/portal/", "/consultorio/", "/portal-paciente", "/acceso"];
+// - PANEL del profesional: el logo de SU consultorio (caché que escribe
+//   DashboardBrandingContext); si todavía no subió marca, Consultorio Digital.
+// - Páginas propias de Consultorio Digital (landing, /auth, /acceso...):
+//   logo de Consultorio Digital.
+const CLINIC_PREFIXES = ["/portal/", "/consultorio/", "/portal-paciente"];
+const PANEL_PREFIXES = [
+  "/dashboard", "/agenda", "/patients", "/pagos", "/solicitudes",
+  "/recordatorios-pendientes", "/mi-consultorio", "/horarios-disponibles",
+  "/personalizar-portal", "/billing", "/estadisticas", "/centro-control",
+  "/appointments",
+];
+
+const getPanelBrand = (): { logoUrl: string | null; color: string | null } | null => {
+  try {
+    const raw = localStorage.getItem("panel_brand");
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+};
 
 const LoadingPage = () => {
   const path = typeof window !== "undefined" ? window.location.pathname : "";
   const clinicMode = CLINIC_PREFIXES.some((p) => path.startsWith(p));
+  const panelMode = !clinicMode && PANEL_PREFIXES.some((p) => path.startsWith(p));
   const slug =
     path.startsWith("/portal/") || path.startsWith("/consultorio/")
       ? path.split("/")[2] || null
       : null;
-  const brand = clinicMode ? getCachedClinicBrand(slug) : null;
+  const brand = clinicMode ? getCachedClinicBrand(slug) : panelMode ? getPanelBrand() : null;
   const ringColor = brand?.color
     ? `hsl(${brand.color} / 0.5)`
     : "hsl(var(--primary) / 0.5)";
@@ -67,25 +86,23 @@ const LoadingPage = () => {
       <div className="loading-stage relative flex items-center justify-center">
         <span className="loading-ring" aria-hidden="true" />
         <span className="loading-ring loading-ring-late" aria-hidden="true" />
-        {clinicMode ? (
-          brand?.logoUrl ? (
-            <img
-              src={brand.logoUrl}
-              alt="Cargando..."
-              className="loading-breathe h-24 w-24 rounded-full object-cover shadow-lg bg-card"
-            />
-          ) : (
-            // Marca aún desconocida: disco neutro con el color disponible,
-            // sin ningún logo ajeno al consultorio.
-            <div
-              className="loading-breathe h-24 w-24 rounded-full"
-              style={{
-                background: brand?.color
-                  ? `hsl(${brand.color} / 0.14)`
-                  : "hsl(var(--primary) / 0.12)",
-              }}
-            />
-          )
+        {brand?.logoUrl ? (
+          <img
+            src={brand.logoUrl}
+            alt="Cargando..."
+            className="loading-breathe h-24 w-24 rounded-full object-cover shadow-lg bg-card"
+          />
+        ) : clinicMode ? (
+          // Marca del consultorio aún desconocida: disco neutro con el color
+          // disponible, sin ningún logo ajeno al consultorio.
+          <div
+            className="loading-breathe h-24 w-24 rounded-full"
+            style={{
+              background: brand?.color
+                ? `hsl(${brand.color} / 0.14)`
+                : "hsl(var(--primary) / 0.12)",
+            }}
+          />
         ) : (
           <div
             className="loading-breathe relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-full shadow-lg"
