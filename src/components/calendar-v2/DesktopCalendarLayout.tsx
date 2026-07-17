@@ -28,7 +28,9 @@ export const DesktopCalendarLayout = ({
   onPaymentClick,
 }: DesktopCalendarLayoutProps) => {
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(true); // Start open to show the panel
+  // Cerrado por defecto: un panel vacío ocupando lugar queda feo. Se abre al
+  // tocar un día del calendario o con la flechita del borde.
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleDayClick = (date: Date) => {
     if (selectedDay && isSameDay(date, selectedDay)) {

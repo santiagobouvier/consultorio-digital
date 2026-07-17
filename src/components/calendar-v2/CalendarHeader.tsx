@@ -140,11 +140,12 @@ export const CalendarHeader = ({
         </Tabs>
       </div>
 
-      {/* Desktop Header */}
-      <div className="hidden md:flex items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
+      {/* Desktop/tablet Header: en tablet los controles bajan a una segunda
+          fila (flex-wrap) en vez de estrujar la fecha en vertical */}
+      <div className="hidden md:flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+        <div className="flex items-center gap-3 min-w-0">
           {/* Date Navigation */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 shrink-0">
             <Button
               variant="ghost"
               size="icon"
@@ -164,8 +165,8 @@ export const CalendarHeader = ({
           </div>
 
           {/* Date Display */}
-          <div>
-            <h1 className="text-xl font-bold capitalize inline-flex items-center gap-2">
+          <div className="min-w-0">
+            <h1 className="text-xl font-bold capitalize inline-flex items-center gap-2 whitespace-nowrap">
               {dateLabel}
               <HelpTooltip id="agenda" />
             </h1>
@@ -175,13 +176,13 @@ export const CalendarHeader = ({
             variant="outline"
             size="sm"
             onClick={onToday}
-            className="rounded-xl"
+            className="rounded-xl shrink-0"
           >
             Hoy
           </Button>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           {/* View Tabs */}
           <Tabs value={viewType} onValueChange={(v) => onViewChange(v as ViewType)}>
             <TabsList className="h-10 rounded-xl">
