@@ -546,7 +546,7 @@ const Dashboard = () => {
 
         {/* KPI Metrics Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <Card className="mobile-card-compact">
+          <Card className="mobile-card-compact cursor-pointer active:scale-[0.98] transition-transform" onClick={() => navigate("/agenda")}>
             <CardContent className="p-4 text-center">
               <CalendarDays className="h-5 w-5 mx-auto text-primary mb-1" />
               <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wide inline-flex items-center gap-1 justify-center">
@@ -558,7 +558,7 @@ const Dashboard = () => {
               </p>
             </CardContent>
           </Card>
-          <Card className="mobile-card-compact">
+          <Card className="mobile-card-compact cursor-pointer active:scale-[0.98] transition-transform" onClick={() => navigate("/patients")}>
             <CardContent className="p-4 text-center">
               <Users className="h-5 w-5 mx-auto text-primary mb-1" />
               <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wide inline-flex items-center gap-1 justify-center">
@@ -570,7 +570,7 @@ const Dashboard = () => {
               </p>
             </CardContent>
           </Card>
-          <Card className="mobile-card-compact bg-green-500/5 border-green-500/30">
+          <Card className="mobile-card-compact bg-green-500/5 border-green-500/30 cursor-pointer active:scale-[0.98] transition-transform" onClick={() => navigate("/pagos?status=paid&period=this_month")}>
             <CardContent className="p-4 text-center">
               <CreditCard className="h-5 w-5 mx-auto text-green-600 mb-1" />
               <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wide inline-flex items-center gap-1 justify-center">
@@ -582,9 +582,9 @@ const Dashboard = () => {
               </p>
             </CardContent>
           </Card>
-          <Card 
-            className={`mobile-card-compact cursor-pointer transition-colors ${overduePayments > 0 ? 'bg-destructive/5 border-destructive/30 hover:bg-destructive/10' : ''}`}
-            onClick={() => overduePayments > 0 && navigate("/pagos?status=overdue")}
+          <Card
+            className={`mobile-card-compact cursor-pointer active:scale-[0.98] transition-all ${overduePayments > 0 ? 'bg-destructive/5 border-destructive/30 hover:bg-destructive/10' : ''}`}
+            onClick={() => navigate(overduePayments > 0 ? "/pagos?status=overdue" : "/pagos")}
           >
             <CardContent className="p-4 text-center">
               <AlertTriangle className={`h-5 w-5 mx-auto mb-1 ${overduePayments > 0 ? 'text-destructive' : 'text-muted-foreground'}`} />
