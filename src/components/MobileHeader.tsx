@@ -27,25 +27,48 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { InstallAppButton } from "@/components/pwa/InstallAppButton";
 import consultorioLogo from "@/assets/logo-loading.png";
 
-type NavItem = {
+type ModuleItem = {
   title: string;
   url: string;
   icon: typeof LayoutDashboard;
+  /** Tinte HSL propio del módulo ("38 92% 55%"). null = color de marca. */
+  tint: string | null;
   highlight?: boolean;
 };
 
-const navItems: NavItem[] = [
-  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "Solicitudes", url: "/solicitudes", icon: FileText, highlight: true },
-  { title: "Pacientes", url: "/patients", icon: Users },
-  { title: "Agenda", url: "/agenda", icon: CalendarDays },
-  { title: "Pagos", url: "/pagos", icon: Receipt },
-  { title: "Recordatorios", url: "/recordatorios-pendientes", icon: Clock },
-  { title: "Horarios", url: "/horarios-disponibles", icon: AlarmClock },
-  { title: "Estadísticas", url: "/estadisticas", icon: BarChart3 },
-  { title: "Facturación", url: "/billing", icon: CreditCard },
-  { title: "Consultorio", url: "/mi-consultorio", icon: Settings },
-  { title: "Portal", url: "/personalizar-portal", icon: Palette },
+type ModuleGroup = {
+  label: string;
+  items: ModuleItem[];
+};
+
+// Lanzador de módulos: bloques agrupados por frecuencia de uso
+// (estilo "pantalla de apps", no lista interminable).
+const MODULE_GROUPS: ModuleGroup[] = [
+  {
+    label: "Tu día a día",
+    items: [
+      { title: "Agenda", url: "/agenda", icon: CalendarDays, tint: null },
+      { title: "Solicitudes", url: "/solicitudes", icon: FileText, tint: "38 92% 55%", highlight: true },
+      { title: "Pacientes", url: "/patients", icon: Users, tint: "210 90% 60%" },
+      { title: "Pagos", url: "/pagos", icon: Receipt, tint: "152 70% 45%" },
+    ],
+  },
+  {
+    label: "Configuración",
+    items: [
+      { title: "Horarios", url: "/horarios-disponibles", icon: AlarmClock, tint: "262 80% 66%" },
+      { title: "Recordatorios", url: "/recordatorios-pendientes", icon: Clock, tint: "22 90% 58%" },
+      { title: "Consultorio", url: "/mi-consultorio", icon: Settings, tint: "215 15% 65%" },
+      { title: "Portal", url: "/personalizar-portal", icon: Palette, tint: "320 75% 62%" },
+    ],
+  },
+  {
+    label: "Tu negocio",
+    items: [
+      { title: "Estadísticas", url: "/estadisticas", icon: BarChart3, tint: "190 85% 50%" },
+      { title: "Facturación", url: "/billing", icon: CreditCard, tint: "235 75% 66%" },
+    ],
+  },
 ];
 
 /**
@@ -67,9 +90,10 @@ export function MobileHeader() {
   const brandHsla = (alpha: number) => `hsla(${primaryColor}, ${alpha})`;
 
   const isActive = (path: string) => location.pathname === path;
-  const visibleNavItems = isSuperAdmin
-    ? navItems.filter((item) => item.url !== "/billing")
-    : navItems;
+  const visibleGroups = MODULE_GROUPS.map((group) => ({
+    ...group,
+    items: isSuperAdmin ? group.items.filter((item) => item.url !== "/billing") : group.items,
+  })).filter((group) => group.items.length > 0);
 
   // Lock body scroll when drawer is open
   useEffect(() => {
@@ -227,55 +251,103 @@ export function MobileHeader() {
           </button>
         </div>
 
-        {/* Centered nav items */}
+        {/* Lanzador de módulos: bloques agrupados */}
         <nav
-          className="flex-1 flex flex-col items-center justify-center gap-2 px-6 py-10 overflow-y-auto"
+          className="flex-1 overflow-y-auto px-5 pt-2 pb-6"
           style={{
             scrollbarWidth: "none",
             msOverflowStyle: "none",
           }}
         >
           <style>{`nav::-webkit-scrollbar { display: none; }`}</style>
-          {visibleNavItems.map((item, index) => {
-            const active = isActive(item.url);
-            const showBadge = item.highlight && pendingRequests > 0;
-            return (
-              <button
-                key={item.url}
-                onClick={() => handleNav(item.url)}
-                className={cn(
-                  "relative flex items-center justify-center gap-2.5 w-full max-w-[220px] h-10 rounded-xl transition-all duration-200",
-                  "active:scale-[0.96]",
-                  active
-                    ? "text-white"
-                    : "text-white/55 hover:text-white hover:bg-white/[0.04]",
-                  open && "animate-in fade-in slide-in-from-bottom-3"
-                )}
-                style={{
-                  background: active ? brandHsla(0.16) : undefined,
-                  border: active ? `1px solid ${brandHsla(0.32)}` : "1px solid transparent",
-                  animationDelay: open ? `${index * 45 + 150}ms` : "0ms",
-                  animationDuration: "500ms",
-                  animationFillMode: "both",
-                  boxShadow: active ? `0 6px 20px -8px ${brandHsla(0.5)}` : undefined,
-                }}
+          <div className="max-w-sm mx-auto space-y-6">
+            {/* Nombre del consultorio + acceso al inicio */}
+            <button
+              onClick={() => handleNav("/dashboard")}
+              className={cn(
+                "relative w-full flex items-center gap-3 rounded-2xl px-4 h-14 transition-all duration-200 active:scale-[0.97]",
+                open && "animate-in fade-in slide-in-from-bottom-3"
+              )}
+              style={{
+                background: isActive("/dashboard") ? brandHsla(0.16) : "rgba(255,255,255,0.045)",
+                border: `1px solid ${isActive("/dashboard") ? brandHsla(0.35) : "rgba(255,255,255,0.08)"}`,
+                animationDelay: open ? "120ms" : "0ms",
+                animationDuration: "450ms",
+                animationFillMode: "both",
+              }}
+            >
+              <span
+                className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                style={{ background: brandHsla(0.18) }}
               >
-                <item.icon
-                  className="h-[16px] w-[16px] shrink-0 transition-colors"
-                  style={{ color: active ? brandHsl : undefined }}
-                />
-                <span className="text-[13.5px] font-medium tracking-tight">{item.title}</span>
-                {showBadge && (
-                  <span
-                    className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-[10px] font-bold animate-badge-pulse"
-                    aria-label={`${pendingRequests} solicitudes pendientes`}
-                  >
-                    {pendingRequests > 99 ? "99+" : pendingRequests}
-                  </span>
-                )}
-              </button>
-            );
-          })}
+                <LayoutDashboard className="h-[18px] w-[18px]" style={{ color: brandHsl }} />
+              </span>
+              <span className="min-w-0 text-left">
+                <span className="block text-[13.5px] font-semibold text-white truncate">
+                  {displayName || "Mi consultorio"}
+                </span>
+                <span className="block text-[11px] text-white/45">Ir al inicio</span>
+              </span>
+              <ChevronRight className="h-4 w-4 text-white/30 ml-auto shrink-0" />
+            </button>
+
+            {visibleGroups.map((group, groupIndex) => (
+              <div key={group.label}>
+                <p className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-white/40 mb-2.5 px-1">
+                  {group.label}
+                </p>
+                <div className="grid grid-cols-2 gap-2.5">
+                  {group.items.map((item, itemIndex) => {
+                    const active = isActive(item.url);
+                    const showBadge = item.highlight && pendingRequests > 0;
+                    const tint = item.tint ?? primaryColor;
+                    const tintHsl = `hsl(${tint})`;
+                    const tintHsla = (alpha: number) => `hsla(${tint}, ${alpha})`;
+                    const index = groupIndex * 4 + itemIndex;
+                    return (
+                      <button
+                        key={item.url}
+                        onClick={() => handleNav(item.url)}
+                        className={cn(
+                          "relative flex flex-col items-center justify-center gap-2 rounded-2xl py-4 transition-all duration-200 active:scale-[0.95]",
+                          open && "animate-in fade-in slide-in-from-bottom-3"
+                        )}
+                        style={{
+                          background: active ? tintHsla(0.13) : "rgba(255,255,255,0.045)",
+                          border: `1px solid ${active ? tintHsla(0.4) : "rgba(255,255,255,0.08)"}`,
+                          animationDelay: open ? `${index * 40 + 180}ms` : "0ms",
+                          animationDuration: "450ms",
+                          animationFillMode: "both",
+                          boxShadow: active ? `0 8px 24px -10px ${tintHsla(0.55)}` : undefined,
+                        }}
+                      >
+                        <span
+                          className="w-11 h-11 rounded-2xl flex items-center justify-center"
+                          style={{
+                            background: tintHsla(0.16),
+                            boxShadow: `inset 0 0 0 1px ${tintHsla(0.22)}`,
+                          }}
+                        >
+                          <item.icon className="h-5 w-5" style={{ color: tintHsl }} strokeWidth={2} />
+                        </span>
+                        <span className={cn("text-[12.5px] font-medium tracking-tight", active ? "text-white" : "text-white/75")}>
+                          {item.title}
+                        </span>
+                        {showBadge && (
+                          <span
+                            className="absolute top-2 right-2 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-[10px] font-bold animate-badge-pulse"
+                            aria-label={`${pendingRequests} solicitudes pendientes`}
+                          >
+                            {pendingRequests > 99 ? "99+" : pendingRequests}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
         </nav>
 
         {/* Logout — centered footer */}
