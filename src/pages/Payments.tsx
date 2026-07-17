@@ -380,6 +380,9 @@ const Payments = () => {
               className="pl-11 h-12 rounded-2xl text-base bg-card border-border/50 shadow-sm focus-visible:ring-primary/30 focus-visible:border-primary/50"
             />
           </div>
+          {/* En mobile: grilla 2x2 compacta; en escritorio se disuelve (sm:contents)
+              y los controles quedan en la misma fila que el buscador */}
+          <div className="grid grid-cols-2 gap-2 sm:contents">
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-full sm:w-[180px] h-12 rounded-2xl border-border/50 shadow-sm bg-card">
               <SelectValue placeholder="Estado" />
@@ -393,19 +396,6 @@ const Payments = () => {
               <SelectItem value="cancelled">Cancelados</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={patientFilter} onValueChange={setPatientFilter}>
-            <SelectTrigger className="w-full sm:w-[180px] h-12 rounded-2xl border-border/50 shadow-sm bg-card">
-              <SelectValue placeholder="Paciente" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
-              {patients.map((patient) => (
-                <SelectItem key={patient.id} value={patient.id}>
-                  {patient.full_name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
           <Select value={periodFilter} onValueChange={setPeriodFilter}>
             <SelectTrigger className="w-full sm:w-[180px] h-12 rounded-2xl border-border/50 shadow-sm bg-card">
               <SelectValue placeholder="Período" />
@@ -417,6 +407,19 @@ const Payments = () => {
               <SelectItem value="30d">Últimos 30 días</SelectItem>
               <SelectItem value="this_year">Este año</SelectItem>
               <SelectItem value="custom">Personalizado…</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={patientFilter} onValueChange={setPatientFilter}>
+            <SelectTrigger className="w-full sm:w-[180px] h-12 rounded-2xl border-border/50 shadow-sm bg-card">
+              <SelectValue placeholder="Paciente" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              {patients.map((patient) => (
+                <SelectItem key={patient.id} value={patient.id}>
+                  {patient.full_name}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
           <Button
@@ -437,8 +440,10 @@ const Payments = () => {
             }}
           >
             <Download className="h-4 w-4" />
+            <span className="sm:hidden">CSV</span>
             <span className="hidden sm:inline">Exportar CSV</span>
           </Button>
+          </div>
         </div>
 
         {/* Rango personalizado */}
@@ -566,89 +571,93 @@ const Payments = () => {
                 className="group cursor-pointer border-border/50 shadow-sm hover:shadow-md hover:-translate-y-0.5 active:scale-[0.99] transition-all duration-200 animate-fade-in"
                 style={{ animationDelay: `${index * 50}ms` }}
               >
-                <CardContent className="p-4 flex items-center gap-4">
-                  {/* Status Indicator */}
-                  <div
-                    className={cn(
-                      "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
-                      payment.status === "paid"
-                        ? "bg-emerald-500/10"
-                        : payment.status === "overdue"
-                        ? "bg-destructive/10"
-                        : payment.status === "due_soon"
-                        ? "bg-amber-500/10"
-                        : "bg-muted"
-                    )}
-                  >
-                    {payment.status === "paid" ? (
-                      <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-                    ) : payment.status === "overdue" ? (
-                      <AlertTriangle className="h-5 w-5 text-destructive" />
-                    ) : (
-                      <Clock className="h-5 w-5 text-muted-foreground" />
-                    )}
-                  </div>
-
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/patients/${payment.patient_id}`);
-                      }}
-                      className="font-semibold text-sm text-foreground hover:text-primary transition-colors text-left truncate block w-full"
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3 sm:gap-4">
+                    {/* Status Indicator */}
+                    <div
+                      className={cn(
+                        "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
+                        payment.status === "paid"
+                          ? "bg-emerald-500/10"
+                          : payment.status === "overdue"
+                          ? "bg-destructive/10"
+                          : payment.status === "due_soon"
+                          ? "bg-amber-500/10"
+                          : "bg-muted"
+                      )}
                     >
-                      {payment.patients?.full_name || "Paciente desconocido"}
-                    </button>
-                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                      <p className="text-xs text-muted-foreground">
-                        Vence: {format(new Date(payment.due_date), "d MMM yyyy", { locale: es })}
-                      </p>
-                      {payment.recurrence_type !== "one_time" && (
-                        <Badge variant="outline" className="rounded-full text-[10px] gap-0.5 h-5">
-                          <RefreshCw className="h-2.5 w-2.5" />
-                          {getRecurrenceTypeLabel(payment.recurrence_type)}
-                        </Badge>
+                      {payment.status === "paid" ? (
+                        <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                      ) : payment.status === "overdue" ? (
+                        <AlertTriangle className="h-5 w-5 text-destructive" />
+                      ) : (
+                        <Clock className="h-5 w-5 text-muted-foreground" />
                       )}
                     </div>
-                  </div>
 
-                  {/* Actions */}
-                  <div className="flex items-center gap-2 shrink-0">
-                    {payment.status !== "paid" && payment.status !== "cancelled" && (
-                      <div onClick={(e) => e.stopPropagation()}>
-                        <PaymentWhatsAppMenu
-                          patientPhone={payment.patients?.whatsapp_phone || null}
-                          patientName={payment.patients?.full_name || ""}
-                        />
-                      </div>
-                    )}
-                    <span className="font-bold text-sm text-foreground">
-                      {formatCurrency(payment.amount, payment.currency)}
-                    </span>
-                    <Badge className={`${getPaymentStatusColor(payment.status)} rounded-full text-xs`}>
-                      {getPaymentStatusLabel(payment.status)}
-                    </Badge>
-                    {payment.status !== "paid" && payment.status !== "cancelled" && (
-                      <Button
-                        variant="outline"
-                        size="sm"
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          setConfirmPaymentData({
-                            id: payment.id,
-                            amount: payment.amount,
-                            patientName: payment.patients?.full_name || "Paciente",
-                          });
+                          navigate(`/patients/${payment.patient_id}`);
                         }}
-                        className="rounded-lg h-8 gap-1.5"
-                        title="Marcar como pagado"
+                        className="font-semibold text-sm text-foreground hover:text-primary transition-colors text-left truncate block w-full"
                       >
-                        <CheckCircle2 className="h-3.5 w-3.5" />
-                        <span className="hidden md:inline">Cobrar</span>
-                      </Button>
-                    )}
-                    <div className="hidden sm:flex items-center gap-1">
+                        {payment.patients?.full_name || "Paciente desconocido"}
+                      </button>
+                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                        <p className="text-xs text-muted-foreground">
+                          Vence: {format(new Date(payment.due_date), "d MMM yyyy", { locale: es })}
+                        </p>
+                        {payment.recurrence_type !== "one_time" && (
+                          <Badge variant="outline" className="rounded-full text-[10px] gap-0.5 h-5">
+                            <RefreshCw className="h-2.5 w-2.5" />
+                            {getRecurrenceTypeLabel(payment.recurrence_type)}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Monto + estado: columna derecha, respira en cualquier ancho */}
+                    <div className="text-right shrink-0">
+                      <p className="font-bold text-[15px] text-foreground leading-tight">
+                        {formatCurrency(payment.amount, payment.currency)}
+                      </p>
+                      <Badge className={`${getPaymentStatusColor(payment.status)} rounded-full text-[11px] mt-1`}>
+                        {getPaymentStatusLabel(payment.status)}
+                      </Badge>
+                    </div>
+
+                    {/* Acciones inline: solo escritorio */}
+                    <div className="hidden sm:flex items-center gap-1 shrink-0">
+                      {payment.status !== "paid" && payment.status !== "cancelled" && (
+                        <>
+                          <div onClick={(e) => e.stopPropagation()}>
+                            <PaymentWhatsAppMenu
+                              patientPhone={payment.patients?.whatsapp_phone || null}
+                              patientName={payment.patients?.full_name || ""}
+                            />
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setConfirmPaymentData({
+                                id: payment.id,
+                                amount: payment.amount,
+                                patientName: payment.patients?.full_name || "Paciente",
+                              });
+                            }}
+                            className="rounded-lg h-8 gap-1.5"
+                            title="Marcar como pagado"
+                          >
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                            <span className="hidden md:inline">Cobrar</span>
+                          </Button>
+                        </>
+                      )}
                       <Button
                         variant="ghost"
                         size="sm"
@@ -675,6 +684,33 @@ const Payments = () => {
                       </Button>
                     </div>
                   </div>
+
+                  {/* Acciones mobile: barra cómoda abajo, solo si hay algo por cobrar */}
+                  {payment.status !== "paid" && payment.status !== "cancelled" && (
+                    <div
+                      className="flex sm:hidden items-center gap-2 mt-3 pt-3 border-t border-border/40"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <PaymentWhatsAppMenu
+                        patientPhone={payment.patients?.whatsapp_phone || null}
+                        patientName={payment.patients?.full_name || ""}
+                      />
+                      <Button
+                        variant="outline"
+                        onClick={() =>
+                          setConfirmPaymentData({
+                            id: payment.id,
+                            amount: payment.amount,
+                            patientName: payment.patients?.full_name || "Paciente",
+                          })
+                        }
+                        className="flex-1 h-10 rounded-xl gap-2"
+                      >
+                        <CheckCircle2 className="h-4 w-4" />
+                        Cobrar
+                      </Button>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             ))}
