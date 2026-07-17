@@ -224,7 +224,11 @@ const Payments = () => {
   const filteredPayments = payments.filter((payment) => {
     if (statusFilter !== "all" && payment.status !== statusFilter) return false;
     if (patientFilter !== "all" && payment.patient_id !== patientFilter) return false;
-    if (rangeActive && !inPeriod(payment.due_date)) return false;
+    // Período: los pagos COBRADOS se ubican por su fecha de pago (así
+    // "cobrado este mes" muestra lo que entró este mes, aunque la deuda
+    // venciera antes); el resto, por su vencimiento.
+    const refDate = payment.status === "paid" && payment.paid_at ? payment.paid_at : payment.due_date;
+    if (rangeActive && !inPeriod(refDate)) return false;
     if (searchQuery) {
       const patientName = payment.patients?.full_name?.toLowerCase() || "";
       if (!patientName.includes(searchQuery.toLowerCase())) return false;
