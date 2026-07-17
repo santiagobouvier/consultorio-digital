@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { ArrowLeft, Users, Loader2, Plus, ListChecks } from "lucide-react";
+import { ArrowLeft, Users, Loader2, Plus, ListChecks, ChevronDown } from "lucide-react";
 import { useBusinessId } from "@/hooks/use-business-id";
 import { useProfessionals } from "@/hooks/use-professionals";
 import { useAvailabilityTemplate } from "@/hooks/use-availability-template";
@@ -38,6 +38,8 @@ const AvailableSlots = () => {
 
   const [saving, setSaving] = useState(false);
   const [punctualOpen, setPunctualOpen] = useState(false);
+  // Sección "días puntuales": secundaria, arranca colapsada
+  const [punctualSectionOpen, setPunctualSectionOpen] = useState(false);
   const [slots, setSlots] = useState<SlotRow[]>([]);
   const [slotsLoading, setSlotsLoading] = useState(true);
 
@@ -101,27 +103,24 @@ const AvailableSlots = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto max-w-5xl p-4 space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <Button variant="ghost" onClick={() => navigate("/dashboard")}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Volver
-          </Button>
-        </div>
-
-        {/* Hero */}
-        <div className="rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border p-6">
-          <div className="flex items-start justify-between gap-4 flex-wrap">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold tracking-tight inline-flex items-center gap-2">
-                Horarios del consultorio
+      <div className="mx-auto w-full max-w-[1500px] p-4 sm:p-6 space-y-6">
+        {/* Encabezado de página */}
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="h-11 w-11 rounded-2xl flex items-center justify-center shrink-0" style={{ background: "hsla(262, 80%, 66%, 0.14)" }}>
+              <ListChecks className="h-5 w-5" style={{ color: "hsl(262 80% 66%)" }} />
+            </span>
+            <div className="min-w-0">
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight inline-flex items-center gap-2">
+                Horarios
                 <HelpTooltip id="schedules" />
               </h1>
-              <p className="text-muted-foreground mt-1 text-sm md:text-base">
-                Definí cuándo atendés. Los horarios para reservar se calculan solos según tus tipos de sesión.
+              <p className="text-sm text-muted-foreground">
+                Definí cuándo atendés — los horarios para reservar se calculan solos.
               </p>
             </div>
+          </div>
+          <div className="flex items-center gap-3">
             {showProfessionalSelector && (
               <div className="flex items-center gap-2">
                 <Users className="h-4 w-4 text-muted-foreground" />
@@ -139,12 +138,11 @@ const AvailableSlots = () => {
                 </Select>
               </div>
             )}
+            <Button variant="ghost" onClick={() => navigate("/dashboard")}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Volver
+            </Button>
           </div>
-          {selectedPro && showProfessionalSelector && (
-            <div className="mt-3 text-xs text-muted-foreground">
-              Editando horarios de <strong>{selectedPro.name}</strong>
-            </div>
-          )}
         </div>
 
         {loading || !businessId || !selectedProUserId || !template ? (
@@ -155,37 +153,58 @@ const AvailableSlots = () => {
           </Card>
         ) : (
           <>
-            {/* Tipos de sesión (qué ofrecés) */}
-            <ServicesManager businessId={businessId} />
-
-            {/* Semana tipo (guardar = agenda generada y mantenida sola) */}
-            <WeeklyTemplateEditor
-              template={template}
-              onChange={setTemplate as any}
-              onSave={handleSaveTemplate}
-              saving={saving}
-            />
-
-            {/* Horarios sueltos (fuera de la semana tipo) */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between gap-3 flex-wrap">
-                <h2 className="text-lg font-semibold inline-flex items-center gap-2">
-                  <ListChecks className="h-5 w-5 text-primary" />
-                  Horarios sueltos
-                </h2>
-                <Button variant="outline" size="sm" onClick={() => setPunctualOpen(true)}>
-                  <Plus className="h-4 w-4 mr-1" /> Horario suelto
-                </Button>
+            {/* Desktop: semana tipo protagonista (2/3) + panel derecho con
+                tipos de sesión y días puntuales (secundario, colapsado) */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+              <div className="order-2 lg:order-1 lg:col-span-2">
+                {/* Semana tipo (guardar = agenda generada y mantenida sola) */}
+                <WeeklyTemplateEditor
+                  template={template}
+                  onChange={setTemplate as any}
+                  onSave={handleSaveTemplate}
+                  saving={saving}
+                />
               </div>
-              {slotsLoading ? (
-                <Card>
-                  <CardContent className="py-16 flex items-center justify-center text-muted-foreground">
-                    <Loader2 className="h-5 w-5 animate-spin mr-2" /> Cargando horarios...
-                  </CardContent>
-                </Card>
-              ) : (
-                <SlotsList slots={slots} onChange={loadSlots} />
-              )}
+
+              <div className="order-1 lg:order-2 space-y-6">
+                {/* Tipos de sesión (qué ofrecés) */}
+                <ServicesManager businessId={businessId} />
+
+                {/* Días puntuales: secundario y colapsado — para el sábado
+                    excepcional o el horario extra de una semana concreta */}
+                <div className="rounded-xl border bg-muted/20">
+                  <button
+                    type="button"
+                    onClick={() => setPunctualSectionOpen((v) => !v)}
+                    className="w-full flex items-center justify-between gap-2 p-4 text-left"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-foreground">¿Abrís un día puntual?</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Horarios sueltos fuera de tu semana tipo
+                        {slots.length > 0 ? ` · ${slots.length} activo${slots.length !== 1 ? "s" : ""}` : ""}
+                      </p>
+                    </div>
+                    <ChevronDown
+                      className={`h-4 w-4 text-muted-foreground shrink-0 transition-transform ${punctualSectionOpen ? "rotate-180" : ""}`}
+                    />
+                  </button>
+                  {punctualSectionOpen && (
+                    <div className="px-4 pb-4 space-y-3">
+                      <Button variant="outline" size="sm" onClick={() => setPunctualOpen(true)} className="w-full">
+                        <Plus className="h-4 w-4 mr-1" /> Agregar horario suelto
+                      </Button>
+                      {slotsLoading ? (
+                        <div className="py-8 flex items-center justify-center text-muted-foreground text-sm">
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" /> Cargando...
+                        </div>
+                      ) : (
+                        <SlotsList slots={slots} onChange={loadSlots} />
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
 
             {/* Horario suelto (fuera de la semana tipo) */}
