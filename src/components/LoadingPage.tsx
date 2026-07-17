@@ -1,8 +1,25 @@
-// Pantalla de carga global. La usan todas las páginas del panel, el portal y
-// la web pública, así que respeta el modo claro/oscuro del usuario en vez de
-// forzar un fondo oscuro. El logo va sobre un disco oscuro fijo (como ícono de
-// app) porque el PNG está diseñado para fondo oscuro.
+import { getCachedClinicBrand } from "@/lib/clinic-brand-cache";
+
+// Pantalla de carga global. Respeta el modo claro/oscuro y es consciente de
+// DÓNDE se está mostrando:
+// - En el panel del profesional y páginas propias: logo de Consultorio Digital.
+// - En superficies del CONSULTORIO (portal del paciente, web pública): identidad
+//   100% del consultorio — su logo y su color si ya los conocemos (caché local),
+//   y si no, solo la animación neutra. Nunca el logo de Consultorio Digital.
+const CLINIC_PREFIXES = ["/portal/", "/consultorio/", "/portal-paciente", "/acceso"];
+
 const LoadingPage = () => {
+  const path = typeof window !== "undefined" ? window.location.pathname : "";
+  const clinicMode = CLINIC_PREFIXES.some((p) => path.startsWith(p));
+  const slug =
+    path.startsWith("/portal/") || path.startsWith("/consultorio/")
+      ? path.split("/")[2] || null
+      : null;
+  const brand = clinicMode ? getCachedClinicBrand(slug) : null;
+  const ringColor = brand?.color
+    ? `hsl(${brand.color} / 0.5)`
+    : "hsl(var(--primary) / 0.5)";
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
       <style>{`
@@ -33,7 +50,7 @@ const LoadingPage = () => {
           position: absolute;
           inset: 0;
           border-radius: 9999px;
-          border: 2px solid hsl(var(--primary) / 0.5);
+          border: 2px solid ${ringColor};
           animation: loadingRing 2.4s ease-out infinite;
         }
 
@@ -50,16 +67,37 @@ const LoadingPage = () => {
       <div className="loading-stage relative flex items-center justify-center">
         <span className="loading-ring" aria-hidden="true" />
         <span className="loading-ring loading-ring-late" aria-hidden="true" />
-        <div
-          className="loading-breathe relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-full shadow-lg"
-          style={{ backgroundColor: "hsl(180 12% 10%)" }}
-        >
-          <img
-            src="/logo-loading.png"
-            alt="Cargando..."
-            className="h-14 w-14 object-contain"
-          />
-        </div>
+        {clinicMode ? (
+          brand?.logoUrl ? (
+            <img
+              src={brand.logoUrl}
+              alt="Cargando..."
+              className="loading-breathe h-24 w-24 rounded-full object-cover shadow-lg bg-card"
+            />
+          ) : (
+            // Marca aún desconocida: disco neutro con el color disponible,
+            // sin ningún logo ajeno al consultorio.
+            <div
+              className="loading-breathe h-24 w-24 rounded-full"
+              style={{
+                background: brand?.color
+                  ? `hsl(${brand.color} / 0.14)`
+                  : "hsl(var(--primary) / 0.12)",
+              }}
+            />
+          )
+        ) : (
+          <div
+            className="loading-breathe relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-full shadow-lg"
+            style={{ backgroundColor: "hsl(180 12% 10%)" }}
+          >
+            <img
+              src="/logo-loading.png"
+              alt="Cargando..."
+              className="h-14 w-14 object-contain"
+            />
+          </div>
+        )}
       </div>
     </div>
   );

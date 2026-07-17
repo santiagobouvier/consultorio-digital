@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import NotFound from "./NotFound";
 import { getPlanDefinition } from "@/lib/plan-definitions";
 import { PublicThemeControl } from "@/components/public/PublicThemeControl";
+import { cacheClinicBrand } from "@/lib/clinic-brand-cache";
 
 // Horarios 2.0: la reserva es por TIPO DE SESIÓN (service). El visitante elige
 // el tipo, el motor calcula los inicios que caben según su duración, completa
@@ -261,6 +262,11 @@ const PublicBooking = ({ demo = false }: { demo?: boolean }) => {
 
         if (cancelled) return;
         setBusiness(businessData);
+        // La pantalla de carga usa esta marca en las próximas visitas
+        cacheClinicBrand(slug, {
+          logoUrl: businessData.portal_logo_url || null,
+          color: businessData.portal_primary_color || null,
+        });
         setServices((svcResp?.services ?? []) as Service[]);
       } catch (error) {
         console.error("[PublicBooking] Error cargando reserva:", error);

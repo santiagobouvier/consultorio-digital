@@ -28,6 +28,7 @@ import {
   type ProfileEditData,
 } from "@/components/portal/PatientPortalView";
 import { getRecurrenceTypeLabel, RecurrenceType, formatCurrency } from "@/lib/payments";
+import { cacheClinicBrand } from "@/lib/clinic-brand-cache";
 
 interface ClinicBrandingFull extends PortalBranding {
   id: string;
@@ -300,6 +301,11 @@ const ClinicPortal = () => {
         slug: data.public_slug,
         cancellationHoursNotice: (data as any).cancellation_hours_notice ?? 24,
         lateCancellationMessage: (data as any).late_cancellation_message ?? null,
+      });
+      // La pantalla de carga usa esta marca en las próximas visitas
+      cacheClinicBrand(slug, {
+        logoUrl: (data as any).portal_logo_url || null,
+        color: (data as any).portal_primary_color || null,
       });
       setLoading(false);
     })();

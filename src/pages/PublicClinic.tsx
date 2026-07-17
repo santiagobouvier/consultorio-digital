@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CalendarDays, LogIn, Clock, Stethoscope } from "lucide-react";
 import LoadingPage from "@/components/LoadingPage";
+import { cacheClinicBrand } from "@/lib/clinic-brand-cache";
 import NotFound from "./NotFound";
 import { getPlanDefinition } from "@/lib/plan-definitions";
 import { PublicThemeControl } from "@/components/public/PublicThemeControl";
@@ -123,6 +124,11 @@ const PublicClinic = () => {
 
         if (cancelled) return;
         setBusiness(businessData);
+        // La pantalla de carga usa esta marca en las próximas visitas
+        cacheClinicBrand(slug, {
+          logoUrl: businessData.portal_logo_url || null,
+          color: businessData.portal_primary_color || null,
+        });
         setSettings(settingsData);
         setSchedule(buildSchedule(templateData));
       } catch (error) {
