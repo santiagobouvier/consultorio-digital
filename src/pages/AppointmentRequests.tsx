@@ -687,70 +687,32 @@ const AppointmentRequests = () => {
   const loading = loadingReqs || loadingPortal || loadingReschedule;
 
   return (
-    <div className="min-h-screen bg-background p-4">
-      <div className="container mx-auto max-w-4xl">
-        <div className="mb-6">
+    <div className="min-h-screen bg-background p-4 sm:p-6">
+      <div className="mx-auto w-full max-w-[1500px]">
+        {/* Encabezado de página */}
+        <div className="mb-6 flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="h-11 w-11 rounded-2xl flex items-center justify-center shrink-0" style={{ background: "hsla(38, 92%, 55%, 0.14)" }}>
+              <Inbox className="h-5 w-5" style={{ color: "hsl(38 92% 55%)" }} />
+            </span>
+            <div className="min-w-0">
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Solicitudes</h1>
+              <p className="text-sm text-muted-foreground">
+                {items.length === 0
+                  ? "Nada espera tu respuesta"
+                  : `${items.length} pendiente${items.length !== 1 ? "s" : ""} de aprobar`}
+              </p>
+            </div>
+          </div>
           <Button variant="ghost" onClick={() => navigate("/dashboard")}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Volver al panel
           </Button>
         </div>
 
-        {/* Recent cancellations collapsible */}
-        {!loadingCancellations && recentCancellations.length > 0 && (
-          <Collapsible
-            open={cancellationsOpen}
-            onOpenChange={setCancellationsOpen}
-            className="mb-4 rounded-xl border bg-muted/30"
-          >
-            <div className="flex items-center justify-between p-3 gap-2">
-              <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium text-foreground flex-1 min-w-0 hover:opacity-80">
-                <XCircle className="h-4 w-4 text-muted-foreground shrink-0" />
-                <span className="truncate">
-                  Cancelaciones recientes ({recentCancellations.length})
-                </span>
-                <ChevronDown
-                  className={cn(
-                    "h-4 w-4 text-muted-foreground transition-transform",
-                    cancellationsOpen && "rotate-180"
-                  )}
-                />
-              </CollapsibleTrigger>
-              {recentCancellations.length >= 2 && (
-                <Button variant="ghost" size="sm" onClick={ackAllCancellations} className="text-xs h-7">
-                  Marcar todas como vistas
-                </Button>
-              )}
-            </div>
-            <CollapsibleContent>
-              <div className="px-3 pb-3 space-y-1.5">
-                {recentCancellations.map((c) => (
-                  <div
-                    key={c.id}
-                    className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-background border px-3 py-2 text-sm"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium truncate">{c.patientName}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Canceló cita del {format(new Date(c.startAt), "d 'de' MMM HH:mm", { locale: es })}
-                        {c.reason && ` · "${c.reason}"`}
-                      </p>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 text-xs shrink-0"
-                      onClick={() => ackCancellation(c.id)}
-                    >
-                      Marcar como vista
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
-        )}
-
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+          {/* Columna principal: pendientes */}
+          <div className="lg:col-span-2 space-y-4">
         <Card>
           <CardHeader>
             <CardTitle>Pendientes de aprobar</CardTitle>
@@ -814,6 +776,122 @@ const AppointmentRequests = () => {
           totalItems={items.length}
           pageSize={ITEMS_PER_PAGE}
         />
+          </div>
+
+          {/* Panel lateral: resumen + cancelaciones recientes */}
+          <div className="space-y-4">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Resumen</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {[
+                  {
+                    label: "Reservas del portal",
+                    count: items.filter((i) => i.kind === "portal_booking").length,
+                    tint: "176 100% 32%",
+                  },
+                  {
+                    label: "Solicitudes públicas",
+                    count: items.filter((i) => i.kind === "public_request").length,
+                    tint: "210 90% 60%",
+                  },
+                  {
+                    label: "Reprogramaciones",
+                    count: items.filter((i) => i.kind === "reschedule").length,
+                    tint: "38 92% 55%",
+                  },
+                ].map((row) => (
+                  <div
+                    key={row.label}
+                    className="flex items-center justify-between rounded-xl border border-border/50 bg-muted/20 px-3.5 py-2.5"
+                  >
+                    <span className="text-sm text-muted-foreground inline-flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full" style={{ background: `hsl(${row.tint})` }} />
+                      {row.label}
+                    </span>
+                    <span
+                      className="text-sm font-bold tabular-nums"
+                      style={{ color: row.count > 0 ? `hsl(${row.tint})` : undefined }}
+                    >
+                      {row.count}
+                    </span>
+                  </div>
+                ))}
+                {items.length === 0 && (
+                  <p className="text-xs text-muted-foreground pt-1">
+                    Todo al día ✓ — cuando llegue algo nuevo, te avisamos por email y notificación.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Cancelaciones recientes */}
+            {!loadingCancellations && recentCancellations.length > 0 && (
+              <Collapsible
+                open={cancellationsOpen}
+                onOpenChange={setCancellationsOpen}
+                className="rounded-xl border bg-muted/30"
+              >
+                <div className="flex items-center justify-between p-3 gap-2">
+                  <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium text-foreground flex-1 min-w-0 hover:opacity-80">
+                    <XCircle className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <span className="truncate">
+                      Cancelaciones recientes ({recentCancellations.length})
+                    </span>
+                    <ChevronDown
+                      className={cn(
+                        "h-4 w-4 text-muted-foreground transition-transform",
+                        cancellationsOpen && "rotate-180"
+                      )}
+                    />
+                  </CollapsibleTrigger>
+                  {recentCancellations.length >= 2 && (
+                    <Button variant="ghost" size="sm" onClick={ackAllCancellations} className="text-xs h-7">
+                      Marcar todas como vistas
+                    </Button>
+                  )}
+                </div>
+                <CollapsibleContent>
+                  <div className="px-3 pb-3 space-y-1.5">
+                    {recentCancellations.map((c) => (
+                      <div
+                        key={c.id}
+                        className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-background border px-3 py-2 text-sm"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium truncate">{c.patientName}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Canceló cita del {format(new Date(c.startAt), "d 'de' MMM HH:mm", { locale: es })}
+                            {c.reason && ` · "${c.reason}"`}
+                          </p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-xs shrink-0"
+                          onClick={() => ackCancellation(c.id)}
+                        >
+                          Marcar como vista
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            )}
+
+            {/* Cómo funciona */}
+            <Card className="border-dashed">
+              <CardContent className="p-4 text-xs text-muted-foreground leading-relaxed">
+                Al <span className="font-medium text-foreground">confirmar</span>, la cita entra a tu
+                agenda y el paciente recibe el aviso automáticamente. Al{" "}
+                <span className="font-medium text-foreground">rechazar</span>, también se le avisa —
+                nunca queda esperando sin respuesta.
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
 
       {/* Reject reschedule dialog */}
