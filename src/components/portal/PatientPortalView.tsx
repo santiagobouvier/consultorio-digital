@@ -21,7 +21,7 @@ import { InstallAppButton } from "@/components/pwa/InstallAppButton";
 import { NotificationActivationCard } from "@/components/NotificationActivationCard";
 import { NotificationBell } from "@/components/portal/NotificationBell";
 import { NotificationsSummaryCard } from "@/components/portal/NotificationsSummaryCard";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, isToday, isTomorrow, differenceInCalendarDays } from "date-fns";
 import { es } from "date-fns/locale";
 import {
   User, Calendar, CreditCard, Clock, MapPin, Video,
@@ -504,21 +504,46 @@ export function PatientPortalView(props: PatientPortalViewProps) {
           </Card>
         )}
 
-        {/* Welcome (desktop, inline) */}
-        <div className="flex items-center gap-4">
-          <Avatar className="h-14 w-14 lg:h-16 lg:w-16 border-2 border-primary/30 shadow-lg shadow-primary/10">
-            {patient.avatar_url ? <AvatarImage src={patient.avatar_url} /> : null}
-            <AvatarFallback className="text-xl font-bold bg-gradient-to-tr from-primary to-primary/70 text-primary-foreground">
-              {initials}
-            </AvatarFallback>
-          </Avatar>
-          <div className="min-w-0">
-            <h2 className="text-2xl lg:text-3xl font-bold tracking-tight text-foreground">
-              Hola, {firstName} <span className="inline-block">👋</span>
-            </h2>
-            <p className="text-sm lg:text-base text-muted-foreground">
-              Bienvenido/a a tu portal de {branding.name}.
-            </p>
+        {/* Hero de marca: el portal se siente SU consultorio desde el primer pixel */}
+        <div className="relative overflow-hidden rounded-3xl border border-primary/20 p-5 lg:p-6">
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background:
+                "linear-gradient(120deg, hsl(var(--primary) / 0.16), hsl(var(--primary) / 0.05) 55%, transparent)",
+            }}
+          />
+          <div className="relative flex items-center gap-4">
+            {branding.logoUrl ? (
+              <img
+                src={branding.logoUrl}
+                alt={branding.name}
+                className="h-14 w-14 lg:h-16 lg:w-16 rounded-2xl object-cover shrink-0 ring-2 ring-primary/30"
+                style={{ boxShadow: "0 8px 26px -8px hsl(var(--primary) / 0.5)" }}
+              />
+            ) : (
+              <Avatar className="h-14 w-14 lg:h-16 lg:w-16 border-2 border-primary/30 shadow-lg shadow-primary/10 shrink-0">
+                {patient.avatar_url ? <AvatarImage src={patient.avatar_url} /> : null}
+                <AvatarFallback className="text-xl font-bold bg-gradient-to-tr from-primary to-primary/70 text-primary-foreground">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+            )}
+            <div className="min-w-0 flex-1">
+              <h2 className="text-2xl lg:text-3xl font-bold tracking-tight text-foreground">
+                Hola, {firstName} <span className="inline-block">👋</span>
+              </h2>
+              <p className="text-sm lg:text-base text-muted-foreground truncate">
+                Tu espacio en <span className="font-semibold text-foreground">{branding.name}</span>
+                {branding.specialty ? ` · ${branding.specialty}` : ""}
+              </p>
+            </div>
+            <Avatar className="hidden sm:block h-11 w-11 border border-border shrink-0">
+              {patient.avatar_url ? <AvatarImage src={patient.avatar_url} /> : null}
+              <AvatarFallback className="text-sm font-bold bg-muted text-muted-foreground">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
           </div>
         </div>
 
@@ -539,10 +564,26 @@ export function PatientPortalView(props: PatientPortalViewProps) {
             ) : (
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div className="space-y-3 min-w-0">
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-medium">
-                    <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-                    Próxima cita
-                  </div>
+                  {(() => {
+                    const start = parseISO(upcomingAppointments[0].start_at);
+                    if (isToday(start)) {
+                      return (
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary text-primary-foreground text-xs font-bold shadow-md shadow-primary/30">
+                          <span className="w-2 h-2 rounded-full bg-primary-foreground animate-pulse" />
+                          ¡Tu cita es HOY!
+                        </div>
+                      );
+                    }
+                    const label = isTomorrow(start)
+                      ? "Próxima cita · mañana"
+                      : `Próxima cita · en ${differenceInCalendarDays(start, new Date())} días`;
+                    return (
+                      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-medium">
+                        <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                        {label}
+                      </div>
+                    );
+                  })()}
                   <div className="space-y-1">
                     <h3 className="text-xl lg:text-2xl font-bold capitalize">
                       {formatDateLong(parseISO(upcomingAppointments[0].start_at))}
@@ -579,11 +620,6 @@ export function PatientPortalView(props: PatientPortalViewProps) {
                       </a>
                     </Button>
                   )}
-                  {onBookAppointment && (
-                    <Button variant="outline" onClick={onBookAppointment} className="gap-2">
-                      <Plus className="h-4 w-4" /> Reservar otra cita
-                    </Button>
-                  )}
                   {upcomingAppointments[0].status !== "reschedule_requested" && (onRescheduleAppointment || onCancelAppointment) && (
                     <div className="grid grid-cols-2 gap-2">
                       {onRescheduleAppointment && (
@@ -607,40 +643,62 @@ export function PatientPortalView(props: PatientPortalViewProps) {
           </CardContent>
         </Card>
 
-        {/* Notas del profesional */}
-        <Card className="hover:shadow-md transition-all">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base lg:text-lg flex items-center gap-2">
-              <Heart className="h-5 w-5 text-primary" /> Notas de tu profesional
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {patient.private_notes ? (
+        {/* Notas del profesional: solo si hay algo que decir */}
+        {patient.private_notes && (
+          <Card className="hover:shadow-md transition-all">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base lg:text-lg flex items-center gap-2">
+                <Heart className="h-5 w-5 text-primary" /> Notas de tu profesional
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
               <div className="rounded-xl bg-muted/50 p-4 lg:p-5">
                 <p className="text-sm lg:text-base text-muted-foreground leading-relaxed whitespace-pre-wrap italic">
                   "{patient.private_notes}"
                 </p>
               </div>
-            ) : (
-              <div className="text-center py-6">
-                <Heart className="h-10 w-10 text-muted-foreground/40 mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">Aún no hay notas para mostrar</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* RIGHT (4/12) */}
       <div className="lg:col-span-4 flex flex-col gap-4 lg:gap-5">
+        {/* CTA principal: reservar siempre a mano (cuando no hay citas, el
+            hero de la izquierda ya muestra el botón grande) */}
+        {onBookAppointment && upcomingAppointments.length > 0 && (
+          <button
+            onClick={onBookAppointment}
+            className="group relative overflow-hidden rounded-2xl p-5 text-left transition-all hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.99]"
+            style={{
+              background:
+                "linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.82))",
+              boxShadow: "0 10px 30px -10px hsl(var(--primary) / 0.55)",
+            }}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-base font-bold text-primary-foreground">Reservar una cita</p>
+                <p className="text-xs text-primary-foreground/80 mt-0.5">
+                  Elegí día y horario en un minuto
+                </p>
+              </div>
+              <span className="h-10 w-10 rounded-xl bg-white/20 flex items-center justify-center shrink-0 transition-transform group-hover:scale-110">
+                <Plus className="h-5 w-5 text-primary-foreground" />
+              </span>
+            </div>
+          </button>
+        )}
+
         {/* Stats compactos — "Pendientes" cuenta solo los no vencidos (los vencidos los muestra la card alerta grande) */}
         <div className="grid grid-cols-3 gap-2 lg:gap-3">
           {[
-            { value: upcomingAppointments.length, label: "Próximas", tone: "neutral" as const },
-            { value: totalSessions, label: "Sesiones", tone: "neutral" as const },
+            { value: upcomingAppointments.length, label: "Próximas", icon: Calendar, tone: "neutral" as const },
+            { value: totalSessions, label: "Sesiones", icon: CalendarCheck, tone: "neutral" as const },
             {
               value: nonOverdueCount,
               label: "Pendientes",
+              icon: Clock,
               tone: (nonOverdueCount > 0 ? "warning" : "neutral") as "warning" | "neutral",
             },
           ].map((stat, i) => (
@@ -652,6 +710,11 @@ export function PatientPortalView(props: PatientPortalViewProps) {
                   : "border-border/60 bg-card"
               }`}
             >
+              <stat.icon
+                className={`h-4 w-4 mx-auto mb-1 ${
+                  stat.tone === "warning" ? "text-amber-600 dark:text-amber-400" : "text-primary/70"
+                }`}
+              />
               <p className={`text-2xl lg:text-3xl font-bold ${
                 stat.tone === "warning" ? "text-amber-600 dark:text-amber-400" : "text-primary"
               }`}>
