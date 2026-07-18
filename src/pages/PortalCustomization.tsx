@@ -318,30 +318,39 @@ const PortalCustomization = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b bg-card sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-4 lg:px-8 py-3 lg:py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <div>
-              <h1 className="text-lg lg:text-xl font-bold flex items-center gap-2">
-                <Palette className="h-5 w-5 text-primary" />
-                Personalizar Portal
+      <main className="mx-auto w-full max-w-[1500px] px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
+
+        {/* Encabezado de página */}
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="h-11 w-11 rounded-2xl flex items-center justify-center shrink-0" style={{ background: "hsla(320, 75%, 62%, 0.14)" }}>
+              <Palette className="h-5 w-5" style={{ color: "hsl(320 75% 62%)" }} />
+            </span>
+            <div className="min-w-0">
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight inline-flex items-center gap-2">
+                Personalizar portal
                 <HelpTooltip id="patientPortal" />
               </h1>
-              <p className="text-xs text-muted-foreground">Configurá cómo ven los pacientes su portal</p>
+              <p className="text-sm text-muted-foreground truncate">
+                Tu marca en el portal, la web pública y el panel
+              </p>
             </div>
           </div>
-          <div className="flex items-center gap-2 flex-wrap justify-end">
-            <Button size="sm" onClick={handleSave} disabled={saving} className="gap-2">
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" onClick={() => navigate(-1)} className="gap-2 rounded-xl h-11">
+              <ArrowLeft className="h-4 w-4" />
+              <span className="hidden sm:inline">Volver</span>
+            </Button>
+            <Button onClick={handleSave} disabled={saving} className="gap-2 rounded-xl h-11 px-5 font-semibold shadow-md shadow-primary/20">
               {saving ? "Guardando..." : "Guardar"}
             </Button>
           </div>
         </div>
-      </header>
 
-      <main className="max-w-5xl mx-auto px-4 lg:px-8 py-6 lg:py-10 space-y-6 lg:space-y-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+
+        {/* Riel derecho: tu dirección en internet (arriba en mobile) */}
+        <div className="order-1 lg:order-2 space-y-6">
         {/* URL del portal — vive acá porque es 100% portal del paciente */}
         <Card>
           <CardHeader>
@@ -429,8 +438,11 @@ const PortalCustomization = () => {
             )}
           </CardContent>
         </Card>
+        </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Columna principal: identidad + colores + invitaciones */}
+        <div className="order-2 lg:order-1 lg:col-span-2 space-y-6">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           <Card>
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
@@ -470,8 +482,6 @@ const PortalCustomization = () => {
             </CardContent>
           </Card>
         </div>
-
-        <Separator />
 
         <Card>
           <CardHeader>
@@ -577,9 +587,10 @@ const PortalCustomization = () => {
           </CardContent>
         </Card>
 
-        <Separator />
-
         <PortalInviteBatch businessId={businessId} />
+        </div>
+
+        </div>
 
         <div className="flex justify-end gap-3 pb-8">
           <Button variant="outline" onClick={() => navigate(-1)}>Cancelar</Button>
