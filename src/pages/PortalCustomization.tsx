@@ -82,7 +82,7 @@ const PortalCustomization = () => {
   const [publicSlug, setPublicSlug] = useState("");
   const [initialSlug, setInitialSlug] = useState("");
   const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
-  const [copied, setCopied] = useState(false);
+  const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
 
   // PWA icon editor
   const [iconBgColor, setIconBgColor] = useState<string>("#00a89d");
@@ -146,16 +146,11 @@ const PortalCustomization = () => {
 
   const portalUrl = publicSlug ? buildShareUrl(`/portal/${publicSlug}`) : "";
 
-  const copyPortalUrl = async () => {
-    if (!portalUrl) return;
-    await navigator.clipboard.writeText(portalUrl);
-    setCopied(true);
+  const copyUrl = async (url: string) => {
+    await navigator.clipboard.writeText(url);
+    setCopiedUrl(url);
     toast({ title: "URL copiada" });
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const openPortal = () => {
-    if (portalUrl) window.open(portalUrl, "_blank");
+    setTimeout(() => setCopiedUrl(null), 2000);
   };
 
   const handlePresetSelect = (preset: typeof THEME_PRESETS[0]) => {
@@ -411,29 +406,30 @@ const PortalCustomization = () => {
             {portalUrl && (
               <div className="space-y-2">
                 <Label>Tus direcciones</Label>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground w-24 shrink-0">Web pública</span>
-                    <Input
-                      value={buildShareUrl(`/consultorio/${publicSlug}`)}
-                      readOnly
-                      className="font-mono text-xs h-10 flex-1"
-                    />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground w-24 shrink-0">Portal</span>
-                    <Input value={portalUrl} readOnly className="font-mono text-xs h-10 flex-1" />
-                  </div>
+                <div className="rounded-lg border divide-y overflow-hidden">
+                  {[
+                    { label: "Web pública (reservas)", url: buildShareUrl(`/consultorio/${publicSlug}`) },
+                    { label: "Portal de pacientes", url: portalUrl },
+                  ].map(({ label, url }) => (
+                    <div key={label} className="p-3 space-y-1 bg-muted/20">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-medium text-muted-foreground">{label}</span>
+                        <div className="flex gap-0.5 shrink-0">
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => copyUrl(url)} title="Copiar link">
+                            {copiedUrl === url ? <Check className="h-3.5 w-3.5 text-primary" /> : <Copy className="h-3.5 w-3.5" />}
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => window.open(url, "_blank")} title="Abrir en otra pestaña">
+                            <ExternalLink className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+                      <p className="text-xs font-mono break-all leading-relaxed text-foreground/90">{url}</p>
+                    </div>
+                  ))}
                 </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={copyPortalUrl} className="h-10 gap-2 flex-1 sm:flex-initial">
-                    {copied ? <Check className="h-4 w-4 text-primary" /> : <Copy className="h-4 w-4" />}
-                    {copied ? "Copiada" : "Copiar link del portal"}
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={openPortal} className="h-10 gap-2 flex-1 sm:flex-initial">
-                    <ExternalLink className="h-4 w-4" /> Ver portal
-                  </Button>
-                </div>
+                <p className="text-xs text-muted-foreground">
+                  Compartí la web pública con quien quiera reservar y el portal con tus pacientes.
+                </p>
               </div>
             )}
           </CardContent>
