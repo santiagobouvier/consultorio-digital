@@ -261,22 +261,32 @@ const Billing = () => {
         style={{ background: "radial-gradient(ellipse 60% 40% at 50% 0%, hsla(176,80%,40%,0.06), transparent)" }}
       />
 
-      <div className="relative z-10 max-w-3xl mx-auto px-4 py-8">
-        <button
-          onClick={() => navigate("/dashboard")}
-          className="inline-flex items-center gap-2 text-sm text-white/40 hover:text-white/70 mb-6 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Volver al dashboard
-        </button>
-
-        <h1 className="text-2xl sm:text-3xl font-bold mb-8 inline-flex items-center gap-2">
-          Facturación
-          <HelpTooltip id="billing" />
-        </h1>
+      <div className="relative z-10 mx-auto w-full max-w-[1500px] px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
+        {/* Encabezado de página */}
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="h-11 w-11 rounded-2xl flex items-center justify-center shrink-0" style={{ background: "hsla(235, 75%, 66%, 0.16)" }}>
+              <CreditCard className="h-5 w-5" style={{ color: "hsl(235 75% 66%)" }} />
+            </span>
+            <div className="min-w-0">
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight inline-flex items-center gap-2">
+                Facturación
+                <HelpTooltip id="billing" />
+              </h1>
+              <p className="text-sm text-white/50 truncate">Tu suscripción a Consultorio Digital</p>
+            </div>
+          </div>
+          <button
+            onClick={() => navigate("/dashboard")}
+            className="inline-flex items-center gap-2 text-sm text-white/40 hover:text-white/70 transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Volver al dashboard
+          </button>
+        </div>
 
         {!subscription ? (
-          <Card className="bg-[#111111] border-white/10">
+          <Card className="bg-[#111111] border-white/10 max-w-xl mx-auto">
             <CardContent className="p-8 text-center">
               <CreditCard className="w-12 h-12 mx-auto mb-4 text-white/30" />
               <h3 className="text-lg font-semibold text-white mb-2">Sin suscripción activa</h3>
@@ -291,7 +301,10 @@ const Billing = () => {
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+
+            {/* Columna principal: la suscripción con sus acciones */}
+            <div className="lg:col-span-2 space-y-6">
             {/* Status + Plan Card */}
             <Card className="bg-[#111111] border-white/10">
               <CardHeader className="pb-4">
@@ -376,9 +389,34 @@ const Billing = () => {
                     </p>
                   </div>
                 )}
+
+                <Separator className="bg-white/10" />
+
+                {/* Acciones de la suscripción */}
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Button
+                    className="flex-1 bg-white text-black hover:bg-white/90"
+                    onClick={() => setShowPlanModal(true)}
+                  >
+                    <ArrowUpRight className="w-4 h-4 mr-2" />
+                    Cambiar plan
+                  </Button>
+                  {subscription.status !== "cancelled" && (
+                    <Button
+                      variant="outline"
+                      className="flex-1 border-red-500/20 text-red-400 hover:bg-red-500/10"
+                      onClick={handleCancelSubscription}
+                    >
+                      {subscription.status === "trial" ? "Cancelar prueba gratuita" : "Cancelar suscripción"}
+                    </Button>
+                  )}
+                </div>
               </CardContent>
             </Card>
+            </div>
 
+            {/* Riel derecho: uso actual + método de pago */}
+            <div className="space-y-6">
             {/* Usage Card */}
             <Card className="bg-[#111111] border-white/10">
               <CardHeader className="pb-4">
@@ -512,29 +550,8 @@ const Billing = () => {
               </CardContent>
             </Card>
 
-            {/* Actions */}
-            <Card className="bg-[#111111] border-white/10">
-              <CardContent className="p-6">
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <Button
-                    className="flex-1 bg-white text-black hover:bg-white/90"
-                    onClick={() => setShowPlanModal(true)}
-                  >
-                    <ArrowUpRight className="w-4 h-4 mr-2" />
-                    Cambiar plan
-                  </Button>
-                  {subscription.status !== "cancelled" && (
-                    <Button
-                      variant="outline"
-                      className="flex-1 border-red-500/20 text-red-400 hover:bg-red-500/10"
-                      onClick={handleCancelSubscription}
-                    >
-                      {subscription.status === "trial" ? "Cancelar prueba gratuita" : "Cancelar suscripción"}
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+            </div>
+
           </div>
         )}
       </div>
