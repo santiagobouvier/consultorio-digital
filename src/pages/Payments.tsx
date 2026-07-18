@@ -41,6 +41,7 @@ import {
   Download,
 } from "lucide-react";
 import { exportCSV, todayDateString } from "@/lib/csv-export";
+import { createPaymentLink } from "@/lib/payment-links";
 import { PaymentWhatsAppMenu } from "@/components/PaymentWhatsAppMenu";
 import { PaymentForm } from "@/components/PaymentForm";
 import { GlobalPaymentForm } from "@/components/GlobalPaymentForm";
@@ -79,6 +80,8 @@ interface Payment {
   anchor_day: number | null;
   method: string | null;
   notes: string | null;
+  mp_link_url?: string | null;
+  mp_link_status?: string | null;
   patients?: {
     full_name: string;
     whatsapp_phone: string | null;
@@ -133,6 +136,21 @@ const Payments = () => {
     retry: 1,
   });
 
+  // ¿El consultorio tiene Mercado Pago conectado? (habilita links de cobro)
+  const { data: mpConnected = false } = useQuery({
+    queryKey: ["mp_connected", businessId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("payment_policies")
+        .select("mp_access_token")
+        .eq("business_id", businessId!)
+        .maybeSingle();
+      return !!(data as any)?.mp_access_token;
+    },
+    enabled: !!businessId,
+    staleTime: 300_000,
+  });
+
   // Patients list for filter dropdown
   const { data: patients = [] } = useQuery({
     queryKey: ["patients_list_for_payments", businessId],
@@ -162,6 +180,14 @@ const Payments = () => {
   const invalidatePayments = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["payments", businessId] });
   }, [queryClient, businessId]);
+
+  // Link de cobro MP: siempre pasa por el backend, que actualiza la
+  // preferencia existente (misma URL, monto vigente) o crea una nueva.
+  const ensurePaymentLink = useCallback(async (ids: string[]) => {
+    const url = await createPaymentLink(businessId!, ids);
+    invalidatePayments();
+    return url;
+  }, [businessId, invalidatePayments]);
 
   useEffect(() => {
     const status = searchParams.get("status");
@@ -273,7 +299,7 @@ const Payments = () => {
 
   // Deudores: pagos vencidos agrupados por paciente, el que más debe primero
   const debtors = useMemo(() => {
-    const map = new Map<string, { name: string; phone: string | null; total: number; count: number }>();
+    const map = new Map<string, { name: string; phone: string | null; total: number; count: number; ids: string[] }>();
     for (const p of payments) {
       if (p.status !== "overdue") continue;
       const cur = map.get(p.patient_id) ?? {
@@ -281,9 +307,11 @@ const Payments = () => {
         phone: p.patients?.whatsapp_phone || null,
         total: 0,
         count: 0,
+        ids: [] as string[],
       };
       cur.total += p.amount;
       cur.count += 1;
+      cur.ids.push(p.id);
       map.set(p.patient_id, cur);
     }
     return Array.from(map.entries())
@@ -531,7 +559,11 @@ const Payments = () => {
                       <span className="font-bold text-sm text-destructive">
                         {formatCurrency(d.total, "UYU")}
                       </span>
-                      <PaymentWhatsAppMenu patientPhone={d.phone} patientName={d.name} />
+                      <PaymentWhatsAppMenu
+                        patientPhone={d.phone}
+                        patientName={d.name}
+                        getPaymentLink={mpConnected && d.ids.length > 0 ? () => ensurePaymentLink(d.ids) : undefined}
+                      />
                     </div>
                   </div>
                 ))}
@@ -687,6 +719,16 @@ const Payments = () => {
                       <Badge className={`${getPaymentStatusColor(payment.status)} rounded-full text-[11px] mt-1`}>
                         {getPaymentStatusLabel(payment.status)}
                       </Badge>
+                      {/* Estado del link de cobro online */}
+                      {payment.status !== "paid" && payment.status !== "cancelled" && payment.mp_link_status === "rejected" && (
+                        <p className="text-[10px] text-destructive mt-0.5 font-medium">Intentó pagar · rechazado</p>
+                      )}
+                      {payment.status !== "paid" && payment.status !== "cancelled" && payment.mp_link_status === "in_process" && (
+                        <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-0.5">Pago online en proceso</p>
+                      )}
+                      {payment.status !== "paid" && payment.status !== "cancelled" && payment.mp_link_url && payment.mp_link_status === "created" && (
+                        <p className="text-[10px] text-muted-foreground mt-0.5">Link de pago enviado</p>
+                      )}
                     </div>
 
                     {/* Acciones inline: solo escritorio */}
@@ -697,6 +739,7 @@ const Payments = () => {
                             <PaymentWhatsAppMenu
                               patientPhone={payment.patients?.whatsapp_phone || null}
                               patientName={payment.patients?.full_name || ""}
+                              getPaymentLink={mpConnected ? () => ensurePaymentLink([payment.id]) : undefined}
                             />
                           </div>
                           <Button
@@ -754,6 +797,7 @@ const Payments = () => {
                       <PaymentWhatsAppMenu
                         patientPhone={payment.patients?.whatsapp_phone || null}
                         patientName={payment.patients?.full_name || ""}
+                        getPaymentLink={mpConnected ? () => ensurePaymentLink([payment.id]) : undefined}
                       />
                       <Button
                         variant="outline"

@@ -335,7 +335,8 @@ serve(async (req) => {
         }
       }
       // PATIENT PAYMENT BATCH: external_reference has type "payment_batch"
-      else if (extRef && (extRef as any).type === "payment_batch" && payment.status === "approved") {
+      // (lo generan el portal del paciente Y los links de cobro del profesional)
+      else if (extRef && (extRef as any).type === "payment_batch") {
         const batchRef = extRef as {
           type: string;
           payment_ids?: string[];
@@ -343,36 +344,53 @@ serve(async (req) => {
           patient_id?: string;
         };
 
-        console.log("Payment batch approved:", batchRef);
-
         if (Array.isArray(batchRef.payment_ids) && batchRef.payment_ids.length > 0) {
-          // Mark all payments in batch as paid
-          const { data: updatedPayments, error: updErr } = await supabase
-            .from("payments")
-            .update({
-              status: "paid",
-              paid_at: new Date().toISOString(),
-              method: "mercadopago",
-            })
-            .in("id", batchRef.payment_ids)
-            .neq("status", "paid")
-            .select("id, appointment_id");
+          if (payment.status === "approved") {
+            console.log("Payment batch approved:", batchRef);
 
-          if (updErr) {
-            console.error("Failed to mark batch payments as paid:", updErr);
-          } else {
-            console.log(`Batch marked paid: ${updatedPayments?.length || 0} payments`);
+            // Mark all payments in batch as paid
+            const { data: updatedPayments, error: updErr } = await supabase
+              .from("payments")
+              .update({
+                status: "paid",
+                paid_at: new Date().toISOString(),
+                method: "mercadopago",
+                mp_link_status: "approved",
+              })
+              .in("id", batchRef.payment_ids)
+              .neq("status", "paid")
+              .select("id, appointment_id");
 
-            // For any payment linked to an appointment, also confirm appointment payment_status
-            const apptIds = (updatedPayments || [])
-              .map((p) => p.appointment_id)
-              .filter((id): id is string => !!id);
-            if (apptIds.length > 0) {
-              await supabase
-                .from("appointments")
-                .update({ payment_status: "pagado" })
-                .in("id", apptIds);
+            if (updErr) {
+              console.error("Failed to mark batch payments as paid:", updErr);
+            } else {
+              console.log(`Batch marked paid: ${updatedPayments?.length || 0} payments`);
+
+              // For any payment linked to an appointment, also confirm appointment payment_status
+              const apptIds = (updatedPayments || [])
+                .map((p) => p.appointment_id)
+                .filter((id): id is string => !!id);
+              if (apptIds.length > 0) {
+                await supabase
+                  .from("appointments")
+                  .update({ payment_status: "pagado" })
+                  .in("id", apptIds);
+              }
             }
+          } else {
+            // Intento fallido o en proceso: dejar el rastro visible en el
+            // módulo Pagos ("intentó pagar y la tarjeta fue rechazada", etc.)
+            const linkStatus =
+              payment.status === "rejected" || payment.status === "cancelled"
+                ? "rejected"
+                : "in_process";
+            console.log(`Payment batch attempt ${payment.status} -> mp_link_status=${linkStatus}`, batchRef.payment_ids);
+
+            await supabase
+              .from("payments")
+              .update({ mp_link_status: linkStatus })
+              .in("id", batchRef.payment_ids)
+              .neq("status", "paid");
           }
         }
       }
