@@ -2,9 +2,20 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here.
 All colors MUST be HSL.
 */
+
+/* Escala global de la interfaz en desktop: la app entera está construida en
+   unidades rem (relativas a este tamaño base), así que bajarlo achica textos,
+   íconos y espaciados en proporción — equivale a un zoom ~91% del navegador,
+   que es donde la densidad se ve mejor. Mobile y tablet quedan en 16px (los
+   objetivos táctiles no deben achicarse). */
+@media (min-width: 1024px) {
+  html {
+    font-size: 14.5px;
+  }
+}
 
 @layer base {
 :root {
