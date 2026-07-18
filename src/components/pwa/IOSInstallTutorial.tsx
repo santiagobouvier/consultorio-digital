@@ -22,7 +22,8 @@ export function IOSInstallTutorial({ open, onClose, clinicName }: IOSInstallTuto
   const steps = [
     {
       title: "Tocá el botón Compartir",
-      description: "Es el cuadrado con la flecha hacia arriba, en la barra inferior de Safari.",
+      description:
+        "Es el cuadrado con la flecha hacia arriba, en la barra inferior de Safari. (Si usás Chrome, está arriba a la derecha, junto a la barra de dirección.)",
       illustration: <IOSShareStep />,
     },
     {

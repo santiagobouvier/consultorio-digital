@@ -62,9 +62,15 @@ serve(async (req) => {
 
     const themeColor = hslToHex(h, s, l);
 
+    // Origen de la app (el sitio donde vive el portal). El manifest se sirve
+    // desde el dominio de Supabase, así que TODAS las URLs deben ser absolutas:
+    // los navegadores resuelven start_url/scope contra la URL del manifest y,
+    // si quedan relativas, la app instalada apunta al dominio equivocado.
+    const appOrigin = url.searchParams.get("origin") || "https://consultoriodigital.app";
+
     // Build icons array - use logo if available, fallback to generic
     const icons: Array<{ src: string; sizes: string; type: string; purpose?: string }> = [];
-    
+
     if (logoUrl) {
       icons.push(
         { src: logoUrl, sizes: "192x192", type: "image/png", purpose: "any maskable" },
@@ -72,22 +78,25 @@ serve(async (req) => {
       );
     } else {
       // Fallback to default app icons
-      const origin = url.searchParams.get("origin") || "https://agenda-psicologia.lovable.app";
       icons.push(
-        { src: `${origin}/app-icon-192.png`, sizes: "192x192", type: "image/png" },
-        { src: `${origin}/app-icon-512.png`, sizes: "512x512", type: "image/png" }
+        { src: `${appOrigin}/app-icon-192.png`, sizes: "192x192", type: "image/png" },
+        { src: `${appOrigin}/app-icon-512.png`, sizes: "512x512", type: "image/png" }
       );
     }
 
     const manifest = {
+      id: `${appOrigin}/portal/${slug}`,
       name: displayName,
       short_name: displayName.length > 12 ? displayName.substring(0, 12) : displayName,
       description: business.specialty ? `${displayName} — ${business.specialty}` : displayName,
-      start_url: `/portal/${slug}`,
-      scope: `/portal/${slug}`,
+      lang: "es",
+      start_url: `${appOrigin}/portal/${slug}`,
+      scope: `${appOrigin}/portal/${slug}`,
       display: "standalone",
       orientation: "any",
-      background_color: "#ffffff",
+      // Fondo del splash de arranque: SIEMPRE oscuro (regla de la casa:
+      // ninguna pantalla de carga blanca), a juego con el splash del index.
+      background_color: "#242e2e",
       theme_color: themeColor,
       icons,
     };
