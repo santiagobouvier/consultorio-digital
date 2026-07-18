@@ -270,7 +270,7 @@ const Billing = () => {
             </span>
             <div className="min-w-0">
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight inline-flex items-center gap-2">
-                Facturación
+                Mi plan
                 <HelpTooltip id="billing" />
               </h1>
               <p className="text-sm text-white/50 truncate">Tu suscripción a Consultorio Digital</p>
