@@ -354,7 +354,7 @@ const SECTIONS: GuideSection[] = [
       {
         q: "¿Cómo manejo mi suscripción a Consultorio Digital?",
         steps: [
-          "En Facturación ves tu plan, el estado y la próxima fecha de cobro.",
+          "En \"Mi plan\" ves tu suscripción, el estado y la próxima fecha de cobro.",
           "El cobro es automático por Mercado Pago. Podés cancelar cuando quieras y mantenés el acceso hasta el fin del período pago.",
           "¿Dudas o problemas con el cobro? Escribinos y lo resolvemos.",
         ],

@@ -4,8 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  AlertTriangle,
   BarChart3,
   TrendingDown,
   UserX,
@@ -109,6 +110,8 @@ const Statistics = () => {
   const { professionals } = useProfessionals(businessId);
   const { displayName, primaryColor } = useDashboardBranding();
   const [period, setPeriod] = useState<PeriodKey>("90d");
+  // Vista activa: la historia de tu plata, tu agenda o tus pacientes
+  const [view, setView] = useState<"finanzas" | "actividad" | "pacientes">("finanzas");
   const [loading, setLoading] = useState(true);
   const [exportingPDF, setExportingPDF] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
@@ -312,6 +315,12 @@ const Statistics = () => {
       .filter((p) => !p.paid_at && p.status !== "cancelled" && inMonth(p.due_date))
       .reduce((s, p) => s + p.amount, 0);
     return { cobrado, porCobrar, total: cobrado + porCobrar };
+  }, [payments]);
+
+  // === Pagos vencidos (total histórico, para la pestaña Finanzas) ===
+  const overdueInfo = useMemo(() => {
+    const od = payments.filter((p) => p.status === "overdue");
+    return { count: od.length, total: od.reduce((s, p) => s + p.amount, 0) };
   }, [payments]);
 
   // === Demora promedio de cobro (días entre vencimiento y pago) ===
@@ -651,6 +660,22 @@ const Statistics = () => {
 
         {/* Reportable content (captured for PDF) */}
         <div ref={reportRef} className="space-y-6 bg-background">
+
+        <Tabs value={view} onValueChange={(v) => setView(v as typeof view)} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3 sm:w-auto sm:inline-grid h-auto p-1">
+            <TabsTrigger value="finanzas" className="gap-1.5 sm:px-6">
+              <DollarSign className="h-4 w-4" /> Finanzas
+            </TabsTrigger>
+            <TabsTrigger value="actividad" className="gap-1.5 sm:px-6">
+              <Activity className="h-4 w-4" /> Actividad
+            </TabsTrigger>
+            <TabsTrigger value="pacientes" className="gap-1.5 sm:px-6">
+              <Users className="h-4 w-4" /> Pacientes
+            </TabsTrigger>
+          </TabsList>
+
+        {/* ══════════ FINANZAS: la historia de tu plata ══════════ */}
+        <TabsContent value="finanzas" className="space-y-6 mt-0">
         {/* Cobros destacado */}
         <Card className="border-2 border-primary/20">
           <CardContent className="p-4 sm:p-6">
@@ -687,27 +712,7 @@ const Statistics = () => {
           </CardContent>
         </Card>
 
-        {/* KPI row complementario (con tendencia vs período anterior) */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <KpiCard
-            icon={CalendarCheck}
-            label="Citas"
-            value={String(kpis.totalCitas)}
-            color="text-primary"
-            trend={<TrendBadge value={trends?.citas ?? null} />}
-          />
-          <KpiCard icon={Users} label="Pacientes activos" value={String(kpis.activePatients)} color="text-primary" />
-          <KpiCard icon={Activity} label="Ocupación" value={`${kpis.occupancy}%`} color="text-primary" />
-          <KpiCard
-            icon={TrendingDown}
-            label="Ausencias"
-            value={`${kpis.noShowRate}%`}
-            color="text-destructive"
-            trend={<TrendBadge value={trends?.ausencias ?? null} suffix=" pts" invert />}
-          />
-        </div>
-
-        {/* Fila inteligente: proyección, demora de cobro y origen */}
+        {/* Fila inteligente: proyección, demora de cobro y vencidos */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <Card>
             <CardContent className="p-4">
@@ -737,41 +742,34 @@ const Statistics = () => {
           </Card>
           <Card>
             <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Globe className="h-4 w-4 text-primary" />
-                <p className="text-xs text-muted-foreground">Origen de las reservas</p>
+              <div className="flex items-center gap-2 mb-1">
+                <AlertTriangle className="h-4 w-4 text-destructive" />
+                <p className="text-xs text-muted-foreground">Pagos vencidos</p>
               </div>
-              {sourceData.total === 0 ? (
-                <p className="text-sm text-muted-foreground py-2">Sin citas en el período</p>
-              ) : (
-                <div className="space-y-1.5">
-                  {([
-                    ["Vos (panel)", sourceData.panel, "bg-muted-foreground/50"],
-                    ["Web pública", sourceData.publica, "bg-primary"],
-                    ["Portal", sourceData.portal, "bg-emerald-500"],
-                  ] as const).map(([label, count, color]) => {
-                    const pctVal = Math.round((count / sourceData.total) * 100);
-                    return (
-                      <div key={label} className="flex items-center gap-2">
-                        <span className="text-xs w-20 shrink-0 text-muted-foreground">{label}</span>
-                        <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
-                          <div className={`h-full rounded-full ${color}`} style={{ width: `${pctVal}%` }} />
-                        </div>
-                        <span className="text-xs font-semibold w-10 text-right tabular-nums">{pctVal}%</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+              <p className="text-xl sm:text-2xl font-bold text-destructive">{formatCurrency(overdueInfo.total)}</p>
+              <div className="flex items-center justify-between gap-2 mt-1">
+                <p className="text-xs text-muted-foreground">
+                  {overdueInfo.count === 0
+                    ? "nadie te debe, todo al día"
+                    : `${overdueInfo.count} pago${overdueInfo.count === 1 ? "" : "s"} sin cobrar`}
+                </p>
+                {overdueInfo.count > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs shrink-0"
+                    onClick={() => navigate("/pagos?status=overdue")}
+                  >
+                    Ver quién te debe
+                  </Button>
+                )}
+              </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Gráficos en dos columnas en desktop (una columna en mobile) */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
         {/* Revenue */}
-        <Card className="lg:col-span-2">
+        <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
               <DollarSign className="h-5 w-5 text-primary" />
@@ -802,6 +800,32 @@ const Statistics = () => {
             )}
           </CardContent>
         </Card>
+        </TabsContent>
+
+        {/* ══════════ ACTIVIDAD: tu agenda en números ══════════ */}
+        <TabsContent value="actividad" className="space-y-6 mt-0">
+
+        {/* KPIs de actividad (con tendencia vs período anterior) */}
+        <div className="grid grid-cols-3 gap-3">
+          <KpiCard
+            icon={CalendarCheck}
+            label="Citas"
+            value={String(kpis.totalCitas)}
+            color="text-primary"
+            trend={<TrendBadge value={trends?.citas ?? null} />}
+          />
+          <KpiCard icon={Activity} label="Ocupación" value={`${kpis.occupancy}%`} color="text-primary" />
+          <KpiCard
+            icon={TrendingDown}
+            label="Ausencias"
+            value={`${kpis.noShowRate}%`}
+            color="text-destructive"
+            trend={<TrendBadge value={trends?.ausencias ?? null} suffix=" pts" invert />}
+          />
+        </div>
+
+        {/* Gráficos de actividad en dos columnas en desktop */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
         {/* Occupancy */}
         <Card>
@@ -830,38 +854,6 @@ const Statistics = () => {
                     />
                     <Line type="monotone" dataKey="ocupacion" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 3 }} />
                   </LineChart>
-                </ResponsiveContainer>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* New vs returning */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Users className="h-5 w-5 text-primary" />
-              Pacientes nuevos vs recurrentes
-              <HelpTooltip id="statsRetention" />
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {retentionData.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-8 text-center">Sin datos de pagos en el período</p>
-            ) : (
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={retentionData}>
-                    <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                    <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                    <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
-                    <Tooltip
-                      contentStyle={{ borderRadius: 8, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))" }}
-                    />
-                    <Legend wrapperStyle={{ fontSize: 12 }} />
-                    <Bar dataKey="nuevos" name="Nuevos" stackId="a" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="recurrentes" name="Recurrentes" stackId="a" fill="hsl(var(--muted-foreground) / 0.5)" radius={[4, 4, 0, 0]} />
-                  </BarChart>
                 </ResponsiveContainer>
               </div>
             )}
@@ -975,8 +967,8 @@ const Statistics = () => {
           </CardContent>
         </Card>
 
-        {/* No-show trend (fila completa cuando no hay tarjeta de profesionales) */}
-        <Card className={professionalRows.length > 1 ? undefined : "lg:col-span-2"}>
+        {/* No-show trend */}
+        <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center justify-between gap-2">
               <span className="flex items-center gap-2">
@@ -1025,8 +1017,86 @@ const Statistics = () => {
           </CardContent>
         </Card>
 
+        {/* Origen de las reservas */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Globe className="h-5 w-5 text-primary" />
+              Origen de las reservas
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {sourceData.total === 0 ? (
+              <p className="text-sm text-muted-foreground py-8 text-center">Sin citas en el período</p>
+            ) : (
+              <div className="space-y-2.5">
+                {([
+                  ["Vos (panel)", sourceData.panel, "bg-muted-foreground/50"],
+                  ["Web pública", sourceData.publica, "bg-primary"],
+                  ["Portal", sourceData.portal, "bg-emerald-500"],
+                ] as const).map(([label, count, color]) => {
+                  const pctVal = Math.round((count / sourceData.total) * 100);
+                  return (
+                    <div key={label} className="flex items-center gap-2">
+                      <span className="text-xs w-20 shrink-0 text-muted-foreground">{label}</span>
+                      <div className="flex-1 h-2.5 rounded-full bg-muted overflow-hidden">
+                        <div className={`h-full rounded-full ${color}`} style={{ width: `${pctVal}%` }} />
+                      </div>
+                      <span className="text-xs font-semibold w-10 text-right tabular-nums">{pctVal}%</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        </div>
+        </TabsContent>
+
+        {/* ══════════ PACIENTES: retención y riesgo ══════════ */}
+        <TabsContent value="pacientes" className="space-y-6 mt-0">
+
+        {/* KPIs de pacientes */}
+        <div className="grid grid-cols-2 gap-3">
+          <KpiCard icon={Users} label="Pacientes activos" value={String(kpis.activePatients)} color="text-primary" />
+          <KpiCard icon={UserX} label="Sin próxima cita" value={String(inactivePatients.length)} color="text-[hsl(var(--warning))]" />
+        </div>
+
+        {/* New vs returning */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Users className="h-5 w-5 text-primary" />
+              Pacientes nuevos vs recurrentes
+              <HelpTooltip id="statsRetention" />
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {retentionData.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-8 text-center">Sin datos de pagos en el período</p>
+            ) : (
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={retentionData}>
+                    <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                    <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+                    <Tooltip
+                      contentStyle={{ borderRadius: 8, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))" }}
+                    />
+                    <Legend wrapperStyle={{ fontSize: 12 }} />
+                    <Bar dataKey="nuevos" name="Nuevos" stackId="a" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="recurrentes" name="Recurrentes" stackId="a" fill="hsl(var(--muted-foreground) / 0.5)" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Inactive patients */}
-        <Card className="lg:col-span-2">
+        <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2 flex-wrap">
               <UserX className="h-5 w-5 text-orange-500" />
@@ -1103,8 +1173,9 @@ const Statistics = () => {
             )}
           </CardContent>
         </Card>
+        </TabsContent>
 
-        </div>
+        </Tabs>
         </div>
       </div>
     </div>

@@ -43,7 +43,7 @@ export const HELP_CONTENT: Record<string, HelpEntry> = {
     body: "Métricas reales de tu consultorio: ingresos, ocupación, ausencias y retención.",
   },
   billing: {
-    title: "Facturación",
+    title: "Mi plan",
     body: "Tu plan, próximos cobros y método de pago vinculado con Mercado Pago.",
   },
   schedules: {

@@ -76,11 +76,13 @@ const MODULE_GROUPS: { label: string | null; items: NavItem[] }[] = [
     label: "Tu negocio",
     items: [
       { title: "Estadísticas", url: "/estadisticas", icon: BarChart3, tint: "190 85% 50%" },
-      { title: "Facturación", url: "/billing", icon: CreditCard, tint: "235 75% 66%" },
-      { title: "Ayuda", url: "/ayuda", icon: LifeBuoy, tint: "150 65% 45%" },
+      { title: "Mi plan", url: "/billing", icon: CreditCard, tint: "235 75% 66%" },
     ],
   },
 ];
+
+// Ayuda va suelta al final del nav: es soporte, no un módulo del negocio.
+const HELP_ITEM: NavItem = { title: "Ayuda", url: "/ayuda", icon: LifeBuoy, tint: "150 65% 45%" };
 
 const MINI_WIDTH = 64;
 const EXPANDED_WIDTH = 240;
@@ -361,6 +363,12 @@ export function PremiumSidebar() {
                 )}
               </div>
             ))}
+
+            {/* Ayuda: suelta, separada de los módulos */}
+            <div className="my-2 mx-3">
+              <div className="h-px bg-gradient-to-r from-transparent via-white/[0.08] to-transparent" />
+            </div>
+            {renderItem(HELP_ITEM)}
 
             {isSuperAdmin && !isVisitMode &&
               renderItem({
