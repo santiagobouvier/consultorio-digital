@@ -248,42 +248,48 @@ const ClinicSettings = () => {
 
   return (
     <div className="min-h-screen bg-background pb-32">
-      <div className="max-w-4xl mx-auto p-4 sm:p-6 space-y-6">
-        <button
-          onClick={() => navigate("/dashboard")}
-          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Volver al dashboard
-        </button>
-
-        {/* Header administrativo simple */}
-        <div className="border-b pb-5">
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Mi Consultorio</h1>
-          <p className="text-sm text-muted-foreground mt-1 truncate">
-            {clinicName || "Mi Consultorio"}
-            {specialty ? ` · ${specialty}` : ""}
-          </p>
-          {isPrivateClinic && (
-            <Badge variant="secondary" className="text-[10px] mt-2">Agenda privada</Badge>
-          )}
+      <div className="mx-auto w-full max-w-[1500px] p-4 sm:p-6 space-y-6">
+        {/* Encabezado de página */}
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="h-11 w-11 rounded-2xl flex items-center justify-center shrink-0" style={{ background: "hsla(215, 15%, 65%, 0.16)" }}>
+              <Building2 className="h-5 w-5" style={{ color: "hsl(215 15% 65%)" }} />
+            </span>
+            <div className="min-w-0">
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Mi Consultorio</h1>
+              <p className="text-sm text-muted-foreground truncate">
+                {clinicName || "Mi Consultorio"}
+                {specialty ? ` · ${specialty}` : ""}
+                {isPrivateClinic ? " · Agenda privada" : ""}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => navigate("/dashboard")}
+            className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Volver al dashboard
+          </button>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full h-auto p-1 grid-cols-3">
-            <TabsTrigger value="general" className="gap-1.5 text-xs sm:text-sm py-2">
+          <TabsList className="grid w-full sm:w-auto sm:inline-grid h-auto p-1 grid-cols-3">
+            <TabsTrigger value="general" className="gap-1.5 text-xs sm:text-sm py-2 sm:px-6">
               <Building2 className="h-3.5 w-3.5" /> General
             </TabsTrigger>
-            <TabsTrigger value="notificaciones" className="gap-1.5 text-xs sm:text-sm py-2">
+            <TabsTrigger value="notificaciones" className="gap-1.5 text-xs sm:text-sm py-2 sm:px-6">
               <Bell className="h-3.5 w-3.5" /> Avisos
             </TabsTrigger>
-            <TabsTrigger value="pagos" className="gap-1.5 text-xs sm:text-sm py-2">
+            <TabsTrigger value="pagos" className="gap-1.5 text-xs sm:text-sm py-2 sm:px-6">
               <CreditCard className="h-3.5 w-3.5" /> Pagos
             </TabsTrigger>
           </TabsList>
 
-          {/* TAB: GENERAL */}
-          <TabsContent value="general" className="space-y-5 mt-5">
+          {/* TAB: GENERAL — dos columnas en desktop */}
+          <TabsContent value="general" className="mt-5">
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-5 items-start">
+            <div className="lg:col-span-3">
             <Card>
               <CardHeader><CardTitle className="text-base">Información del consultorio</CardTitle></CardHeader>
               <CardContent className="space-y-4">
@@ -352,6 +358,9 @@ const ClinicSettings = () => {
               </CardContent>
             </Card>
 
+            </div>
+
+            <div className="lg:col-span-2 space-y-5">
             <Card>
               <CardContent className="p-5 flex items-center justify-between gap-4">
                 <div>
@@ -400,11 +409,13 @@ const ClinicSettings = () => {
                 </div>
               </CardContent>
             </Card>
+            </div>
+            </div>
           </TabsContent>
 
           {/* TAB: NOTIFICACIONES */}
-          <TabsContent value="notificaciones" className="space-y-5 mt-5">
-            <Card>
+          <TabsContent value="notificaciones" className="mt-5">
+            <Card className="lg:max-w-2xl">
               <CardHeader>
                 <CardTitle className="text-base flex items-center gap-2">
                   <Bell className="h-4 w-4" /> Notificaciones push
@@ -434,7 +445,7 @@ const ClinicSettings = () => {
 
       {isDirty && (
         <div className="fixed bottom-0 left-0 right-0 z-40 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 shadow-lg animate-in slide-in-from-bottom duration-200">
-          <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+          <div className="max-w-[1500px] mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
             <p className="text-sm">
               <span className="font-semibold">Cambios sin guardar</span>
               <span className="text-muted-foreground"> — recordá guardar antes de salir.</span>

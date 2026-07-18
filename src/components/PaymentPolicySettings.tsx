@@ -247,7 +247,9 @@ export const PaymentPolicySettings = ({ businessId }: Props) => {
   }
 
   return (
-    <div className="space-y-5">
+    // Desktop: política de cobro protagonista (izquierda) + conexión MP al costado
+    <div className="grid grid-cols-1 lg:grid-cols-5 gap-5 items-start">
+      <div className="order-1 lg:order-2 lg:col-span-2">
       {/* 1. Conectar Mercado Pago */}
       <Card>
         <CardHeader>
@@ -288,6 +290,9 @@ export const PaymentPolicySettings = ({ businessId }: Props) => {
         </CardContent>
       </Card>
 
+      </div>
+
+      <div className="order-2 lg:order-1 lg:col-span-3 space-y-5">
       {/* 2. Política de cobro */}
       <Card>
         <CardHeader>
@@ -442,6 +447,7 @@ export const PaymentPolicySettings = ({ businessId }: Props) => {
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
           {saving ? "Guardando..." : "Guardar política de cobro"}
         </Button>
+      </div>
       </div>
     </div>
   );
