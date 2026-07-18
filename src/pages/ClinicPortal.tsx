@@ -356,6 +356,20 @@ const ClinicPortal = () => {
       appleIcon.href = branding.logoUrl;
     }
 
+    // iOS toma el nombre de la app instalada de este meta (no del manifest en
+    // versiones viejas): mientras el portal está montado, la app se llama como
+    // el consultorio, no "Tu Consultorio".
+    let appleTitle = document.querySelector<HTMLMetaElement>('meta[name="apple-mobile-web-app-title"]');
+    const previousAppleTitle = appleTitle?.content;
+    if (branding?.name) {
+      if (!appleTitle) {
+        appleTitle = document.createElement("meta");
+        appleTitle.name = "apple-mobile-web-app-title";
+        document.head.appendChild(appleTitle);
+      }
+      appleTitle.content = branding.name;
+    }
+
     return () => {
       link.remove();
       previousManifestLinks.forEach(({ href, crossOrigin }) => {
@@ -366,8 +380,9 @@ const ClinicPortal = () => {
         document.head.appendChild(restored);
       });
       if (appleIcon && previousAppleHref) appleIcon.href = previousAppleHref;
+      if (appleTitle && previousAppleTitle) appleTitle.content = previousAppleTitle;
     };
-  }, [slug, branding?.logoUrl]);
+  }, [slug, branding?.logoUrl, branding?.name]);
 
   // Auth listener
   useEffect(() => {
