@@ -1052,6 +1052,9 @@ export type Database = {
           due_date: string
           id: string
           method: string | null
+          mp_link_created_at: string | null
+          mp_link_status: string | null
+          mp_link_url: string | null
           mp_preference_id: string | null
           notes: string | null
           paid_at: string | null
@@ -1070,6 +1073,9 @@ export type Database = {
           due_date: string
           id?: string
           method?: string | null
+          mp_link_created_at?: string | null
+          mp_link_status?: string | null
+          mp_link_url?: string | null
           mp_preference_id?: string | null
           notes?: string | null
           paid_at?: string | null
@@ -1088,6 +1094,9 @@ export type Database = {
           due_date?: string
           id?: string
           method?: string | null
+          mp_link_created_at?: string | null
+          mp_link_status?: string | null
+          mp_link_url?: string | null
           mp_preference_id?: string | null
           notes?: string | null
           paid_at?: string | null
