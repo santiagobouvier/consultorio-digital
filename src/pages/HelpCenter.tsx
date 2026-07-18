@@ -384,28 +384,30 @@ const HelpCenter = () => {
 
   return (
     <div className="min-h-screen bg-background pb-16">
-      <div className="max-w-3xl mx-auto p-4 sm:p-6 space-y-6">
-        <button
-          onClick={() => navigate("/dashboard")}
-          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Volver al inicio
-        </button>
-
-        <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-primary/12 flex items-center justify-center shrink-0" style={{ background: "hsl(var(--primary) / 0.12)" }}>
-            <LifeBuoy className="h-5 w-5 text-primary" />
+      <div className="mx-auto w-full max-w-[1500px] px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
+        {/* Encabezado de página */}
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="h-11 w-11 rounded-2xl flex items-center justify-center shrink-0" style={{ background: "hsla(150, 65%, 45%, 0.14)" }}>
+              <LifeBuoy className="h-5 w-5" style={{ color: "hsl(150 65% 45%)" }} />
+            </span>
+            <div className="min-w-0">
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Centro de ayuda</h1>
+              <p className="text-sm text-muted-foreground truncate">
+                Guías cortas de cada módulo, al grano.
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Centro de ayuda</h1>
-            <p className="text-sm text-muted-foreground">
-              Guías cortas de cada módulo, al grano.
-            </p>
-          </div>
+          <button
+            onClick={() => navigate("/dashboard")}
+            className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Volver al inicio
+          </button>
         </div>
 
-        <div className="relative">
+        <div className="relative lg:max-w-2xl">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             value={query}
@@ -426,8 +428,10 @@ const HelpCenter = () => {
           </Card>
         )}
 
+        {/* Mosaico de guías: dos columnas en desktop, una en mobile */}
+        <div className="lg:columns-2 2xl:columns-3 lg:gap-6">
         {filtered.map((section) => (
-          <Card key={section.id}>
+          <Card key={section.id} className="break-inside-avoid mb-6">
             <CardContent className="p-4 sm:p-5">
               <div className="flex items-center gap-2.5 mb-2">
                 <span
@@ -466,6 +470,7 @@ const HelpCenter = () => {
             </CardContent>
           </Card>
         ))}
+        </div>
 
         <p className="text-center text-xs text-muted-foreground pt-2">
           ¿No encontraste lo que buscabas? Escribinos a{" "}
