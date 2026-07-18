@@ -16,6 +16,9 @@ const CHUNK_LOAD_ERROR_PATTERNS = [
   /Importing a module script failed/i,
   /ChunkLoadError/i,
   /Loading chunk \d+ failed/i,
+  // Stale prod bundle: la lazy resolvió a undefined y React.lazy hace `module.default`.
+  /Cannot read properties of undefined \(reading 'default'\)/i,
+  /undefined is not an object \(evaluating '.*\.default'\)/i,
 ];
 
 let cacheClearPromise: Promise<void> | null = null;
