@@ -344,8 +344,8 @@ const PortalCustomization = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
 
-        {/* Riel derecho: tu dirección en internet (arriba en mobile) */}
-        <div className="order-1 lg:order-2 space-y-6">
+        {/* Riel derecho arriba: tu dirección en internet (primero en mobile) */}
+        <div className="order-1 lg:col-start-3 lg:row-start-1">
         {/* URL del portal — vive acá porque es 100% portal del paciente */}
         <Card>
           <CardHeader>
@@ -436,8 +436,8 @@ const PortalCustomization = () => {
         </Card>
         </div>
 
-        {/* Columna principal: identidad + colores + invitaciones */}
-        <div className="order-2 lg:order-1 lg:col-span-2 space-y-6">
+        {/* Columna principal: identidad + colores */}
+        <div className="order-2 lg:col-start-1 lg:col-span-2 lg:row-start-1 lg:row-span-2 space-y-6">
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           <Card>
             <CardHeader>
@@ -582,8 +582,11 @@ const PortalCustomization = () => {
             </div>
           </CardContent>
         </Card>
+        </div>
 
-        <PortalInviteBatch businessId={businessId} />
+        {/* Riel derecho abajo: invitaciones al portal (último en mobile) */}
+        <div className="order-3 lg:col-start-3 lg:row-start-2">
+          <PortalInviteBatch businessId={businessId} />
         </div>
 
         </div>
