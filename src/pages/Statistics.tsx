@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  ArrowLeft,
   BarChart3,
   TrendingDown,
   UserX,
@@ -605,19 +604,19 @@ const Statistics = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")} className="shrink-0 h-10 w-10">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <div>
-              <h1 className="text-xl sm:text-2xl font-bold inline-flex items-center gap-2">
+      <div className="mx-auto w-full max-w-[1500px] px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
+        {/* Encabezado de página */}
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="h-11 w-11 rounded-2xl flex items-center justify-center shrink-0" style={{ background: "hsla(190, 85%, 50%, 0.14)" }}>
+              <BarChart3 className="h-5 w-5" style={{ color: "hsl(190 85% 50%)" }} />
+            </span>
+            <div className="min-w-0">
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight inline-flex items-center gap-2">
                 Estadísticas
                 <HelpTooltip id="statistics" />
               </h1>
-              <p className="text-sm text-muted-foreground">{PERIOD_LABELS[period]}</p>
+              <p className="text-sm text-muted-foreground truncate">{PERIOD_LABELS[period]}</p>
             </div>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
@@ -768,8 +767,11 @@ const Statistics = () => {
           </Card>
         </div>
 
+        {/* Gráficos en dos columnas en desktop (una columna en mobile) */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
         {/* Revenue */}
-        <Card>
+        <Card className="lg:col-span-2">
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
               <DollarSign className="h-5 w-5 text-primary" />
@@ -781,7 +783,7 @@ const Statistics = () => {
             {revenueData.length === 0 ? (
               <p className="text-sm text-muted-foreground py-8 text-center">No hay pagos en el período</p>
             ) : (
-              <div className="h-72">
+              <div className="h-72 lg:h-80">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={revenueData}>
                     <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
@@ -973,8 +975,8 @@ const Statistics = () => {
           </CardContent>
         </Card>
 
-        {/* No-show trend */}
-        <Card>
+        {/* No-show trend (fila completa cuando no hay tarjeta de profesionales) */}
+        <Card className={professionalRows.length > 1 ? undefined : "lg:col-span-2"}>
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center justify-between gap-2">
               <span className="flex items-center gap-2">
@@ -1024,7 +1026,7 @@ const Statistics = () => {
         </Card>
 
         {/* Inactive patients */}
-        <Card>
+        <Card className="lg:col-span-2">
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2 flex-wrap">
               <UserX className="h-5 w-5 text-orange-500" />
@@ -1045,6 +1047,7 @@ const Statistics = () => {
               </p>
             ) : (
               <div className="space-y-2">
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-2">
                 {pageInactive.map((p) => {
                   const phone = allPatients.find((x) => x.id === p.id)?.whatsapp_phone || null;
                   return (
@@ -1088,6 +1091,7 @@ const Statistics = () => {
                     </div>
                   );
                 })}
+                </div>
                 <ListPagination
                   currentPage={inactivePage}
                   totalPages={inactiveTotalPages}
@@ -1099,6 +1103,8 @@ const Statistics = () => {
             )}
           </CardContent>
         </Card>
+
+        </div>
         </div>
       </div>
     </div>
