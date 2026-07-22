@@ -323,8 +323,10 @@ export function PaymentForm({
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
-                    Solo informativo: cómo se paga (o pagó). Para cobrar online, después de
-                    registrar el pago usá el botón de WhatsApp 💬 → "Enviar link de pago".
+                    Este campo es solo un registro de cómo te pagan; no genera ningún cobro.
+                    Si querés cobrar online con un link de pago, eso funciona únicamente con
+                    tu cuenta de <strong>Mercado Pago conectada</strong>: registrá el pago y
+                    después tocá el botón 💬 → "Enviar link de pago".
                   </p>
                   <FormMessage />
                 </FormItem>
