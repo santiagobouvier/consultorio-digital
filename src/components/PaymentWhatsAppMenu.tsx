@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Copy, Link2, Loader2, MessageCircle } from "lucide-react";
+import { ChevronDown, Copy, Link2, Loader2, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -123,21 +124,26 @@ export function PaymentWhatsAppMenu({
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
-          variant="ghost"
+          variant="outline"
           size="sm"
-          className="h-8 w-8 p-0"
-          title="Enviar aviso por WhatsApp"
+          className="h-8 gap-1 px-2.5 rounded-lg text-xs font-medium"
+          title="Enviar aviso o link de pago por WhatsApp"
           disabled={busy}
         >
-          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageCircle className="h-4 w-4" />}
+          {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MessageCircle className="h-3.5 w-3.5" />}
+          Avisar
+          <ChevronDown className="h-3 w-3 opacity-60" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-64">
         {getPaymentLink ? (
           <>
+            <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              Cobro online
+            </DropdownMenuLabel>
             <DropdownMenuItem onClick={() => handleSendMessage("payment_link")} className="gap-2">
               <Link2 className="h-4 w-4 text-primary" />
-              Enviar link de pago
+              Enviar link de pago por WhatsApp
             </DropdownMenuItem>
             <DropdownMenuItem onClick={handleCopyLink} className="gap-2">
               <Copy className="h-4 w-4" />
@@ -169,14 +175,17 @@ export function PaymentWhatsAppMenu({
             <DropdownMenuSeparator />
           </>
         )}
+        <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
+          Avisos de vencimiento por WhatsApp
+        </DropdownMenuLabel>
         <DropdownMenuItem onClick={() => handleSendMessage("expires_soon_10")}>
-          Avisar: se vence en menos de 10 días
+          Se vence en menos de 10 días
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => handleSendMessage("expires_soon")}>
-          Avisar: se vence pronto
+          Se vence pronto
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => handleSendMessage("overdue")}>
-          Avisar: pago vencido
+          Pago vencido
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
