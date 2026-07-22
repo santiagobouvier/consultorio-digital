@@ -348,6 +348,10 @@ export function GlobalPaymentForm({
                       ))}
                     </SelectContent>
                   </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Solo informativo: cómo se paga (o pagó). Para cobrar online, después de
+                    registrar el pago usá el botón de WhatsApp 💬 → "Enviar link de pago".
+                  </p>
                   <FormMessage />
                 </FormItem>
               )}

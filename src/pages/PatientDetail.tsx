@@ -36,6 +36,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { PaymentWhatsAppMenu } from "@/components/PaymentWhatsAppMenu";
+import { ConfirmPaymentDialog } from "@/components/ConfirmPaymentDialog";
+import { createPaymentLink } from "@/lib/payment-links";
 import LoadingPage from "@/components/LoadingPage";
 import { SessionNotes } from "@/components/SessionNotes";
 import { PatientDocuments } from "@/components/PatientDocuments";
@@ -260,6 +262,24 @@ const PatientDetail = () => {
         : "598" + digits;
     window.open(`https://wa.me/${phone}`, "_blank");
   };
+
+  // Cobrar pide confirmación (igual que en el módulo Pagos): un toque
+  // accidental no debe marcar nada como pagado.
+  const [confirmPaymentData, setConfirmPaymentData] = useState<Payment | null>(null);
+
+  // ¿El consultorio tiene Mercado Pago conectado? Habilita el link de cobro.
+  const [mpConnected, setMpConnected] = useState(false);
+  useEffect(() => {
+    if (!patient?.business_id) return;
+    (async () => {
+      const { data } = await supabase
+        .from("payment_policies")
+        .select("mp_access_token")
+        .eq("business_id", patient.business_id)
+        .maybeSingle();
+      setMpConnected(!!(data as any)?.mp_access_token);
+    })();
+  }, [patient?.business_id]);
 
   const handleMarkAsPaid = async (payment: Payment) => {
     try {
@@ -751,11 +771,16 @@ const PatientDetail = () => {
                               <PaymentWhatsAppMenu
                                 patientPhone={patient.whatsapp_phone}
                                 patientName={patient.full_name}
+                                getPaymentLink={mpConnected ? async () => {
+                                  const url = await createPaymentLink(patient.business_id, [payment.id]);
+                                  fetchData();
+                                  return url;
+                                } : undefined}
                               />
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handleMarkAsPaid(payment)}
+                                onClick={() => setConfirmPaymentData(payment)}
                                 className="rounded-lg h-8 gap-1.5"
                               >
                                 <Check className="h-3.5 w-3.5" />
@@ -872,6 +897,22 @@ const PatientDetail = () => {
           onSuccess={() => {
             setEditingPayment(null);
             fetchData();
+          }}
+        />
+      )}
+
+      {/* Confirm "Cobrar" (evita cobros por toque accidental) */}
+      {confirmPaymentData && (
+        <ConfirmPaymentDialog
+          open={!!confirmPaymentData}
+          onOpenChange={(isOpen) => {
+            if (!isOpen) setConfirmPaymentData(null);
+          }}
+          patientName={patient.full_name}
+          amount={confirmPaymentData.amount}
+          onConfirm={async () => {
+            await handleMarkAsPaid(confirmPaymentData);
+            setConfirmPaymentData(null);
           }}
         />
       )}
