@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Copy, Link2, Loader2, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -59,6 +60,7 @@ export function PaymentWhatsAppMenu({
   patientName,
   getPaymentLink,
 }: PaymentWhatsAppMenuProps) {
+  const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
 
   const requirePhone = (): boolean => {
@@ -131,7 +133,7 @@ export function PaymentWhatsAppMenu({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-64">
-        {getPaymentLink && (
+        {getPaymentLink ? (
           <>
             <DropdownMenuItem onClick={() => handleSendMessage("payment_link")} className="gap-2">
               <Link2 className="h-4 w-4 text-primary" />
@@ -141,6 +143,29 @@ export function PaymentWhatsAppMenu({
               <Copy className="h-4 w-4" />
               Copiar link de pago
             </DropdownMenuItem>
+            <DropdownMenuSeparator />
+          </>
+        ) : (
+          <>
+            {/* Sin Mercado Pago conectado: la función se muestra igual (que se
+                sepa que existe) con el camino directo para habilitarla. */}
+            <div className="px-2 py-2">
+              <p className="text-xs font-semibold flex items-center gap-1.5">
+                <Link2 className="h-3.5 w-3.5 text-muted-foreground" />
+                Link de pago online
+              </p>
+              <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">
+                Conectá tu cuenta de Mercado Pago para cobrar esta sesión con un
+                link que se marca pagado solo.
+              </p>
+              <Button
+                size="sm"
+                className="mt-2 h-8 w-full text-xs rounded-lg"
+                onClick={() => navigate("/mi-consultorio?tab=pagos")}
+              >
+                Ir a conectar Mercado Pago
+              </Button>
+            </div>
             <DropdownMenuSeparator />
           </>
         )}
