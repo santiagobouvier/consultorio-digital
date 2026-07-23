@@ -115,15 +115,11 @@ const queryClient = new QueryClient({
 });
 
 // Helper to wrap a page with subscription guard + sidebar layout.
-// El splash de bienvenida va POR ENCIMA del guard: cubre también el
-// preloader de arranque, así el login muestra UNA sola pantalla de carga.
+// (La bienvenida post-login vive a nivel App, por encima del Suspense.)
 const Protected = ({ children }: { children: React.ReactNode }) => (
-  <>
-    <ClinicEntranceSplash />
-    <SubscriptionGuard>
-      <DashboardLayout>{children}</DashboardLayout>
-    </SubscriptionGuard>
-  </>
+  <SubscriptionGuard>
+    <DashboardLayout>{children}</DashboardLayout>
+  </SubscriptionGuard>
 );
 
 // Super admin pages live in their own visual world (no clinic sidebar / no subscription guard).
@@ -199,6 +195,9 @@ const App = () => {
         <PWAInstalledCelebrationModal />
         <BrowserRouter>
           <AuthSyncBridge />
+          {/* Bienvenida con marca tras el login: por ENCIMA del Suspense de
+              rutas, para que ningún otro preloader se vea en el medio. */}
+          <ClinicEntranceSplash />
           <AuthProvider>
             <BusinessIdProvider>
             <ChunkLoadRecoveryBoundary>
