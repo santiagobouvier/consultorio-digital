@@ -363,6 +363,8 @@ export function CreateAppointmentModal({
       const endAt = new Date(startAt);
       endAt.setMinutes(endAt.getMinutes() + parseInt(duration));
       const serviceId = selectedServiceId !== CUSTOM_SERVICE ? selectedServiceId : null;
+      // Para contarle al usuario qué cobros generó la base junto con la(s) cita(s)
+      let createdAppointmentIds: string[] = [];
 
       if (isRecurrent && recurrenceDates.length > 1) {
         // Cobro de la serie: por sesión = precio en cada cita (genera un pago
@@ -393,8 +395,12 @@ export function CreateAppointmentModal({
             session_price: seriesPrice,
           };
         });
-        const { error } = await supabase.from("appointments").insert(rows as any);
+        const { data: insertedRows, error } = await supabase
+          .from("appointments")
+          .insert(rows as any)
+          .select("id");
         if (error) throw error;
+        createdAppointmentIds = (insertedRows || []).map((r: any) => r.id);
 
         // Mensualidad: un solo cobro por mes (si el paciente no tiene ya una)
         if (chargeMode === "monthly" && monthlyAmount && Number(monthlyAmount) > 0) {
@@ -441,7 +447,7 @@ export function CreateAppointmentModal({
           }
         }
       } else {
-        const { error } = await supabase.from("appointments").insert({
+        const { data: insertedRow, error } = await supabase.from("appointments").insert({
           business_id: businessId,
           patient_id: selectedPatientId,
           professional_id: finalProfessionalId,
@@ -454,8 +460,9 @@ export function CreateAppointmentModal({
           status: "pending",
           payment_status: "pendiente",
           session_price: sessionPrice ? Number(sessionPrice) : null,
-        } as any);
+        } as any).select("id").single();
         if (error) throw error;
+        if (insertedRow?.id) createdAppointmentIds = [insertedRow.id];
       }
 
       // Best-effort confirmation email (does not block flow).
@@ -530,11 +537,34 @@ export function CreateAppointmentModal({
         url: "/portal",
       });
 
+      // El cobro sigue a la cita: la base lo crea sola. Acá le contamos al
+      // usuario QUÉ se generó de verdad (consultando, no suponiendo).
+      let cobroInfo = "";
+      try {
+        if (createdAppointmentIds.length > 0) {
+          const { data: pays } = await supabase
+            .from("payments")
+            .select("amount")
+            .in("appointment_id", createdAppointmentIds)
+            .neq("status", "cancelled");
+          if (pays && pays.length > 0) {
+            const totalCobros = pays.reduce((s, p) => s + Number(p.amount), 0);
+            cobroInfo = pays.length === 1
+              ? ` El cobro de $${totalCobros.toLocaleString("es-UY")} ya quedó pendiente en Pagos.`
+              : ` Se generaron ${pays.length} cobros en Pagos ($${totalCobros.toLocaleString("es-UY")} en total).`;
+          } else if (chargeMode !== "monthly") {
+            cobroInfo = " Sin cobro asociado: definí el precio del servicio o tu tarifa en Mi consultorio.";
+          }
+        }
+      } catch { /* informativo, nunca bloquea */ }
+
       toast({
-        title: "Éxito",
-        description: isRecurrent && recurrenceDates.length > 1
-          ? `Se crearon ${recurrenceDates.length} citas recurrentes`
-          : "Cita creada correctamente",
+        title: isRecurrent && recurrenceDates.length > 1
+          ? `${recurrenceDates.length} citas creadas`
+          : "Cita creada",
+        description: (isRecurrent && recurrenceDates.length > 1
+          ? "La serie quedó en tu agenda."
+          : "Quedó en tu agenda.") + cobroInfo,
       });
 
       onOpenChange(false);
