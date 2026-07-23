@@ -11,14 +11,25 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { User, Calendar, MapPin, Video, Clock, CreditCard, MessageCircle, AlertCircle, BellRing, Repeat, X, RefreshCw, Check, XCircle } from "lucide-react";
+import { User, Calendar, MapPin, Video, Clock, CreditCard, MessageCircle, AlertCircle, BellRing, Repeat, X, RefreshCw, Check, XCircle, UserX } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { PaymentForm } from "@/components/PaymentForm";
 import { ReminderModal } from "@/components/ReminderModal";
 import { calculatePaymentStatus, type PaymentStatus } from "@/lib/payments";
 import { notifyPatient } from "@/lib/push-notifications";
+import { useDashboardBranding } from "@/contexts/DashboardBrandingContext";
 
 interface Appointment {
   id: string;
@@ -53,9 +64,13 @@ export const AppointmentDetailModal = ({
   onPaymentRegistered,
 }: AppointmentDetailModalProps) => {
   const navigate = useNavigate();
+  const { displayName: clinicDisplayName } = useDashboardBranding();
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [showReminderModal, setShowReminderModal] = useState(false);
   const [cancellingRecurrence, setCancellingRecurrence] = useState(false);
+  // Confirmación antes de cancelar (una cita o la serie completa)
+  const [cancelConfirm, setCancelConfirm] = useState<"single" | "series" | null>(null);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
   const [rescheduleRequest, setRescheduleRequest] = useState<any | null>(null);
   const [resolvingRequest, setResolvingRequest] = useState(false);
   const [rejectMode, setRejectMode] = useState(false);
@@ -165,17 +180,63 @@ export const AppointmentDetailModal = ({
     }
   };
 
-  const handleViewAppointment = () => {
-    navigate(`/appointments`);
-    onClose();
-  };
-
   const handlePaymentSuccess = () => {
     setShowPaymentForm(false);
     onPaymentRegistered?.();
   };
 
   const isRecurrent = !!appointment.recurrence_group_id;
+
+  // Mail de cancelación al paciente (además del push): sin esto, un paciente
+  // sin notificaciones activadas no se enteraba de que su cita se canceló.
+  const sendCancellationEmail = async (seriesCancelled: boolean) => {
+    const email = appointment.patients?.email;
+    if (!email || !businessId) return;
+    const clinic = clinicDisplayName || "tu consultorio";
+    const dateStr = format(new Date(appointment.start_at), "EEEE d 'de' MMMM", { locale: es });
+    const timeStr = format(new Date(appointment.start_at), "HH:mm");
+    const firstName = (appointment.patients?.full_name || "").split(" ")[0] || "Hola";
+    try {
+      await supabase.functions.invoke("send-resend-email", {
+        body: {
+          to: email,
+          template: "raw",
+          businessId,
+          data: {
+            subject: seriesCancelled
+              ? `Tus próximas citas fueron canceladas — ${clinic}`
+              : `Tu cita del ${format(new Date(appointment.start_at), "d/M")} fue cancelada — ${clinic}`,
+            message: seriesCancelled
+              ? `Hola ${firstName},\n\nTe avisamos que ${clinic} canceló tus próximas citas de la serie que tenías agendada.\n\nSi querés reagendar, contactate con el consultorio o entrá a tu portal.\n\n${clinic}`
+              : `Hola ${firstName},\n\nTe avisamos que ${clinic} canceló tu cita del ${dateStr} a las ${timeStr}.\n\nSi querés reagendar, contactate con el consultorio o entrá a tu portal.\n\n${clinic}`,
+          },
+        },
+      });
+    } catch (err) {
+      console.warn("Cancellation email failed:", err);
+    }
+  };
+
+  // Marcar cómo terminó la sesión: el gesto más frecuente del día a día.
+  const handleSetStatus = async (status: "attended" | "no_show") => {
+    setUpdatingStatus(true);
+    try {
+      const { error } = await supabase
+        .from("appointments")
+        .update({ status })
+        .eq("id", appointment.id);
+      if (error) throw error;
+      toast({
+        title: status === "attended" ? "Cita marcada como realizada ✓" : "Paciente marcado como ausente",
+      });
+      onPaymentRegistered?.();
+      onClose();
+    } catch {
+      toast({ title: "Error", description: "No se pudo actualizar la cita", variant: "destructive" });
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
 
   const handleCancelSingle = async () => {
     try {
@@ -192,7 +253,8 @@ export const AppointmentDetailModal = ({
           url: "/portal",
         });
       }
-      toast({ title: "Turno cancelado" });
+      void sendCancellationEmail(false);
+      toast({ title: "Cita cancelada", description: "Le avisamos al paciente por email." });
       onPaymentRegistered?.();
       onClose();
     } catch {
@@ -220,7 +282,8 @@ export const AppointmentDetailModal = ({
           url: "/portal",
         });
       }
-      toast({ title: "Serie cancelada", description: "Se cancelaron todos los turnos futuros de la serie" });
+      void sendCancellationEmail(true);
+      toast({ title: "Serie cancelada", description: "Se cancelaron los turnos futuros y le avisamos al paciente." });
       onPaymentRegistered?.();
       onClose();
     } catch {
@@ -390,20 +453,32 @@ export const AppointmentDetailModal = ({
               </div>
             )}
 
-            {/* Actions */}
+            {/* Acciones, ordenadas por lo que uno viene a hacer:
+                1) resolver el estado de la sesión, 2) cobrar/recordar,
+                3) ver la ficha, y al final la zona de peligro (cancelar). */}
             <div className="space-y-2 pt-2">
-              <div className="flex flex-col sm:flex-row gap-2">
-                {appointment.patient_id && (
-                  <Button onClick={handleViewPatient} className="flex-1 rounded-xl">
-                    <User className="h-4 w-4 mr-2" />
-                    Ver paciente
+              {/* ¿Cómo terminó la sesión? */}
+              {["pending", "confirmed", "scheduled"].includes(appointment.status) && (
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Button
+                    onClick={() => handleSetStatus("attended")}
+                    disabled={updatingStatus}
+                    className="flex-1 rounded-xl gap-2"
+                  >
+                    <Check className="h-4 w-4" />
+                    Marcar realizada
                   </Button>
-                )}
-                <Button variant="outline" onClick={handleViewAppointment} className="flex-1 rounded-xl">
-                  <Calendar className="h-4 w-4 mr-2" />
-                  Ver citas
-                </Button>
-              </div>
+                  <Button
+                    variant="outline"
+                    onClick={() => handleSetStatus("no_show")}
+                    disabled={updatingStatus}
+                    className="flex-1 rounded-xl gap-2"
+                  >
+                    <UserX className="h-4 w-4" />
+                    Ausente
+                  </Button>
+                </div>
+              )}
 
               <div className="flex flex-col sm:flex-row gap-2">
                 {appointment.patient_id && businessId && (
@@ -416,7 +491,7 @@ export const AppointmentDetailModal = ({
                 {/* Reminder button */}
                 {appointment.patient_id && (
                   <Button
-                    variant="outline"
+                    variant="secondary"
                     onClick={() => setShowReminderModal(true)}
                     className="flex-1 rounded-xl"
                   >
@@ -425,29 +500,6 @@ export const AppointmentDetailModal = ({
                   </Button>
                 )}
               </div>
-
-              {/* Recurrence cancel actions */}
-              {isRecurrent && appointment.status !== "cancelled" && (
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={handleCancelSingle}
-                    className="flex-1 rounded-xl text-destructive border-destructive/30 hover:bg-destructive/10"
-                  >
-                    <X className="h-4 w-4 mr-2" />
-                    Cancelar este turno
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={handleCancelSeries}
-                    disabled={cancellingRecurrence}
-                    className="flex-1 rounded-xl text-destructive border-destructive/30 hover:bg-destructive/10"
-                  >
-                    <Repeat className="h-4 w-4 mr-2" />
-                    {cancellingRecurrence ? "Cancelando..." : "Cancelar toda la serie"}
-                  </Button>
-                </div>
-              )}
 
               {showPaymentReminder && appointment.patient_id && (
                 <Button
@@ -462,6 +514,39 @@ export const AppointmentDetailModal = ({
                   <MessageCircle className="h-4 w-4 mr-2" />
                   Recordatorio de pago
                 </Button>
+              )}
+
+              {appointment.patient_id && (
+                <Button variant="outline" onClick={handleViewPatient} className="w-full rounded-xl">
+                  <User className="h-4 w-4 mr-2" />
+                  Ver ficha del paciente
+                </Button>
+              )}
+
+              {/* Zona de peligro: cancelar, siempre disponible mientras la
+                  cita esté viva (antes solo existía para las recurrentes) */}
+              {!["cancelled", "cancelled_by_patient", "attended", "no_show"].includes(appointment.status) && (
+                <div className="flex flex-col sm:flex-row gap-2 pt-1 border-t border-border/40 mt-1">
+                  <Button
+                    variant="ghost"
+                    onClick={() => setCancelConfirm("single")}
+                    className="flex-1 rounded-xl text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  >
+                    <X className="h-4 w-4 mr-2" />
+                    Cancelar cita
+                  </Button>
+                  {isRecurrent && (
+                    <Button
+                      variant="ghost"
+                      onClick={() => setCancelConfirm("series")}
+                      disabled={cancellingRecurrence}
+                      className="flex-1 rounded-xl text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    >
+                      <Repeat className="h-4 w-4 mr-2" />
+                      {cancellingRecurrence ? "Cancelando..." : "Cancelar toda la serie"}
+                    </Button>
+                  )}
+                </div>
               )}
             </div>
           </div>
@@ -478,6 +563,38 @@ export const AppointmentDetailModal = ({
           onSuccess={handlePaymentSuccess}
         />
       )}
+
+      {/* Confirmación de cancelación (cita o serie) */}
+      <AlertDialog open={!!cancelConfirm} onOpenChange={(o) => !o && setCancelConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {cancelConfirm === "series" ? "¿Cancelar toda la serie?" : "¿Cancelar esta cita?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {cancelConfirm === "series"
+                ? "Se cancelan todos los turnos futuros de la serie. "
+                : `Se cancela la cita del ${format(new Date(appointment.start_at), "d 'de' MMMM 'a las' HH:mm", { locale: es })}. `}
+              Le avisamos al paciente por email{appointment.patients?.email ? "" : " (este paciente no tiene email cargado)"} y
+              su recordatorio automático se anula solo.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-xl">Volver</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                const which = cancelConfirm;
+                setCancelConfirm(null);
+                if (which === "series") void handleCancelSeries();
+                else void handleCancelSingle();
+              }}
+              className="rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Sí, cancelar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Reminder Modal */}
       {appointment.patient_id && (
