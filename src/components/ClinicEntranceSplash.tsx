@@ -2,13 +2,24 @@ import { useEffect, useState } from "react";
 
 const FLAG_KEY = "clinic_entrance_pending";
 const START_EVENT = "clinic-entrance-start";
-const SHOW_MS = 2800; // cuánto se luce la entrada
+const READY_EVENT = "clinic-entrance-ready";
+const SHOW_MS = 2800; // mínimo que se luce la entrada
+const MAX_MS = 15000; // tope duro: nunca más que esto
 const FADE_MS = 600; // fundido de salida
 
 /** Dispara la bienvenida (la llama Auth justo antes de navegar al panel). */
 export function triggerClinicEntrance() {
   try { sessionStorage.setItem(FLAG_KEY, "1"); } catch {}
   window.dispatchEvent(new Event(START_EVENT));
+}
+
+/**
+ * Avisa que el panel ya está montado (lo llama DashboardLayout). El splash
+ * espera este aviso ADEMÁS del tiempo mínimo: así nunca se despide antes de
+ * que el panel esté listo y no queda expuesto ningún preloader genérico.
+ */
+export function notifyClinicEntranceReady() {
+  window.dispatchEvent(new Event(READY_EVENT));
 }
 
 /**
@@ -59,14 +70,35 @@ export function ClinicEntranceSplash() {
     return () => window.removeEventListener(START_EVENT, onStart);
   }, []);
 
+  // Salida en dos condiciones: pasó el tiempo mínimo Y el panel avisó que
+  // está listo (o se alcanzó el tope duro). Así el splash nunca se despide
+  // dejando un preloader genérico a la vista.
   useEffect(() => {
     if (phase !== "show") return;
     try { sessionStorage.removeItem(FLAG_KEY); } catch {}
-    const t1 = window.setTimeout(() => setPhase("fade"), SHOW_MS);
-    const t2 = window.setTimeout(() => setPhase("done"), SHOW_MS + FADE_MS);
+
+    let ready = false;
+    let minDone = false;
+    let leaving = false;
+    let tFade = 0;
+
+    const leave = () => {
+      if (leaving || !(ready && minDone)) return;
+      leaving = true;
+      setPhase("fade");
+      tFade = window.setTimeout(() => setPhase("done"), FADE_MS);
+    };
+    const onReady = () => { ready = true; leave(); };
+
+    window.addEventListener(READY_EVENT, onReady);
+    const tMin = window.setTimeout(() => { minDone = true; leave(); }, SHOW_MS);
+    const tMax = window.setTimeout(() => { ready = true; minDone = true; leave(); }, MAX_MS);
+
     return () => {
-      window.clearTimeout(t1);
-      window.clearTimeout(t2);
+      window.removeEventListener(READY_EVENT, onReady);
+      window.clearTimeout(tMin);
+      window.clearTimeout(tMax);
+      if (tFade) window.clearTimeout(tFade);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);

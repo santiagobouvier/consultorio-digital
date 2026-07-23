@@ -6,6 +6,7 @@ import { SuperAdminVisitBanner } from "@/components/SuperAdminVisitBanner";
 import { TrialBanner } from "@/components/TrialBanner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { DashboardBrandingProvider } from "@/contexts/DashboardBrandingContext";
+import { notifyClinicEntranceReady } from "@/components/ClinicEntranceSplash";
 
 const PROFESSIONAL_FIRST_SEEN_KEY = "pwa_install_pro_first_seen";
 
@@ -16,6 +17,12 @@ interface DashboardLayoutProps {
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const isMobile = useIsMobile();
   const [firstSeen, setFirstSeen] = useState<string | null>(null);
+
+  // El panel ya está montado: la bienvenida post-login puede despedirse
+  // (nunca antes, para que no quede expuesto ningún preloader intermedio).
+  useEffect(() => {
+    notifyClinicEntranceReady();
+  }, []);
 
   useEffect(() => {
     const stored = localStorage.getItem(PROFESSIONAL_FIRST_SEEN_KEY);
