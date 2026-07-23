@@ -857,14 +857,46 @@ export function CreateAppointmentModal({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="manual-time" className="text-sm font-semibold">Hora de inicio *</Label>
-                  <Input
-                    id="manual-time"
-                    type="time"
-                    value={time}
-                    onChange={(e) => setTime(e.target.value)}
-                    className="h-11 rounded-xl"
-                  />
+                  <Label className="text-sm font-semibold">Hora de inicio *</Label>
+                  {/* Selects propios (hora y minutos): el picker nativo del
+                      navegador se veía roto en modo oscuro y era incómodo. */}
+                  <div className="flex items-center gap-2">
+                    <Select
+                      value={time ? time.split(":")[0] : undefined}
+                      onValueChange={(h) => setTime(`${h}:${time.split(":")[1] || "00"}`)}
+                    >
+                      <SelectTrigger className="h-11 rounded-xl flex-1">
+                        <SelectValue placeholder="Hora" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-64">
+                        {Array.from({ length: 18 }, (_, i) => String(i + 6).padStart(2, "0")).map((h) => (
+                          <SelectItem key={h} value={h}>{h} hs</SelectItem>
+                        ))}
+                        {["00", "01", "02", "03", "04", "05"].map((h) => (
+                          <SelectItem key={h} value={h}>{h} hs</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <span className="text-lg font-bold text-muted-foreground">:</span>
+                    <Select
+                      value={time ? (time.split(":")[1] || "00") : undefined}
+                      onValueChange={(m) => setTime(`${time.split(":")[0] || "09"}:${m}`)}
+                    >
+                      <SelectTrigger className="h-11 rounded-xl flex-1">
+                        <SelectValue placeholder="Minutos" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-64">
+                        {["00", "05", "10", "15", "20", "25", "30", "35", "40", "45", "50", "55"].map((m) => (
+                          <SelectItem key={m} value={m}>{m} min</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {time && (
+                    <p className="text-xs text-muted-foreground">
+                      La sesión empieza a las <span className="font-semibold text-foreground">{time}</span>
+                    </p>
+                  )}
                 </div>
                 <Button
                   onClick={() => setStep("confirm")}
