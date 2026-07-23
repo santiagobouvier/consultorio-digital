@@ -791,7 +791,7 @@ export function PatientPortalView(props: PatientPortalViewProps) {
               </>
             )}
 
-            <NotificationActivationCard variant="full" />
+            <NotificationActivationCard variant="full" audience="patient" />
           </CardContent>
         </Card>
       </div>
