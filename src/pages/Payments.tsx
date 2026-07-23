@@ -39,10 +39,18 @@ import {
   CheckCircle2,
   Clock,
   Download,
+  MoreVertical,
 } from "lucide-react";
 import { exportCSV, todayDateString } from "@/lib/csv-export";
 import { createPaymentLink } from "@/lib/payment-links";
 import { PaymentWhatsAppMenu } from "@/components/PaymentWhatsAppMenu";
+import { PaymentLinkMenu } from "@/components/PaymentLinkMenu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { PaymentForm } from "@/components/PaymentForm";
 import { GlobalPaymentForm } from "@/components/GlobalPaymentForm";
 import { ConfirmPaymentDialog } from "@/components/ConfirmPaymentDialog";
@@ -559,7 +567,8 @@ const Payments = () => {
                       <span className="font-bold text-sm text-destructive">
                         {formatCurrency(d.total, "UYU")}
                       </span>
-                      <PaymentWhatsAppMenu
+                      <PaymentLinkMenu
+                        compact
                         patientPhone={d.phone}
                         patientName={d.name}
                         getPaymentLink={mpConnected && d.ids.length > 0 ? () => ensurePaymentLink(d.ids) : undefined}
@@ -731,28 +740,34 @@ const Payments = () => {
                       )}
                     </div>
 
-                    {/* Acciones inline: solo escritorio */}
-                    <div className="hidden sm:flex items-center gap-1 shrink-0">
+                    {/* Acciones inline: solo escritorio. Cobro online, aviso y
+                        cobrar manual visibles; editar/eliminar guardados en ⋯ */}
+                    <div
+                      className="hidden sm:flex items-center gap-1.5 shrink-0 pl-2 ml-1 border-l border-border/40"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       {payment.status !== "paid" && payment.status !== "cancelled" && (
                         <>
-                          <div onClick={(e) => e.stopPropagation()}>
-                            <PaymentWhatsAppMenu
-                              patientPhone={payment.patients?.whatsapp_phone || null}
-                              patientName={payment.patients?.full_name || ""}
-                              getPaymentLink={mpConnected ? () => ensurePaymentLink([payment.id]) : undefined}
-                            />
-                          </div>
+                          <PaymentLinkMenu
+                            patientPhone={payment.patients?.whatsapp_phone || null}
+                            patientName={payment.patients?.full_name || ""}
+                            getPaymentLink={mpConnected ? () => ensurePaymentLink([payment.id]) : undefined}
+                          />
+                          <PaymentWhatsAppMenu
+                            patientPhone={payment.patients?.whatsapp_phone || null}
+                            patientName={payment.patients?.full_name || ""}
+                            getPaymentLink={mpConnected ? () => ensurePaymentLink([payment.id]) : undefined}
+                          />
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
+                            onClick={() =>
                               setConfirmPaymentData({
                                 id: payment.id,
                                 amount: payment.amount,
                                 patientName: payment.patients?.full_name || "Paciente",
-                              });
-                            }}
+                              })
+                            }
                             className="rounded-lg h-8 gap-1.5"
                             title="Marcar como pagado"
                           >
@@ -761,30 +776,31 @@ const Payments = () => {
                           </Button>
                         </>
                       )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setEditingPayment(payment);
-                        }}
-                        className="rounded-lg h-8 px-2 text-foreground"
-                        title="Editar pago"
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDeletingPaymentId(payment.id);
-                        }}
-                        className="rounded-lg h-8 px-2 text-destructive hover:text-destructive"
-                        title="Eliminar pago"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="rounded-lg h-8 w-8 p-0 text-muted-foreground"
+                            title="Más acciones"
+                          >
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-44">
+                          <DropdownMenuItem onClick={() => setEditingPayment(payment)} className="gap-2">
+                            <Pencil className="h-4 w-4" />
+                            Editar pago
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => setDeletingPaymentId(payment.id)}
+                            className="gap-2 text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            Eliminar pago
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
 
@@ -794,6 +810,11 @@ const Payments = () => {
                       className="flex sm:hidden items-center gap-2 mt-3 pt-3 border-t border-border/40"
                       onClick={(e) => e.stopPropagation()}
                     >
+                      <PaymentLinkMenu
+                        patientPhone={payment.patients?.whatsapp_phone || null}
+                        patientName={payment.patients?.full_name || ""}
+                        getPaymentLink={mpConnected ? () => ensurePaymentLink([payment.id]) : undefined}
+                      />
                       <PaymentWhatsAppMenu
                         patientPhone={payment.patients?.whatsapp_phone || null}
                         patientName={payment.patients?.full_name || ""}
