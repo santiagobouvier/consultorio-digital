@@ -425,7 +425,7 @@ const ClinicSettings = () => {
                 </p>
               </CardHeader>
               <CardContent>
-                <NotificationActivationCard variant="full" />
+                <NotificationActivationCard variant="full" audience="professional" />
               </CardContent>
             </Card>
           </TabsContent>
