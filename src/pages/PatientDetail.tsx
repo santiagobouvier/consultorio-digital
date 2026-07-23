@@ -36,6 +36,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { PaymentWhatsAppMenu } from "@/components/PaymentWhatsAppMenu";
+import { PaymentLinkMenu } from "@/components/PaymentLinkMenu";
 import { ConfirmPaymentDialog } from "@/components/ConfirmPaymentDialog";
 import { createPaymentLink } from "@/lib/payment-links";
 import LoadingPage from "@/components/LoadingPage";
@@ -768,6 +769,15 @@ const PatientDetail = () => {
                         <div className="flex items-center gap-1 shrink-0">
                           {payment.status !== "paid" && payment.status !== "cancelled" && (
                             <>
+                              <PaymentLinkMenu
+                                patientPhone={patient.whatsapp_phone}
+                                patientName={patient.full_name}
+                                getPaymentLink={mpConnected ? async () => {
+                                  const url = await createPaymentLink(patient.business_id, [payment.id]);
+                                  fetchData();
+                                  return url;
+                                } : undefined}
+                              />
                               <PaymentWhatsAppMenu
                                 patientPhone={patient.whatsapp_phone}
                                 patientName={patient.full_name}
