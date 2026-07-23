@@ -55,9 +55,14 @@ export function DashboardBrandingProvider({ children }: { children: ReactNode })
         setPrimaryColor(color);
         setLogoUrl(logo);
         setDisplayName(d.portal_clinic_display_name || d.dashboard_display_name || data.name || null);
-        // La pantalla de carga del panel usa esta marca en las próximas visitas
+        // La pantalla de carga del panel y la bienvenida post-login usan esta
+        // marca en las próximas visitas (incluye el nombre para el splash).
         try {
-          localStorage.setItem("panel_brand", JSON.stringify({ logoUrl: logo, color }));
+          localStorage.setItem("panel_brand", JSON.stringify({
+            logoUrl: logo,
+            color,
+            name: d.portal_clinic_display_name || d.dashboard_display_name || data.name || null,
+          }));
         } catch {
           /* ignore */
         }

@@ -6,7 +6,6 @@ import { SuperAdminVisitBanner } from "@/components/SuperAdminVisitBanner";
 import { TrialBanner } from "@/components/TrialBanner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { DashboardBrandingProvider } from "@/contexts/DashboardBrandingContext";
-import { ClinicEntranceSplash } from "@/components/ClinicEntranceSplash";
 
 const PROFESSIONAL_FIRST_SEEN_KEY = "pwa_install_pro_first_seen";
 
@@ -31,8 +30,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   return (
     <DashboardBrandingProvider>
-      {/* Bienvenida con la marca del consultorio (una vez por login) */}
-      <ClinicEntranceSplash />
       <div className="min-h-screen flex w-full relative">
         <PremiumSidebar />
         <main
