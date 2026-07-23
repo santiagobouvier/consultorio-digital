@@ -179,6 +179,12 @@ const ClinicPortal = () => {
   const [patient, setPatient] = useState<PortalPatient | null>(null);
   const [patientLoading, setPatientLoading] = useState(false);
   const [patientChecked, setPatientChecked] = useState(false);
+  // La sesión del navegador es de un PROFESIONAL de este consultorio (dueño o
+  // miembro) que abrió su propio portal — merece una pantalla propia, no el
+  // error de "no tenés ficha de paciente".
+  const [isProfessionalViewer, setIsProfessionalViewer] = useState(false);
+  // Watchdog: si algún spinner queda girando demasiado, ofrecemos recargar.
+  const [gateTimedOut, setGateTimedOut] = useState(false);
   const [isDark, setIsDark] = useState(true);
   const [welcomeSeen, setWelcomeSeen] = useState<boolean>(true);
   const [payingAppointment, setPayingAppointment] = useState<string | null>(null);
@@ -384,15 +390,29 @@ const ClinicPortal = () => {
     };
   }, [slug, branding?.logoUrl, branding?.name]);
 
-  // Auth listener
+  // Auth listener. Con timeout de seguridad: si getSession() se cuelga
+  // (candados de sesión con varias pestañas abiertas), el portal NO queda
+  // girando para siempre — sigue como visitante y muestra el login.
   useEffect(() => {
+    let cancelled = false;
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, sess) => {
+      if (cancelled) return;
       setSession(sess); setAuthChecked(true);
     });
+    const failOpen = window.setTimeout(() => {
+      if (!cancelled) setAuthChecked(true);
+    }, 3500);
     supabase.auth.getSession().then(({ data: { session: sess } }) => {
+      if (cancelled) return;
       setSession(sess); setAuthChecked(true);
+    }).catch(() => {
+      if (!cancelled) setAuthChecked(true);
     });
-    return () => subscription.unsubscribe();
+    return () => {
+      cancelled = true;
+      window.clearTimeout(failOpen);
+      subscription.unsubscribe();
+    };
   }, []);
 
   // Load patient
@@ -414,10 +434,46 @@ const ClinicPortal = () => {
       if (data) {
         setPatient(data as PortalPatient);
         await reloadPatientData(data.id, branding.id);
+      } else {
+        // ¿Es el profesional del consultorio mirando su propio portal?
+        try {
+          const { data: owned } = await supabase
+            .from("businesses")
+            .select("id")
+            .eq("id", branding.id)
+            .eq("owner_user_id", session.user.id)
+            .maybeSingle();
+          let member = !!owned;
+          if (!member) {
+            const { data: role } = await supabase
+              .from("user_roles")
+              .select("id")
+              .eq("business_id", branding.id)
+              .eq("user_id", session.user.id)
+              .maybeSingle();
+            member = !!role;
+          }
+          setIsProfessionalViewer(member);
+        } catch {
+          setIsProfessionalViewer(false);
+        }
       }
       setPatientLoading(false); setPatientChecked(true);
     })();
   }, [session?.user?.id, branding?.id, authChecked, reloadPatientData]);
+
+  // Watchdog de los spinners de arranque: pasados 10s ofrecemos recargar en
+  // vez de girar infinito (colgadas de red o de sesión con multi-pestaña).
+  const bootGating =
+    loading || !authChecked || (!!session && !!branding && (!patientChecked || patientLoading));
+  useEffect(() => {
+    if (!bootGating) {
+      setGateTimedOut(false);
+      return;
+    }
+    const t = window.setTimeout(() => setGateTimedOut(true), 10000);
+    return () => window.clearTimeout(t);
+  }, [bootGating]);
 
   const themeStyleLogin = (() => {
     if (!branding) return {};
@@ -426,8 +482,10 @@ const ClinicPortal = () => {
   })();
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    setSession(null); setPatient(null);
+    // scope local: cierra la sesión de ESTE navegador solamente. El global
+    // revocaba también la sesión del celular del paciente (u otras compus).
+    await supabase.auth.signOut({ scope: "local" });
+    setSession(null); setPatient(null); setIsProfessionalViewer(false);
     setPatientLoading(false); setPatientChecked(false);
   };
 
@@ -563,6 +621,26 @@ const ClinicPortal = () => {
     setShowBookingModal(true);
   };
 
+  // Red de seguridad: un arranque colgado ofrece recargar, nunca gira infinito.
+  if (bootGating && gateTimedOut) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background text-foreground p-4">
+        <Card className="max-w-sm w-full">
+          <CardContent className="pt-8 pb-6 text-center space-y-3">
+            <AlertCircle className="h-10 w-10 text-muted-foreground mx-auto" />
+            <h2 className="text-lg font-bold">Está tardando más de lo normal</h2>
+            <p className="text-sm text-muted-foreground">
+              Puede ser tu conexión. Recargá la página para reintentar.
+            </p>
+            <Button onClick={() => window.location.reload()} className="w-full">
+              Recargar página
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (loading || !authChecked) {
     return <div className="min-h-screen flex items-center justify-center bg-background"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
   }
@@ -595,6 +673,45 @@ const ClinicPortal = () => {
   if (session && (!patientChecked || patientLoading)) {
     return <div className="min-h-screen flex items-center justify-center bg-background"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
   }
+  if (!patient && isProfessionalViewer) {
+    // El profesional abrió su propio portal con la sesión del panel. OJO: acá
+    // NUNCA cerramos sesión global — eso mataría el panel en las otras
+    // pestañas. Si quiere probar el login de pacientes, se le avisa el costo.
+    return (
+      <div className="min-h-screen" style={themeStyleLogin as any}>
+        <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-4">
+          <Card className="max-w-md w-full">
+            <CardContent className="pt-8 pb-6 text-center space-y-4">
+              {branding.logoUrl ? (
+                <img src={branding.logoUrl} alt="" className="h-14 w-14 rounded-2xl object-cover mx-auto" />
+              ) : (
+                <Building2 className="h-12 w-12 text-primary mx-auto" />
+              )}
+              <div className="space-y-1.5">
+                <h2 className="text-xl font-bold">Este es el portal de tus pacientes</h2>
+                <p className="text-sm text-muted-foreground">
+                  Estás con tu sesión de profesional de {branding.displayName}, así que no hay una
+                  ficha de paciente para mostrar. Tus pacientes entran acá con su propio acceso y
+                  ven sus citas, pagos y reservas.
+                </p>
+              </div>
+              <Button className="w-full" onClick={() => navigate("/dashboard")}>
+                Volver a mi panel
+              </Button>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                ¿Querés probar el login de pacientes? Abrí este link en una ventana de incógnito,
+                o cerrá sesión — ojo: eso también cierra tu panel en este navegador.
+              </p>
+              <Button variant="ghost" size="sm" onClick={handleLogout} className="text-muted-foreground">
+                <LogOut className="h-4 w-4 mr-2" /> Cerrar sesión igual
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
   if (!patient) {
     return (
       <div className="min-h-screen" style={themeStyleLogin as any}>
