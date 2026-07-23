@@ -283,7 +283,7 @@ const ClinicPortal = () => {
     (async () => {
       const { data, error } = await supabase
         .from("businesses_public_branding")
-        .select("id, name, specialty, contact_email, portal_logo_url, portal_clinic_display_name, portal_primary_color, portal_dark_primary_color, public_slug, custom_subdomain, cancellation_hours_notice, late_cancellation_message")
+        .select("id, name, specialty, portal_logo_url, portal_clinic_display_name, portal_primary_color, portal_dark_primary_color, public_slug, custom_subdomain, cancellation_hours_notice, late_cancellation_message")
         .or(`public_slug.eq.${slug},custom_subdomain.eq.${slug}`)
         .limit(1).maybeSingle();
       if (error || !data) {
@@ -294,7 +294,7 @@ const ClinicPortal = () => {
         name: (data as any).portal_clinic_display_name || data.name,
         displayName: (data as any).portal_clinic_display_name || data.name,
         specialty: data.specialty || "",
-        contactEmail: data.contact_email,
+        contactEmail: null,
         logoUrl: (data as any).portal_logo_url || "",
         lightColor: (data as any).portal_primary_color || "176 100% 32%",
         darkColor: (data as any).portal_dark_primary_color || "176 85% 42%",
