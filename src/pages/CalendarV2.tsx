@@ -106,6 +106,22 @@ const CalendarV2 = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const [currentDate, setCurrentDate] = useState(new Date());
+
+  // Deep-link: /agenda?date=YYYY-MM-DD abre la agenda EN ese día en vista
+  // día (lo usa el dashboard, ej: "citas de mañana sin confirmar").
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const dateParam = params.get("date");
+    if (!dateParam || !/^\d{4}-\d{2}-\d{2}$/.test(dateParam)) return;
+    const target = new Date(`${dateParam}T12:00:00`);
+    if (isNaN(target.getTime())) return;
+    setCurrentDate(target);
+    setViewType("day");
+    // Limpiar el parámetro para que navegar dentro de la agenda no lo re-aplique
+    window.history.replaceState({}, "", window.location.pathname);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<CalendarFilters>({
     professionalId: null,

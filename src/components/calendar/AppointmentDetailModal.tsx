@@ -295,6 +295,36 @@ export const AppointmentDetailModal = ({
     }
   };
 
+  // Confirmar una cita futura (cierra el círculo del aviso del dashboard
+  // "citas de mañana sin confirmar").
+  const handleConfirm = async () => {
+    setUpdatingStatus(true);
+    try {
+      const { error } = await supabase
+        .from("appointments")
+        .update({ status: "confirmed" })
+        .eq("id", appointment.id);
+      if (error) throw error;
+      if (appointment.patient_id) {
+        notifyPatient({
+          patientId: appointment.patient_id,
+          title: "Cita confirmada ✓",
+          body: `Tu cita del ${format(new Date(appointment.start_at), "d 'de' MMMM 'a las' HH:mm", { locale: es })} está confirmada.`,
+          url: "/portal",
+        });
+      }
+      toast({ title: "Cita confirmada ✓" });
+      onPaymentRegistered?.();
+      onClose();
+    } catch {
+      toast({ title: "Error", description: "No se pudo confirmar la cita", variant: "destructive" });
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
+  const isFutureAppointment = new Date(appointment.start_at).getTime() > Date.now();
+
   const handleCancelSingle = async () => {
     try {
       const { error } = await supabase
@@ -545,8 +575,19 @@ export const AppointmentDetailModal = ({
                 1) resolver el estado de la sesión, 2) cobrar/recordar,
                 3) ver la ficha, y al final la zona de peligro (cancelar). */}
             <div className="space-y-2 pt-2">
-              {/* ¿Cómo terminó la sesión? */}
-              {["pending", "confirmed", "scheduled"].includes(appointment.status) && (
+              {/* Cita futura sin confirmar → confirmarla; cita ya pasada →
+                  registrar cómo terminó (realizada / ausente). */}
+              {isFutureAppointment && ["pending", "scheduled"].includes(appointment.status) && (
+                <Button
+                  onClick={handleConfirm}
+                  disabled={updatingStatus}
+                  className="w-full rounded-xl gap-2"
+                >
+                  <Check className="h-4 w-4" />
+                  Confirmar cita
+                </Button>
+              )}
+              {!isFutureAppointment && ["pending", "confirmed", "scheduled"].includes(appointment.status) && (
                 <div className="flex flex-col sm:flex-row gap-2">
                   <Button
                     onClick={() => handleSetStatus("attended")}
