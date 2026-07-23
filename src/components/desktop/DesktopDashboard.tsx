@@ -929,7 +929,12 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
                   )}
                   {tomorrowUnconfirmed.length > 0 && (
                     <button
-                      onClick={() => navigate("/agenda")}
+                      onClick={() => {
+                        const t = new Date();
+                        t.setDate(t.getDate() + 1);
+                        const iso = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
+                        navigate(`/agenda?date=${iso}`);
+                      }}
                       className="w-full flex items-center gap-3 p-3.5 rounded-xl bg-primary/[0.06] border border-primary/25 hover:bg-primary/[0.1] transition-all group text-left"
                     >
                       <div className="h-9 w-9 rounded-lg bg-primary/12 flex items-center justify-center shrink-0">
@@ -939,7 +944,7 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
                         <p className="text-sm font-semibold text-foreground">
                           {tomorrowUnconfirmed.length} cita{tomorrowUnconfirmed.length !== 1 ? "s" : ""} de mañana sin confirmar
                         </p>
-                        <p className="text-xs text-muted-foreground mt-0.5">Revisalas en la agenda</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">Abrí el día de mañana y confirmalas</p>
                       </div>
                       <ArrowRight className="h-4 w-4 text-primary group-hover:translate-x-0.5 transition-transform shrink-0" />
                     </button>
