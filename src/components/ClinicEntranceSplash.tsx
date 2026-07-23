@@ -1,24 +1,42 @@
 import { useEffect, useState } from "react";
-import { useDashboardBranding } from "@/contexts/DashboardBrandingContext";
 
 const FLAG_KEY = "clinic_entrance_pending";
-const SHOW_MS = 2500; // cuánto se luce la entrada
-const FADE_MS = 550; // fundido de salida
+const SHOW_MS = 2800; // cuánto se luce la entrada
+const FADE_MS = 600; // fundido de salida
 
 /**
  * Bienvenida con marca al entrar al panel tras iniciar sesión: el logo del
  * consultorio con su color, "Preparando tu consultorio..." y una barra de
  * progreso elegante. Se muestra UNA vez por login (flag en sessionStorage
  * que setea Auth al redirigir al dashboard).
+ *
+ * Lee la marca de la caché local (panel_brand) para poder montarse ANTES de
+ * que cargue cualquier dato: cubre también el preloader de arranque del
+ * panel, así la entrada es UNA sola pantalla, no dos encadenadas.
  */
 export function ClinicEntranceSplash() {
-  const { logoUrl, displayName, primaryColor } = useDashboardBranding();
   const [phase, setPhase] = useState<"show" | "fade" | "done">(() => {
     try {
       return sessionStorage.getItem(FLAG_KEY) === "1" ? "show" : "done";
     } catch {
       return "done";
     }
+  });
+
+  // Marca cacheada por DashboardBrandingContext en visitas anteriores.
+  const [brandInfo] = useState<{ logoUrl: string | null; color: string; name: string | null }>(() => {
+    try {
+      const raw = localStorage.getItem("panel_brand");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        return {
+          logoUrl: parsed?.logoUrl || null,
+          color: parsed?.color || "176 100% 32%",
+          name: parsed?.name || null,
+        };
+      }
+    } catch { /* ignore */ }
+    return { logoUrl: null, color: "176 100% 32%", name: null };
   });
 
   useEffect(() => {
@@ -35,8 +53,8 @@ export function ClinicEntranceSplash() {
 
   if (phase === "done") return null;
 
-  const brand = primaryColor || "176 100% 32%";
-  const name = displayName || "Tu consultorio";
+  const brand = brandInfo.color;
+  const name = brandInfo.name || "Tu consultorio";
   const initials = name
     .trim()
     .split(/\s+/)
@@ -48,9 +66,9 @@ export function ClinicEntranceSplash() {
   return (
     <div
       aria-hidden
-      className="fixed inset-0 z-[150] flex items-center justify-center"
+      className="fixed inset-0 z-[200] flex items-center justify-center"
       style={{
-        backgroundColor: "hsl(180 12% 16%)",
+        backgroundColor: "hsl(180 12% 14%)",
         opacity: phase === "fade" ? 0 : 1,
         transition: `opacity ${FADE_MS}ms ease`,
         pointerEvents: phase === "fade" ? "none" : "auto",
@@ -58,16 +76,20 @@ export function ClinicEntranceSplash() {
     >
       <style>{`
         @keyframes ce-logo-in {
-          0% { opacity: 0; transform: scale(0.72) translateY(10px); }
-          55% { opacity: 1; transform: scale(1.04) translateY(0); }
+          0% { opacity: 0; transform: scale(0.6) translateY(14px); }
+          55% { opacity: 1; transform: scale(1.06) translateY(0); }
           100% { opacity: 1; transform: scale(1) translateY(0); }
         }
         @keyframes ce-breathe {
-          0%, 100% { box-shadow: 0 0 0 2px hsla(${brand}, 0.55), 0 0 46px -6px hsla(${brand}, 0.55); }
-          50% { box-shadow: 0 0 0 2px hsla(${brand}, 0.85), 0 0 70px -4px hsla(${brand}, 0.75); }
+          0%, 100% { box-shadow: 0 0 0 3px hsla(${brand}, 0.55), 0 0 60px -4px hsla(${brand}, 0.6); }
+          50% { box-shadow: 0 0 0 3px hsla(${brand}, 0.95), 0 0 100px 0px hsla(${brand}, 0.8); }
+        }
+        @keyframes ce-halo-spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
         }
         @keyframes ce-rise {
-          0% { opacity: 0; transform: translateY(8px); }
+          0% { opacity: 0; transform: translateY(10px); }
           100% { opacity: 1; transform: translateY(0); }
         }
         @keyframes ce-bar {
@@ -96,56 +118,68 @@ export function ClinicEntranceSplash() {
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
-          background: `radial-gradient(ellipse 55% 42% at 50% 42%, hsla(${brand}, 0.16), transparent 70%)`,
+          background: `radial-gradient(ellipse 60% 46% at 50% 40%, hsla(${brand}, 0.22), transparent 70%)`,
         }}
       />
 
       <div className="relative flex flex-col items-center px-6 text-center">
-        {/* Logo del consultorio */}
-        <div
-          className="h-24 w-24 rounded-3xl overflow-hidden flex items-center justify-center"
-          style={{
-            backgroundColor: "hsl(180 12% 10%)",
-            animation: `ce-logo-in 700ms cubic-bezier(0.22, 1, 0.36, 1) both, ce-breathe 2.2s ease-in-out 700ms infinite`,
-          }}
-        >
-          {logoUrl ? (
-            <img src={logoUrl} alt="" className="h-full w-full object-cover" />
-          ) : (
-            <span className="text-3xl font-bold" style={{ color: `hsl(${brand})` }}>
-              {initials || "CD"}
-            </span>
-          )}
+        {/* Halo giratorio alrededor del logo */}
+        <div className="relative">
+          <div
+            className="absolute -inset-4 rounded-full pointer-events-none"
+            style={{
+              background: `conic-gradient(from 0deg, transparent 0deg, transparent 260deg, hsla(${brand}, 0.9) 320deg, transparent 360deg)`,
+              WebkitMask: "radial-gradient(farthest-side, transparent calc(100% - 3px), black calc(100% - 2px))",
+              mask: "radial-gradient(farthest-side, transparent calc(100% - 3px), black calc(100% - 2px))",
+              animation: "ce-halo-spin 1.6s linear infinite",
+            }}
+          />
+          {/* Logo del consultorio */}
+          <div
+            className="h-28 w-28 rounded-[28px] overflow-hidden flex items-center justify-center"
+            style={{
+              backgroundColor: "hsl(180 12% 9%)",
+              animation: `ce-logo-in 750ms cubic-bezier(0.22, 1, 0.36, 1) both, ce-breathe 2.2s ease-in-out 750ms infinite`,
+            }}
+          >
+            {brandInfo.logoUrl ? (
+              <img src={brandInfo.logoUrl} alt="" className="h-full w-full object-cover" />
+            ) : (
+              <span className="text-4xl font-bold" style={{ color: `hsl(${brand})` }}>
+                {initials || "CD"}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Nombre del consultorio */}
         <p
-          className="mt-6 text-2xl font-bold tracking-tight text-white"
-          style={{ animation: "ce-rise 600ms ease 350ms both" }}
+          className="mt-8 text-3xl font-bold tracking-tight text-white"
+          style={{ animation: "ce-rise 650ms ease 400ms both" }}
         >
           {name}
         </p>
 
         <p
-          className="ce-dots mt-2 text-sm text-white/50"
-          style={{ animation: "ce-rise 600ms ease 550ms both" }}
+          className="ce-dots mt-2.5 text-[15px] text-white/55"
+          style={{ animation: "ce-rise 650ms ease 600ms both" }}
         >
           Preparando tu consultorio
         </p>
 
         {/* Barra de progreso de marca */}
         <div
-          className="mt-7 h-1.5 w-56 rounded-full overflow-hidden"
+          className="mt-8 h-2 w-64 rounded-full overflow-hidden"
           style={{
             backgroundColor: "hsla(0, 0%, 100%, 0.08)",
-            animation: "ce-rise 600ms ease 700ms both",
+            animation: "ce-rise 650ms ease 750ms both",
           }}
         >
           <div
             className="h-full rounded-full"
             style={{
-              background: `linear-gradient(90deg, hsla(${brand}, 0.65), hsl(${brand}))`,
-              boxShadow: `0 0 14px hsla(${brand}, 0.7)`,
+              background: `linear-gradient(90deg, hsla(${brand}, 0.6), hsl(${brand}))`,
+              boxShadow: `0 0 18px hsla(${brand}, 0.8)`,
               animation: `ce-bar ${SHOW_MS + 300}ms cubic-bezier(0.35, 0.1, 0.25, 1) both`,
             }}
           />

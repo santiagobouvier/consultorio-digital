@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Component, lazy, Suspense, useEffect, type ErrorInfo, type ReactNode } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { ClinicEntranceSplash } from "@/components/ClinicEntranceSplash";
 import { supabase } from "@/integrations/supabase/client";
 import {
   clearServiceWorkerCaches,
@@ -113,11 +114,16 @@ const queryClient = new QueryClient({
   },
 });
 
-// Helper to wrap a page with subscription guard + sidebar layout
+// Helper to wrap a page with subscription guard + sidebar layout.
+// El splash de bienvenida va POR ENCIMA del guard: cubre también el
+// preloader de arranque, así el login muestra UNA sola pantalla de carga.
 const Protected = ({ children }: { children: React.ReactNode }) => (
-  <SubscriptionGuard>
-    <DashboardLayout>{children}</DashboardLayout>
-  </SubscriptionGuard>
+  <>
+    <ClinicEntranceSplash />
+    <SubscriptionGuard>
+      <DashboardLayout>{children}</DashboardLayout>
+    </SubscriptionGuard>
+  </>
 );
 
 // Super admin pages live in their own visual world (no clinic sidebar / no subscription guard).
