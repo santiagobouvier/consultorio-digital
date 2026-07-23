@@ -90,6 +90,11 @@ const Auth = () => {
         }
 
         const destination = await getPostLoginDestination(user.id);
+        // Entrada con marca: al aterrizar en el panel tras el login, se
+        // muestra la bienvenida animada del consultorio (una sola vez).
+        if (destination.startsWith("/dashboard")) {
+          try { sessionStorage.setItem("clinic_entrance_pending", "1"); } catch {}
+        }
         navigate(destination, { replace: true });
       } catch (err) {
         // Fallback: si las consultas de routing fallan, no dejamos al usuario
@@ -99,6 +104,7 @@ const Auth = () => {
         if (ctxIsSuperAdmin) {
           navigate("/saas-admin", { replace: true });
         } else {
+          try { sessionStorage.setItem("clinic_entrance_pending", "1"); } catch {}
           navigate("/dashboard", { replace: true });
         }
       }
