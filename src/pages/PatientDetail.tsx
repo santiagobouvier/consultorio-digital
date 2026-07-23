@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { invalidatePaymentData } from "@/lib/data-sync";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -282,6 +284,8 @@ const PatientDetail = () => {
     })();
   }, [patient?.business_id]);
 
+  const queryClient = useQueryClient();
+
   const handleMarkAsPaid = async (payment: Payment) => {
     try {
       const { error } = await supabase
@@ -290,6 +294,7 @@ const PatientDetail = () => {
         .eq("id", payment.id);
 
       if (error) throw error;
+      invalidatePaymentData(queryClient);
 
       // El vencimiento siguiente de un pago recurrente lo genera la base de
       // datos (trigger generate_next_recurring_payment) — no el navegador.
@@ -329,6 +334,7 @@ const PatientDetail = () => {
 
       if (error) throw error;
 
+      invalidatePaymentData(queryClient);
       toast({ title: "Éxito", description: "Pago eliminado correctamente" });
       setDeletingPaymentId(null);
       fetchData();

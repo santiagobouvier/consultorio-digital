@@ -43,6 +43,7 @@ import {
 } from "lucide-react";
 import { exportCSV, todayDateString } from "@/lib/csv-export";
 import { createPaymentLink } from "@/lib/payment-links";
+import { invalidatePaymentData } from "@/lib/data-sync";
 import { PaymentWhatsAppMenu } from "@/components/PaymentWhatsAppMenu";
 import { PaymentLinkMenu } from "@/components/PaymentLinkMenu";
 import {
@@ -186,8 +187,9 @@ const Payments = () => {
   }, [rawPayments, businessId]);
 
   const invalidatePayments = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ["payments", businessId] });
-  }, [queryClient, businessId]);
+    // Central: refresca Pagos, los chips de la agenda y la ficha del paciente
+    invalidatePaymentData(queryClient);
+  }, [queryClient]);
 
   // Link de cobro MP: siempre pasa por el backend, que actualiza la
   // preferencia existente (misma URL, monto vigente) o crea una nueva.

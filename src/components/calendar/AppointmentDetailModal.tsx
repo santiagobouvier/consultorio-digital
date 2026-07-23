@@ -71,11 +71,43 @@ export const AppointmentDetailModal = ({
   // Confirmación antes de cancelar (una cita o la serie completa)
   const [cancelConfirm, setCancelConfirm] = useState<"single" | "series" | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  // El cobro atado a ESTA cita (lo crea la base automáticamente al agendar).
+  const [linkedPayment, setLinkedPayment] = useState<{
+    id: string; amount: number; currency: string; status: string; paid_at: string | null;
+  } | null>(null);
+  const [linkedPaymentChecked, setLinkedPaymentChecked] = useState(false);
+  const [cobroConfirm, setCobroConfirm] = useState(false);
+  const [markingPaid, setMarkingPaid] = useState(false);
   const [rescheduleRequest, setRescheduleRequest] = useState<any | null>(null);
   const [resolvingRequest, setResolvingRequest] = useState(false);
   const [rejectMode, setRejectMode] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
   const [cancellationDetails, setCancellationDetails] = useState<{ reason: string | null; cancelled_at: string | null } | null>(null);
+
+  // Cargar el cobro ligado a la cita (si existe)
+  useEffect(() => {
+    if (!appointment || !open) {
+      setLinkedPayment(null);
+      setLinkedPaymentChecked(false);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("payments")
+        .select("id, amount, currency, status, paid_at")
+        .eq("appointment_id", appointment.id)
+        .neq("status", "cancelled")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (!cancelled) {
+        setLinkedPayment(data ? { ...data, amount: Number(data.amount) } : null);
+        setLinkedPaymentChecked(true);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [appointment?.id, open]);
 
   useEffect(() => {
     if (!appointment || !open) {
@@ -214,6 +246,31 @@ export const AppointmentDetailModal = ({
       });
     } catch (err) {
       console.warn("Cancellation email failed:", err);
+    }
+  };
+
+  // Cobrar el pago atado a la cita (confirmado por diálogo)
+  const handleMarkSessionPaid = async () => {
+    if (!linkedPayment) return;
+    setMarkingPaid(true);
+    try {
+      const { error } = await supabase
+        .from("payments")
+        .update({ status: "paid", paid_at: new Date().toISOString() })
+        .eq("id", linkedPayment.id);
+      if (error) throw error;
+      await supabase
+        .from("appointments")
+        .update({ payment_status: "pagado" })
+        .eq("id", appointment.id);
+      setLinkedPayment({ ...linkedPayment, status: "paid", paid_at: new Date().toISOString() });
+      toast({ title: "Sesión cobrada ✓", description: "El pago quedó registrado." });
+      onPaymentRegistered?.();
+    } catch {
+      toast({ title: "Error", description: "No se pudo registrar el cobro", variant: "destructive" });
+    } finally {
+      setMarkingPaid(false);
+      setCobroConfirm(false);
     }
   };
 
@@ -445,6 +502,37 @@ export const AppointmentDetailModal = ({
               </div>
             </div>
 
+            {/* Cobro de la sesión: el pago que la base creó junto con la cita */}
+            {linkedPaymentChecked && linkedPayment && (
+              <div className="flex items-center justify-between gap-3 p-3 border rounded-xl">
+                <div className="flex items-center gap-3 min-w-0">
+                  <CreditCard className="h-5 w-5 text-muted-foreground shrink-0" />
+                  <div className="min-w-0">
+                    <p className="font-medium">
+                      Cobro de la sesión: ${linkedPayment.amount.toLocaleString("es-UY")}
+                    </p>
+                    <p className={`text-sm ${linkedPayment.status === "paid" ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"}`}>
+                      {linkedPayment.status === "paid"
+                        ? `Pagado${linkedPayment.paid_at ? ` el ${format(new Date(linkedPayment.paid_at), "d MMM", { locale: es })}` : ""} ✓`
+                        : "Pendiente · vence el día de la sesión"}
+                    </p>
+                  </div>
+                </div>
+                {linkedPayment.status !== "paid" && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setCobroConfirm(true)}
+                    disabled={markingPaid}
+                    className="rounded-lg shrink-0 gap-1.5"
+                  >
+                    <Check className="h-3.5 w-3.5" />
+                    Cobrar
+                  </Button>
+                )}
+              </div>
+            )}
+
             {/* Recurrence badge */}
             {isRecurrent && (
               <div className="flex items-center gap-2 p-3 border rounded-xl bg-primary/5">
@@ -481,7 +569,10 @@ export const AppointmentDetailModal = ({
               )}
 
               <div className="flex flex-col sm:flex-row gap-2">
-                {appointment.patient_id && businessId && (
+                {/* Solo si la cita NO tiene su cobro creado (ej: sin tarifa):
+                    con cobro ligado, cobrar se hace desde el bloque de arriba
+                    y este botón solo invitaba a duplicar pagos. */}
+                {appointment.patient_id && businessId && linkedPaymentChecked && !linkedPayment && (
                   <Button variant="secondary" onClick={() => setShowPaymentForm(true)} className="flex-1 rounded-xl">
                     <CreditCard className="h-4 w-4 mr-2" />
                     Registrar pago
@@ -563,6 +654,25 @@ export const AppointmentDetailModal = ({
           onSuccess={handlePaymentSuccess}
         />
       )}
+
+      {/* Confirmación de cobro de la sesión */}
+      <AlertDialog open={cobroConfirm} onOpenChange={setCobroConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Registrar el cobro?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se marca como pagada la sesión de {appointment.patients?.full_name || "este paciente"} por{" "}
+              <strong>${linkedPayment?.amount.toLocaleString("es-UY")}</strong>.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-xl">Volver</AlertDialogCancel>
+            <AlertDialogAction onClick={handleMarkSessionPaid} className="rounded-xl">
+              Sí, cobrar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Confirmación de cancelación (cita o serie) */}
       <AlertDialog open={!!cancelConfirm} onOpenChange={(o) => !o && setCancelConfirm(null)}>

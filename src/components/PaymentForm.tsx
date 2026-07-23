@@ -11,6 +11,7 @@ import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { PAYMENT_METHODS, RECURRENCE_TYPES, type RecurrenceType } from "@/lib/payments";
 import { notifyPatient } from "@/lib/push-notifications";
+import { invalidatePaymentData } from "@/lib/data-sync";
 
 import {
   Dialog,
@@ -161,8 +162,8 @@ export function PaymentForm({
       }
 
       onSuccess();
-      // Invalidate global payments cache so /pagos page reflects the change
-      queryClient.invalidateQueries({ queryKey: ["payments", businessId] });
+      // Refresca TODAS las cachés que muestran plata (Pagos, agenda, ficha)
+      invalidatePaymentData(queryClient);
       onOpenChange(false);
       form.reset();
     } catch (error) {

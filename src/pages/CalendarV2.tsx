@@ -41,6 +41,7 @@ import type { DayPayment } from "@/components/calendar-v2/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { exportCSV, todayDateString } from "@/lib/csv-export";
+import { invalidateAppointmentData } from "@/lib/data-sync";
 
 import {
   CalendarAppointment,
@@ -412,8 +413,8 @@ const CalendarV2 = () => {
   };
 
   const handleRefresh = () => {
-    queryClient.invalidateQueries({ queryKey: ["appointments", businessId] });
-    queryClient.invalidateQueries({ queryKey: ["calendar_payments", businessId] });
+    // Central: una cita que cambia también mueve su cobro → refrescar todo
+    invalidateAppointmentData(queryClient);
   };
 
   // Determine if we should show professional colors
