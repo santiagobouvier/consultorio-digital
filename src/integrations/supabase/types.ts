@@ -1665,7 +1665,6 @@ export type Database = {
       businesses_public_branding: {
         Row: {
           cancellation_hours_notice: number | null
-          contact_email: string | null
           custom_domain: string | null
           custom_subdomain: string | null
           dashboard_display_name: string | null
@@ -1688,7 +1687,6 @@ export type Database = {
         }
         Insert: {
           cancellation_hours_notice?: number | null
-          contact_email?: string | null
           custom_domain?: string | null
           custom_subdomain?: string | null
           dashboard_display_name?: string | null
@@ -1711,7 +1709,6 @@ export type Database = {
         }
         Update: {
           cancellation_hours_notice?: number | null
-          contact_email?: string | null
           custom_domain?: string | null
           custom_subdomain?: string | null
           dashboard_display_name?: string | null
