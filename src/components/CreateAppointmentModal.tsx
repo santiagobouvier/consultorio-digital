@@ -577,7 +577,14 @@ export function CreateAppointmentModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
+      <DialogContent
+        className={cn(
+          "max-h-[85vh] overflow-y-auto sm:max-w-lg",
+          // El paso de día y horario respira en desktop: más ancho para ver
+          // los días sin scroll horizontal y los horarios en más columnas.
+          step === "schedule" && scheduleMode === "slots" && "lg:max-w-3xl"
+        )}
+      >
         <DialogHeader className="pb-1">
           <div className="flex items-center gap-2">
             {showBack && (
@@ -744,8 +751,9 @@ export function CreateAppointmentModal({
                   </div>
                 ) : (
                   <>
-                    {/* Tira de días con lugar */}
-                    <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 snap-x">
+                    {/* Días con lugar: tira deslizable en mobile, grilla que
+                        envuelve en desktop (sin scrollbar horizontal) */}
+                    <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 snap-x lg:flex-wrap lg:overflow-visible lg:pb-0 lg:snap-none">
                       {startsByDate.map(({ day }) => {
                         const { date: d, d: dayNum, m } = parseDay(day);
                         const isSelected = selectedDay === day;
@@ -755,9 +763,9 @@ export function CreateAppointmentModal({
                             type="button"
                             onClick={() => setSelectedDay(day)}
                             className={cn(
-                              "flex flex-col items-center justify-center rounded-xl border-2 px-3 py-2 min-w-[60px] snap-start transition-all",
+                              "flex flex-col items-center justify-center rounded-xl border-2 px-3 py-2 min-w-[60px] snap-start transition-all hover:border-primary/50",
                               isSelected
-                                ? "border-primary bg-primary text-primary-foreground"
+                                ? "border-primary bg-primary text-primary-foreground hover:border-primary"
                                 : "border-border bg-card"
                             )}
                           >
@@ -777,13 +785,13 @@ export function CreateAppointmentModal({
                     {selectedDay && (
                       <div className="space-y-2">
                         <p className="text-sm font-semibold">{formatDayLong(selectedDay)}</p>
-                        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                        <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2">
                           {timesForSelectedDay.map((s) => (
                             <button
                               key={`${s.day}-${s.start_time}`}
                               type="button"
                               onClick={() => pickStart(s)}
-                              className="px-2 py-2.5 rounded-md border-2 border-primary/30 bg-primary/5 text-primary text-sm font-medium transition-all hover:bg-primary hover:text-primary-foreground"
+                              className="px-2 py-2.5 rounded-xl border-2 border-primary/30 bg-primary/5 text-primary text-sm font-semibold tabular-nums transition-all hover:bg-primary hover:text-primary-foreground"
                             >
                               {s.start_time.slice(0, 5)}
                             </button>
