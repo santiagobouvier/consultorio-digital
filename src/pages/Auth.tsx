@@ -15,6 +15,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import logoWhite from "@/assets/logo-consultorio-digital-white.png";
 import authBgConsultorio from "@/assets/auth-bg-consultorio.jpg";
 import digitalBuildersLogo from "@/assets/logo-digitalbuilders.webp";
+import { triggerClinicEntrance } from "@/components/ClinicEntranceSplash";
 
 const REMEMBER_EMAIL_KEY = "auth_remembered_email";
 
@@ -93,7 +94,7 @@ const Auth = () => {
         // Entrada con marca: al aterrizar en el panel tras el login, se
         // muestra la bienvenida animada del consultorio (una sola vez).
         if (destination.startsWith("/dashboard")) {
-          try { sessionStorage.setItem("clinic_entrance_pending", "1"); } catch {}
+          triggerClinicEntrance();
         }
         navigate(destination, { replace: true });
       } catch (err) {
@@ -104,7 +105,7 @@ const Auth = () => {
         if (ctxIsSuperAdmin) {
           navigate("/saas-admin", { replace: true });
         } else {
-          try { sessionStorage.setItem("clinic_entrance_pending", "1"); } catch {}
+          triggerClinicEntrance();
           navigate("/dashboard", { replace: true });
         }
       }

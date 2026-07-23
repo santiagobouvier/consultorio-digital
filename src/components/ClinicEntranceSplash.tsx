@@ -1,8 +1,15 @@
 import { useEffect, useState } from "react";
 
 const FLAG_KEY = "clinic_entrance_pending";
+const START_EVENT = "clinic-entrance-start";
 const SHOW_MS = 2800; // cuánto se luce la entrada
 const FADE_MS = 600; // fundido de salida
+
+/** Dispara la bienvenida (la llama Auth justo antes de navegar al panel). */
+export function triggerClinicEntrance() {
+  try { sessionStorage.setItem(FLAG_KEY, "1"); } catch {}
+  window.dispatchEvent(new Event(START_EVENT));
+}
 
 /**
  * Bienvenida con marca al entrar al panel tras iniciar sesión: el logo del
@@ -24,7 +31,7 @@ export function ClinicEntranceSplash() {
   });
 
   // Marca cacheada por DashboardBrandingContext en visitas anteriores.
-  const [brandInfo] = useState<{ logoUrl: string | null; color: string; name: string | null }>(() => {
+  const readBrand = () => {
     try {
       const raw = localStorage.getItem("panel_brand");
       if (raw) {
@@ -37,7 +44,20 @@ export function ClinicEntranceSplash() {
       }
     } catch { /* ignore */ }
     return { logoUrl: null, color: "176 100% 32%", name: null };
-  });
+  };
+  const [brandInfo, setBrandInfo] = useState(readBrand);
+
+  // El splash vive montado a nivel App (por encima del Suspense de rutas):
+  // arranca cuando Auth dispara el evento, tapando también el preloader
+  // global desde el primer frame.
+  useEffect(() => {
+    const onStart = () => {
+      setBrandInfo(readBrand());
+      setPhase("show");
+    };
+    window.addEventListener(START_EVENT, onStart);
+    return () => window.removeEventListener(START_EVENT, onStart);
+  }, []);
 
   useEffect(() => {
     if (phase !== "show") return;
