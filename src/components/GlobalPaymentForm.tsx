@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { PAYMENT_METHODS, RECURRENCE_TYPES } from "@/lib/payments";
+import { Switch } from "@/components/ui/switch";
 
 import {
   Dialog,
@@ -74,6 +75,11 @@ export function GlobalPaymentForm({
   const [loading, setLoading] = useState(false);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [loadingPatients, setLoadingPatients] = useState(false);
+  // "Ya lo cobraste": registra el pago directo como pagado (pago único)
+  const [alreadyPaid, setAlreadyPaid] = useState(false);
+  useEffect(() => {
+    if (open) setAlreadyPaid(false);
+  }, [open]);
 
   const form = useForm<GlobalPaymentFormData>({
     resolver: zodResolver(globalPaymentSchema),
@@ -131,6 +137,8 @@ export function GlobalPaymentForm({
         ? (data.anchor_day || data.due_date.getDate())
         : null;
 
+      const markPaid = alreadyPaid && data.recurrence_type === "one_time";
+
       const paymentData = {
         business_id: businessId,
         patient_id: data.patient_id,
@@ -138,7 +146,8 @@ export function GlobalPaymentForm({
         due_date: data.due_date.toISOString(),
         method: data.method || null,
         notes: data.notes || null,
-        status: "pending" as const,
+        status: markPaid ? ("paid" as const) : ("pending" as const),
+        paid_at: markPaid ? new Date().toISOString() : null,
         recurrence_type: data.recurrence_type,
         anchor_day: anchorDay,
       };
@@ -148,8 +157,10 @@ export function GlobalPaymentForm({
       if (error) throw error;
 
       toast({
-        title: "Éxito",
-        description: "Pago registrado correctamente",
+        title: markPaid ? "Pago cobrado ✓" : "Éxito",
+        description: markPaid
+          ? "Quedó registrado como pagado."
+          : "Pago registrado correctamente",
       });
 
       onSuccess();
@@ -358,6 +369,19 @@ export function GlobalPaymentForm({
                 </FormItem>
               )}
             />
+
+            {/* Registrar un cobro que YA ocurrió (pago único) */}
+            {recurrenceType === "one_time" && (
+              <div className="flex items-center justify-between gap-3 rounded-xl border p-3.5">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold">¿Ya lo cobraste?</p>
+                  <p className="text-xs text-muted-foreground">
+                    Queda registrado directo como <strong>pagado</strong> — para llevar el registro, sin nada pendiente.
+                  </p>
+                </div>
+                <Switch checked={alreadyPaid} onCheckedChange={setAlreadyPaid} className="shrink-0" />
+              </div>
+            )}
 
             <FormField
               control={form.control}

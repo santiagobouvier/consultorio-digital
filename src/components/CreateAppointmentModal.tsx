@@ -132,6 +132,7 @@ export function CreateAppointmentModal({
 
   // Paso 1: paciente
   const [patients, setPatients] = useState<Patient[]>([]);
+  const [patientsLoading, setPatientsLoading] = useState(false);
   const [selectedPatientId, setSelectedPatientId] = useState(patientId || "");
   const [patientSearch, setPatientSearch] = useState("");
 
@@ -173,6 +174,7 @@ export function CreateAppointmentModal({
   useEffect(() => {
     if (!open || !businessId) return;
     (async () => {
+      setPatientsLoading(true);
       const [bizRes, svcRes, patRes] = await Promise.all([
         supabase
           .from("businesses")
@@ -197,6 +199,7 @@ export function CreateAppointmentModal({
       setDefaultPrice(v != null ? Number(v) : null);
       setServices((svcRes.data ?? []) as ServiceOption[]);
       setPatients((patRes.data ?? []) as Patient[]);
+      setPatientsLoading(false);
     })();
   }, [open, businessId]);
 
@@ -596,7 +599,7 @@ export function CreateAppointmentModal({
     step === "confirm" || step === "schedule" || (step === "service" && !patientId);
 
   const STEP_TITLES: Record<Step, string> = {
-    patient: "¿Para qué paciente?",
+    patient: "¿Para quién es la cita?",
     service: "Tipo de sesión",
     schedule: "Día y horario",
     confirm: "Confirmá la cita",
@@ -648,9 +651,21 @@ export function CreateAppointmentModal({
               />
             </div>
             <div className="space-y-1.5 max-h-[45vh] overflow-y-auto">
-              {filteredPatients.length === 0 ? (
+              {patientsLoading ? (
+                <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Cargando tus pacientes...
+                </div>
+              ) : patients.length === 0 ? (
+                <div className="text-center py-8 space-y-1.5">
+                  <p className="text-sm font-medium text-foreground">Todavía no tenés pacientes cargados</p>
+                  <p className="text-xs text-muted-foreground">
+                    Creá el primero desde el dashboard con "Nuevo paciente" y después agendale la cita.
+                  </p>
+                </div>
+              ) : filteredPatients.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-8">
-                  No se encontraron pacientes.
+                  Ningún paciente coincide con "{patientSearch}".
                 </p>
               ) : (
                 filteredPatients.map((p) => (

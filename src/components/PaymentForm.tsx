@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useQueryClient } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { PAYMENT_METHODS, RECURRENCE_TYPES, type RecurrenceType } from "@/lib/payments";
 import { notifyPatient } from "@/lib/push-notifications";
 import { invalidatePaymentData } from "@/lib/data-sync";
+import { Switch } from "@/components/ui/switch";
 
 import {
   Dialog,
@@ -82,6 +83,11 @@ export function PaymentForm({
   onSuccess,
 }: PaymentFormProps) {
   const [loading, setLoading] = useState(false);
+  // "Ya lo cobraste": registra el pago directo como pagado (solo alta, pago único)
+  const [alreadyPaid, setAlreadyPaid] = useState(false);
+  useEffect(() => {
+    if (open) setAlreadyPaid(false);
+  }, [open]);
   const queryClient = useQueryClient();
   const isEditing = !!paymentId;
 
@@ -112,9 +118,11 @@ export function PaymentForm({
     try {
       setLoading(true);
 
-      const anchorDay = data.recurrence_type !== "one_time" 
+      const anchorDay = data.recurrence_type !== "one_time"
         ? (data.anchor_day || data.due_date.getDate())
         : null;
+
+      const markPaid = alreadyPaid && data.recurrence_type === "one_time";
 
       const paymentData = {
         business_id: businessId,
@@ -123,12 +131,13 @@ export function PaymentForm({
         due_date: data.due_date.toISOString(),
         method: data.method || null,
         notes: data.notes || null,
-        status: 'pending' as const,
         recurrence_type: data.recurrence_type,
         anchor_day: anchorDay,
       };
 
       if (isEditing) {
+        // Al editar NO se toca el estado ni la fecha de pago: eso se maneja
+        // con Cobrar / el link de pago, no desde la edición de datos.
         const { error } = await supabase
           .from("payments")
           .update(paymentData)
@@ -143,21 +152,29 @@ export function PaymentForm({
       } else {
         const { error } = await supabase
           .from("payments")
-          .insert(paymentData);
+          .insert({
+            ...paymentData,
+            status: markPaid ? ("paid" as const) : ("pending" as const),
+            paid_at: markPaid ? new Date().toISOString() : null,
+          });
 
         if (error) throw error;
 
         // Notify patient about new payment
         notifyPatient({
           patientId,
-          title: "Nuevo pago registrado",
-          body: `Se registró un pago de $${data.amount}.`,
+          title: markPaid ? "Pago registrado ✓" : "Nuevo pago registrado",
+          body: markPaid
+            ? `Se registró tu pago de $${data.amount}. ¡Gracias!`
+            : `Se registró un pago de $${data.amount}.`,
           url: "/portal",
         });
 
         toast({
-          title: "Éxito",
-          description: "Pago registrado correctamente",
+          title: markPaid ? "Pago cobrado ✓" : "Éxito",
+          description: markPaid
+            ? "Quedó registrado como pagado."
+            : "Pago registrado correctamente",
         });
       }
 
@@ -333,6 +350,19 @@ export function PaymentForm({
                 </FormItem>
               )}
             />
+
+            {/* Registrar un cobro que YA ocurrió (solo alta, pago único) */}
+            {!isEditing && recurrenceType === "one_time" && (
+              <div className="flex items-center justify-between gap-3 rounded-xl border p-3.5">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold">¿Ya lo cobraste?</p>
+                  <p className="text-xs text-muted-foreground">
+                    Queda registrado directo como <strong>pagado</strong> — para llevar el registro, sin nada pendiente.
+                  </p>
+                </div>
+                <Switch checked={alreadyPaid} onCheckedChange={setAlreadyPaid} className="shrink-0" />
+              </div>
+            )}
 
             <FormField
               control={form.control}
