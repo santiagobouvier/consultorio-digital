@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "@/hooks/use-toast";
-import { Users, CalendarPlus, CalendarDays, UserPlus, Bell, LogOut, Camera, CreditCard, AlertTriangle, Clock, Plus, EyeOff, Eye, Smartphone, Building2, ChevronDown, Shield, Settings, ArrowRight, Palette } from "lucide-react";
+import { Users, CalendarPlus, CalendarDays, UserPlus, Bell, LogOut, Camera, CreditCard, AlertTriangle, Clock, Plus, EyeOff, Eye, Smartphone, Building2, ChevronDown, Shield, Settings, ArrowRight, Palette, MessageCircle, CheckCircle2, User, Video, MapPin, Inbox } from "lucide-react";
 import { MonthlyHighlights } from "@/components/MonthlyHighlights";
 import LoadingPage from "@/components/LoadingPage";
 import { PublicLinkCard } from "@/components/PublicLinkCard";
@@ -16,7 +16,8 @@ import { calculatePaymentStatus, formatCurrency } from "@/lib/payments";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { InstallPromptCard } from "@/components/pwa/InstallPromptCard";
 import { ActivationChecklist } from "@/components/ActivationChecklist";
-import { PendingRequestsBanner } from "@/components/PendingRequestsBanner";
+import { usePendingRequestsCount } from "@/hooks/use-pending-requests-count";
+import { openWhatsApp } from "@/lib/whatsapp";
 import {
   ActivationCompleteModal,
   wasActivationCelebrated,
@@ -59,6 +60,8 @@ const Dashboard = () => {
   const [portalPatientsCount, setPortalPatientsCount] = useState(0);
   const [todayAppointmentsCount, setTodayAppointmentsCount] = useState(0);
   const [todayAppointments, setTodayAppointments] = useState<any[]>([]);
+  const [tomorrowAppointments, setTomorrowAppointments] = useState<any[]>([]);
+  const [overdueAmount, setOverdueAmount] = useState(0);
   const [overduePayments, setOverduePayments] = useState(0);
   const [dueSoonPayments, setDueSoonPayments] = useState(0);
   const [urgentPayments, setUrgentPayments] = useState<any[]>([]);
@@ -88,6 +91,14 @@ const Dashboard = () => {
 
   const businessId = ctxBusinessId;
   const userId = user?.id ?? null;
+  const pendingRequestsCount = usePendingRequestsCount();
+
+  // Reloj del hero "Ahora": refresca el countdown cada minuto
+  const [nowTick, setNowTick] = useState(() => Date.now());
+  useEffect(() => {
+    const t = window.setInterval(() => setNowTick(Date.now()), 60_000);
+    return () => window.clearInterval(t);
+  }, []);
 
   useEffect(() => {
     // Show success toast if coming from MP payment
@@ -127,6 +138,8 @@ const Dashboard = () => {
       today.setHours(0, 0, 0, 0);
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
+      const dayAfterTomorrow = new Date(today);
+      dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
       const monthStart = new Date();
       monthStart.setDate(1);
       monthStart.setHours(0, 0, 0, 0);
@@ -139,6 +152,7 @@ const Dashboard = () => {
         portalCountRes,
         appointmentsCountRes,
         appointmentsRes,
+        tomorrowApptsRes,
         unpaidRes,
         userRoleRes,
         allBusinessesRes,
@@ -155,8 +169,10 @@ const Dashboard = () => {
         supabase.from("patients").select("*", { count: "exact", head: true }).eq("business_id", currentBusinessId).not("auth_user_id", "is", null),
         // 5. Today appointments count
         supabase.from("appointments").select("*", { count: "exact", head: true }).eq("business_id", currentBusinessId).gte("start_at", today.toISOString()).lt("start_at", tomorrow.toISOString()).not("status", "in", '("cancelled","no_show")'),
-        // 6. Today appointments list
-        supabase.from("appointments").select(`id, start_at, status, contact_name, patient_id, patients (full_name)`).eq("business_id", currentBusinessId).gte("start_at", today.toISOString()).lt("start_at", tomorrow.toISOString()).order("start_at", { ascending: true }).limit(5),
+        // 6. Today appointments list (con end_at/modalidad/teléfono para el hero "Ahora")
+        supabase.from("appointments").select(`id, start_at, end_at, status, modality, contact_name, patient_id, patients (full_name, whatsapp_phone)`).eq("business_id", currentBusinessId).gte("start_at", today.toISOString()).lt("start_at", tomorrow.toISOString()).order("start_at", { ascending: true }),
+        // 6b. Tomorrow appointments (primera cita de mañana + sin confirmar)
+        supabase.from("appointments").select(`id, start_at, status, patients (full_name)`).eq("business_id", currentBusinessId).gte("start_at", tomorrow.toISOString()).lt("start_at", dayAfterTomorrow.toISOString()).not("status", "in", '("cancelled","cancelled_by_patient","no_show")').order("start_at", { ascending: true }),
         // 7. Unpaid payments
         supabase.from("payments").select("*").eq("business_id", currentBusinessId).is("paid_at", null).not("status", "eq", "cancelled"),
         // 8. User role
@@ -198,6 +214,7 @@ const Dashboard = () => {
       setPortalPatientsCount(portalCountRes.count || 0);
       setTodayAppointmentsCount(appointmentsCountRes.count || 0);
       setTodayAppointments(appointmentsRes.data || []);
+      setTomorrowAppointments(tomorrowApptsRes.data || []);
 
       // Process unpaid payments
       const unpaidPaymentsData = unpaidRes.data;
@@ -212,6 +229,7 @@ const Dashboard = () => {
 
         setOverduePayments(overdue.length);
         setDueSoonPayments(dueSoon.length);
+        setOverdueAmount(overdue.reduce((s: number, p: any) => s + (Number(p.amount) || 0), 0));
 
         const urgent = [...overdue, ...dueSoon]
           .sort((a: any, b: any) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())
@@ -529,100 +547,220 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Guía de activación (solo hasta dejar el consultorio pronto) */}
-        {businessId && (
-          <ActivationChecklist
-            businessId={businessId}
-            onAllDone={() => {
-              if (!wasActivationCelebrated(businessId)) {
-                setShowActivationDone(true);
-              }
-            }}
-          />
-        )}
+        {/* ══════════ 1) AHORA: la próxima sesión, protagonista ══════════ */}
+        {(() => {
+          const CANCELLED = ["cancelled", "cancelled_by_patient", "no_show"];
+          const active = todayAppointments.filter((a) => !CANCELLED.includes(a.status));
+          const inSession = active.find(
+            (a) =>
+              a.status !== "attended" &&
+              new Date(a.start_at).getTime() <= nowTick &&
+              a.end_at && new Date(a.end_at).getTime() > nowTick
+          );
+          const nextAppt = active.find((a) => new Date(a.start_at).getTime() > nowTick);
+          const tomorrowFirst = tomorrowAppointments[0];
+          const overduePatientIds = new Set(
+            urgentPayments.filter((p: any) => p.calculatedStatus === "overdue").map((p: any) => p.patient_id)
+          );
 
-        {/* Lo primero: ¿alguien espera tu respuesta? */}
-        <PendingRequestsBanner />
+          const countdownLabel = (iso: string) => {
+            const mins = Math.max(0, Math.round((new Date(iso).getTime() - nowTick) / 60000));
+            if (mins < 60) return `en ${mins} min`;
+            const h = Math.floor(mins / 60);
+            const m = mins % 60;
+            return m > 0 ? `en ${h} h ${m} min` : `en ${h} h`;
+          };
+          const tomorrowLine = tomorrowFirst
+            ? `Mañana arrancás ${formatTime(tomorrowFirst.start_at)} con ${tomorrowFirst.patients?.full_name?.split(" ")[0] || "un paciente"}`
+            : "Mañana no tenés sesiones agendadas";
 
-        {/* KPI Metrics Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <Card className="mobile-card-compact cursor-pointer active:scale-[0.98] transition-transform" onClick={() => navigate("/agenda")}>
-            <CardContent className="p-4 text-center">
-              <CalendarDays className="h-5 w-5 mx-auto text-primary mb-1" />
-              <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wide inline-flex items-center gap-1 justify-center">
-                Citas hoy
-                <HelpTooltip id="dashboardTodayAppointments" />
-              </p>
-              <p className="text-2xl font-bold text-foreground mt-1">
-                {todayAppointmentsCount}
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="mobile-card-compact cursor-pointer active:scale-[0.98] transition-transform" onClick={() => navigate("/patients")}>
-            <CardContent className="p-4 text-center">
-              <Users className="h-5 w-5 mx-auto text-primary mb-1" />
-              <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wide inline-flex items-center gap-1 justify-center">
-                Pacientes
-                <HelpTooltip id="dashboardActivePatients" />
-              </p>
-              <p className="text-2xl font-bold text-foreground mt-1">
-                {activePatientsCount}
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="mobile-card-compact bg-green-500/5 border-green-500/30 cursor-pointer active:scale-[0.98] transition-transform" onClick={() => navigate("/pagos?status=paid&period=this_month")}>
-            <CardContent className="p-4 text-center">
-              <CreditCard className="h-5 w-5 mx-auto text-green-600 mb-1" />
-              <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wide inline-flex items-center gap-1 justify-center">
-                Cobrado mes
-                <HelpTooltip id="dashboardMonthlyIncome" />
-              </p>
-              <p className="text-2xl font-bold text-green-600 mt-1">
-                {privacyMode ? "•••" : formatCurrency(monthlyIncome, "UYU")}
-              </p>
-            </CardContent>
-          </Card>
-          <Card
-            className={`mobile-card-compact cursor-pointer active:scale-[0.98] transition-all ${overduePayments > 0 ? 'bg-destructive/5 border-destructive/30 hover:bg-destructive/10' : ''}`}
-            onClick={() => navigate(overduePayments > 0 ? "/pagos?status=overdue" : "/pagos")}
-          >
-            <CardContent className="p-4 text-center">
-              <AlertTriangle className={`h-5 w-5 mx-auto mb-1 ${overduePayments > 0 ? 'text-destructive' : 'text-muted-foreground'}`} />
-              <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wide inline-flex items-center gap-1 justify-center">
-                Vencidos
-                <HelpTooltip id="dashboardOverduePayments" />
-              </p>
-              <p className={`text-2xl font-bold mt-1 ${overduePayments > 0 ? 'text-destructive' : 'text-foreground'}`}>
-                {overduePayments}
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+          // Variante: hay una próxima sesión hoy → hero grande
+          if (nextAppt) {
+            const name = nextAppt.patients?.full_name || nextAppt.contact_name || "Paciente";
+            const phone = nextAppt.patients?.whatsapp_phone || null;
+            const debe = nextAppt.patient_id && overduePatientIds.has(nextAppt.patient_id);
+            return (
+              <Card className="border-primary/25 bg-gradient-to-br from-primary/[0.09] to-transparent shadow-md">
+                <CardContent className="p-5 space-y-4">
+                  {inSession && (
+                    <div className="flex items-center gap-2 text-xs font-medium text-primary">
+                      <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                      En sesión con {inSession.patients?.full_name?.split(" ")[0] || "un paciente"} hasta {inSession.end_at ? formatTime(inSession.end_at) : ""}
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+                      {inSession ? "Después" : "Tu próxima sesión"}
+                    </p>
+                    <div className="flex items-end justify-between gap-3 mt-1">
+                      <p className="text-4xl font-bold tracking-tight text-foreground leading-none">
+                        {formatTime(nextAppt.start_at)}
+                      </p>
+                      <span className="text-sm font-semibold text-primary">{countdownLabel(nextAppt.start_at)}</span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-2 flex-wrap">
+                      <p className="text-base font-semibold text-foreground truncate">{name}</p>
+                      <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                        {nextAppt.modality === "online" ? <Video className="h-3 w-3" /> : <MapPin className="h-3 w-3" />}
+                        {nextAppt.modality === "online" ? "Online" : "Presencial"}
+                      </span>
+                      {debe && (
+                        <Badge variant="outline" className="text-[10px] rounded-full border-destructive/40 text-destructive bg-destructive/5">
+                          Te debe plata
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    {phone && (
+                      <Button
+                        variant="outline"
+                        className="flex-1 h-10 rounded-xl gap-2"
+                        onClick={() => openWhatsApp(phone, "")}
+                      >
+                        <MessageCircle className="h-4 w-4" />
+                        WhatsApp
+                      </Button>
+                    )}
+                    {nextAppt.patient_id && (
+                      <Button
+                        className="flex-1 h-10 rounded-xl gap-2"
+                        onClick={() => navigate(`/patients/${nextAppt.patient_id}`)}
+                      >
+                        <User className="h-4 w-4" />
+                        Ver ficha
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          }
 
-        {/* Privacy Toggle for Income */}
-        <div className="flex justify-end -mt-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-xs text-muted-foreground gap-1.5 h-8"
-            onClick={() => {
-              const newValue = !privacyMode;
-              setPrivacyMode(newValue);
-              localStorage.setItem(PRIVACY_MODE_KEY, String(newValue));
-            }}
-          >
-            {privacyMode ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-            {privacyMode ? "Mostrar montos" : "Ocultar"}
-          </Button>
-        </div>
+          // Variante: en sesión y no hay más después
+          if (inSession) {
+            return (
+              <Card className="border-primary/25 bg-gradient-to-br from-primary/[0.09] to-transparent">
+                <CardContent className="p-5 space-y-1.5">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-primary">
+                    <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                    En sesión con {inSession.patients?.full_name || "un paciente"}
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Hasta {inSession.end_at ? formatTime(inSession.end_at) : ""} · Es tu última de hoy
+                  </p>
+                  <p className="text-xs text-muted-foreground">{tomorrowLine}</p>
+                </CardContent>
+              </Card>
+            );
+          }
 
-        {/* Today's Appointments Section */}
+          // Variante: día terminado o día libre
+          return (
+            <Card className="border-border/50">
+              <CardContent className="p-5 space-y-2">
+                <p className="text-base font-semibold text-foreground">
+                  {active.length > 0
+                    ? `Terminaste por hoy 🎉 (${active.length} sesi${active.length === 1 ? "ón" : "ones"})`
+                    : "Hoy no tenés sesiones"}
+                </p>
+                <p className="text-sm text-muted-foreground">{tomorrowLine}</p>
+                {active.length === 0 && (
+                  <Button variant="outline" size="sm" className="rounded-xl gap-2 mt-1" onClick={() => setShowAppointmentModal(true)}>
+                    <CalendarPlus className="h-4 w-4" />
+                    Agendar cita
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })()}
+
+        {/* ══════════ 2) NECESITAN DE VOS ══════════ */}
+        {(() => {
+          const tomorrowUnconfirmed = tomorrowAppointments.filter((a) =>
+            ["pending", "scheduled"].includes(a.status)
+          );
+          const tomorrowIso = (() => {
+            const t = new Date();
+            t.setDate(t.getDate() + 1);
+            return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
+          })();
+          const items: { key: string; className: string; icon: JSX.Element; title: string; subtitle: string; to: string }[] = [];
+          if (pendingRequestsCount > 0) {
+            items.push({
+              key: "solicitudes",
+              className: "bg-amber-500/[0.07] border-amber-500/30",
+              icon: <Inbox className="h-4 w-4 text-amber-500" />,
+              title: `${pendingRequestsCount} solicitud${pendingRequestsCount !== 1 ? "es" : ""} esperando respuesta`,
+              subtitle: "Tocá para responderlas",
+              to: "/solicitudes",
+            });
+          }
+          if (overduePayments > 0) {
+            items.push({
+              key: "deudas",
+              className: "bg-destructive/[0.06] border-destructive/30",
+              icon: <AlertTriangle className="h-4 w-4 text-destructive" />,
+              title: privacyMode ? `Te deben ${overduePayments} pago${overduePayments !== 1 ? "s" : ""}` : `Te deben ${formatCurrency(overdueAmount, "UYU")}`,
+              subtitle: urgentPayments
+                .filter((p: any) => p.calculatedStatus === "overdue")
+                .slice(0, 3)
+                .map((p: any) => (p.patientName || "").split(" ")[0])
+                .join(", ") || `${overduePayments} pagos vencidos`,
+              to: "/pagos?status=overdue",
+            });
+          }
+          if (tomorrowUnconfirmed.length > 0) {
+            items.push({
+              key: "unconfirmed",
+              className: "bg-primary/[0.06] border-primary/25",
+              icon: <CalendarDays className="h-4 w-4 text-primary" />,
+              title: `${tomorrowUnconfirmed.length} cita${tomorrowUnconfirmed.length !== 1 ? "s" : ""} de mañana sin confirmar`,
+              subtitle: "Abrí el día de mañana y confirmalas",
+              to: `/agenda?date=${tomorrowIso}`,
+            });
+          }
+          return (
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                Necesitan de vos
+              </h3>
+              {items.length === 0 ? (
+                <div className="flex items-center gap-2.5 rounded-xl border border-emerald-500/25 bg-emerald-500/[0.06] px-4 py-3">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                  <p className="text-sm font-medium text-foreground">Todo en orden — nada pendiente</p>
+                </div>
+              ) : (
+                items.map((it) => (
+                  <button
+                    key={it.key}
+                    onClick={() => navigate(it.to)}
+                    className={`w-full flex items-center gap-3 rounded-xl border px-4 py-3 text-left active:scale-[0.98] transition-transform ${it.className}`}
+                  >
+                    <span className="shrink-0">{it.icon}</span>
+                    <span className="flex-1 min-w-0">
+                      <span className="block text-sm font-semibold text-foreground">{it.title}</span>
+                      <span className="block text-xs text-muted-foreground truncate">{it.subtitle}</span>
+                    </span>
+                    <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                  </button>
+                ))
+              )}
+            </div>
+          );
+        })()}
+
+        {/* ══════════ 3) TU DÍA: la tira compacta de hoy ══════════ */}
         <Card className="mobile-card">
           <CardHeader className="pb-3 px-0 pt-0 sm:px-6 sm:pt-6">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base font-bold flex items-center gap-2">
                 <CalendarDays className="h-5 w-5 text-primary" />
-                Hoy en el consultorio
+                Tu día
+                {todayAppointmentsCount > 0 && (
+                  <span className="text-xs font-normal text-muted-foreground">({todayAppointmentsCount})</span>
+                )}
               </CardTitle>
               <Button
                 variant="outline"
@@ -637,132 +775,96 @@ const Dashboard = () => {
           <CardContent className="px-0 pb-0 sm:px-6 sm:pb-6">
             {todayAppointments.length > 0 ? (
               <div className="space-y-1">
-                {todayAppointments.map((appointment) => (
-                  <div 
-                    key={appointment.id} 
-                    className="flex items-center justify-between py-3 border-b border-border last:border-0"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <span className="text-sm font-bold text-primary whitespace-nowrap">
+                {todayAppointments.map((appointment) => {
+                  const cancelled = ["cancelled", "cancelled_by_patient"].includes(appointment.status);
+                  const done =
+                    appointment.status === "attended" ||
+                    (!cancelled && appointment.end_at && new Date(appointment.end_at).getTime() <= nowTick);
+                  const current =
+                    !cancelled && !done &&
+                    new Date(appointment.start_at).getTime() <= nowTick &&
+                    appointment.end_at && new Date(appointment.end_at).getTime() > nowTick;
+                  return (
+                    <div
+                      key={appointment.id}
+                      className={`flex items-center gap-3 py-2.5 border-b border-border/60 last:border-0 ${done || cancelled ? "opacity-55" : ""}`}
+                    >
+                      <span
+                        className={`h-2 w-2 rounded-full shrink-0 ${
+                          cancelled
+                            ? "bg-muted-foreground/40"
+                            : current
+                            ? "bg-primary animate-pulse"
+                            : done
+                            ? "bg-emerald-500"
+                            : "border-2 border-primary/50 bg-transparent"
+                        }`}
+                      />
+                      <span className={`text-sm font-bold whitespace-nowrap ${current ? "text-primary" : "text-foreground"}`}>
                         {formatTime(appointment.start_at)}
                       </span>
-                      <span className="text-sm text-foreground truncate">
+                      <span className={`text-sm truncate flex-1 ${cancelled ? "line-through" : "text-foreground"}`}>
                         {appointment.patients?.full_name || appointment.contact_name}
                       </span>
+                      {done && !cancelled && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />}
+                      {current && <span className="text-[10px] font-semibold text-primary shrink-0">AHORA</span>}
                     </div>
-                    <span className="text-xs text-muted-foreground capitalize whitespace-nowrap ml-2 px-2 py-1 bg-muted rounded-full">
-                      {statusMap[appointment.status] || appointment.status}
-                    </span>
-                  </div>
-                ))}
-                {todayAppointmentsCount > 5 && (
-                  <Button 
-                    variant="ghost" 
-                    className="w-full mt-3 h-10 rounded-xl text-sm"
-                    onClick={() => navigate("/agenda")}
-                  >
-                    Ver todas las {todayAppointmentsCount} citas
-                  </Button>
-                )}
+                  );
+                })}
               </div>
             ) : (
-              <div className="py-6 text-center">
-                <CalendarDays className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" />
-                <p className="text-sm text-muted-foreground">
-                  Hoy no tenés citas agendadas
-                </p>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  className="mt-3"
-                  onClick={() => setShowAppointmentModal(true)}
-                >
-                  <CalendarPlus className="h-4 w-4 mr-2" />
-                  Agendar cita
-                </Button>
-              </div>
+              <p className="text-sm text-muted-foreground py-4 text-center">Día libre en la agenda</p>
             )}
           </CardContent>
         </Card>
 
-        {/* Payment Alerts Section */}
-        {(overduePayments > 0 || dueSoonPayments > 0) && (
-          <Card className="mobile-card border-orange-500/30 bg-orange-500/5">
-            <CardHeader className="pb-3 px-0 pt-0 sm:px-6 sm:pt-6">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base font-bold flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5 text-orange-500" />
-                  Alertas de pagos
-                </CardTitle>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-xs h-8"
-                  onClick={() => navigate("/pagos")}
-                >
-                  Ver pagos
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="px-0 pb-0 sm:px-6 sm:pb-6">
-              {/* Alert Summary */}
-              <div className="flex gap-4 mb-4">
-                {overduePayments > 0 && (
-                  <div 
-                    className="flex items-center gap-2 cursor-pointer hover:opacity-80"
-                    onClick={() => navigate("/pagos?status=overdue")}
-                  >
-                    <div className="w-3 h-3 rounded-full bg-destructive" />
-                    <span className="text-sm text-foreground">
-                      <span className="font-bold">{overduePayments}</span> vencidos
-                    </span>
-                  </div>
-                )}
-                {dueSoonPayments > 0 && (
-                  <div 
-                    className="flex items-center gap-2 cursor-pointer hover:opacity-80"
-                    onClick={() => navigate("/pagos?status=due_soon")}
-                  >
-                    <div className="w-3 h-3 rounded-full bg-orange-500" />
-                    <span className="text-sm text-foreground">
-                      <span className="font-bold">{dueSoonPayments}</span> por vencer
-                    </span>
-                  </div>
-                )}
-              </div>
-              
-              {/* Top 3 Urgent Payments */}
-              {urgentPayments.length > 0 && (
-                <div className="space-y-2">
-                  {urgentPayments.slice(0, 3).map((payment) => (
-                    <div 
-                      key={payment.id}
-                      className="flex items-center justify-between py-2 px-3 rounded-lg bg-background cursor-pointer hover:bg-muted transition-colors"
-                      onClick={() => navigate(`/patients/${payment.patient_id}`)}
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${payment.calculatedStatus === 'overdue' ? 'bg-destructive' : 'bg-orange-500'}`} />
-                        <span className="text-sm text-foreground truncate font-medium">
-                          {payment.patientName}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2 ml-2 flex-shrink-0">
-                        <span className="text-xs text-muted-foreground">
-                          {new Date(payment.due_date).toLocaleDateString('es-UY', { day: 'numeric', month: 'short' })}
-                        </span>
-                        {!privacyMode && (
-                          <Badge variant="outline" className="text-xs">
-                            {formatCurrency(payment.amount, payment.currency)}
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
+        {/* ══════════ 4) LOS NÚMEROS: chicos y al final ══════════ */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+              Tu mes
+            </h3>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs text-muted-foreground gap-1.5 h-7 -mr-2"
+              onClick={() => {
+                const newValue = !privacyMode;
+                setPrivacyMode(newValue);
+                localStorage.setItem(PRIVACY_MODE_KEY, String(newValue));
+              }}
+            >
+              {privacyMode ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+              {privacyMode ? "Mostrar" : "Ocultar"}
+            </Button>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={() => navigate("/pagos?status=paid&period=this_month")}
+              className="rounded-xl border border-green-500/30 bg-green-500/5 px-4 py-3 text-left active:scale-[0.98] transition-transform"
+            >
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground inline-flex items-center gap-1">
+                <CreditCard className="h-3 w-3 text-green-600" /> Cobrado
+              </p>
+              <p className="text-lg font-bold text-green-600 mt-0.5 truncate">
+                {privacyMode ? "•••" : formatCurrency(monthlyIncome, "UYU")}
+              </p>
+            </button>
+            <button
+              onClick={() => navigate(overduePayments > 0 ? "/pagos?status=overdue" : "/pagos")}
+              className={`rounded-xl border px-4 py-3 text-left active:scale-[0.98] transition-transform ${
+                overduePayments > 0 ? "border-destructive/30 bg-destructive/5" : "border-border/60"
+              }`}
+            >
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground inline-flex items-center gap-1">
+                <AlertTriangle className={`h-3 w-3 ${overduePayments > 0 ? "text-destructive" : "text-muted-foreground"}`} /> Vencidos
+              </p>
+              <p className={`text-lg font-bold mt-0.5 truncate ${overduePayments > 0 ? "text-destructive" : "text-foreground"}`}>
+                {overduePayments > 0 ? (privacyMode ? overduePayments : formatCurrency(overdueAmount, "UYU")) : "0"}
+              </p>
+            </button>
+          </div>
+        </div>
 
         {/* Quick Actions */}
         <div>
@@ -821,6 +923,16 @@ const Dashboard = () => {
         {/* ── Zona de sistema: útil pero no urgente ──
             Plan y notificaciones viven en Mi consultorio (y la guía de
             activación apunta ahí); acá solo lo que se usa a diario. */}
+        {businessId && (
+          <ActivationChecklist
+            businessId={businessId}
+            onAllDone={() => {
+              if (!wasActivationCelebrated(businessId)) {
+                setShowActivationDone(true);
+              }
+            }}
+          />
+        )}
         <PublicLinkCard businessId={businessId} />
         <InstallPromptCard />
 
