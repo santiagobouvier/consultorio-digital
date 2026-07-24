@@ -795,7 +795,11 @@ export function CreateAppointmentModal({
                 ) : startsByDate.length === 0 ? (
                   <div className="py-8 text-center space-y-2">
                     <Clock className="h-8 w-8 mx-auto text-muted-foreground" />
-                    <p className="text-sm font-medium">No hay horarios libres en los próximos 30 días</p>
+                    <p className="text-sm font-medium">
+                      {lockDate && prefilledDate
+                        ? "No hay horarios libres para el día seleccionado"
+                        : "No hay horarios libres en los próximos 6 meses"}
+                    </p>
                     <p className="text-xs text-muted-foreground">
                       Podés elegir el horario a mano igual.
                     </p>
