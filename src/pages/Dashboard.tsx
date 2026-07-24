@@ -871,39 +871,43 @@ const Dashboard = () => {
           <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
             Accesos rápidos
           </h3>
-          <div className="grid grid-cols-4 gap-2">
+          {/* Etiquetas que dicen lo que HACEN (crear/registrar), no sustantivos
+              ambiguos que se confunden con listados. */}
+          <div className="grid grid-cols-2 gap-2">
             <Button
               variant="outline"
-              className="h-20 flex flex-col items-center justify-center gap-1.5 rounded-xl"
-              onClick={() => setShowPatientForm(true)}
-            >
-              <UserPlus className="h-5 w-5 text-primary" />
-              <span className="text-xs font-medium">Paciente</span>
-            </Button>
-            <Button
-              variant="outline"
-              className="h-20 flex flex-col items-center justify-center gap-1.5 rounded-xl"
+              className="h-14 flex items-center justify-start gap-2.5 rounded-xl px-3.5"
               onClick={() => setShowAppointmentModal(true)}
             >
-              <CalendarPlus className="h-5 w-5 text-primary" />
-              <span className="text-xs font-medium">Cita</span>
+              <CalendarPlus className="h-5 w-5 text-primary shrink-0" />
+              <span className="text-sm font-semibold">Nueva cita</span>
             </Button>
             <Button
               variant="outline"
-              className="h-20 flex flex-col items-center justify-center gap-1.5 rounded-xl"
+              className="h-14 flex items-center justify-start gap-2.5 rounded-xl px-3.5"
               onClick={() => setShowPaymentForm(true)}
             >
-              <Plus className="h-5 w-5 text-primary" />
-              <span className="text-xs font-medium">Pago</span>
+              <CreditCard className="h-5 w-5 text-primary shrink-0" />
+              <span className="text-sm font-semibold">Registrar pago</span>
             </Button>
             <Button
               variant="outline"
-              className="h-20 flex flex-col items-center justify-center gap-1.5 rounded-xl border-primary/30 bg-primary/5"
-              onClick={() => navigate("/patients?portal=true")}
+              className="h-14 flex items-center justify-start gap-2.5 rounded-xl px-3.5"
+              onClick={() => setShowPatientForm(true)}
             >
-              <Smartphone className="h-5 w-5 text-primary" />
-              <span className="text-xs font-medium">Portal</span>
-              <span className="text-[10px] text-muted-foreground leading-none">{portalPatientsCount} activos</span>
+              <UserPlus className="h-5 w-5 text-primary shrink-0" />
+              <span className="text-sm font-semibold">Nuevo paciente</span>
+            </Button>
+            <Button
+              variant="outline"
+              className="h-14 flex items-center justify-start gap-2.5 rounded-xl px-3.5 border-primary/30 bg-primary/5"
+              onClick={() => navigate("/personalizar-portal")}
+            >
+              <Smartphone className="h-5 w-5 text-primary shrink-0" />
+              <span className="min-w-0 text-left">
+                <span className="block text-sm font-semibold leading-tight">Mi portal</span>
+                <span className="block text-[10px] text-muted-foreground leading-tight">{portalPatientsCount} paciente{portalPatientsCount !== 1 ? "s" : ""} con acceso</span>
+              </span>
             </Button>
           </div>
         </div>
