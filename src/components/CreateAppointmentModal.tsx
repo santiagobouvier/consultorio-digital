@@ -801,7 +801,7 @@ export function CreateAppointmentModal({
                         : "No hay horarios libres en los próximos 6 meses"}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Podés elegir el horario a mano igual.
+                      Podés elegir el horario a mano sin límite de fecha.
                     </p>
                   </div>
                 ) : (
