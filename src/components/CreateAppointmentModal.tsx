@@ -801,7 +801,7 @@ export function CreateAppointmentModal({
                         : "No hay horarios libres en los próximos 6 meses"}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Podés elegir el horario a mano igual.
+                      Podés elegir el horario a mano sin límite de fecha.
                     </p>
                   </div>
                 ) : (
@@ -880,6 +880,16 @@ export function CreateAppointmentModal({
                     disabled={lockDate && !!prefilledDate}
                     className="h-11 rounded-xl disabled:opacity-100"
                   />
+                  {date && (() => {
+                    const picked = new Date(`${date}T00:00:00`);
+                    const sixMonths = new Date();
+                    sixMonths.setMonth(sixMonths.getMonth() + 6);
+                    return picked > sixMonths ? (
+                      <p className="text-xs text-amber-600 dark:text-amber-400">
+                        Estás agendando a más de 6 meses. Verificá que la fecha sea correcta.
+                      </p>
+                    ) : null;
+                  })()}
                 </div>
                 <div className="space-y-2">
                   <Label className="text-sm font-semibold">Hora de inicio *</Label>
