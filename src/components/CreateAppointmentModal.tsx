@@ -248,8 +248,14 @@ export function CreateAppointmentModal({
     setStartsLoading(true);
     try {
       const today = new Date();
-      const from = today.toISOString().slice(0, 10);
-      const toDate = new Date(today.getTime() + 30 * 86400000).toISOString().slice(0, 10);
+      // Si el usuario tocó una fecha específica en la agenda, buscamos horarios
+      // solo para ese día. Si no, mostramos los próximos 6 meses.
+      const from = (lockDate && prefilledDate ? prefilledDate : today)
+        .toISOString().slice(0, 10);
+      const toDate = (lockDate && prefilledDate
+        ? prefilledDate
+        : new Date(today.getTime() + 180 * 86400000)
+      ).toISOString().slice(0, 10);
       const { data, error } = await (supabase as any).rpc("get_available_starts", {
         p_business_id: businessId,
         p_professional_user_id: currentUserId,
@@ -265,7 +271,7 @@ export function CreateAppointmentModal({
     } finally {
       setStartsLoading(false);
     }
-  }, [businessId, currentUserId]);
+  }, [businessId, currentUserId, lockDate, prefilledDate]);
 
   // ── Elegir tipo de sesión ──
   // Tocar un tipo avanza directo al horario (como la web pública);
@@ -789,7 +795,11 @@ export function CreateAppointmentModal({
                 ) : startsByDate.length === 0 ? (
                   <div className="py-8 text-center space-y-2">
                     <Clock className="h-8 w-8 mx-auto text-muted-foreground" />
-                    <p className="text-sm font-medium">No hay horarios libres en los próximos 30 días</p>
+                    <p className="text-sm font-medium">
+                      {lockDate && prefilledDate
+                        ? "No hay horarios libres para el día seleccionado"
+                        : "No hay horarios libres en los próximos 6 meses"}
+                    </p>
                     <p className="text-xs text-muted-foreground">
                       Podés elegir el horario a mano igual.
                     </p>
