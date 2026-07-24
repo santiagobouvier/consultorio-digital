@@ -248,8 +248,14 @@ export function CreateAppointmentModal({
     setStartsLoading(true);
     try {
       const today = new Date();
-      const from = today.toISOString().slice(0, 10);
-      const toDate = new Date(today.getTime() + 30 * 86400000).toISOString().slice(0, 10);
+      // Si el usuario tocó una fecha específica en la agenda, buscamos horarios
+      // solo para ese día. Si no, mostramos los próximos 6 meses.
+      const from = (lockDate && prefilledDate ? prefilledDate : today)
+        .toISOString().slice(0, 10);
+      const toDate = (lockDate && prefilledDate
+        ? prefilledDate
+        : new Date(today.getTime() + 180 * 86400000)
+      ).toISOString().slice(0, 10);
       const { data, error } = await (supabase as any).rpc("get_available_starts", {
         p_business_id: businessId,
         p_professional_user_id: currentUserId,
@@ -265,7 +271,7 @@ export function CreateAppointmentModal({
     } finally {
       setStartsLoading(false);
     }
-  }, [businessId, currentUserId]);
+  }, [businessId, currentUserId, lockDate, prefilledDate]);
 
   // ── Elegir tipo de sesión ──
   // Tocar un tipo avanza directo al horario (como la web pública);
