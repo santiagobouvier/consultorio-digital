@@ -26,3 +26,8 @@ verify_jwt = false
 
 [functions.public-patient-lookup]
 verify_jwt = false
+
+# send-whatsapp valida la service role key por su cuenta (uso interno del
+# robot de recordatorios); el JWT de gateway no aplica.
+[functions.send-whatsapp]
+verify_jwt = false

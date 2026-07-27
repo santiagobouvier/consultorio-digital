@@ -48,10 +48,10 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
 // Página "Recordatorios": centro de avisos automáticos.
-// Los recordatorios salen SOLOS por email (los manda la base de datos, sin
-// intervención). Acá el profesional ve qué va a salir, qué salió (y qué
-// falló), y configura anticipación y plantilla. El canal WhatsApp aparece
-// cuando se conecte la API oficial — no hay flujo manual.
+// Los recordatorios salen SOLOS por email (Resend) y por WhatsApp (Cloud API
+// oficial de Meta, plantilla aprobada con formato fijo). Acá el profesional
+// ve qué va a salir, qué salió (y qué falló), y configura anticipación,
+// plantilla de email y su número de contacto para WhatsApp.
 
 interface Reminder {
   id: string;
@@ -142,6 +142,8 @@ const PendingReminders = () => {
   const [settingsRowId, setSettingsRowId] = useState<string | null>(null);
   const [settingsLoading, setSettingsLoading] = useState(true);
   const [autoEmail, setAutoEmail] = useState(true);
+  const [autoWhatsapp, setAutoWhatsapp] = useState(true);
+  const [waContactPhone, setWaContactPhone] = useState("");
   const [hoursBefore, setHoursBefore] = useState("24");
   const [template, setTemplate] = useState(DEFAULT_TEMPLATE);
   const [settingsSnapshot, setSettingsSnapshot] = useState("");
@@ -149,8 +151,8 @@ const PendingReminders = () => {
   const templateRef = useRef<HTMLTextAreaElement>(null);
 
   const settingsDirty = useMemo(
-    () => JSON.stringify({ autoEmail, hoursBefore, template }) !== settingsSnapshot,
-    [autoEmail, hoursBefore, template, settingsSnapshot]
+    () => JSON.stringify({ autoEmail, autoWhatsapp, waContactPhone, hoursBefore, template }) !== settingsSnapshot,
+    [autoEmail, autoWhatsapp, waContactPhone, hoursBefore, template, settingsSnapshot]
   );
 
   useEffect(() => {
@@ -160,17 +162,21 @@ const PendingReminders = () => {
         if (!user) return;
         const { data } = await supabase
           .from("clinic_settings")
-          .select("id, reminder_hours_before, auto_email_reminders, default_reminder_message")
+          .select("id, reminder_hours_before, auto_email_reminders, auto_whatsapp_reminders, whatsapp_contact_phone, default_reminder_message")
           .eq("user_id", user.id)
           .maybeSingle();
         const loadedAuto = data?.auto_email_reminders ?? true;
+        const loadedAutoWa = data?.auto_whatsapp_reminders ?? true;
+        const loadedWaPhone = data?.whatsapp_contact_phone ?? "";
         const loadedHours = String(data?.reminder_hours_before ?? 24);
         const loadedTemplate = data?.default_reminder_message || DEFAULT_TEMPLATE;
         setSettingsRowId(data?.id ?? null);
         setAutoEmail(loadedAuto);
+        setAutoWhatsapp(loadedAutoWa);
+        setWaContactPhone(loadedWaPhone);
         setHoursBefore(loadedHours);
         setTemplate(loadedTemplate);
-        setSettingsSnapshot(JSON.stringify({ autoEmail: loadedAuto, hoursBefore: loadedHours, template: loadedTemplate }));
+        setSettingsSnapshot(JSON.stringify({ autoEmail: loadedAuto, autoWhatsapp: loadedAutoWa, waContactPhone: loadedWaPhone, hoursBefore: loadedHours, template: loadedTemplate }));
       } catch (e) {
         console.error("Error cargando configuración de recordatorios:", e);
       } finally {
@@ -187,6 +193,8 @@ const PendingReminders = () => {
       if (!user) return;
       const payload = {
         auto_email_reminders: autoEmail,
+        auto_whatsapp_reminders: autoWhatsapp,
+        whatsapp_contact_phone: waContactPhone.trim() || null,
         reminder_hours_before: parseInt(hoursBefore),
         default_reminder_message: template.trim() || DEFAULT_TEMPLATE,
       };
@@ -202,7 +210,7 @@ const PendingReminders = () => {
         if (error) throw error;
         setSettingsRowId(data.id);
       }
-      setSettingsSnapshot(JSON.stringify({ autoEmail, hoursBefore, template }));
+      setSettingsSnapshot(JSON.stringify({ autoEmail, autoWhatsapp, waContactPhone, hoursBefore, template }));
       toast({ title: "Configuración guardada", description: "Aplica a los recordatorios de las próximas citas." });
     } catch (e) {
       console.error(e);
@@ -334,10 +342,12 @@ const PendingReminders = () => {
 
   const retryFailed = async (reminder: Reminder) => {
     // Volver a programarlo: el robot lo toma en la próxima pasada (cada 5 min).
-    if (!reminder.patient?.email) {
+    if (reminder.channel === "whatsapp" ? !reminder.patient?.whatsapp_phone : !reminder.patient?.email) {
       toast({
-        title: "El paciente no tiene email",
-        description: "Cargale un email en su ficha y después reintentá.",
+        title: reminder.channel === "whatsapp" ? "El paciente no tiene WhatsApp" : "El paciente no tiene email",
+        description: reminder.channel === "whatsapp"
+          ? "Cargale un teléfono en su ficha y después reintentá."
+          : "Cargale un email en su ficha y después reintentá.",
         variant: "destructive",
       });
       return;
@@ -470,18 +480,43 @@ const PendingReminders = () => {
                     <Switch checked={autoEmail} onCheckedChange={setAutoEmail} className="shrink-0" />
                   </div>
 
-                  {/* Canal WhatsApp (próximamente) */}
-                  <div className="flex items-center justify-between gap-3 rounded-lg border border-dashed p-3 opacity-70">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="p-2 rounded-lg bg-green-500/10 text-green-500 shrink-0">
-                        <MessageSquare className="h-4 w-4" />
+                  {/* Canal WhatsApp (API oficial de Meta) */}
+                  <div className="rounded-lg border p-3 space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="p-2 rounded-lg bg-green-500/10 text-green-500 shrink-0">
+                          <MessageSquare className="h-4 w-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium">WhatsApp automático</p>
+                          <p className="text-xs text-muted-foreground">Se envía solo, desde el número oficial del sistema</p>
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium">WhatsApp automático</p>
-                        <p className="text-xs text-muted-foreground">Se activa al conectar WhatsApp</p>
-                      </div>
+                      <Switch checked={autoWhatsapp} onCheckedChange={setAutoWhatsapp} className="shrink-0" />
                     </div>
-                    <Badge variant="outline" className="rounded-full text-[11px] shrink-0 whitespace-nowrap">Próximamente</Badge>
+                    {autoWhatsapp && (
+                      <div className="space-y-1.5">
+                        <Label htmlFor="wa-contact-phone">Tu WhatsApp (para que te respondan)</Label>
+                        <Input
+                          id="wa-contact-phone"
+                          value={waContactPhone}
+                          onChange={(e) => setWaContactPhone(e.target.value)}
+                          placeholder="098 123 456"
+                          inputMode="tel"
+                          className="rounded-xl"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          El aviso incluye este número para que el paciente te escriba directo a vos
+                          (el número del sistema es solo de salida). El mensaje de WhatsApp tiene un
+                          formato fijo aprobado por Meta, con nombre, fecha y hora de la sesión.
+                        </p>
+                        {!waContactPhone.trim() && (
+                          <p className="text-xs text-destructive font-medium">
+                            Sin tu número, los avisos por WhatsApp no salen.
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -649,8 +684,17 @@ const PendingReminders = () => {
                               <div className="flex items-start gap-2 rounded-lg bg-destructive/5 border border-destructive/20 p-2.5 text-xs text-destructive">
                                 <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
                                 <span>
-                                  No se pudo enviar. Lo más común: el paciente no tiene email cargado en su ficha
-                                  {reminder.patient?.email ? "" : " (este paciente no tiene)"}.
+                                  {reminder.channel === "whatsapp" ? (
+                                    <>
+                                      No se pudo enviar por WhatsApp. Lo más común: el paciente no tiene teléfono cargado en su ficha
+                                      {reminder.patient?.whatsapp_phone ? "" : " (este paciente no tiene)"}, o falta tu número de contacto en la configuración.
+                                    </>
+                                  ) : (
+                                    <>
+                                      No se pudo enviar. Lo más común: el paciente no tiene email cargado en su ficha
+                                      {reminder.patient?.email ? "" : " (este paciente no tiene)"}.
+                                    </>
+                                  )}
                                 </span>
                               </div>
                             )}
@@ -663,6 +707,8 @@ const PendingReminders = () => {
                               <div className="flex gap-1.5">
                                 {isUpcoming && (
                                   <>
+                                    {/* WhatsApp usa plantilla fija aprobada por Meta: no se edita el texto */}
+                                    {reminder.channel !== "whatsapp" && (
                                     <Button
                                       size="sm"
                                       variant="ghost"
@@ -672,6 +718,7 @@ const PendingReminders = () => {
                                       <Pencil className="h-3.5 w-3.5" />
                                       <span className="hidden sm:inline">Editar</span>
                                     </Button>
+                                    )}
                                     <Button
                                       size="sm"
                                       variant="ghost"
