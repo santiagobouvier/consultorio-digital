@@ -713,6 +713,7 @@ export type Database = {
           updated_at: string
           user_id: string
           welcome_message: string | null
+          whatsapp_contact_phone: string | null
         }
         Insert: {
           auto_accept_bookings?: boolean
@@ -731,6 +732,7 @@ export type Database = {
           updated_at?: string
           user_id: string
           welcome_message?: string | null
+          whatsapp_contact_phone?: string | null
         }
         Update: {
           auto_accept_bookings?: boolean
@@ -749,6 +751,7 @@ export type Database = {
           updated_at?: string
           user_id?: string
           welcome_message?: string | null
+          whatsapp_contact_phone?: string | null
         }
         Relationships: []
       }
