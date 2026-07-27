@@ -89,6 +89,27 @@ const VARIABLES = [
   { key: "{{link}}", desc: "Link o ubicación" },
 ];
 
+// Datos de ejemplo para la vista previa en vivo del mensaje: cada etiqueta
+// se muestra ya convertida (y resaltada) como la vería el paciente.
+const SAMPLE_VARIABLE_VALUES: Record<string, string> = {
+  "{{paciente}}": "María",
+  "{{fecha}}": "03/08/2026",
+  "{{hora}}": "15:00",
+  "{{modalidad}}": "Presencial",
+  "{{link}}": "Av. Rivera 1234",
+};
+
+const renderTemplatePreview = (tpl: string) =>
+  tpl.split(/(\{\{[a-záéíóúñ]+\}\})/g).map((part, i) =>
+    SAMPLE_VARIABLE_VALUES[part] ? (
+      <span key={i} className="rounded px-1 font-semibold bg-primary/15 text-primary">
+        {SAMPLE_VARIABLE_VALUES[part]}
+      </span>
+    ) : (
+      <span key={i}>{part}</span>
+    )
+  );
+
 const HOURS_OPTIONS = [
   { value: "1", label: "1 hora antes" },
   { value: "3", label: "3 horas antes" },
@@ -572,9 +593,8 @@ const PendingReminders = () => {
                   <Label>Mensaje del recordatorio por email</Label>
                   <p className="text-xs text-muted-foreground">
                     Las etiquetas como <span className="font-mono">{"{{paciente}}"}</span> son
-                    comodines: cuando el aviso sale, se cambian solas por el dato real de cada
-                    cita (el nombre, la fecha…). El de WhatsApp no se edita acá: usa un formato
-                    fijo aprobado por Meta.
+                    comodines: se cambian solos por el dato real de cada cita. Mirá el ejemplo
+                    abajo. (El de WhatsApp no se edita acá: usa un formato fijo aprobado por Meta.)
                   </p>
                   <Textarea
                     ref={templateRef}
@@ -583,6 +603,16 @@ const PendingReminders = () => {
                     rows={3}
                     className="resize-none text-sm"
                   />
+
+                  {/* Vista previa en vivo: las etiquetas ya convertidas y
+                      resaltadas, como las va a ver el paciente. */}
+                  <div className="rounded-lg border bg-muted/40 px-3 py-2.5">
+                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1">
+                      Así le llega al paciente (ejemplo en vivo) 👇
+                    </p>
+                    <p className="text-sm leading-relaxed">{renderTemplatePreview(template)}</p>
+                  </div>
+
                   <p className="text-xs text-muted-foreground">
                     Tocá una etiqueta para <strong>agregarla</strong> al mensaje, donde tengas el cursor:
                   </p>
