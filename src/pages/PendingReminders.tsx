@@ -42,6 +42,7 @@ import {
 } from "lucide-react";
 import { RouteSkeleton } from "@/components/RouteSkeleton";
 import { useBusinessId } from "@/hooks/use-business-id";
+import { useDashboardBranding } from "@/contexts/DashboardBrandingContext";
 import { ListPagination, usePagination, ITEMS_PER_PAGE } from "@/components/ListPagination";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
@@ -115,6 +116,7 @@ const UPCOMING_STATUSES = ["scheduled", "sending"];
 
 const PendingReminders = () => {
   const { businessId } = useBusinessId();
+  const { displayName } = useDashboardBranding();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("upcoming");
   const [currentPage, setCurrentPage] = useState(1);
@@ -501,8 +503,8 @@ const PendingReminders = () => {
                       <Switch checked={autoWhatsapp} onCheckedChange={setAutoWhatsapp} className="shrink-0" />
                     </div>
                     {autoWhatsapp && (
-                      <div className="space-y-1.5">
-                        <Label htmlFor="wa-contact-phone">Tu WhatsApp de contacto (va dentro del mensaje)</Label>
+                      <div className="space-y-2">
+                        <Label htmlFor="wa-contact-phone">Tu WhatsApp de contacto</Label>
                         <Input
                           id="wa-contact-phone"
                           value={waContactPhone}
@@ -511,20 +513,41 @@ const PendingReminders = () => {
                           inputMode="tel"
                           className="rounded-xl"
                         />
-                        <p className="text-xs text-muted-foreground">
-                          El recordatorio automático le dice al paciente:{" "}
-                          <span className="italic">
-                            "Si necesitás reprogramar o cancelar, escribile a tu profesional: <strong>este número</strong>"
-                          </span>
-                          . Poné acá tu WhatsApp personal o el de tu consultorio — donde quieras
-                          recibir las consultas de tus pacientes. (El número que envía los avisos es
-                          automático y no recibe respuestas.)
-                        </p>
                         {!waContactPhone.trim() && (
                           <p className="text-xs text-destructive font-medium">
                             Sin tu número, los avisos por WhatsApp no salen.
                           </p>
                         )}
+
+                        {/* Vista previa estilo WhatsApp: se VE dónde aparece el
+                            número, en vivo mientras lo escribe. */}
+                        <p className="text-xs text-muted-foreground pt-1">
+                          Así le llega al paciente — tu número aparece acá 👇
+                        </p>
+                        <div className="rounded-xl p-3" style={{ background: "#0b141a" }}>
+                          <div
+                            className="rounded-lg rounded-tl-none px-3 py-2 text-[12.5px] leading-relaxed"
+                            style={{ background: "#202c33", color: "rgba(255,255,255,0.95)" }}
+                          >
+                            Hola María 👋 Te recordamos tu próxima sesión con {displayName || "tu consultorio"}: 📅
+                            lunes 3 de agosto 🕐 15:00 hs. Si necesitás reprogramar o cancelar, escribile a
+                            tu profesional:{" "}
+                            <span
+                              className="font-bold rounded px-1 whitespace-nowrap"
+                              style={{ background: "rgba(37,211,102,0.22)", color: "#4ade80" }}
+                            >
+                              {waContactPhone.trim() || "acá va tu número"}
+                            </span>{" "}
+                            ¡Te esperamos!
+                            <span className="block text-right text-[10px] mt-1" style={{ color: "rgba(255,255,255,0.4)" }}>
+                              10:00 ✓✓
+                            </span>
+                          </div>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          El paciente toca ese número y te escribe directo a vos. El mensaje sale de
+                          un número automático que no recibe respuestas.
+                        </p>
                       </div>
                     )}
                   </div>
