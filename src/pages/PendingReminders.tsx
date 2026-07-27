@@ -99,6 +99,21 @@ const SAMPLE_VARIABLE_VALUES: Record<string, string> = {
   "{{link}}": "Av. Rivera 1234",
 };
 
+// Valida que sea un celular uruguayo con formato real: 09X XXX XXX,
+// con o sin +598 adelante. Solo valida formato — que el número exista y
+// tenga WhatsApp recién se confirma al enviar.
+const validateWaContact = (raw: string): string | null => {
+  if (!raw.trim()) return null; // vacío se avisa aparte ("sin tu número no salen")
+  let digits = raw.replace(/\D/g, "");
+  if (digits.startsWith("00598")) digits = digits.slice(5);
+  else if (digits.startsWith("598")) digits = digits.slice(3);
+  if (digits.startsWith("0")) digits = digits.slice(1);
+  if (!/^9\d{7}$/.test(digits)) {
+    return "Ese número no parece un celular uruguayo. Escribilo como 098 123 456 (9 dígitos empezando en 09).";
+  }
+  return null;
+};
+
 const renderTemplatePreview = (tpl: string) =>
   tpl.split(/(\{\{[a-záéíóúñ]+\}\})/g).map((part, i) =>
     SAMPLE_VARIABLE_VALUES[part] ? (
@@ -178,6 +193,12 @@ const PendingReminders = () => {
     [autoEmail, autoWhatsapp, waContactPhone, hoursBefore, template, settingsSnapshot]
   );
 
+  // Error de formato del número de contacto (solo aplica con el canal prendido)
+  const waContactError = useMemo(
+    () => (autoWhatsapp ? validateWaContact(waContactPhone) : null),
+    [autoWhatsapp, waContactPhone]
+  );
+
   useEffect(() => {
     const loadSettings = async () => {
       try {
@@ -210,6 +231,14 @@ const PendingReminders = () => {
   }, []);
 
   const saveSettings = async () => {
+    if (waContactError) {
+      toast({
+        title: "Revisá tu número de WhatsApp",
+        description: waContactError,
+        variant: "destructive",
+      });
+      return;
+    }
     setSettingsSaving(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -532,13 +561,16 @@ const PendingReminders = () => {
                           onChange={(e) => setWaContactPhone(e.target.value)}
                           placeholder="098 123 456"
                           inputMode="tel"
-                          className="rounded-xl"
+                          className={`rounded-xl ${waContactError ? "border-destructive focus-visible:ring-destructive" : ""}`}
+                          aria-invalid={!!waContactError}
                         />
-                        {!waContactPhone.trim() && (
+                        {waContactError ? (
+                          <p className="text-xs text-destructive font-medium">{waContactError}</p>
+                        ) : !waContactPhone.trim() ? (
                           <p className="text-xs text-destructive font-medium">
                             Sin tu número, los avisos por WhatsApp no salen.
                           </p>
-                        )}
+                        ) : null}
 
                         {/* Vista previa estilo WhatsApp: se VE dónde aparece el
                             número, en vivo mientras lo escribe. */}
@@ -639,7 +671,7 @@ const PendingReminders = () => {
                 </div>
 
                 <div className="flex justify-end">
-                  <Button onClick={saveSettings} disabled={!settingsDirty || settingsSaving} className="gap-2">
+                  <Button onClick={saveSettings} disabled={!settingsDirty || settingsSaving || !!waContactError} className="gap-2">
                     {settingsSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                     Guardar configuración
                   </Button>
