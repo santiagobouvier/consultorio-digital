@@ -99,17 +99,39 @@ const SAMPLE_VARIABLE_VALUES: Record<string, string> = {
   "{{link}}": "Av. Rivera 1234",
 };
 
-// Valida que sea un celular uruguayo con formato real: 09X XXX XXX,
-// con o sin +598 adelante. Solo valida formato — que el número exista y
-// tenga WhatsApp recién se confirma al enviar.
+// Valida que sea un celular uruguayo con formato real (09X XXX XXX, con o
+// sin +598) y devuelve un error ESPECÍFICO según qué está mal: letras,
+// dígitos de más, dígitos de menos o un número que no es celular. Solo
+// valida formato — que el número exista y tenga WhatsApp recién se
+// confirma al enviar.
 const validateWaContact = (raw: string): string | null => {
-  if (!raw.trim()) return null; // vacío se avisa aparte ("sin tu número no salen")
-  let digits = raw.replace(/\D/g, "");
+  const trimmed = raw.trim();
+  if (!trimmed) return null; // vacío se avisa aparte ("sin tu número no salen")
+
+  if (/[a-zA-Z]/.test(trimmed)) {
+    return "El número no puede tener letras. Escribilo solo con dígitos: 098 123 456.";
+  }
+
+  let digits = trimmed.replace(/\D/g, "");
+  if (!digits) {
+    return "Escribí el número con dígitos, tipo 098 123 456.";
+  }
+
+  // Tolerar el código de país adelante (+598 / 00598)
   if (digits.startsWith("00598")) digits = digits.slice(5);
-  else if (digits.startsWith("598")) digits = digits.slice(3);
-  if (digits.startsWith("0")) digits = digits.slice(1);
-  if (!/^9\d{7}$/.test(digits)) {
-    return "Ese número no parece un celular uruguayo. Escribilo como 098 123 456 (9 dígitos empezando en 09).";
+  else if (digits.startsWith("598") && digits.length > 9) digits = digits.slice(3);
+
+  // Número nacional sin el 0 inicial: debe quedar 9XXXXXXX (8 dígitos)
+  const national = digits.startsWith("0") ? digits.slice(1) : digits;
+
+  if (national.length > 8) {
+    return "Hay dígitos de más: un celular uruguayo tiene 9 en total (098 123 456). Borrá los que sobran.";
+  }
+  if (national.length < 8) {
+    return "Faltan dígitos: un celular uruguayo tiene 9 en total (098 123 456).";
+  }
+  if (!national.startsWith("9")) {
+    return "Ese no parece un celular (los celulares empiezan con 09). Para WhatsApp tiene que ser un celular.";
   }
   return null;
 };
