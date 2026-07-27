@@ -221,17 +221,23 @@ const PendingReminders = () => {
   };
 
   const insertVariable = (variable: string) => {
+    const desc = VARIABLES.find((v) => v.key === variable)?.desc?.toLowerCase() || "dato real";
     const el = templateRef.current;
     if (!el) {
       setTemplate((t) => t + " " + variable);
-      return;
+    } else {
+      const start = el.selectionStart ?? template.length;
+      const end = el.selectionEnd ?? template.length;
+      setTemplate(template.slice(0, start) + variable + template.slice(end));
+      requestAnimationFrame(() => {
+        el.focus();
+        el.setSelectionRange(start + variable.length, start + variable.length);
+      });
     }
-    const start = el.selectionStart ?? template.length;
-    const end = el.selectionEnd ?? template.length;
-    setTemplate(template.slice(0, start) + variable + template.slice(end));
-    requestAnimationFrame(() => {
-      el.focus();
-      el.setSelectionRange(start + variable.length, start + variable.length);
+    // Feedback claro: que se note que el botón AGREGÓ algo al mensaje.
+    toast({
+      title: `Se agregó ${variable} al mensaje`,
+      description: `Cuando el aviso salga, se reemplaza por: ${desc}. Si lo tocaste sin querer, borralo del texto.`,
     });
   };
 
@@ -540,7 +546,13 @@ const PendingReminders = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Mensaje del recordatorio</Label>
+                  <Label>Mensaje del recordatorio por email</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Las etiquetas como <span className="font-mono">{"{{paciente}}"}</span> son
+                    comodines: cuando el aviso sale, se cambian solas por el dato real de cada
+                    cita (el nombre, la fecha…). El de WhatsApp no se edita acá: usa un formato
+                    fijo aprobado por Meta.
+                  </p>
                   <Textarea
                     ref={templateRef}
                     value={template}
@@ -548,16 +560,19 @@ const PendingReminders = () => {
                     rows={3}
                     className="resize-none text-sm"
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Tocá una etiqueta para <strong>agregarla</strong> al mensaje, donde tengas el cursor:
+                  </p>
                   <div className="flex flex-wrap items-center gap-1.5">
                     {VARIABLES.map((v) => (
                       <button
                         key={v.key}
                         type="button"
                         onClick={() => insertVariable(v.key)}
-                        title={v.desc}
+                        title={`Agregar al mensaje · ${v.desc}`}
                         className="px-2.5 py-1 rounded-full bg-muted border text-xs font-mono hover:bg-primary hover:text-primary-foreground transition-colors"
                       >
-                        {v.key}
+                        + {v.key}
                       </button>
                     ))}
                     <button
