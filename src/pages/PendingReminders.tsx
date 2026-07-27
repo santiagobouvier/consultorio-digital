@@ -496,7 +496,7 @@ const PendingReminders = () => {
                     </div>
                     {autoWhatsapp && (
                       <div className="space-y-1.5">
-                        <Label htmlFor="wa-contact-phone">Tu WhatsApp (para que te respondan)</Label>
+                        <Label htmlFor="wa-contact-phone">Tu WhatsApp de contacto (va dentro del mensaje)</Label>
                         <Input
                           id="wa-contact-phone"
                           value={waContactPhone}
@@ -506,9 +506,13 @@ const PendingReminders = () => {
                           className="rounded-xl"
                         />
                         <p className="text-xs text-muted-foreground">
-                          El aviso incluye este número para que el paciente te escriba directo a vos
-                          (el número del sistema es solo de salida). El mensaje de WhatsApp tiene un
-                          formato fijo aprobado por Meta, con nombre, fecha y hora de la sesión.
+                          El recordatorio automático le dice al paciente:{" "}
+                          <span className="italic">
+                            "Si necesitás reprogramar o cancelar, escribile a tu profesional: <strong>este número</strong>"
+                          </span>
+                          . Poné acá tu WhatsApp personal o el de tu consultorio — donde quieras
+                          recibir las consultas de tus pacientes. (El número que envía los avisos es
+                          automático y no recibe respuestas.)
                         </p>
                         {!waContactPhone.trim() && (
                           <p className="text-xs text-destructive font-medium">
