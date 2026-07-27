@@ -527,24 +527,16 @@ const Dashboard = () => {
               </h1>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate("/recordatorios-pendientes")}
-              className="text-muted-foreground hover:text-foreground h-10 w-10"
-            >
-              <Bell className="h-5 w-5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleLogout}
-              className="text-muted-foreground hover:text-destructive h-10 w-10"
-            >
-              <LogOut className="h-5 w-5" />
-            </Button>
-          </div>
+          {/* Solo cerrar sesión: la campanita confundía (parecía notificaciones
+              y llevaba a Recordatorios, que ya vive en el menú de módulos). */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleLogout}
+            className="text-muted-foreground hover:text-destructive h-10 w-10"
+          >
+            <LogOut className="h-5 w-5" />
+          </Button>
         </div>
 
         {/* ══════════ 1) AHORA: la próxima sesión, protagonista ══════════ */}
