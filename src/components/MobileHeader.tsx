@@ -178,7 +178,6 @@ export function MobileHeader() {
         {/* Right: theme toggle + clinic logo */}
         <div className="flex items-center gap-2">
         <ThemeToggle />
-        <InstallAppButton variant="icon-only" />
         {logoUrl ? (
           <img
             src={logoUrl}
@@ -344,6 +343,17 @@ export function MobileHeader() {
                 </div>
               </div>
             ))}
+
+            {/* Instalar la app: entrada permanente y discreta. Se oculta sola
+                cuando la app ya está instalada. Cerramos el drawer al tocarla
+                para que el prompt/tutorial de instalación quede visible. */}
+            <div onClickCapture={() => setOpen(false)}>
+              <InstallAppButton
+                variant="icon-text"
+                label="Instalar la app"
+                className="w-full justify-center h-12 rounded-2xl border border-white/[0.08] bg-white/[0.045] text-white/60 hover:text-white hover:bg-white/[0.07]"
+              />
+            </div>
           </div>
         </nav>
 
