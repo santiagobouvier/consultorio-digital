@@ -13,9 +13,15 @@ const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 // Plantillas aprobadas en Meta, según el tipo de aviso
 const WHATSAPP_TEMPLATE_BY_TYPE: Record<string, string> = {
+  // Al paciente
   reminder: "recordatorio_cita",
   confirmation: "confirmacion_cita",
   reschedule: "reprogramacion_cita",
+  cancellation: "cancelacion_sesion",
+  // Al profesional (recipient_phone + wa_params vienen de la base)
+  pro_new_booking: "nueva_reserva_pro",
+  pro_cancellation: "cancelacion_pro",
+  pro_reschedule: "reprogramacion_pro",
 };
 const WHATSAPP_LANG = "es";
 
@@ -82,7 +88,7 @@ Deno.serve(async (req) => {
     const { data: due, error } = await supabase
       .from("scheduled_reminders")
       .select(`
-        id, business_id, patient_id, appointment_id, scheduled_for, message, channel, type, status, auto_send,
+        id, business_id, patient_id, appointment_id, scheduled_for, message, channel, type, status, auto_send, recipient_phone, wa_params,
         patients!fk_patient ( email, full_name, whatsapp_phone ),
         appointments ( start_at )
       `)
@@ -208,14 +214,16 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // ── Canal whatsapp: plantilla recordatorio_cita ──
+      // ── Canal whatsapp: plantilla según el tipo de aviso ──
       const ctx = bizContext.get(r.business_id);
       const startAt = (r as any).appointments?.start_at as string | undefined;
-      const patientPhone = patient?.whatsapp_phone;
+      // Avisos al profesional: destino y parámetros ya vienen armados de la base.
+      const preParams = Array.isArray((r as any).wa_params) ? ((r as any).wa_params as string[]) : null;
+      const recipient = ((r as any).recipient_phone as string | null) || patient?.whatsapp_phone;
 
-      if (!patientPhone || !ctx?.contactPhone || !startAt) {
-        // Falta el teléfono del paciente, el número de contacto del
-        // profesional o la cita: no hay forma de armar la plantilla.
+      if (!ctx || !recipient || (!preParams && (!ctx.contactPhone || !startAt))) {
+        // Falta el destinatario, el número de contacto del profesional o la
+        // cita: no hay forma de armar la plantilla.
         await markFailed();
         summary.skipped++;
         continue;
@@ -239,19 +247,33 @@ Deno.serve(async (req) => {
           .eq("id", r.id)
           .eq("status", "scheduled");
 
-        const when = new Date(startAt);
-        const dateEs = new Intl.DateTimeFormat("es-UY", {
-          weekday: "long",
-          day: "numeric",
-          month: "long",
-          timeZone: ctx.timezone,
-        }).format(when);
-        const timeEs = new Intl.DateTimeFormat("es-UY", {
-          hour: "2-digit",
-          minute: "2-digit",
-          hour12: false,
-          timeZone: ctx.timezone,
-        }).format(when);
+        // Parámetros: pre-armados (avisos al profesional) o construidos acá
+        // (avisos al paciente: nombre, consultorio, fecha larga, hora, contacto)
+        let params: string[];
+        if (preParams) {
+          params = preParams;
+        } else {
+          const when = new Date(startAt!);
+          const dateEs = new Intl.DateTimeFormat("es-UY", {
+            weekday: "long",
+            day: "numeric",
+            month: "long",
+            timeZone: ctx.timezone,
+          }).format(when);
+          const timeEs = new Intl.DateTimeFormat("es-UY", {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+            timeZone: ctx.timezone,
+          }).format(when);
+          params = [
+            firstName(patient?.full_name),
+            ctx.profName,
+            dateEs,
+            timeEs,
+            displayPhone(ctx.contactPhone!),
+          ];
+        }
 
         const resp = await fetch(`${SUPABASE_URL}/functions/v1/send-whatsapp`, {
           method: "POST",
@@ -260,16 +282,10 @@ Deno.serve(async (req) => {
             "Authorization": `Bearer ${SERVICE_ROLE}`,
           },
           body: JSON.stringify({
-            to: patientPhone,
+            to: recipient,
             template: WHATSAPP_TEMPLATE_BY_TYPE[(r as any).type] || WHATSAPP_TEMPLATE_BY_TYPE.reminder,
             languageCode: WHATSAPP_LANG,
-            params: [
-              firstName(patient?.full_name),
-              ctx.profName,
-              dateEs,
-              timeEs,
-              displayPhone(ctx.contactPhone),
-            ],
+            params,
           }),
         });
 
