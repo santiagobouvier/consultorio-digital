@@ -28,6 +28,8 @@ import { toast } from "@/hooks/use-toast";
 import { PaymentForm } from "@/components/PaymentForm";
 import { ReminderModal } from "@/components/ReminderModal";
 import { RescheduleAppointmentModal } from "@/components/calendar/RescheduleAppointmentModal";
+import { PaymentLinkMenu } from "@/components/PaymentLinkMenu";
+import { createPaymentLink } from "@/lib/payment-links";
 import { calculatePaymentStatus, type PaymentStatus } from "@/lib/payments";
 import { notifyPatient } from "@/lib/push-notifications";
 import { useDashboardBranding } from "@/contexts/DashboardBrandingContext";
@@ -78,6 +80,8 @@ export const AppointmentDetailModal = ({
     id: string; amount: number; currency: string; status: string; paid_at: string | null;
   } | null>(null);
   const [linkedPaymentChecked, setLinkedPaymentChecked] = useState(false);
+  // Mercado Pago conectado: habilita el link de pago del cobro de la sesión
+  const [mpConnected, setMpConnected] = useState(false);
   const [cobroConfirm, setCobroConfirm] = useState(false);
   const [markingPaid, setMarkingPaid] = useState(false);
   const [rescheduleRequest, setRescheduleRequest] = useState<any | null>(null);
@@ -108,8 +112,19 @@ export const AppointmentDetailModal = ({
         setLinkedPaymentChecked(true);
       }
     })();
+    // ¿Mercado Pago conectado? (para ofrecer el link de pago acá mismo)
+    if (businessId) {
+      (async () => {
+        const { data: policy } = await supabase
+          .from("payment_policies")
+          .select("mp_access_token")
+          .eq("business_id", businessId)
+          .maybeSingle();
+        if (!cancelled) setMpConnected(!!(policy as any)?.mp_access_token);
+      })();
+    }
     return () => { cancelled = true; };
-  }, [appointment?.id, open]);
+  }, [appointment?.id, open, businessId]);
 
   useEffect(() => {
     if (!appointment || !open) {
@@ -551,16 +566,29 @@ export const AppointmentDetailModal = ({
                   </div>
                 </div>
                 {linkedPayment.status !== "paid" && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setCobroConfirm(true)}
-                    disabled={markingPaid}
-                    className="rounded-lg shrink-0 gap-1.5"
-                  >
-                    <Check className="h-3.5 w-3.5" />
-                    Cobrar
-                  </Button>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {/* Compartir el link de pago de MP sin salir de la cita */}
+                    <PaymentLinkMenu
+                      patientPhone={appointment.patients?.whatsapp_phone || null}
+                      patientName={appointment.patients?.full_name || "Paciente"}
+                      getPaymentLink={
+                        mpConnected && businessId
+                          ? async () => createPaymentLink(businessId, [linkedPayment.id])
+                          : undefined
+                      }
+                      compact
+                    />
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setCobroConfirm(true)}
+                      disabled={markingPaid}
+                      className="rounded-lg shrink-0 gap-1.5"
+                    >
+                      <Check className="h-3.5 w-3.5" />
+                      Cobrar
+                    </Button>
+                  </div>
                 )}
               </div>
             )}
