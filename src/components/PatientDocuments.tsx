@@ -44,11 +44,16 @@ import {
   Lock,
   Loader2,
   Paperclip,
+  Eye,
+  ExternalLink,
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/AuthContext";
+import { useDashboardBranding } from "@/contexts/DashboardBrandingContext";
+import { notifyPatient } from "@/lib/push-notifications";
 import { ListPagination, ITEMS_PER_PAGE } from "@/components/ListPagination";
 
-type DocumentType = "consentimiento" | "informe" | "otro";
+type DocumentType = "consentimiento" | "informe" | "evaluacion" | "indicaciones" | "recibo" | "otro";
 
 interface PatientDocument {
   id: string;
@@ -62,6 +67,8 @@ interface PatientDocument {
   document_type: DocumentType;
   notes: string | null;
   created_at: string;
+  shared_with_patient: boolean;
+  shared_at: string | null;
 }
 
 interface PatientDocumentsProps {
@@ -76,6 +83,9 @@ const ACCEPTED_MIME =
 const typeLabels: Record<DocumentType, string> = {
   consentimiento: "Consentimiento",
   informe: "Informe",
+  evaluacion: "Evaluación",
+  indicaciones: "Indicaciones / Material",
+  recibo: "Recibo",
   otro: "Otro",
 };
 
@@ -95,6 +105,7 @@ const fileIcon = (mime: string | null) => {
 
 export const PatientDocuments = ({ patientId, businessId }: PatientDocumentsProps) => {
   const { user } = useAuth();
+  const { displayName: clinicDisplayName } = useDashboardBranding();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [documents, setDocuments] = useState<PatientDocument[]>([]);
   const [loading, setLoading] = useState(true);
@@ -105,6 +116,9 @@ export const PatientDocuments = ({ patientId, businessId }: PatientDocumentsProp
   const [uploading, setUploading] = useState(false);
   const [deletingDoc, setDeletingDoc] = useState<PatientDocument | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  // Compartir con el paciente: confirmación al activar + estado de guardado
+  const [sharingDoc, setSharingDoc] = useState<PatientDocument | null>(null);
+  const [togglingShareId, setTogglingShareId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
 
   const fetchDocuments = async () => {
@@ -220,23 +234,89 @@ export const PatientDocuments = ({ patientId, businessId }: PatientDocumentsProp
     }
   };
 
-  const handleDownload = async (doc: PatientDocument) => {
+  const openDocument = async (doc: PatientDocument, download: boolean) => {
     setDownloadingId(doc.id);
     try {
       const { data, error } = await supabase.storage
         .from("patient-documents")
-        .createSignedUrl(doc.file_path, 60, { download: doc.file_name });
+        .createSignedUrl(doc.file_path, 60, download ? { download: doc.file_name } : undefined);
       if (error || !data?.signedUrl) throw error || new Error("Sin URL");
       window.open(data.signedUrl, "_blank", "noopener,noreferrer");
     } catch (err) {
-      console.error("Download error:", err);
+      console.error("Open document error:", err);
       toast({
         title: "Error",
-        description: "No se pudo descargar el documento",
+        description: download ? "No se pudo descargar el documento" : "No se pudo abrir el documento",
         variant: "destructive",
       });
     } finally {
       setDownloadingId(null);
+    }
+  };
+
+  // Compartir / dejar de compartir con el paciente
+  const setShared = async (doc: PatientDocument, shared: boolean) => {
+    setTogglingShareId(doc.id);
+    try {
+      const { error } = await supabase
+        .from("patient_documents")
+        .update({ shared_with_patient: shared, shared_at: shared ? new Date().toISOString() : null })
+        .eq("id", doc.id);
+      if (error) throw error;
+
+      setDocuments((docs) =>
+        docs.map((d) => (d.id === doc.id ? { ...d, shared_with_patient: shared } : d))
+      );
+
+      if (shared) {
+        const clinic = clinicDisplayName || "Tu profesional";
+        // Push + email al paciente (best-effort)
+        notifyPatient({
+          patientId,
+          title: "Nuevo documento 📄",
+          body: `${clinic} te compartió "${doc.file_name}". Entrá a tu portal para verlo.`,
+          url: "/portal",
+        });
+        void (async () => {
+          try {
+            const { data: pat } = await supabase
+              .from("patients")
+              .select("full_name, email")
+              .eq("id", patientId)
+              .maybeSingle();
+            if (!pat?.email) return;
+            const firstName = (pat.full_name || "").split(" ")[0] || "Hola";
+            await supabase.functions.invoke("send-resend-email", {
+              body: {
+                to: pat.email,
+                template: "raw",
+                businessId,
+                data: {
+                  subject: `Te compartieron un documento — ${clinic}`,
+                  message: `Hola ${firstName},\n\n${clinic} te compartió un documento: "${doc.file_name}".\n\nEntrá a tu portal para verlo y descargarlo (sección Historial → Mis documentos).\n\n${clinic}`,
+                },
+              },
+            });
+          } catch (err) {
+            console.warn("Share-document email failed:", err);
+          }
+        })();
+        toast({
+          title: "Documento compartido ✓",
+          description: "El paciente ya lo ve en su portal. Le avisamos con una notificación.",
+        });
+      } else {
+        toast({
+          title: "Documento privado de nuevo",
+          description: "El paciente dejó de verlo en su portal.",
+        });
+      }
+    } catch (err) {
+      console.error("Share toggle error:", err);
+      toast({ title: "Error", description: "No se pudo cambiar el estado de compartido", variant: "destructive" });
+    } finally {
+      setTogglingShareId(null);
+      setSharingDoc(null);
     }
   };
 
@@ -274,7 +354,7 @@ export const PatientDocuments = ({ patientId, businessId }: PatientDocumentsProp
           <Paperclip className="h-5 w-5 text-primary" />
           <CardTitle className="text-lg">Documentos</CardTitle>
           <Badge variant="outline" className="gap-1 text-xs">
-            <Lock className="h-3 w-3" /> Privados
+            <Lock className="h-3 w-3" /> Privados salvo que los compartas
           </Badge>
           {documents.length > 0 && (
             <Badge variant="secondary" className="rounded-full">
@@ -324,8 +404,17 @@ export const PatientDocuments = ({ patientId, businessId }: PatientDocumentsProp
                     </p>
                     <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
                       <Badge variant="secondary" className="text-xs">
-                        {typeLabels[doc.document_type]}
+                        {typeLabels[doc.document_type] || doc.document_type}
                       </Badge>
+                      {doc.shared_with_patient ? (
+                        <Badge className="text-[10px] gap-1 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/15">
+                          <Eye className="h-2.5 w-2.5" /> Compartido
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-[10px] gap-1 text-muted-foreground">
+                          <Lock className="h-2.5 w-2.5" /> Privado
+                        </Badge>
+                      )}
                       <span className="text-xs text-muted-foreground">
                         {format(new Date(doc.created_at), "d MMM yyyy", {
                           locale: es,
@@ -344,29 +433,60 @@ export const PatientDocuments = ({ patientId, businessId }: PatientDocumentsProp
                     )}
                   </div>
                 </div>
-                <div className="flex gap-2 mt-3 sm:mt-2 sm:justify-end">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="rounded-lg flex-1 sm:flex-initial"
-                    onClick={() => handleDownload(doc)}
-                    disabled={downloadingId === doc.id}
-                  >
-                    {downloadingId === doc.id ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between mt-3 pt-3 border-t border-border/50">
+                  {/* Compartir con el paciente (con confirmación al activar) */}
+                  <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                    <Switch
+                      checked={doc.shared_with_patient}
+                      disabled={togglingShareId === doc.id}
+                      onCheckedChange={(next) => {
+                        if (next) setSharingDoc(doc);
+                        else void setShared(doc, false);
+                      }}
+                    />
+                    <span className="text-xs text-muted-foreground">
+                      {togglingShareId === doc.id
+                        ? "Guardando…"
+                        : doc.shared_with_patient
+                        ? "Visible en el portal del paciente"
+                        : "Compartir con el paciente"}
+                    </span>
+                  </label>
+
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="rounded-lg flex-1 sm:flex-initial"
+                      onClick={() => openDocument(doc, false)}
+                      disabled={downloadingId === doc.id}
+                    >
+                      {downloadingId === doc.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <ExternalLink className="h-4 w-4" />
+                      )}
+                      <span className="ml-1.5">Ver</span>
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="rounded-lg flex-1 sm:flex-initial"
+                      onClick={() => openDocument(doc, true)}
+                      disabled={downloadingId === doc.id}
+                    >
                       <Download className="h-4 w-4" />
-                    )}
-                    <span className="ml-1.5">Descargar</span>
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="rounded-lg text-destructive hover:text-destructive hover:bg-destructive/5 border-destructive/30"
-                    onClick={() => setDeletingDoc(doc)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                      <span className="ml-1.5 sm:hidden lg:inline">Descargar</span>
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="rounded-lg text-destructive hover:text-destructive hover:bg-destructive/5 border-destructive/30"
+                      onClick={() => setDeletingDoc(doc)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </div>
             );
@@ -418,6 +538,9 @@ export const PatientDocuments = ({ patientId, businessId }: PatientDocumentsProp
                 <SelectContent>
                   <SelectItem value="consentimiento">Consentimiento</SelectItem>
                   <SelectItem value="informe">Informe</SelectItem>
+                  <SelectItem value="evaluacion">Evaluación</SelectItem>
+                  <SelectItem value="indicaciones">Indicaciones / Material</SelectItem>
+                  <SelectItem value="recibo">Recibo</SelectItem>
                   <SelectItem value="otro">Otro</SelectItem>
                 </SelectContent>
               </Select>
@@ -464,6 +587,29 @@ export const PatientDocuments = ({ patientId, businessId }: PatientDocumentsProp
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Confirmación de compartir con el paciente */}
+      <AlertDialog
+        open={!!sharingDoc}
+        onOpenChange={(open) => !open && setSharingDoc(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Compartir con el paciente?</AlertDialogTitle>
+            <AlertDialogDescription>
+              <span className="font-medium text-foreground break-all">{sharingDoc?.file_name}</span>{" "}
+              va a aparecer en el portal del paciente, donde podrá verlo y descargarlo.
+              Le avisamos con una notificación y un email. Podés volver a hacerlo privado cuando quieras.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => sharingDoc && void setShared(sharingDoc, true)}>
+              Sí, compartir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Delete confirm */}
       <AlertDialog
