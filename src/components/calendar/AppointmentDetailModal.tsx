@@ -402,7 +402,9 @@ export const AppointmentDetailModal = ({
   return (
     <>
       <Dialog open={open} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-md">
+        {/* max-h + scroll interno: el detalle creció (reprogramar, link de
+            pago) y sin esto se salía de la pantalla en mobile */}
+        <DialogContent className="sm:max-w-md max-h-[90dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Calendar className="h-5 w-5 text-primary" />
@@ -549,9 +551,10 @@ export const AppointmentDetailModal = ({
               </div>
             </div>
 
-            {/* Cobro de la sesión: el pago que la base creó junto con la cita */}
+            {/* Cobro de la sesión: el pago que la base creó junto con la cita.
+                En pantallas angostas los botones bajan a su propia fila. */}
             {linkedPaymentChecked && linkedPayment && (
-              <div className="flex items-center justify-between gap-3 p-3 border rounded-xl">
+              <div className="flex flex-wrap items-center justify-between gap-3 p-3 border rounded-xl">
                 <div className="flex items-center gap-3 min-w-0">
                   <CreditCard className="h-5 w-5 text-muted-foreground shrink-0" />
                   <div className="min-w-0">
@@ -566,7 +569,7 @@ export const AppointmentDetailModal = ({
                   </div>
                 </div>
                 {linkedPayment.status !== "paid" && (
-                  <div className="flex items-center gap-1.5 shrink-0">
+                  <div className="flex items-center gap-1.5 ml-auto">
                     {/* Compartir el link de pago de MP sin salir de la cita */}
                     <PaymentLinkMenu
                       patientPhone={appointment.patients?.whatsapp_phone || null}
@@ -576,14 +579,13 @@ export const AppointmentDetailModal = ({
                           ? async () => createPaymentLink(businessId, [linkedPayment.id])
                           : undefined
                       }
-                      compact
                     />
                     <Button
                       size="sm"
                       variant="outline"
                       onClick={() => setCobroConfirm(true)}
                       disabled={markingPaid}
-                      className="rounded-lg shrink-0 gap-1.5"
+                      className="rounded-lg shrink-0 gap-1.5 h-8"
                     >
                       <Check className="h-3.5 w-3.5" />
                       Cobrar
