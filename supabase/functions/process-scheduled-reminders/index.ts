@@ -15,6 +15,7 @@ const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const WHATSAPP_TEMPLATE_BY_TYPE: Record<string, string> = {
   reminder: "recordatorio_cita",
   confirmation: "confirmacion_cita",
+  reschedule: "reprogramacion_cita",
 };
 const WHATSAPP_LANG = "es";
 
