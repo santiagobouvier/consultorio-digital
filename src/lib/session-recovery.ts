@@ -3,6 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 const RELOAD_COUNTER_KEY = "__app_reload_counter";
 const RELOAD_WINDOW_START_KEY = "__app_reload_window_start";
 const CHUNK_RECOVERY_STATE_KEY = "__app_chunk_recovery_state";
+// Marca que la PRÓXIMA recarga la disparó el propio sistema (no el usuario).
+// El detector de bucles solo cuenta recargas con esta marca: un usuario
+// apretando F5 varias veces seguidas NUNCA debe perder la sesión por eso.
+const AUTO_RELOAD_FLAG_KEY = "__app_auto_reload";
 // Red de seguridad relajada: solo se dispara si hay 5+ reloads en 30s.
 // Los fixes de auth-sync + AuthContext eliminan el bucle real; este guard
 // queda como protección residual para casos edge.
@@ -207,6 +211,11 @@ export const recoverFromChunkLoadFailure = async (
   }
 
   await clearServiceWorkerCaches({ unregister: options.unregisterServiceWorkers ?? true });
+  try {
+    sessionStorage.setItem(AUTO_RELOAD_FLAG_KEY, "1");
+  } catch {
+    // sin marca, el detector simplemente no cuenta esta recarga
+  }
   window.location.reload();
   return true;
 };
@@ -215,6 +224,17 @@ export const detectReloadLoopAndRecover = async () => {
   if (typeof window === "undefined") return false;
 
   try {
+    // Solo cuentan las recargas AUTOMÁTICAS (marcadas por el sistema).
+    // Una carga normal o un F5 del usuario resetea el contador y sale:
+    // refrescar a mano jamás puede terminar en un cierre de sesión.
+    const wasAutoReload = sessionStorage.getItem(AUTO_RELOAD_FLAG_KEY) === "1";
+    sessionStorage.removeItem(AUTO_RELOAD_FLAG_KEY);
+    if (!wasAutoReload) {
+      sessionStorage.removeItem(RELOAD_COUNTER_KEY);
+      sessionStorage.removeItem(RELOAD_WINDOW_START_KEY);
+      return false;
+    }
+
     const now = Date.now();
     const windowStart = Number(sessionStorage.getItem(RELOAD_WINDOW_START_KEY) ?? "0");
     const currentCount = Number(sessionStorage.getItem(RELOAD_COUNTER_KEY) ?? "0");
