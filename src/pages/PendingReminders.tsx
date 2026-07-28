@@ -171,6 +171,20 @@ const channelConfig: Record<string, { label: string; icon: typeof Mail }> = {
   whatsapp: { label: "WhatsApp", icon: MessageSquare },
 };
 
+// Etiqueta corta según el tipo de aviso (los nuevos avisos automáticos)
+const typeLabel: Record<string, string> = {
+  confirmation: "Confirmación de cita",
+  reschedule: "Aviso de reprogramación",
+};
+
+// Título de la tarjeta: nombre del paciente, o —si el join no lo trae—
+// lo rescatamos del propio mensaje ("Hola María 👋 ..." / "Hola María, ...").
+const reminderTitle = (r: Reminder): string => {
+  if (r.patient?.full_name) return r.patient.full_name;
+  const m = r.message?.match(/^Hola\s+([^,👋\n]+)/u);
+  return m ? m[1].trim() : "Sin paciente";
+};
+
 const UPCOMING_STATUSES = ["scheduled", "sending"];
 
 const PendingReminders = () => {
@@ -346,11 +360,13 @@ const PendingReminders = () => {
   const { data: reminders = [], isLoading: loading } = useQuery({
     queryKey: ["reminders", businessId],
     queryFn: async () => {
+      // El join a patients usa la FK explícita (igual que el robot de envío):
+      // sin la pista, el nombre venía null y todo decía "Sin paciente".
       const { data, error } = await supabase
         .from("scheduled_reminders")
         .select(`
           *,
-          patient:patients(full_name, whatsapp_phone, email),
+          patient:patients!fk_patient(full_name, whatsapp_phone, email),
           appointment:appointments(start_at, modality, location)
         `)
         .eq("business_id", businessId!)
@@ -842,7 +858,7 @@ const PendingReminders = () => {
                           <div className="flex-1 min-w-0 space-y-2">
                             <div className="flex items-start justify-between gap-2">
                               <div>
-                                <p className="font-semibold">{reminder.patient?.full_name || "Sin paciente"}</p>
+                                <p className="font-semibold">{reminderTitle(reminder)}</p>
                                 {apptDt && (
                                   <p className="text-sm text-muted-foreground">
                                     Cita: {apptDt.date} a las {apptDt.time}
@@ -878,6 +894,7 @@ const PendingReminders = () => {
                             <div className="flex items-center justify-between gap-2 flex-wrap">
                               <p className="text-xs text-muted-foreground">
                                 {isUpcoming ? "Sale el" : "Programado para el"} {schedDt.date} a las {schedDt.time} · {chConf.label}
+                                {typeLabel[reminder.type] ? ` · ${typeLabel[reminder.type]}` : ""}
                               </p>
 
                               <div className="flex gap-1.5">

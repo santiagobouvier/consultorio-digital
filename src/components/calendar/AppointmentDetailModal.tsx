@@ -27,6 +27,7 @@ import { User, Calendar, MapPin, Video, Clock, CreditCard, MessageCircle, AlertC
 import { toast } from "@/hooks/use-toast";
 import { PaymentForm } from "@/components/PaymentForm";
 import { ReminderModal } from "@/components/ReminderModal";
+import { RescheduleAppointmentModal } from "@/components/calendar/RescheduleAppointmentModal";
 import { calculatePaymentStatus, type PaymentStatus } from "@/lib/payments";
 import { notifyPatient } from "@/lib/push-notifications";
 import { useDashboardBranding } from "@/contexts/DashboardBrandingContext";
@@ -67,6 +68,7 @@ export const AppointmentDetailModal = ({
   const { displayName: clinicDisplayName } = useDashboardBranding();
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [showReminderModal, setShowReminderModal] = useState(false);
+  const [showReschedule, setShowReschedule] = useState(false);
   const [cancellingRecurrence, setCancellingRecurrence] = useState(false);
   // Confirmación antes de cancelar (una cita o la serie completa)
   const [cancelConfirm, setCancelConfirm] = useState<"single" | "series" | null>(null);
@@ -587,6 +589,19 @@ export const AppointmentDetailModal = ({
                   Confirmar cita
                 </Button>
               )}
+
+              {/* Reprogramar: mover la cita de día/hora sin cancelarla.
+                  Recordatorios y cobro la siguen solos; se avisa al paciente. */}
+              {isFutureAppointment && ["pending", "scheduled", "confirmed"].includes(appointment.status) && (
+                <Button
+                  variant="secondary"
+                  onClick={() => setShowReschedule(true)}
+                  className="w-full rounded-xl gap-2"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Reprogramar cita
+                </Button>
+              )}
               {!isFutureAppointment && ["pending", "confirmed", "scheduled"].includes(appointment.status) && (
                 <div className="flex flex-col sm:flex-row gap-2">
                   <Button
@@ -746,6 +761,18 @@ export const AppointmentDetailModal = ({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Reprogramar cita */}
+      <RescheduleAppointmentModal
+        appointment={appointment}
+        open={showReschedule}
+        onClose={() => setShowReschedule(false)}
+        businessId={businessId}
+        onSuccess={() => {
+          onPaymentRegistered?.();
+          onClose();
+        }}
+      />
 
       {/* Reminder Modal */}
       {appointment.patient_id && (
