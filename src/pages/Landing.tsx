@@ -48,7 +48,15 @@ const GREEN_GLOW = "rgba(0, 199, 138, 0.15)";
 const faqItems = [
   {
     question: "¿Qué incluye cada plan?",
-    answer: "Todos los planes incluyen las mismas funcionalidades: portal del paciente, agenda, cobro online con Mercado Pago, recordatorios con un click por WhatsApp, estadísticas, app instalable, marca blanca y más. La única diferencia está en la cantidad de pacientes activos que podés manejar."
+    answer: "Todos los planes incluyen las mismas funcionalidades: portal del paciente, agenda, cobro online con Mercado Pago, recordatorios automáticos por WhatsApp y email, estadísticas, app instalable, marca blanca y más. La diferencia está en la cantidad de pacientes activos y de WhatsApps automáticos por mes."
+  },
+  {
+    question: "¿Los recordatorios automáticos tienen costo extra?",
+    answer: "No. Cada plan incluye una cantidad generosa de recordatorios de WhatsApp por mes (200 en Emprendedor, 500 en Esencial, 1.500 en Profesional) y los de email son ilimitados en todos los planes. Si llegás al límite de WhatsApps, tus pacientes siguen recibiendo el aviso por email igual."
+  },
+  {
+    question: "¿De qué número le llega el WhatsApp a mis pacientes?",
+    answer: "Desde el número oficial de Consultorio Digital, con un mensaje aprobado por WhatsApp que incluye el nombre de tu consultorio y TU número de contacto — si el paciente quiere reprogramar, te escribe directo a vos."
   },
   {
     question: "¿Puedo cambiar de plan en cualquier momento?",
@@ -71,12 +79,14 @@ const problems = [
   { icon: AlertTriangle, text: "Información repartida en planillas y apps" },
 ];
 
-// Per-plan feature definitions
+// Per-plan feature definitions. El item de recordatorios se personaliza por
+// plan con su límite mensual de WhatsApps (getPricingPlans).
+const REMINDERS_FEATURE = "Recordatorios automáticos por WhatsApp y email";
 const allFeatures = [
   "Portal del paciente",
   "Agenda privada",
   "Gestión de pagos y alertas",
-  "Recordatorios con un click por WhatsApp",
+  REMINDERS_FEATURE,
   "Dashboard financiero",
   "App instalable (PWA)",
   "Invitación de pacientes por link",
@@ -111,8 +121,11 @@ const Landing = () => {
         : `Hasta ${plan.maxPatients} pacientes activos`;
 
       const includedFeatures = planFeatures[planCode] || [];
+      const waLimit = plan.whatsappMonthly;
       const features = allFeatures.map(f => ({
-        text: f,
+        text: f === REMINDERS_FEATURE && waLimit
+          ? `Recordatorios automáticos: ${waLimit.toLocaleString("es-UY")} WhatsApps/mes + emails sin límite`
+          : f,
         included: includedFeatures.includes(f),
       }));
       
@@ -244,7 +257,7 @@ const Landing = () => {
                     "Un sistema privado para tu consultorio",
                     "Todo centralizado y claro",
                     "Acceso para vos y tus pacientes",
-                    "Alertas de pagos y recordatorios con un click por WhatsApp",
+                    "Recordatorios automáticos por WhatsApp y email — salen solos",
                   ].map((text, i) => (
                     <li key={i} className="flex items-start gap-3">
                       <Check className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: GREEN }} />
@@ -458,11 +471,11 @@ const Landing = () => {
                 </h2>
                 <p className="text-gray-400 text-sm sm:text-base leading-relaxed font-light mb-6">
                   Vista diaria, semanal y mensual de tu consultorio.
-                  Arrastrá citas, marcá tu disponibilidad y tené todo bajo control.
+                  Creá citas en segundos, marcá tu disponibilidad y tené todo bajo control.
                 </p>
                 <ul className="space-y-3">
                   {[
-                    "Arrastrá y reprogramá citas en segundos",
+                    "Citas únicas o semanales en un par de toques",
                     "Filtros rápidos por estado y paciente",
                     "Vistas: día, semana, mes",
                     "Pagos pendientes del día en la agenda",
@@ -483,8 +496,89 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* ── Gestión de Pagos ── */}
+      {/* ── Avisos Automáticos (WhatsApp + Email) ── */}
       <section className="relative px-4 sm:px-6 py-14 sm:py-24 z-10 bg-black">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid md:grid-cols-2 gap-8 md:gap-14 items-center">
+            <ScrollReveal direction="left">
+              <div>
+                <div
+                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium mb-6"
+                  style={{ backgroundColor: 'rgba(37, 211, 102, 0.15)', color: '#25d366' }}
+                >
+                  <Bell className="w-3.5 h-3.5" />
+                  Piloto automático
+                </div>
+                <h2 className="text-xl sm:text-3xl md:text-4xl font-bold mb-4 tracking-tight">
+                  Recordatorios que salen{" "}
+                  <span style={{ color: '#25d366' }}>solos</span>
+                </h2>
+                <p className="text-gray-400 text-sm sm:text-base leading-relaxed font-light mb-6">
+                  Agendás la cita y listo: el sistema le manda al paciente el recordatorio
+                  por <strong className="text-white">WhatsApp y email, sin que toques nada</strong>.
+                  Como tener una secretaria que nunca se olvida.
+                </p>
+                <ul className="space-y-3">
+                  {[
+                    "WhatsApp automático desde un número oficial verificado",
+                    "Email automático incluido, sin límite",
+                    "Si la cita se cancela o se mueve, el aviso se ajusta solo",
+                    "El paciente te responde directo a TU WhatsApp",
+                  ].map((text, i) => (
+                    <li key={i} className="flex items-center gap-3 text-gray-300 text-sm">
+                      <Check className="w-4 h-4 flex-shrink-0" style={{ color: '#25d366' }} />
+                      {text}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </ScrollReveal>
+
+            <ScrollReveal direction="right" delay={200}>
+              {/* Mock de chat de WhatsApp: el recordatorio como lo ve el paciente */}
+              <div
+                className="rounded-xl sm:rounded-2xl border border-white/10 overflow-hidden max-w-md mx-auto w-full"
+                style={{ backgroundColor: '#0b141a' }}
+              >
+                <div className="flex items-center gap-3 px-4 py-3" style={{ backgroundColor: '#202c33' }}>
+                  <div
+                    className="w-9 h-9 rounded-full flex items-center justify-center text-base shrink-0"
+                    style={{ backgroundColor: 'rgba(37, 211, 102, 0.2)' }}
+                  >
+                    💆
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-white truncate">Centro Bienestar</p>
+                    <p className="text-[10px]" style={{ color: '#25d366' }}>✓ Cuenta de empresa</p>
+                  </div>
+                </div>
+                <div className="p-4 sm:p-5">
+                  <div
+                    className="rounded-lg rounded-tl-none px-3.5 py-2.5 text-[13px] leading-relaxed"
+                    style={{ backgroundColor: '#202c33', color: 'rgba(255,255,255,0.95)' }}
+                  >
+                    Hola María 👋 Te recordamos tu próxima sesión con Centro Bienestar:
+                    <br />📅 lunes 3 de agosto
+                    <br />🕐 15:00 hs
+                    <br /><br />
+                    Si necesitás reprogramar o cancelar, escribile a tu profesional:{" "}
+                    <span style={{ color: '#53bdeb' }}>+598 98 123 456</span> ¡Te esperamos!
+                    <span className="block text-right text-[10px] mt-1.5" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                      10:00 ✓✓
+                    </span>
+                  </div>
+                  <p className="text-center text-[10px] text-gray-500 mt-4">
+                    Enviado automáticamente 24 hs antes de la sesión — configurable
+                  </p>
+                </div>
+              </div>
+            </ScrollReveal>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Gestión de Pagos ── */}
+      <section className="relative px-4 sm:px-6 py-14 sm:py-24 z-10" style={{ backgroundColor: '#080808' }}>
         <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-2 gap-8 md:gap-14 items-center">
             <ScrollReveal direction="left">
@@ -528,7 +622,7 @@ const Landing = () => {
       </section>
 
       {/* ── Invitaciones — Pacientes ── */}
-      <section className="relative px-4 sm:px-6 py-14 sm:py-24 z-10" style={{ backgroundColor: '#080808' }}>
+      <section className="relative px-4 sm:px-6 py-14 sm:py-24 z-10 bg-black">
         <div className="max-w-5xl mx-auto">
           <ScrollReveal>
             <div className="text-center mb-10 sm:mb-14">
@@ -574,7 +668,7 @@ const Landing = () => {
       </section>
 
       {/* ── Estadísticas y Centro de Control ── */}
-      <section className="relative px-4 sm:px-6 py-14 sm:py-24 z-10 bg-black">
+      <section className="relative px-4 sm:px-6 py-14 sm:py-24 z-10" style={{ backgroundColor: '#080808' }}>
         <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-2 gap-8 md:gap-14 items-center">
             <ScrollReveal direction="left">
@@ -616,7 +710,7 @@ const Landing = () => {
       </section>
 
       {/* ── Cobro Online con Mercado Pago ── */}
-      <section className="relative px-4 sm:px-6 py-14 sm:py-24 z-10" style={{ backgroundColor: '#080808' }}>
+      <section className="relative px-4 sm:px-6 py-14 sm:py-24 z-10 bg-black">
         <div className="max-w-5xl mx-auto">
           <div className="grid md:grid-cols-2 gap-8 md:gap-14 items-center">
             <ScrollReveal direction="left">
@@ -707,7 +801,7 @@ const Landing = () => {
       </section>
 
       {/* Social Proof Section */}
-      <section className="relative px-4 sm:px-6 py-14 sm:py-24 z-10 bg-black">
+      <section className="relative px-4 sm:px-6 py-14 sm:py-24 z-10" style={{ backgroundColor: '#080808' }}>
         <div className="max-w-4xl mx-auto">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
             {[
@@ -970,7 +1064,7 @@ const Landing = () => {
             <span>Disponible únicamente en Uruguay</span>
           </div>
           <p className="text-center text-gray-600 text-xs sm:text-sm font-light">
-            © {new Date().getFullYear()} Sistema de Gestión de Consultorio
+            © {new Date().getFullYear()} Consultorio Digital
           </p>
           <div className="flex items-center gap-4 text-xs text-gray-500">
             <a href="/terminos" className="hover:text-gray-300 transition-colors">

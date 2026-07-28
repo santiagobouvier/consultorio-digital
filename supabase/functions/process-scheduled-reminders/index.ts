@@ -14,10 +14,41 @@ const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const WHATSAPP_TEMPLATE = "recordatorio_cita";
 const WHATSAPP_LANG = "es";
 
+// Límite de WhatsApps automáticos por mes según plan (espejo de
+// src/lib/plan-definitions.ts). null = sin límite. Al llegar al tope, el
+// aviso whatsapp se cancela pero el de email sale igual.
+const WHATSAPP_MONTHLY_LIMITS: Record<string, number | null> = {
+  emprendedor: 200,
+  esencial: 500,
+  profesional: 1500,
+  consultorio: 3000,
+  personalizado: null,
+};
+
+// Códigos de plan viejos (espejo de LEGACY_PLAN_MAP)
+const LEGACY_PLAN_MAP: Record<string, string> = {
+  starter: "emprendedor",
+  individual: "esencial",
+  inicial: "esencial",
+  professional: "profesional",
+  advanced: "consultorio",
+  equipo: "consultorio",
+  enterprise: "personalizado",
+  clinica: "personalizado",
+  custom: "personalizado",
+};
+
+function whatsappLimitFor(planCode: string | null | undefined): number | null {
+  const normalized = LEGACY_PLAN_MAP[planCode || ""] || planCode || "emprendedor";
+  return WHATSAPP_MONTHLY_LIMITS[normalized] ?? WHATSAPP_MONTHLY_LIMITS.emprendedor;
+}
+
 interface BusinessContext {
   profName: string;
   contactPhone: string | null;
   timezone: string;
+  waLimit: number | null;
+  waUsedThisMonth: number;
 }
 
 function firstName(full: string | null | undefined): string {
@@ -68,7 +99,7 @@ Deno.serve(async (req) => {
       const bizIds = [...new Set(waRows.map((r) => r.business_id))];
       const { data: businesses } = await supabase
         .from("businesses")
-        .select("id, name, portal_clinic_display_name, dashboard_display_name, timezone, owner_user_id")
+        .select("id, name, portal_clinic_display_name, dashboard_display_name, timezone, owner_user_id, plan_code")
         .in("id", bizIds);
       const ownerIds = (businesses || []).map((b) => b.owner_user_id);
       const { data: settings } = ownerIds.length
@@ -80,11 +111,27 @@ Deno.serve(async (req) => {
       const contactByOwner = new Map(
         (settings || []).map((s) => [s.user_id, s.whatsapp_contact_phone]),
       );
+
+      // Uso del mes: WhatsApps ya enviados este mes por negocio (para el límite del plan)
+      const monthStart = new Date();
+      monthStart.setUTCDate(1);
+      monthStart.setUTCHours(0, 0, 0, 0);
+
       for (const b of businesses || []) {
+        const { count } = await supabase
+          .from("scheduled_reminders")
+          .select("id", { count: "exact", head: true })
+          .eq("business_id", b.id)
+          .eq("channel", "whatsapp")
+          .eq("status", "sent")
+          .gte("scheduled_for", monthStart.toISOString());
+
         bizContext.set(b.id, {
           profName: b.portal_clinic_display_name || b.dashboard_display_name || b.name,
           contactPhone: contactByOwner.get(b.owner_user_id) ?? null,
           timezone: b.timezone || "America/Montevideo",
+          waLimit: whatsappLimitFor(b.plan_code),
+          waUsedThisMonth: count ?? 0,
         });
       }
     }
@@ -169,6 +216,17 @@ Deno.serve(async (req) => {
         continue;
       }
 
+      // Límite mensual del plan: al alcanzarlo, este aviso whatsapp se
+      // cancela (el de email de la misma cita sale igual, sin límite).
+      if (ctx.waLimit !== null && ctx.waUsedThisMonth >= ctx.waLimit) {
+        await supabase
+          .from("scheduled_reminders")
+          .update({ status: "cancelled" })
+          .eq("id", r.id);
+        summary.skipped++;
+        continue;
+      }
+
       try {
         await supabase
           .from("scheduled_reminders")
@@ -220,6 +278,7 @@ Deno.serve(async (req) => {
             .from("scheduled_reminders")
             .update({ status: "sent" })
             .eq("id", r.id);
+          ctx.waUsedThisMonth++;
           summary.sent++;
         }
       } catch (e) {
