@@ -993,24 +993,6 @@ export type Database = {
           },
         ]
       }
-      platform_settings: {
-        Row: {
-          key: string
-          updated_at: string
-          value: number
-        }
-        Insert: {
-          key: string
-          updated_at?: string
-          value: number
-        }
-        Update: {
-          key?: string
-          updated_at?: string
-          value?: number
-        }
-        Relationships: []
-      }
       payment_policies: {
         Row: {
           business_id: string
@@ -1202,6 +1184,24 @@ export type Database = {
         }
         Relationships: []
       }
+      platform_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          value: number
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value: number
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: number
+        }
+        Relationships: []
+      }
       professional_portal_invites: {
         Row: {
           auth_user_id: string | null
@@ -1359,9 +1359,11 @@ export type Database = {
           id: string
           message: string
           patient_id: string
+          recipient_phone: string | null
           scheduled_for: string
           status: string
           type: string
+          wa_params: Json | null
         }
         Insert: {
           appointment_id?: string | null
@@ -1372,9 +1374,11 @@ export type Database = {
           id?: string
           message: string
           patient_id: string
+          recipient_phone?: string | null
           scheduled_for: string
           status?: string
           type?: string
+          wa_params?: Json | null
         }
         Update: {
           appointment_id?: string | null
@@ -1385,9 +1389,11 @@ export type Database = {
           id?: string
           message?: string
           patient_id?: string
+          recipient_phone?: string | null
           scheduled_for?: string
           status?: string
           type?: string
+          wa_params?: Json | null
         }
         Relationships: [
           {
