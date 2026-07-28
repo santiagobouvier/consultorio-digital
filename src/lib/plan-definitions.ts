@@ -9,6 +9,8 @@ export interface PlanDefinition {
   maxPatients: number | null; // null = unlimited
   priceAnnual: number; // Monthly price when paying annually (UYU)
   priceMonthly: number; // Monthly price when paying monthly (UYU)
+  /** Recordatorios automáticos de WhatsApp incluidos por mes. null = sin límite (a medida). */
+  whatsappMonthly: number | null;
   hasPublicWeb: boolean;
   isHighlighted?: boolean;
   highlightLabel?: string;
@@ -22,7 +24,8 @@ export const PLAN_DEFINITIONS: Record<string, PlanDefinition> = {
     maxProfessionals: 1,
     maxPatients: 20,
     priceAnnual: 1290,
-    priceMonthly: 1613,
+    priceMonthly: 1590,
+    whatsappMonthly: 200,
     hasPublicWeb: true,
   },
   esencial: {
@@ -32,7 +35,8 @@ export const PLAN_DEFINITIONS: Record<string, PlanDefinition> = {
     maxProfessionals: 1,
     maxPatients: 50,
     priceAnnual: 2500,
-    priceMonthly: 3125,
+    priceMonthly: 2990,
+    whatsappMonthly: 500,
     hasPublicWeb: true,
     isHighlighted: true,
     highlightLabel: "Más elegido",
@@ -44,7 +48,8 @@ export const PLAN_DEFINITIONS: Record<string, PlanDefinition> = {
     maxProfessionals: 1,
     maxPatients: null,
     priceAnnual: 4500,
-    priceMonthly: 5625,
+    priceMonthly: 5490,
+    whatsappMonthly: 1500,
     hasPublicWeb: true,
   },
   consultorio: {
@@ -55,6 +60,7 @@ export const PLAN_DEFINITIONS: Record<string, PlanDefinition> = {
     maxPatients: 300,
     priceAnnual: 8000,
     priceMonthly: 10000,
+    whatsappMonthly: 3000,
     hasPublicWeb: true,
   },
   personalizado: {
@@ -65,6 +71,7 @@ export const PLAN_DEFINITIONS: Record<string, PlanDefinition> = {
     maxPatients: null,
     priceAnnual: 0,
     priceMonthly: 0,
+    whatsappMonthly: null,
     hasPublicWeb: true,
   },
 };
@@ -102,6 +109,11 @@ export function getPlanLimits(planCode: string, customLimits?: { maxProfessional
     maxProfessionals: plan.maxProfessionals,
     maxPatients: plan.maxPatients,
   };
+}
+
+/** Recordatorios automáticos de WhatsApp incluidos por mes para un plan. */
+export function getWhatsappMonthlyLimit(planCode: string): number | null {
+  return getPlanDefinition(planCode).whatsappMonthly;
 }
 
 export function getPlanPrice(planCode: string, billingCycle: "monthly" | "annual"): number {

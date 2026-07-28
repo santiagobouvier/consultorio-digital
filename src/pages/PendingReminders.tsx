@@ -43,6 +43,7 @@ import {
 import { RouteSkeleton } from "@/components/RouteSkeleton";
 import { useBusinessId } from "@/hooks/use-business-id";
 import { useDashboardBranding } from "@/contexts/DashboardBrandingContext";
+import { getWhatsappMonthlyLimit } from "@/lib/plan-definitions";
 import { ListPagination, usePagination, ITEMS_PER_PAGE } from "@/components/ListPagination";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
@@ -315,6 +316,32 @@ const PendingReminders = () => {
     });
   };
 
+  // ── Uso de WhatsApp del mes (límite según plan) ──
+  const { data: waUsage } = useQuery({
+    queryKey: ["wa_usage", businessId],
+    queryFn: async () => {
+      const monthStart = new Date();
+      monthStart.setDate(1);
+      monthStart.setHours(0, 0, 0, 0);
+      const [{ count }, { data: biz }] = await Promise.all([
+        supabase
+          .from("scheduled_reminders")
+          .select("id", { count: "exact", head: true })
+          .eq("business_id", businessId!)
+          .eq("channel", "whatsapp")
+          .eq("status", "sent")
+          .gte("scheduled_for", monthStart.toISOString()),
+        supabase.from("businesses").select("plan_code").eq("id", businessId!).single(),
+      ]);
+      return {
+        used: count ?? 0,
+        limit: getWhatsappMonthlyLimit(biz?.plan_code || "emprendedor"),
+      };
+    },
+    enabled: !!businessId,
+    staleTime: 60_000,
+  });
+
   // ── Recordatorios ──
   const { data: reminders = [], isLoading: loading } = useQuery({
     queryKey: ["reminders", businessId],
@@ -574,6 +601,29 @@ const PendingReminders = () => {
                       </div>
                       <Switch checked={autoWhatsapp} onCheckedChange={setAutoWhatsapp} className="shrink-0" />
                     </div>
+                    {/* Uso del mes según el plan */}
+                    {autoWhatsapp && waUsage && waUsage.limit !== null && (
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-muted-foreground">WhatsApps enviados este mes</span>
+                          <span className={waUsage.used >= waUsage.limit ? "text-destructive font-semibold" : "font-medium"}>
+                            {waUsage.used} de {waUsage.limit}
+                          </span>
+                        </div>
+                        <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all ${waUsage.used >= waUsage.limit ? "bg-destructive" : "bg-green-500"}`}
+                            style={{ width: `${Math.min(100, (waUsage.used / waUsage.limit) * 100)}%` }}
+                          />
+                        </div>
+                        {waUsage.used >= waUsage.limit && (
+                          <p className="text-xs text-destructive font-medium">
+                            Alcanzaste el límite de tu plan este mes: los avisos siguen saliendo por email.
+                            El contador se reinicia el 1° del mes que viene, o pasate a un plan superior.
+                          </p>
+                        )}
+                      </div>
+                    )}
                     {autoWhatsapp && (
                       <div className="space-y-2">
                         <Label htmlFor="wa-contact-phone">Tu WhatsApp de contacto</Label>
