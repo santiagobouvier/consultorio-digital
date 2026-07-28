@@ -42,7 +42,7 @@ import { PaymentLinkMenu } from "@/components/PaymentLinkMenu";
 import { ConfirmPaymentDialog } from "@/components/ConfirmPaymentDialog";
 import { createPaymentLink } from "@/lib/payment-links";
 import LoadingPage from "@/components/LoadingPage";
-import { SessionNotes } from "@/components/SessionNotes";
+import { PatientRecord } from "@/components/PatientRecord";
 import { PatientDocuments } from "@/components/PatientDocuments";
 import { cn } from "@/lib/utils";
 import {
@@ -601,7 +601,7 @@ const PatientDetail = () => {
         <Tabs defaultValue="resumen" className="w-full">
           <TabsList className="grid grid-cols-5 w-full h-11 rounded-xl">
             <TabsTrigger value="resumen" className="rounded-lg text-xs sm:text-sm">Resumen</TabsTrigger>
-            <TabsTrigger value="notes" className="rounded-lg text-xs sm:text-sm">Notas</TabsTrigger>
+            <TabsTrigger value="notes" className="rounded-lg text-xs sm:text-sm">Expediente</TabsTrigger>
             <TabsTrigger value="payments" className="rounded-lg text-xs sm:text-sm gap-1">
               Pagos
               {unpaid.length > 0 && (
@@ -701,12 +701,12 @@ const PatientDetail = () => {
             </Card>
           </TabsContent>
 
-          {/* Notas de sesión */}
+          {/* Expediente: historia clínica organizada por sesión */}
           <TabsContent value="notes" className="mt-4">
-            <SessionNotes
+            <PatientRecord
               patientId={patient.id}
               businessId={patient.business_id}
-              appointments={appointments.map((a) => ({ id: a.id, start_at: a.start_at }))}
+              reasonForConsultation={patient.reason_for_consultation}
             />
           </TabsContent>
 
