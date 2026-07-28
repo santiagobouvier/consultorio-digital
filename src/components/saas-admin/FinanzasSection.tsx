@@ -30,6 +30,12 @@ interface BusinessRow {
   is_active: boolean;
 }
 
+interface SubscriptionRow {
+  business_id: string;
+  status: string;
+  created_at: string;
+}
+
 interface SettingRow {
   key: string;
   value: number;
@@ -73,6 +79,7 @@ const SIM_DEFAULT_PATIENTS: Record<string, number> = {
 export const FinanzasSection = () => {
   const [loading, setLoading] = useState(true);
   const [businesses, setBusinesses] = useState<BusinessRow[]>([]);
+  const [subscriptions, setSubscriptions] = useState<SubscriptionRow[]>([]);
   const [activePatients, setActivePatients] = useState(0);
   const [waSentThisMonth, setWaSentThisMonth] = useState(0);
   const [settings, setSettings] = useState<SettingRow[]>([]);
@@ -96,8 +103,9 @@ export const FinanzasSection = () => {
       const monthStart = new Date();
       monthStart.setDate(1);
       monthStart.setHours(0, 0, 0, 0);
-      const [bizRes, patRes, waRes, setRes] = await Promise.all([
+      const [bizRes, subsRes, patRes, waRes, setRes] = await Promise.all([
         supabase.from("businesses").select("id, name, plan_code, billing_period, is_demo, is_active"),
+        supabase.from("subscriptions").select("business_id, status, created_at"),
         supabase.from("patients").select("id", { count: "exact", head: true }).eq("is_active", true),
         supabase
           .from("scheduled_reminders")
@@ -108,6 +116,7 @@ export const FinanzasSection = () => {
         supabase.from("platform_settings").select("key, value, updated_at"),
       ]);
       setBusinesses((bizRes.data as BusinessRow[]) || []);
+      setSubscriptions((subsRes.data as SubscriptionRow[]) || []);
       setActivePatients(patRes.count ?? 0);
       setWaSentThisMonth(waRes.count ?? 0);
       setSettings(((setRes.data as any[]) || []).map((s) => ({ ...s, value: Number(s.value) })));
@@ -126,20 +135,43 @@ export const FinanzasSection = () => {
   const msgsPerPatient = getSetting("msgs_per_patient_month", 6);
 
   // ── La realidad ──
+  // Solo cuentan para el MRR los consultorios que están PAGANDO (suscripción
+  // 'active'). Los de prueba no pagan todavía (se muestran aparte como
+  // futuro ingreso) y los expirados/cancelados no generan nada.
   const real = useMemo(() => {
-    const active = businesses.filter((b) => !b.is_demo && b.is_active);
-    const mrr = active.reduce((sum, b) => {
+    // Última suscripción de cada negocio
+    const latestSub = new Map<string, SubscriptionRow>();
+    for (const s of subscriptions) {
+      const prev = latestSub.get(s.business_id);
+      if (!prev || s.created_at > prev.created_at) latestSub.set(s.business_id, s);
+    }
+
+    const candidates = businesses.filter((b) => !b.is_demo);
+    const paying = candidates.filter((b) => latestSub.get(b.id)?.status === "active" && b.is_active);
+    const trials = candidates.filter((b) => latestSub.get(b.id)?.status === "trial" && b.is_active);
+    const expired = candidates.filter((b) => {
+      const st = latestSub.get(b.id)?.status;
+      return !b.is_active || st === "expired" || st === "cancelled" || st === "paused";
+    });
+
+    const mrr = paying.reduce((sum, b) => {
       const code = normalizePlanCode(b.plan_code);
       return sum + getPlanPrice(code, b.billing_period === "monthly" ? "monthly" : "annual");
     }, 0);
     const byPlan = new Map<string, number>();
-    for (const b of active) {
+    for (const b of paying) {
       const code = normalizePlanCode(b.plan_code);
       byPlan.set(code, (byPlan.get(code) || 0) + 1);
     }
     const waCostUyu = waSentThisMonth * msgCostUsd * fx;
-    return { active: active.length, mrr, byPlan, waCostUyu, net: mrr - waCostUyu };
-  }, [businesses, waSentThisMonth, msgCostUsd, fx]);
+    return {
+      paying: paying.length,
+      trials: trials.length,
+      expired: expired.length,
+      mrr, byPlan, waCostUyu,
+      net: mrr - waCostUyu,
+    };
+  }, [businesses, subscriptions, waSentThisMonth, msgCostUsd, fx]);
 
   // ── Simulador ──
   const sim = useMemo(() => {
@@ -217,13 +249,16 @@ export const FinanzasSection = () => {
             icon={DollarSign} accent="text-emerald-400"
             label="Ingresos por mes (MRR)"
             value={fmtUYU(real.mrr)}
-            sub={`${fmtUSD(real.mrr / fx)} · ${fmtUYU(real.mrr * 12)} al año`}
+            sub={`${fmtUSD(real.mrr / fx)} · ${fmtUYU(real.mrr * 12)} al año — solo suscripciones pagando`}
           />
           <KpiCard
             icon={Building2} accent="text-teal-400"
-            label="Consultorios activos"
-            value={String(real.active)}
-            sub={SIM_PLANS.filter((c) => real.byPlan.get(c)).map((c) => `${real.byPlan.get(c)} ${PLAN_DEFINITIONS[c].name}`).join(" · ") || "Sin clientes pagos aún"}
+            label="Consultorios pagando"
+            value={String(real.paying)}
+            sub={
+              (SIM_PLANS.filter((c) => real.byPlan.get(c)).map((c) => `${real.byPlan.get(c)} ${PLAN_DEFINITIONS[c].name}`).join(" · ") || "Ninguno todavía") +
+              ` · ${real.trials} en prueba · ${real.expired} vencidos`
+            }
           />
           <KpiCard
             icon={MessageSquare} accent="text-green-400"
