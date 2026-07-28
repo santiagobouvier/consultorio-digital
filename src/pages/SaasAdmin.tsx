@@ -471,6 +471,29 @@ const SaasAdmin = () => {
     }
   };
 
+  // Marcar/desmarcar un consultorio como NO facturable (demo/cortesía):
+  // sale de todos los cálculos de Finanzas y Estadísticas, pero sigue
+  // funcionando normal para quien lo usa.
+  const handleToggleBillable = async (business: { id: string; name: string; isDemo: boolean }) => {
+    const next = !business.isDemo;
+    try {
+      const { error } = await supabase
+        .from("businesses")
+        .update({ is_demo: next })
+        .eq("id", business.id);
+      if (error) throw error;
+      toast({
+        title: next ? "Marcado como no facturable" : "Marcado como facturable",
+        description: next
+          ? `${business.name} ya no cuenta en Finanzas (demo/cortesía).`
+          : `${business.name} vuelve a contar en Finanzas.`,
+      });
+      await loadData();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message || "No se pudo actualizar", variant: "destructive" });
+    }
+  };
+
   const demoBusinessExists = businesses.some(b => b.isDemo);
   const demoBusiness = businesses.find(b => b.isDemo);
 
@@ -819,6 +842,10 @@ const SaasAdmin = () => {
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem onClick={() => openEditModal(business)}><Pencil className="h-4 w-4 mr-2" />Editar</DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => openActivateModal(business)}><Zap className="h-4 w-4 mr-2" />Activar suscripción</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleToggleBillable(business)}>
+                                  <Sparkles className="h-4 w-4 mr-2" />
+                                  {business.isDemo ? "Marcar como facturable" : "No facturable (demo)"}
+                                </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => openPrivateClinicModal(business)}><Globe className="h-4 w-4 mr-2" />Dominio</DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem onClick={() => openDeleteModal(business)} className="text-destructive focus:text-destructive focus:bg-destructive/10"><Trash2 className="h-4 w-4 mr-2" />Eliminar</DropdownMenuItem>
