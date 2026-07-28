@@ -11,7 +11,11 @@ const corsHeaders = {
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-const WHATSAPP_TEMPLATE = "recordatorio_cita";
+// Plantillas aprobadas en Meta, según el tipo de aviso
+const WHATSAPP_TEMPLATE_BY_TYPE: Record<string, string> = {
+  reminder: "recordatorio_cita",
+  confirmation: "confirmacion_cita",
+};
 const WHATSAPP_LANG = "es";
 
 // Límite de WhatsApps automáticos por mes según plan (espejo de
@@ -77,7 +81,7 @@ Deno.serve(async (req) => {
     const { data: due, error } = await supabase
       .from("scheduled_reminders")
       .select(`
-        id, business_id, patient_id, appointment_id, scheduled_for, message, channel, status, auto_send,
+        id, business_id, patient_id, appointment_id, scheduled_for, message, channel, type, status, auto_send,
         patients!fk_patient ( email, full_name, whatsapp_phone ),
         appointments ( start_at )
       `)
@@ -256,7 +260,7 @@ Deno.serve(async (req) => {
           },
           body: JSON.stringify({
             to: patientPhone,
-            template: WHATSAPP_TEMPLATE,
+            template: WHATSAPP_TEMPLATE_BY_TYPE[(r as any).type] || WHATSAPP_TEMPLATE_BY_TYPE.reminder,
             languageCode: WHATSAPP_LANG,
             params: [
               firstName(patient?.full_name),
