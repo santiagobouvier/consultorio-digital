@@ -44,6 +44,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { isCurrentUserSuperAdmin } from "@/lib/admin-access";
 import { SaasAdminLayout, type SaasSection } from "@/components/saas-admin/SaasAdminLayout";
 import { EstadisticasSection } from "@/components/saas-admin/EstadisticasSection";
+import { FinanzasSection } from "@/components/saas-admin/FinanzasSection";
 import { buildShareUrl } from "@/config/app";
 
 // ── Types ──────────────────────────────────────────────
@@ -554,8 +555,9 @@ const SaasAdmin = () => {
       onSectionChange={setActiveSection}
     >
       {activeSection === "estadisticas" && <EstadisticasSection />}
+      {activeSection === "finanzas" && <FinanzasSection />}
 
-      {activeSection !== "consultorios" && activeSection !== "estadisticas" && (
+      {activeSection !== "consultorios" && activeSection !== "estadisticas" && activeSection !== "finanzas" && (
         <ComingSoonSection section={activeSection} />
       )}
 
