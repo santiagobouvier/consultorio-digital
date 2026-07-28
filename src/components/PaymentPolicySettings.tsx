@@ -4,6 +4,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "@/hooks/use-toast";
 import {
   CheckCircle2,
@@ -38,6 +48,9 @@ export const PaymentPolicySettings = ({ businessId }: Props) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
+  // Confirmación antes de desconectar: un click sin querer no puede tirar
+  // abajo los cobros online del consultorio.
+  const [disconnectConfirm, setDisconnectConfirm] = useState(false);
   const [processingOAuth, setProcessingOAuth] = useState(false);
 
   const [policyType, setPolicyType] = useState<PolicyType>("none");
@@ -268,7 +281,7 @@ export const PaymentPolicySettings = ({ businessId }: Props) => {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={handleDisconnect}
+                onClick={() => setDisconnectConfirm(true)}
                 disabled={disconnecting}
                 className="gap-2 text-destructive hover:text-destructive"
               >
@@ -449,6 +462,33 @@ export const PaymentPolicySettings = ({ businessId }: Props) => {
         </Button>
       </div>
       </div>
+
+      {/* Confirmación antes de desconectar Mercado Pago */}
+      <AlertDialog open={disconnectConfirm} onOpenChange={setDisconnectConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Desconectar Mercado Pago?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Se cortan los cobros online del consultorio: los links de pago dejan
+              de funcionar, los pacientes no van a poder pagar desde su portal y, si
+              tenés una política de cobro al reservar, vuelve a "Sin pago previo".
+              Podés volver a conectarla cuando quieras.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-xl">Volver</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setDisconnectConfirm(false);
+                void handleDisconnect();
+              }}
+              className="rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Sí, desconectar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
