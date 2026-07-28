@@ -17,6 +17,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { PWAInstallBanner } from "@/components/PWAInstallBanner";
+import { PortalDocuments } from "@/components/portal/PortalDocuments";
 import { InstallAppButton } from "@/components/pwa/InstallAppButton";
 import { NotificationActivationCard } from "@/components/NotificationActivationCard";
 import { NotificationBell } from "@/components/portal/NotificationBell";
@@ -936,6 +937,9 @@ export function PatientPortalView(props: PatientPortalViewProps) {
   // ========= HistorialTab =========
   const HistorialTab = () => (
     <div className="space-y-4 lg:space-y-6">
+      {/* Mis documentos: lo que el profesional compartió (si no hay, no aparece) */}
+      <PortalDocuments patientId={patient.id} isDemo={isDemo} />
+
       <div className="flex items-center justify-between">
         <h2 className="text-lg lg:text-xl font-bold flex items-center gap-2">
           <FileText className="h-5 w-5 text-primary" /> Historial de sesiones

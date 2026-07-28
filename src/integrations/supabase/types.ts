@@ -767,6 +767,8 @@ export type Database = {
           mime_type: string | null
           notes: string | null
           patient_id: string
+          shared_at: string | null
+          shared_with_patient: boolean
           updated_at: string
           uploaded_by: string
         }
@@ -781,6 +783,8 @@ export type Database = {
           mime_type?: string | null
           notes?: string | null
           patient_id: string
+          shared_at?: string | null
+          shared_with_patient?: boolean
           updated_at?: string
           uploaded_by: string
         }
@@ -795,6 +799,8 @@ export type Database = {
           mime_type?: string | null
           notes?: string | null
           patient_id?: string
+          shared_at?: string | null
+          shared_with_patient?: boolean
           updated_at?: string
           uploaded_by?: string
         }
