@@ -6,6 +6,60 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Aviso "¡Cobraste!" por WhatsApp al profesional (plantilla cobro_recibido_pro).
+// Best-effort: si falla, el cobro ya quedó registrado igual.
+async function notifyProPaymentWhatsApp(
+  supabase: any,
+  supabaseUrl: string,
+  serviceKey: string,
+  businessId: string | undefined,
+  patientName: string | null | undefined,
+  amount: number | null | undefined,
+) {
+  try {
+    if (!businessId) return;
+    const { data: biz } = await supabase
+      .from("businesses")
+      .select("owner_user_id")
+      .eq("id", businessId)
+      .maybeSingle();
+    if (!biz?.owner_user_id) return;
+
+    const [{ data: cs }, { data: prof }] = await Promise.all([
+      supabase
+        .from("clinic_settings")
+        .select("auto_whatsapp_reminders, whatsapp_contact_phone")
+        .eq("user_id", biz.owner_user_id)
+        .maybeSingle(),
+      supabase.from("profiles").select("name").eq("id", biz.owner_user_id).maybeSingle(),
+    ]);
+    if (cs?.auto_whatsapp_reminders === false) return;
+    const contact = cs?.whatsapp_contact_phone;
+    if (!contact || !String(contact).trim()) return;
+
+    const profFirst = String(prof?.name || "Profesional").trim().split(/\s+/)[0];
+    await fetch(`${supabaseUrl}/functions/v1/send-whatsapp`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${serviceKey}`,
+      },
+      body: JSON.stringify({
+        to: contact,
+        template: "cobro_recibido_pro",
+        languageCode: "es",
+        params: [
+          profFirst,
+          patientName || "Un paciente",
+          Number(amount || 0).toLocaleString("es-UY", { maximumFractionDigits: 0 }),
+        ],
+      }),
+    });
+  } catch (e) {
+    console.warn("WA pro payment notice failed:", e);
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -237,6 +291,16 @@ serve(async (req) => {
 
           console.log(`Session payment confirmed for appointment ${sessionRef.appointment_id}`);
 
+          // WhatsApp "¡Cobraste!" al profesional
+          await notifyProPaymentWhatsApp(
+            supabase,
+            supabaseUrl,
+            supabaseServiceKey,
+            sessionRef.business_id || appt?.business_id,
+            appt?.contact_name,
+            payment.transaction_amount,
+          );
+
           if (wasAwaitingPayment && appt) {
             const { data: biz } = await supabase
               .from("businesses")
@@ -375,6 +439,27 @@ serve(async (req) => {
                   .from("appointments")
                   .update({ payment_status: "pagado" })
                   .in("id", apptIds);
+              }
+
+              // WhatsApp "¡Cobraste!" al profesional (solo si se pagó algo)
+              if ((updatedPayments?.length || 0) > 0) {
+                let patientName: string | null = null;
+                if (batchRef.patient_id) {
+                  const { data: pat } = await supabase
+                    .from("patients")
+                    .select("full_name")
+                    .eq("id", batchRef.patient_id)
+                    .maybeSingle();
+                  patientName = pat?.full_name || null;
+                }
+                await notifyProPaymentWhatsApp(
+                  supabase,
+                  supabaseUrl,
+                  supabaseServiceKey,
+                  batchRef.business_id,
+                  patientName,
+                  payment.transaction_amount,
+                );
               }
             }
           } else {

@@ -175,6 +175,10 @@ const channelConfig: Record<string, { label: string; icon: typeof Mail }> = {
 const typeLabel: Record<string, string> = {
   confirmation: "Confirmación de cita",
   reschedule: "Aviso de reprogramación",
+  cancellation: "Aviso de cancelación",
+  pro_new_booking: "Aviso para vos: nueva reserva",
+  pro_cancellation: "Aviso para vos: cancelación",
+  pro_reschedule: "Aviso para vos: pedido de cambio",
 };
 
 // Título de la tarjeta: nombre del paciente, o —si el join no lo trae—
