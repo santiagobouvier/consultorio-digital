@@ -757,6 +757,7 @@ export type Database = {
       }
       patient_documents: {
         Row: {
+          appointment_id: string | null
           business_id: string
           created_at: string
           document_type: string
@@ -773,6 +774,7 @@ export type Database = {
           uploaded_by: string
         }
         Insert: {
+          appointment_id?: string | null
           business_id: string
           created_at?: string
           document_type?: string
@@ -789,6 +791,7 @@ export type Database = {
           uploaded_by: string
         }
         Update: {
+          appointment_id?: string | null
           business_id?: string
           created_at?: string
           document_type?: string
@@ -805,6 +808,13 @@ export type Database = {
           uploaded_by?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "patient_documents_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "patient_documents_business_id_fkey"
             columns: ["business_id"]
