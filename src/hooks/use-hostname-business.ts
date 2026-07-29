@@ -56,10 +56,9 @@ export const useHostnameBusiness = (): UseHostnameBusinessResult => {
           
           if (subdomain && subdomain !== "www") {
             const { data } = await supabase
-              .from("businesses")
+              .from("businesses_public_branding")
               .select("id, name, public_slug, custom_subdomain, custom_domain")
               .eq("custom_subdomain", subdomain)
-              .eq("is_active", true)
               .maybeSingle();
 
             if (data) {
@@ -72,10 +71,9 @@ export const useHostnameBusiness = (): UseHostnameBusinessResult => {
         } else {
           // It's a custom domain - search exact match
           const { data } = await supabase
-            .from("businesses")
+            .from("businesses_public_branding")
             .select("id, name, public_slug, custom_subdomain, custom_domain")
             .eq("custom_domain", hostname)
-            .eq("is_active", true)
             .maybeSingle();
 
           if (data) {
@@ -119,7 +117,7 @@ export const getSubdomainUrl = (subdomain: string): string => {
  */
 export const checkSubdomainAvailability = async (subdomain: string): Promise<boolean> => {
   const { data } = await supabase
-    .from("businesses")
+    .from("businesses_public_branding")
     .select("id")
     .eq("custom_subdomain", subdomain)
     .maybeSingle();
@@ -132,7 +130,7 @@ export const checkSubdomainAvailability = async (subdomain: string): Promise<boo
  */
 export const checkCustomDomainAvailability = async (domain: string): Promise<boolean> => {
   const { data } = await supabase
-    .from("businesses")
+    .from("businesses_public_branding")
     .select("id")
     .eq("custom_domain", domain)
     .maybeSingle();
