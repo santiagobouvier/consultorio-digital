@@ -524,11 +524,25 @@ export const PatientRecord = ({ patientId, businessId, reasonForConsultation }: 
                     aria-hidden="true"
                   />
 
-                  <Card className={cn("rounded-2xl transition-all hover:shadow-md", isCancelled && "opacity-55")}>
-                    <CardContent className="p-4 space-y-3">
-                      {/* Encabezado de la sesión */}
-                      <div className="flex items-start justify-between gap-2 flex-wrap">
-                        <div className="min-w-0">
+                  {/* Tarjeta minimalista: toda la tarjeta abre el detalle */}
+                  <Card
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setDetailApt(apt)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setDetailApt(apt);
+                      }
+                    }}
+                    className={cn(
+                      "rounded-2xl cursor-pointer transition-all hover:shadow-md hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+                      isCancelled && "opacity-55"
+                    )}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
                           <p className="font-semibold text-sm capitalize">
                             {format(parseISO(apt.start_at), "EEEE d 'de' MMMM yyyy", { locale: es })}
                           </p>
@@ -542,84 +556,49 @@ export const PatientRecord = ({ patientId, businessId, reasonForConsultation }: 
                               </span>
                             )}
                           </p>
+                          {/* Indicadores sutiles de contenido */}
+                          {(!isCancelled || sessionDocs.length > 0) && (
+                            <div className="flex items-center gap-3 flex-wrap mt-2">
+                              {!isCancelled &&
+                                (sessionNotes.length > 0 ? (
+                                  <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                                    <StickyNote className="h-3 w-3 text-primary" /> Con nota
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 text-[11px] text-amber-600 dark:text-amber-400">
+                                    <StickyNote className="h-3 w-3" /> Sin nota
+                                  </span>
+                                ))}
+                              {sessionDocs.length > 0 && (
+                                <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                                  <Paperclip className="h-3 w-3" /> {sessionDocs.length}{" "}
+                                  {sessionDocs.length === 1 ? "adjunto" : "adjuntos"}
+                                </span>
+                              )}
+                            </div>
+                          )}
                         </div>
-                        <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                        <div className="flex items-center gap-1.5 flex-wrap justify-end shrink-0">
                           {sessionStatusBadge(apt.status)}
                           {payBadge && (
                             <Badge className={cn("text-[10px] border hover:bg-transparent", payBadge.cls)} variant="outline">
                               {payBadge.label}
                             </Badge>
                           )}
-                          {/* Abrir el detalle completo de la sesión */}
                           <Button
                             size="sm"
                             variant="ghost"
                             title="Ver detalle de la sesión"
                             className="h-7 w-7 p-0 rounded-lg text-muted-foreground hover:text-foreground"
-                            onClick={() => setDetailApt(apt)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDetailApt(apt);
+                            }}
                           >
                             <Maximize2 className="h-3.5 w-3.5" />
                           </Button>
                         </div>
                       </div>
-
-                      {/* Notas de la sesión */}
-                      {sessionNotes.length > 0 ? (
-                        <div className="space-y-2">
-                          {sessionNotes.map((n) => (
-                            <NoteBlock key={n.id} note={n} apt={apt} />
-                          ))}
-                        </div>
-                      ) : !isCancelled ? (
-                        <button
-                          onClick={() => openNoteEditor(apt)}
-                          className="w-full rounded-xl border border-dashed border-border hover:border-primary/50 hover:bg-primary/[0.03] transition-colors p-3 text-left flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
-                        >
-                          <Plus className="h-4 w-4 text-primary shrink-0" />
-                          Escribir la nota de esta sesión
-                        </button>
-                      ) : null}
-
-                      {/* Documentos de la sesión: hasta 2 chips a la vista;
-                          con más, "+N ver todos" abre el modal agrupado. */}
-                      {(sessionDocs.length > 0 || !isCancelled) && (
-                        <div className="flex items-center gap-2 flex-wrap">
-                          {sessionDocs.slice(0, 2).map((doc) => (
-                            <button
-                              key={doc.id}
-                              onClick={() => viewDocument(doc)}
-                              disabled={busyDocId === doc.id}
-                              title={`${DOC_TYPE_LABELS[doc.document_type] || "Documento"} — abrir`}
-                              className="inline-flex items-center gap-1.5 max-w-[220px] text-xs bg-muted/60 hover:bg-muted border border-border/60 rounded-full pl-2.5 pr-3 py-1.5 transition-colors"
-                            >
-                              {busyDocId === doc.id ? (
-                                <Loader2 className="h-3 w-3 animate-spin shrink-0" />
-                              ) : (
-                                <Paperclip className="h-3 w-3 text-primary shrink-0" />
-                              )}
-                              <span className="truncate">{doc.file_name}</span>
-                              {doc.shared_with_patient && <Eye className="h-3 w-3 text-emerald-500 shrink-0" />}
-                            </button>
-                          ))}
-                          {sessionDocs.length > 2 && (
-                            <button
-                              onClick={() => setDetailApt(apt)}
-                              className="inline-flex items-center gap-1.5 text-xs font-medium text-primary bg-primary/5 hover:bg-primary/10 border border-primary/25 rounded-full px-3 py-1.5 transition-colors"
-                            >
-                              <Paperclip className="h-3 w-3" />
-                              +{sessionDocs.length - 2} · ver todos
-                            </button>
-                          )}
-                          {!isCancelled && (
-                            <button
-                              onClick={() => startAttach(apt)}
-                              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground border border-dashed border-border hover:border-primary/50 rounded-full px-3 py-1.5 transition-colors"
-                            >
-                              <Upload className="h-3 w-3" /> Adjuntar
-                            </button>
-                          )}
-                        </div>
-                      )}
                     </CardContent>
                   </Card>
                 </div>
@@ -721,18 +700,7 @@ export const PatientRecord = ({ patientId, businessId, reasonForConsultation }: 
 
       {/* ── Detalle completo de la sesión: info + nota + adjuntos agrupados ── */}
       <Dialog open={!!detailApt} onOpenChange={(o) => !o && setDetailApt(null)}>
-        <DialogContent className="max-w-lg max-h-[90dvh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-primary" />
-              Detalle de la sesión
-            </DialogTitle>
-            <DialogDescription className="capitalize">
-              {detailApt &&
-                `${format(parseISO(detailApt.start_at), "EEEE d 'de' MMMM yyyy", { locale: es })} · ${format(parseISO(detailApt.start_at), "HH:mm")} – ${format(parseISO(detailApt.end_at), "HH:mm")} hs`}
-            </DialogDescription>
-          </DialogHeader>
-
+        <DialogContent className="max-w-lg max-h-[90dvh] overflow-y-auto p-0 gap-0 rounded-2xl">
           {detailApt && (() => {
             const apt = detailApt;
             const isCancelled = CANCELLED.includes(apt.status);
@@ -756,10 +724,35 @@ export const PatientRecord = ({ patientId, businessId, reasonForConsultation }: 
             if (rest.length > 0) groups.push({ type: "otro", items: rest });
 
             return (
-              <div className="space-y-5 py-1">
-                {/* Estado + servicio + modalidad */}
-                <div className="rounded-xl border border-border/60 bg-muted/30 p-3 space-y-2">
-                  <div className="flex items-center gap-1.5 flex-wrap">
+              <>
+                {/* Encabezado con banda sutil */}
+                <div className="px-5 sm:px-6 pt-6 pb-4 bg-gradient-to-b from-primary/[0.07] to-transparent border-b border-border/60">
+                  <DialogHeader className="text-left space-y-0">
+                    <div className="flex items-start gap-3">
+                      <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                        <FileText className="h-5 w-5 text-primary" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-primary">
+                          Detalle de la sesión
+                        </p>
+                        <DialogTitle className="text-base capitalize leading-tight mt-0.5">
+                          {format(parseISO(apt.start_at), "EEEE d 'de' MMMM yyyy", { locale: es })}
+                        </DialogTitle>
+                        <DialogDescription className="text-xs mt-0.5 flex items-center gap-1.5 flex-wrap">
+                          {format(parseISO(apt.start_at), "HH:mm")} – {format(parseISO(apt.end_at), "HH:mm")} hs
+                          {apt.services?.name && <>· {apt.services.name}</>}
+                          {apt.modality && (
+                            <span className="inline-flex items-center gap-1">
+                              · {apt.modality === "online" ? <Video className="h-3 w-3" /> : <MapPin className="h-3 w-3" />}
+                              {apt.modality === "online" ? "Online" : "Presencial"}
+                            </span>
+                          )}
+                        </DialogDescription>
+                      </div>
+                    </div>
+                  </DialogHeader>
+                  <div className="flex items-center gap-1.5 flex-wrap mt-3">
                     {sessionStatusBadge(apt.status)}
                     {payBadge && (
                       <Badge className={cn("text-[10px] border hover:bg-transparent", payBadge.cls)} variant="outline">
@@ -768,115 +761,107 @@ export const PatientRecord = ({ patientId, businessId, reasonForConsultation }: 
                       </Badge>
                     )}
                   </div>
-                  {(apt.services?.name || apt.modality) && (
-                    <p className="text-xs text-muted-foreground flex items-center gap-1.5 flex-wrap">
-                      {apt.services?.name}
-                      {apt.modality && (
-                        <span className="inline-flex items-center gap-1">
-                          {apt.services?.name && "· "}
-                          {apt.modality === "online" ? <Video className="h-3 w-3" /> : <MapPin className="h-3 w-3" />}
-                          {apt.modality === "online" ? "Online" : "Presencial"}
-                        </span>
-                      )}
-                    </p>
-                  )}
                 </div>
 
-                {/* Nota clínica de la sesión */}
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-                    Nota de la sesión
-                  </p>
-                  {sessionNotes.length > 0 ? (
-                    <div className="space-y-2">
-                      {sessionNotes.map((n) => (
-                        <NoteBlock key={n.id} note={n} apt={apt} />
-                      ))}
-                    </div>
-                  ) : !isCancelled ? (
-                    <button
-                      onClick={() => {
-                        setDetailApt(null);
-                        openNoteEditor(apt);
-                      }}
-                      className="w-full rounded-xl border border-dashed border-border hover:border-primary/50 hover:bg-primary/[0.03] transition-colors p-3 text-left flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
-                    >
-                      <Plus className="h-4 w-4 text-primary shrink-0" />
-                      Escribir la nota de esta sesión
-                    </button>
-                  ) : (
-                    <p className="text-xs text-muted-foreground">Sesión cancelada, sin nota clínica.</p>
-                  )}
-                </div>
-
-                {/* Adjuntos agrupados por tipo */}
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground -mb-2 flex items-center gap-1.5">
-                  <Paperclip className="h-3 w-3" /> Adjuntos{docs.length > 0 ? ` · ${docs.length}` : ""}
-                </p>
-                {groups.length === 0 && (
-                  <p className="text-xs text-muted-foreground pt-2">
-                    Esta sesión todavía no tiene documentos adjuntos.
-                  </p>
-                )}
-                {groups.map(({ type, items }) => (
-                  <div key={type}>
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-                      {DOC_TYPE_LABELS[type] || "Otro"}{items.length > 1 ? `s · ${items.length}` : ""}
+                <div className="px-5 sm:px-6 py-5 space-y-6">
+                  {/* Nota clínica de la sesión */}
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
+                      <StickyNote className="h-3 w-3" /> Nota de la sesión
                     </p>
-                    <div className="space-y-2">
-                      {items.map((doc) => (
-                        <div
-                          key={doc.id}
-                          className="flex items-center gap-3 rounded-xl border border-border/60 bg-muted/30 p-2.5"
-                        >
-                          <div className="shrink-0 h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
-                            <FileText className="h-4 w-4 text-primary" />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium break-all leading-snug">{doc.file_name}</p>
-                            <p className="text-[11px] text-muted-foreground flex items-center gap-1.5">
-                              {formatBytes(doc.file_size)}
-                              {doc.shared_with_patient && (
-                                <span className="inline-flex items-center gap-0.5 text-emerald-600 dark:text-emerald-400">
-                                  <Eye className="h-3 w-3" /> compartido
-                                </span>
-                              )}
-                            </p>
-                          </div>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="rounded-lg h-8 shrink-0"
-                            onClick={() => viewDocument(doc)}
-                            disabled={busyDocId === doc.id}
-                          >
-                            {busyDocId === doc.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Ver"}
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
+                    {sessionNotes.length > 0 ? (
+                      <div className="space-y-2">
+                        {sessionNotes.map((n) => (
+                          <NoteBlock key={n.id} note={n} apt={apt} />
+                        ))}
+                      </div>
+                    ) : !isCancelled ? (
+                      <button
+                        onClick={() => {
+                          setDetailApt(null);
+                          openNoteEditor(apt);
+                        }}
+                        className="w-full rounded-xl border border-dashed border-border hover:border-primary/50 hover:bg-primary/[0.03] transition-colors p-3 text-left flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+                      >
+                        <Plus className="h-4 w-4 text-primary shrink-0" />
+                        Escribir la nota de esta sesión
+                      </button>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">Sesión cancelada, sin nota clínica.</p>
+                    )}
                   </div>
-                ))}
-              </div>
+
+                  {/* Adjuntos agrupados por tipo */}
+                  <div className="space-y-4">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                      <Paperclip className="h-3 w-3" /> Adjuntos{docs.length > 0 ? ` · ${docs.length}` : ""}
+                    </p>
+                    {groups.length === 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        Esta sesión todavía no tiene documentos adjuntos.
+                      </p>
+                    )}
+                    {groups.map(({ type, items }) => (
+                      <div key={type}>
+                        <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/80 mb-1.5">
+                          {DOC_TYPE_LABELS[type] || "Otro"}{items.length > 1 ? `s · ${items.length}` : ""}
+                        </p>
+                        <div className="space-y-2">
+                          {items.map((doc) => (
+                            <div
+                              key={doc.id}
+                              className="flex items-center gap-3 rounded-xl border border-border/60 bg-muted/30 p-2.5 transition-colors hover:bg-muted/50"
+                            >
+                              <div className="shrink-0 h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                                <FileText className="h-4 w-4 text-primary" />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="text-sm font-medium break-all leading-snug">{doc.file_name}</p>
+                                <p className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                                  {formatBytes(doc.file_size)}
+                                  {doc.shared_with_patient && (
+                                    <span className="inline-flex items-center gap-0.5 text-emerald-600 dark:text-emerald-400">
+                                      <Eye className="h-3 w-3" /> compartido
+                                    </span>
+                                  )}
+                                </p>
+                              </div>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="rounded-lg h-8 shrink-0"
+                                onClick={() => viewDocument(doc)}
+                                disabled={busyDocId === doc.id}
+                              >
+                                {busyDocId === doc.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Ver"}
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                    {!isCancelled && (
+                      <button
+                        onClick={() => {
+                          setDetailApt(null);
+                          startAttach(apt);
+                        }}
+                        className="w-full rounded-xl border border-dashed border-border hover:border-primary/50 hover:bg-primary/[0.03] transition-colors p-2.5 flex items-center justify-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground"
+                      >
+                        <Upload className="h-3.5 w-3.5" /> Adjuntar documento
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <DialogFooter className="px-5 sm:px-6 pb-6 pt-0">
+                  <Button className="rounded-xl w-full sm:w-auto" onClick={() => setDetailApt(null)}>
+                    Listo
+                  </Button>
+                </DialogFooter>
+              </>
             );
           })()}
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              className="rounded-xl w-full sm:w-auto gap-1.5"
-              onClick={() => {
-                const apt = detailApt;
-                setDetailApt(null);
-                if (apt) startAttach(apt);
-              }}
-            >
-              <Upload className="h-4 w-4" /> Adjuntar otro
-            </Button>
-            <Button className="rounded-xl w-full sm:w-auto" onClick={() => setDetailApt(null)}>
-              Listo
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 
