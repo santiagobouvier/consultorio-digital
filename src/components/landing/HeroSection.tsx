@@ -4,8 +4,7 @@
 import type { MouseEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Check, ChevronDown, FileText } from "lucide-react";
-import ofertaValorPdf from "@/assets/oferta-valor-2026.pdf.asset.json";
+import { ArrowRight, Check, ChevronDown } from "lucide-react";
 
 const BRAND = "#00a5a0";
 const GREEN = "#00c78a";
