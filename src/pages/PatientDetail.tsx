@@ -430,7 +430,12 @@ const PatientDetail = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-5xl mx-auto p-4 sm:p-6 lg:p-8 space-y-5">
+      {/* Desktop: carnet + números fijos a la izquierda (como una ficha
+          clínica de verdad) y el contenido de las pestañas a lo ancho.
+          Mobile/tablet: mismo orden apilado de siempre. */}
+      <div className="mx-auto w-full max-w-[1500px] p-4 sm:p-6 lg:px-8 lg:py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(340px,390px)_1fr] gap-5 lg:gap-6 items-start">
+        <div className="space-y-5 lg:sticky lg:top-6">
 
         {/* ── Cabecera "carnet" ── */}
         <div className="rounded-2xl border bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-4 sm:p-6">
@@ -454,7 +459,7 @@ const PatientDetail = () => {
             </Avatar>
 
             <div className="min-w-0 flex-1">
-              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground truncate">
+              <h1 className="text-xl sm:text-2xl font-bold text-foreground truncate">
                 {patient.full_name}
               </h1>
               {/* Chips que cuentan la historia en 2 segundos */}
@@ -519,7 +524,8 @@ const PatientDetail = () => {
           </div>
 
           {/* Acciones principales */}
-          <div className={cn("grid sm:flex gap-2 mt-4 sm:pl-[4.5rem]", hasPortal ? "grid-cols-3" : "grid-cols-2")}>
+          {/* En el riel de desktop las acciones van en grilla 2x2 (no en fila) */}
+          <div className={cn("grid sm:flex lg:grid lg:grid-cols-2 gap-2 mt-4 sm:pl-[4.5rem] lg:pl-0", hasPortal ? "grid-cols-3" : "grid-cols-2")}>
             <Button onClick={() => setShowCreateAppointment(true)} className="rounded-xl gap-2 h-10">
               <CalendarPlus className="h-4 w-4" />
               <span className="text-xs sm:text-sm">Agendar cita</span>
@@ -551,8 +557,8 @@ const PatientDetail = () => {
           </div>
         </div>
 
-        {/* ── 4 números clave ── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {/* ── 4 números clave (2x2 en el riel de desktop) ── */}
+        <div className="grid grid-cols-2 gap-3">
           <Card className="rounded-2xl border-border/50">
             <CardContent className="p-3.5">
               <p className="text-xs text-muted-foreground inline-flex items-center gap-1.5">
@@ -596,8 +602,10 @@ const PatientDetail = () => {
             </CardContent>
           </Card>
         </div>
+        </div>
 
-        {/* ── Pestañas ── */}
+        {/* ── Pestañas (columna principal en desktop) ── */}
+        <div className="min-w-0">
         <Tabs defaultValue="resumen" className="w-full">
           <TabsList className="grid grid-cols-5 w-full h-11 rounded-xl">
             <TabsTrigger value="resumen" className="rounded-lg text-xs sm:text-sm">Resumen</TabsTrigger>
@@ -875,6 +883,8 @@ const PatientDetail = () => {
             <PatientDocuments patientId={patient.id} businessId={patient.business_id} />
           </TabsContent>
         </Tabs>
+        </div>
+        </div>
       </div>
 
       {/* Agendar cita (asistente con este paciente preseleccionado) */}
