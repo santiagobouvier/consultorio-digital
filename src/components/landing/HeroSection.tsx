@@ -4,7 +4,8 @@
 import type { MouseEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Check, ChevronDown } from "lucide-react";
+import { ArrowRight, Check, ChevronDown, FileText } from "lucide-react";
+import ofertaValorPdf from "@/assets/oferta-valor-2026.pdf.asset.json";
 
 const BRAND = "#00a5a0";
 const GREEN = "#00c78a";
@@ -112,6 +113,22 @@ export function HeroSection() {
               {t}
             </span>
           ))}
+        </div>
+
+        {/* Offer PDF */}
+        <div
+          className="hero-up mt-8"
+          style={{ animationDelay: "0.5s" }}
+        >
+          <a
+            href={ofertaValorPdf.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"
+          >
+            <FileText className="w-4 h-4" style={{ color: BRAND }} />
+            Ver propuesta de valor 2026
+          </a>
         </div>
       </div>
 
