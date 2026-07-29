@@ -125,16 +125,11 @@ export function PatientForm({
       return;
     }
 
-    // Fuera del try: si la subida falla, el toast de error muestra la ruta
-    // y el usuario reales de la petición para poder diagnosticar RLS.
-    let diagPath = "";
-    let diagUser = "";
     try {
       setUploadingAvatar(true);
 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuario no autenticado");
-      diagUser = user.email || user.id;
 
       const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
       // Use businessId context when available; fallback to user folder.
@@ -143,7 +138,6 @@ export function PatientForm({
       const path = businessId
         ? `business-avatars/${businessId}/${fileId}.${ext}`
         : `${user.id}/patient-avatars/${fileId}.${ext}`;
-      diagPath = path;
 
       // upsert: la ruta es determinística por paciente, así cambiar la foto
       // reemplaza la anterior en vez de fallar por duplicado.
@@ -159,10 +153,10 @@ export function PatientForm({
       setAvatarUrl(`${pub.publicUrl}?v=${Date.now()}`);
       toast({ title: "Foto cargada", description: "Se guardará al confirmar." });
     } catch (err: any) {
-      console.error("Error subiendo avatar:", err, { path: diagPath, user: diagUser });
+      console.error("Error subiendo avatar:", err);
       toast({
         title: "No se pudo subir la foto",
-        description: `${err?.message || "Intentá de nuevo"} · ruta: ${diagPath || "(sin ruta)"} · usuario: ${diagUser || "(sin sesión)"}`,
+        description: err?.message || "Intentá de nuevo",
         variant: "destructive",
       });
     } finally {
