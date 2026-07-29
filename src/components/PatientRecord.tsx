@@ -20,7 +20,7 @@ import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import {
   FileText, Plus, Pencil, Trash2, Loader2, Paperclip, Upload,
-  StickyNote, ClipboardList, Eye, Video, MapPin, CalendarClock, Filter,
+  StickyNote, ClipboardList, Eye, Video, MapPin, CalendarClock, Filter, Maximize2,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
@@ -140,7 +140,7 @@ export const PatientRecord = ({ patientId, businessId, reasonForConsultation }: 
   const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null);
 
   // ── Modal de adjuntos de una sesión (agrupados por tipo) ──
-  const [docsModalApt, setDocsModalApt] = useState<RecordAppointment | null>(null);
+  const [detailApt, setDetailApt] = useState<RecordAppointment | null>(null);
 
   // ── Adjuntar documento a una sesión ──
   const [attachTarget, setAttachTarget] = useState<{ appointmentId: string; label: string } | null>(null);
@@ -550,6 +550,16 @@ export const PatientRecord = ({ patientId, businessId, reasonForConsultation }: 
                               {payBadge.label}
                             </Badge>
                           )}
+                          {/* Abrir el detalle completo de la sesión */}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            title="Ver detalle de la sesión"
+                            className="h-7 w-7 p-0 rounded-lg text-muted-foreground hover:text-foreground"
+                            onClick={() => setDetailApt(apt)}
+                          >
+                            <Maximize2 className="h-3.5 w-3.5" />
+                          </Button>
                         </div>
                       </div>
 
@@ -593,7 +603,7 @@ export const PatientRecord = ({ patientId, businessId, reasonForConsultation }: 
                           ))}
                           {sessionDocs.length > 2 && (
                             <button
-                              onClick={() => setDocsModalApt(apt)}
+                              onClick={() => setDetailApt(apt)}
                               className="inline-flex items-center gap-1.5 text-xs font-medium text-primary bg-primary/5 hover:bg-primary/10 border border-primary/25 rounded-full px-3 py-1.5 transition-colors"
                             >
                               <Paperclip className="h-3 w-3" />
@@ -709,22 +719,34 @@ export const PatientRecord = ({ patientId, businessId, reasonForConsultation }: 
         </DialogContent>
       </Dialog>
 
-      {/* ── Adjuntos de la sesión, agrupados por tipo ── */}
-      <Dialog open={!!docsModalApt} onOpenChange={(o) => !o && setDocsModalApt(null)}>
+      {/* ── Detalle completo de la sesión: info + nota + adjuntos agrupados ── */}
+      <Dialog open={!!detailApt} onOpenChange={(o) => !o && setDetailApt(null)}>
         <DialogContent className="max-w-lg max-h-[90dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Paperclip className="h-5 w-5 text-primary" />
-              Adjuntos de la sesión
+              <FileText className="h-5 w-5 text-primary" />
+              Detalle de la sesión
             </DialogTitle>
             <DialogDescription className="capitalize">
-              {docsModalApt &&
-                `${format(parseISO(docsModalApt.start_at), "EEEE d 'de' MMMM yyyy", { locale: es })} · ${format(parseISO(docsModalApt.start_at), "HH:mm")} hs`}
+              {detailApt &&
+                `${format(parseISO(detailApt.start_at), "EEEE d 'de' MMMM yyyy", { locale: es })} · ${format(parseISO(detailApt.start_at), "HH:mm")} – ${format(parseISO(detailApt.end_at), "HH:mm")} hs`}
             </DialogDescription>
           </DialogHeader>
 
-          {docsModalApt && (() => {
-            const docs = docsByAppointment.get(docsModalApt.id) ?? [];
+          {detailApt && (() => {
+            const apt = detailApt;
+            const isCancelled = CANCELLED.includes(apt.status);
+            const sessionNotes = notesByAppointment.get(apt.id) ?? [];
+            const payment = paymentByAppointment.get(apt.id);
+            const payBadge = payment
+              ? payment.status === "paid"
+                ? { label: "Pagada", cls: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30" }
+                : new Date(payment.due_date).getTime() < now
+                ? { label: "Pago vencido", cls: "bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30" }
+                : { label: "Pago pendiente", cls: "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30" }
+              : null;
+
+            const docs = docsByAppointment.get(apt.id) ?? [];
             const groups = DOC_TYPE_ORDER
               .map((type) => ({ type, items: docs.filter((d) => (d.document_type || "otro") === type) }))
               .filter((g) => g.items.length > 0);
@@ -735,6 +757,67 @@ export const PatientRecord = ({ patientId, businessId, reasonForConsultation }: 
 
             return (
               <div className="space-y-5 py-1">
+                {/* Estado + servicio + modalidad */}
+                <div className="rounded-xl border border-border/60 bg-muted/30 p-3 space-y-2">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {sessionStatusBadge(apt.status)}
+                    {payBadge && (
+                      <Badge className={cn("text-[10px] border hover:bg-transparent", payBadge.cls)} variant="outline">
+                        {payBadge.label}
+                        {payment ? ` · $${Number(payment.amount).toLocaleString("es-UY")}` : ""}
+                      </Badge>
+                    )}
+                  </div>
+                  {(apt.services?.name || apt.modality) && (
+                    <p className="text-xs text-muted-foreground flex items-center gap-1.5 flex-wrap">
+                      {apt.services?.name}
+                      {apt.modality && (
+                        <span className="inline-flex items-center gap-1">
+                          {apt.services?.name && "· "}
+                          {apt.modality === "online" ? <Video className="h-3 w-3" /> : <MapPin className="h-3 w-3" />}
+                          {apt.modality === "online" ? "Online" : "Presencial"}
+                        </span>
+                      )}
+                    </p>
+                  )}
+                </div>
+
+                {/* Nota clínica de la sesión */}
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                    Nota de la sesión
+                  </p>
+                  {sessionNotes.length > 0 ? (
+                    <div className="space-y-2">
+                      {sessionNotes.map((n) => (
+                        <NoteBlock key={n.id} note={n} apt={apt} />
+                      ))}
+                    </div>
+                  ) : !isCancelled ? (
+                    <button
+                      onClick={() => {
+                        setDetailApt(null);
+                        openNoteEditor(apt);
+                      }}
+                      className="w-full rounded-xl border border-dashed border-border hover:border-primary/50 hover:bg-primary/[0.03] transition-colors p-3 text-left flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+                    >
+                      <Plus className="h-4 w-4 text-primary shrink-0" />
+                      Escribir la nota de esta sesión
+                    </button>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">Sesión cancelada, sin nota clínica.</p>
+                  )}
+                </div>
+
+                {/* Adjuntos agrupados por tipo */}
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground -mb-2 flex items-center gap-1.5">
+                  <Paperclip className="h-3 w-3" /> Adjuntos{docs.length > 0 ? ` · ${docs.length}` : ""}
+                </p>
+                {groups.length === 0 && (
+                  <p className="text-xs text-muted-foreground pt-2">
+                    Esta sesión todavía no tiene documentos adjuntos.
+                  </p>
+                )}
                 {groups.map(({ type, items }) => (
                   <div key={type}>
                     <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
@@ -783,14 +866,14 @@ export const PatientRecord = ({ patientId, businessId, reasonForConsultation }: 
               variant="outline"
               className="rounded-xl w-full sm:w-auto gap-1.5"
               onClick={() => {
-                const apt = docsModalApt;
-                setDocsModalApt(null);
+                const apt = detailApt;
+                setDetailApt(null);
                 if (apt) startAttach(apt);
               }}
             >
               <Upload className="h-4 w-4" /> Adjuntar otro
             </Button>
-            <Button className="rounded-xl w-full sm:w-auto" onClick={() => setDocsModalApt(null)}>
+            <Button className="rounded-xl w-full sm:w-auto" onClick={() => setDetailApt(null)}>
               Listo
             </Button>
           </DialogFooter>
