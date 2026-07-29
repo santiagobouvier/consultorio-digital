@@ -5,7 +5,8 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, ArrowRight } from "lucide-react";
+import { Menu, X, ArrowRight, ExternalLink } from "lucide-react";
+import ofertaValorPdf from "@/assets/oferta-valor-2026.pdf.asset.json";
 
 const BRAND = "#00a5a0";
 const GREEN = "#00c78a";
@@ -106,6 +107,16 @@ export function LandingNavbar() {
               Demo
               <span className="nav-link-underline absolute left-0 -bottom-0.5 h-px w-0 group-hover:w-full" style={{ backgroundColor: GREEN }} />
             </button>
+            <a
+              href={ofertaValorPdf.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group relative py-1 text-sm font-medium tracking-wide text-white/70 hover:text-white transition-colors inline-flex items-center gap-1"
+            >
+              Cómo funciona
+              <ExternalLink className="w-3 h-3 opacity-60" />
+              <span className="nav-link-underline absolute left-0 -bottom-0.5 h-px w-0 group-hover:w-full" style={{ backgroundColor: GREEN }} />
+            </a>
           </nav>
 
           {/* Desktop CTAs */}
@@ -181,12 +192,22 @@ export function LandingNavbar() {
               <span className="text-3xl font-semibold text-white tracking-tight">Demo</span>
               <ArrowRight className="w-6 h-6 text-white/25 transition-all group-hover:text-white group-hover:translate-x-1" />
             </button>
+            <a
+              href={ofertaValorPdf.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="nav-item group flex items-center justify-between py-5 border-b border-white/10 text-left"
+              style={{ animationDelay: `${0.07 * (LINKS.length + 1) + 0.05}s` }}
+            >
+              <span className="text-3xl font-semibold text-white tracking-tight">Cómo funciona</span>
+              <ExternalLink className="w-6 h-6 text-white/25 transition-all group-hover:text-white" />
+            </a>
           </nav>
 
           {/* CTAs */}
           <div
             className="nav-item relative px-6 pb-10 pt-4 space-y-3"
-            style={{ animationDelay: `${0.07 * LINKS.length + 0.08}s` }}
+            style={{ animationDelay: `${0.07 * (LINKS.length + 1) + 0.08}s` }}
           >
             <Button
               onClick={() => go("pricing")}

@@ -1,5 +1,3 @@
-import ofertaValorPdf from "@/assets/oferta-valor-2026.pdf.asset.json";
-
 interface BrandFooterProps {
   className?: string;
 }
@@ -13,14 +11,6 @@ export const BrandFooter = ({ className = "" }: BrandFooterProps) => {
           alt="Tu Consultorio Digital" 
           className="w-[200px] sm:w-[300px] opacity-60"
         />
-        <a
-          href={ofertaValorPdf.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-sm text-gray-500 hover:text-[#00a5a0] transition-colors"
-        >
-          Ver propuesta de valor 2026
-        </a>
       </div>
     </footer>
   );
