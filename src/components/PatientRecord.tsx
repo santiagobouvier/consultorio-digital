@@ -52,6 +52,7 @@ interface RecordDocument {
   appointment_id: string | null;
   file_path: string;
   file_name: string;
+  file_size: number | null;
   mime_type: string | null;
   document_type: string;
   shared_with_patient?: boolean;
@@ -85,6 +86,16 @@ const DOC_TYPE_LABELS: Record<string, string> = {
   indicaciones: "Indicaciones / Material",
   recibo: "Recibo",
   otro: "Otro",
+};
+
+// Orden fijo de los grupos en el modal de adjuntos
+const DOC_TYPE_ORDER = ["informe", "evaluacion", "consentimiento", "indicaciones", "recibo", "otro"];
+
+const formatBytes = (bytes: number | null) => {
+  if (!bytes) return "";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
 
 const sessionStatusBadge = (status: string) => {
@@ -127,6 +138,9 @@ export const PatientRecord = ({ patientId, businessId, reasonForConsultation }: 
   const [noteStatus, setNoteStatus] = useState<"draft" | "finalized">("draft");
   const [savingNote, setSavingNote] = useState(false);
   const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null);
+
+  // ── Modal de adjuntos de una sesión (agrupados por tipo) ──
+  const [docsModalApt, setDocsModalApt] = useState<RecordAppointment | null>(null);
 
   // ── Adjuntar documento a una sesión ──
   const [attachTarget, setAttachTarget] = useState<{ appointmentId: string; label: string } | null>(null);
@@ -556,10 +570,11 @@ export const PatientRecord = ({ patientId, businessId, reasonForConsultation }: 
                         </button>
                       ) : null}
 
-                      {/* Documentos de la sesión */}
+                      {/* Documentos de la sesión: hasta 2 chips a la vista;
+                          con más, "+N ver todos" abre el modal agrupado. */}
                       {(sessionDocs.length > 0 || !isCancelled) && (
                         <div className="flex items-center gap-2 flex-wrap">
-                          {sessionDocs.map((doc) => (
+                          {sessionDocs.slice(0, 2).map((doc) => (
                             <button
                               key={doc.id}
                               onClick={() => viewDocument(doc)}
@@ -576,6 +591,15 @@ export const PatientRecord = ({ patientId, businessId, reasonForConsultation }: 
                               {doc.shared_with_patient && <Eye className="h-3 w-3 text-emerald-500 shrink-0" />}
                             </button>
                           ))}
+                          {sessionDocs.length > 2 && (
+                            <button
+                              onClick={() => setDocsModalApt(apt)}
+                              className="inline-flex items-center gap-1.5 text-xs font-medium text-primary bg-primary/5 hover:bg-primary/10 border border-primary/25 rounded-full px-3 py-1.5 transition-colors"
+                            >
+                              <Paperclip className="h-3 w-3" />
+                              +{sessionDocs.length - 2} · ver todos
+                            </button>
+                          )}
                           {!isCancelled && (
                             <button
                               onClick={() => startAttach(apt)}
@@ -680,6 +704,94 @@ export const PatientRecord = ({ patientId, businessId, reasonForConsultation }: 
             <Button className="rounded-xl w-full sm:w-auto" onClick={saveNote} disabled={savingNote || !noteContent.trim()}>
               {savingNote ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : null}
               Guardar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Adjuntos de la sesión, agrupados por tipo ── */}
+      <Dialog open={!!docsModalApt} onOpenChange={(o) => !o && setDocsModalApt(null)}>
+        <DialogContent className="max-w-lg max-h-[90dvh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Paperclip className="h-5 w-5 text-primary" />
+              Adjuntos de la sesión
+            </DialogTitle>
+            <DialogDescription className="capitalize">
+              {docsModalApt &&
+                `${format(parseISO(docsModalApt.start_at), "EEEE d 'de' MMMM yyyy", { locale: es })} · ${format(parseISO(docsModalApt.start_at), "HH:mm")} hs`}
+            </DialogDescription>
+          </DialogHeader>
+
+          {docsModalApt && (() => {
+            const docs = docsByAppointment.get(docsModalApt.id) ?? [];
+            const groups = DOC_TYPE_ORDER
+              .map((type) => ({ type, items: docs.filter((d) => (d.document_type || "otro") === type) }))
+              .filter((g) => g.items.length > 0);
+            // Tipos fuera del catálogo (por si hubiera datos viejos)
+            const known = new Set(DOC_TYPE_ORDER);
+            const rest = docs.filter((d) => !known.has(d.document_type || "otro"));
+            if (rest.length > 0) groups.push({ type: "otro", items: rest });
+
+            return (
+              <div className="space-y-5 py-1">
+                {groups.map(({ type, items }) => (
+                  <div key={type}>
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                      {DOC_TYPE_LABELS[type] || "Otro"}{items.length > 1 ? `s · ${items.length}` : ""}
+                    </p>
+                    <div className="space-y-2">
+                      {items.map((doc) => (
+                        <div
+                          key={doc.id}
+                          className="flex items-center gap-3 rounded-xl border border-border/60 bg-muted/30 p-2.5"
+                        >
+                          <div className="shrink-0 h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <FileText className="h-4 w-4 text-primary" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium break-all leading-snug">{doc.file_name}</p>
+                            <p className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                              {formatBytes(doc.file_size)}
+                              {doc.shared_with_patient && (
+                                <span className="inline-flex items-center gap-0.5 text-emerald-600 dark:text-emerald-400">
+                                  <Eye className="h-3 w-3" /> compartido
+                                </span>
+                              )}
+                            </p>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="rounded-lg h-8 shrink-0"
+                            onClick={() => viewDocument(doc)}
+                            disabled={busyDocId === doc.id}
+                          >
+                            {busyDocId === doc.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Ver"}
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              className="rounded-xl w-full sm:w-auto gap-1.5"
+              onClick={() => {
+                const apt = docsModalApt;
+                setDocsModalApt(null);
+                if (apt) startAttach(apt);
+              }}
+            >
+              <Upload className="h-4 w-4" /> Adjuntar otro
+            </Button>
+            <Button className="rounded-xl w-full sm:w-auto" onClick={() => setDocsModalApt(null)}>
+              Listo
             </Button>
           </DialogFooter>
         </DialogContent>
