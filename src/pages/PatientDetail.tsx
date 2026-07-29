@@ -437,33 +437,35 @@ const PatientDetail = () => {
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(340px,390px)_1fr] gap-5 lg:gap-6 items-start">
         <div className="space-y-5 lg:sticky lg:top-6">
 
-        {/* ── Cabecera "carnet" ── */}
-        <div className="rounded-2xl border bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-4 sm:p-6">
-          <div className="flex items-start gap-3 sm:gap-4">
+        {/* ── Cabecera "carnet" ──
+            Desktop (riel): tarjeta vertical centrada, con el nombre COMPLETO
+            (envuelve, nunca se corta). Mobile: fila horizontal como siempre. */}
+        <div className="relative rounded-2xl border bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-4 sm:p-6">
+          <div className="flex items-start gap-3 sm:gap-4 lg:flex-col lg:items-center lg:gap-3 lg:pt-2">
             <Button
               variant="ghost"
               size="icon"
               onClick={() => navigate("/patients")}
-              className="shrink-0 -ml-2"
+              className="shrink-0 -ml-2 lg:absolute lg:left-3 lg:top-3 lg:ml-0"
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
 
-            <Avatar className="h-16 w-16 sm:h-20 sm:w-20 rounded-2xl shrink-0 ring-2 ring-primary/20">
+            <Avatar className="h-16 w-16 sm:h-20 sm:w-20 lg:h-24 lg:w-24 rounded-2xl shrink-0 ring-2 ring-primary/20">
               {patient.avatar_url && (
                 <AvatarImage src={patient.avatar_url} alt={patient.full_name} className="object-cover" />
               )}
-              <AvatarFallback className="rounded-2xl bg-primary/10 text-primary font-bold text-xl">
+              <AvatarFallback className="rounded-2xl bg-primary/10 text-primary font-bold text-xl lg:text-2xl">
                 {initials || <UserIcon className="h-7 w-7" />}
               </AvatarFallback>
             </Avatar>
 
-            <div className="min-w-0 flex-1">
-              <h1 className="text-xl sm:text-2xl font-bold text-foreground truncate">
+            <div className="min-w-0 flex-1 lg:flex-none lg:w-full lg:text-center">
+              <h1 className="text-xl sm:text-2xl font-bold text-foreground break-words leading-tight">
                 {patient.full_name}
               </h1>
               {/* Chips que cuentan la historia en 2 segundos */}
-              <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+              <div className="flex items-center gap-1.5 mt-2 flex-wrap lg:justify-center">
                 <Badge
                   variant={patient.is_active ? "default" : "secondary"}
                   className="rounded-full text-xs"
@@ -502,7 +504,7 @@ const PatientDetail = () => {
             {/* Menú ⋯ (acciones sensibles escondidas del camino) */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="shrink-0 rounded-xl">
+                <Button variant="ghost" size="icon" className="shrink-0 rounded-xl lg:absolute lg:right-3 lg:top-3">
                   <MoreHorizontal className="h-5 w-5" />
                 </Button>
               </DropdownMenuTrigger>
@@ -602,6 +604,35 @@ const PatientDetail = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* ── Datos de contacto (llena el riel en desktop y es útil siempre) ── */}
+        <Card className="rounded-2xl border-border/50">
+          <CardContent className="p-4 space-y-2.5">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Contacto</p>
+            <div className="flex items-center gap-2.5 text-sm min-w-0">
+              <MessageCircle className="h-4 w-4 text-primary shrink-0" />
+              {patient.whatsapp_phone ? (
+                <span className="tabular-nums">{patient.whatsapp_phone}</span>
+              ) : (
+                <span className="text-muted-foreground">Sin WhatsApp cargado</span>
+              )}
+            </div>
+            <div className="flex items-center gap-2.5 text-sm min-w-0">
+              <Mail className="h-4 w-4 text-primary shrink-0" />
+              {patient.email ? (
+                <span className="truncate">{patient.email}</span>
+              ) : (
+                <span className="text-muted-foreground">Sin email cargado</span>
+              )}
+            </div>
+            <div className="flex items-center gap-2.5 text-sm">
+              <Calendar className="h-4 w-4 text-primary shrink-0" />
+              <span className="text-muted-foreground">
+                Paciente desde {format(new Date(patient.created_at), "MMMM yyyy", { locale: es })}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
         </div>
 
         {/* ── Pestañas (columna principal en desktop) ── */}
