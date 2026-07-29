@@ -236,13 +236,28 @@ export const PatientDocuments = ({ patientId, businessId }: PatientDocumentsProp
 
   const openDocument = async (doc: PatientDocument, download: boolean) => {
     setDownloadingId(doc.id);
+    // Para "Ver" abrimos la pestaña ANTES del await: si no, el bloqueador
+    // de pop-ups del navegador la mata (el click ya no cuenta como gesto).
+    const win = download ? null : window.open("", "_blank");
     try {
       const { data, error } = await supabase.storage
         .from("patient-documents")
         .createSignedUrl(doc.file_path, 60, download ? { download: doc.file_name } : undefined);
       if (error || !data?.signedUrl) throw error || new Error("Sin URL");
-      window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+      if (download) {
+        const a = document.createElement("a");
+        a.href = data.signedUrl;
+        a.download = doc.file_name;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      } else if (win) {
+        win.location.href = data.signedUrl;
+      } else {
+        window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+      }
     } catch (err) {
+      if (win) win.close();
       console.error("Open document error:", err);
       toast({
         title: "Error",

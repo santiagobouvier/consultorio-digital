@@ -19,7 +19,7 @@ import { toast } from "@/hooks/use-toast";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import {
-  FileText, Plus, Pencil, Trash2, Loader2, Paperclip, Upload,
+  FileText, Plus, Pencil, Trash2, Loader2, Paperclip, Upload, Download,
   StickyNote, ClipboardList, Eye, Video, MapPin, CalendarClock, Filter, Maximize2,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -375,16 +375,36 @@ export const PatientRecord = ({ patientId, businessId, reasonForConsultation }: 
     }
   };
 
-  const viewDocument = async (doc: RecordDocument) => {
+  const viewDocument = async (doc: RecordDocument, download = false) => {
     setBusyDocId(doc.id);
+    // Para "Ver" abrimos la pestaña ANTES del await: si no, el bloqueador
+    // de pop-ups del navegador la mata (el click ya no cuenta como gesto).
+    const win = download ? null : window.open("", "_blank");
     try {
       const { data, error } = await supabase.storage
         .from("patient-documents")
-        .createSignedUrl(doc.file_path, 60);
+        .createSignedUrl(doc.file_path, 60, download ? { download: doc.file_name } : undefined);
       if (error || !data?.signedUrl) throw error || new Error("Sin URL");
-      window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+      if (download) {
+        // La URL firmada trae Content-Disposition: attachment → descarga directa
+        const a = document.createElement("a");
+        a.href = data.signedUrl;
+        a.download = doc.file_name;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      } else if (win) {
+        win.location.href = data.signedUrl;
+      } else {
+        window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+      }
     } catch {
-      toast({ title: "Error", description: "No se pudo abrir el documento", variant: "destructive" });
+      if (win) win.close();
+      toast({
+        title: "Error",
+        description: download ? "No se pudo descargar el documento" : "No se pudo abrir el documento",
+        variant: "destructive",
+      });
     } finally {
       setBusyDocId(null);
     }
@@ -826,15 +846,27 @@ export const PatientRecord = ({ patientId, businessId, reasonForConsultation }: 
                                   )}
                                 </p>
                               </div>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="rounded-lg h-8 shrink-0"
-                                onClick={() => viewDocument(doc)}
-                                disabled={busyDocId === doc.id}
-                              >
-                                {busyDocId === doc.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Ver"}
-                              </Button>
+                              <div className="flex gap-1.5 shrink-0">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="rounded-lg h-8"
+                                  onClick={() => viewDocument(doc)}
+                                  disabled={busyDocId === doc.id}
+                                >
+                                  {busyDocId === doc.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Ver"}
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  title="Descargar"
+                                  className="rounded-lg h-8 w-8 p-0"
+                                  onClick={() => viewDocument(doc, true)}
+                                  disabled={busyDocId === doc.id}
+                                >
+                                  <Download className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
                             </div>
                           ))}
                         </div>
