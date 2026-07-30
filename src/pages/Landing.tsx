@@ -82,7 +82,12 @@ const problems = [
 // Per-plan feature definitions. El item de recordatorios se personaliza por
 // plan con su límite mensual de WhatsApps (getPricingPlans).
 const REMINDERS_FEATURE = "Recordatorios automáticos por WhatsApp y email";
-const CUSTOM_WEB_FEATURE = "Web personalizada con tu dominio propio — la armamos por vos";
+const CUSTOM_WEB_FEATURE = "Web propia con tu dominio — la armamos por vos";
+// Texto de la web según el nivel del plan
+const CUSTOM_WEB_TEXT: Record<string, string> = {
+  template: "Web propia con tu dominio — 1 página con inicio, sobre vos, servicios, reservas y contacto",
+  custom: "Web completamente personalizada con tu dominio — diseño a medida, la armamos por vos",
+};
 const allFeatures = [
   CUSTOM_WEB_FEATURE,
   "Portal del paciente",
@@ -128,6 +133,8 @@ const Landing = () => {
       const features = allFeatures.map(f => ({
         text: f === REMINDERS_FEATURE && waLimit
           ? `Recordatorios automáticos: ${waLimit.toLocaleString("es-UY")} WhatsApps/mes + emails sin límite`
+          : f === CUSTOM_WEB_FEATURE && CUSTOM_WEB_TEXT[plan.customWebsite]
+          ? CUSTOM_WEB_TEXT[plan.customWebsite]
           : f,
         included: includedFeatures.includes(f),
       }));
