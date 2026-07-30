@@ -128,17 +128,33 @@ const Landing = () => {
         ? "Pacientes activos sin límite"
         : `Hasta ${plan.maxPatients} pacientes activos`;
 
-      const includedFeatures = planFeatures[planCode] || [];
       const waLimit = plan.whatsappMonthly;
-      const features = allFeatures.map(f => ({
-        text: f === REMINDERS_FEATURE && waLimit
-          ? `Recordatorios automáticos: ${waLimit.toLocaleString("es-UY")} WhatsApps/mes + emails sin límite`
-          : f === CUSTOM_WEB_FEATURE && CUSTOM_WEB_TEXT[plan.customWebsite]
-          ? CUSTOM_WEB_TEXT[plan.customWebsite]
-          : f,
-        included: includedFeatures.includes(f),
-      }));
-      
+
+      // Los 3 diferenciales del plan, en grande: pacientes, WhatsApp y web
+      const keyFeatures = [
+        {
+          text: plan.maxPatients === null
+            ? "Pacientes ilimitados"
+            : `Hasta ${plan.maxPatients} pacientes activos`,
+          included: true,
+        },
+        {
+          text: waLimit
+            ? `${waLimit.toLocaleString("es-UY")} WhatsApps automáticos por mes`
+            : "WhatsApps automáticos sin límite",
+          included: true,
+        },
+        {
+          text: CUSTOM_WEB_TEXT[plan.customWebsite] || "Web propia con tu dominio",
+          included: plan.customWebsite !== "none",
+        },
+      ];
+
+      // La base común (sin los diferenciales, que ya van arriba)
+      const features = allFeatures
+        .filter((f) => f !== REMINDERS_FEATURE && f !== CUSTOM_WEB_FEATURE)
+        .map((f) => ({ text: f, included: true }));
+
       return {
         id: planCode,
         name: plan.name,
@@ -155,6 +171,8 @@ const Landing = () => {
         isExternal: false,
         isHighlighted: plan.isHighlighted || false,
         highlightLabel: plan.highlightLabel,
+        premium: planCode === "profesional",
+        keyFeatures,
         features,
       };
     });
