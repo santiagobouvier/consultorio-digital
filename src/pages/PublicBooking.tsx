@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
+import { buildShareUrl } from "@/config/app";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -110,7 +111,7 @@ const demoStarts = (durationMinutes: number): Start[] => {
   return out;
 };
 
-const PublicBooking = ({ demo = false }: { demo?: boolean }) => {
+const PublicBooking = ({ demo = false, embed = false }: { demo?: boolean; embed?: boolean }) => {
   const { slug } = useParams();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -336,6 +337,19 @@ const PublicBooking = ({ demo = false }: { demo?: boolean }) => {
     [startsByDate, selectedDay]
   );
 
+  // Modo embed: reportar el alto del contenido a la web que nos incrusta
+  useEffect(() => {
+    if (!embed) return;
+    const report = () => {
+      const height = document.documentElement.scrollHeight;
+      window.parent?.postMessage({ type: "cd-embed-height", slug, height }, "*");
+    };
+    report();
+    const ro = new ResizeObserver(report);
+    ro.observe(document.body);
+    return () => ro.disconnect();
+  }, [embed, slug]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedService || !selectedStart || (!slug && !demo)) return;
@@ -388,7 +402,18 @@ const PublicBooking = ({ demo = false }: { demo?: boolean }) => {
       // Política "pago requerido": el checkout de Mercado Pago confirma la reserva
       if ((data as any)?.payment_required && (data as any)?.init_point) {
         toast.info("Te llevamos a Mercado Pago para confirmar tu reserva...");
-        window.location.href = (data as any).init_point;
+        const initPoint = (data as any).init_point as string;
+        if (embed) {
+          // Dentro de un iframe el checkout de MP no puede cargar: navegamos
+          // la ventana principal (o abrimos pestaña si el navegador lo corta).
+          try {
+            window.top!.location.href = initPoint;
+          } catch {
+            window.open(initPoint, "_blank", "noopener");
+          }
+        } else {
+          window.location.href = initPoint;
+        }
         return;
       }
 
@@ -508,14 +533,16 @@ const PublicBooking = ({ demo = false }: { demo?: boolean }) => {
                 </p>
               </div>
             )}
-            <Button
-              className="w-full gap-2"
-              style={{ background: `hsl(var(--brand))`, color: "white" }}
-              onClick={() => navigate(demo ? "/demo" : `/consultorio/${targetSlug}`)}
-            >
-              <ArrowLeft className="h-4 w-4" />
-              {demo ? "Volver a la demo" : "Volver al consultorio"}
-            </Button>
+            {!embed && (
+              <Button
+                className="w-full gap-2"
+                style={{ background: `hsl(var(--brand))`, color: "white" }}
+                onClick={() => navigate(demo ? "/demo" : `/consultorio/${targetSlug}`)}
+              >
+                <ArrowLeft className="h-4 w-4" />
+                {demo ? "Volver a la demo" : "Volver al consultorio"}
+              </Button>
+            )}
             <div className="pt-4 border-t border-border space-y-2">
               <p className="text-xs text-muted-foreground px-2">
                 Tu profesional te enviará acceso a tu portal personal donde podrás ver tus citas y más.
@@ -523,7 +550,13 @@ const PublicBooking = ({ demo = false }: { demo?: boolean }) => {
               <Button
                 variant="outline"
                 className="w-full"
-                onClick={() => navigate(demo ? "/portal-paciente/demo" : `/portal/${targetSlug}`)}
+                onClick={() => {
+                  if (embed) {
+                    window.open(buildShareUrl(`/portal/${targetSlug}`), "_blank", "noopener");
+                  } else {
+                    navigate(demo ? "/portal-paciente/demo" : `/portal/${targetSlug}`);
+                  }
+                }}
               >
                 Conocé tu portal
               </Button>
@@ -545,7 +578,9 @@ const PublicBooking = ({ demo = false }: { demo?: boolean }) => {
   return (
     <div className="min-h-screen bg-background text-foreground" style={brandStyle}>
       {/* Header: el botón de tema vive acá adentro (no flota) para que en
-          mobile nunca se encime con el nombre del consultorio. */}
+          mobile nunca se encime con el nombre del consultorio.
+          En embed no se muestra: la web del cliente ya tiene su marca. */}
+      {!embed && (
       <header className="border-b border-border bg-card/40">
         <div className="container mx-auto max-w-4xl px-4 py-4 flex items-center justify-between gap-3">
           {/* En demo no hay consultorio real adonde volver: alcanza con el
@@ -581,8 +616,9 @@ const PublicBooking = ({ demo = false }: { demo?: boolean }) => {
           <div className="shrink-0">{!demo && <PublicThemeControl inline />}</div>
         </div>
       </header>
+      )}
 
-      <main className="container mx-auto max-w-4xl px-4 py-6 sm:py-10 space-y-6 sm:space-y-8 pb-28 sm:pb-10">
+      <main className={`container mx-auto max-w-4xl px-4 space-y-6 sm:space-y-8 ${embed ? "py-4 pb-10" : "py-6 sm:py-10 pb-28 sm:pb-10"}`}>
         <div className="text-center space-y-2">
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight">
             Reservá tu turno

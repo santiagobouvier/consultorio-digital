@@ -210,6 +210,7 @@ const App = () => {
                 <Route path="/configurar-negocio" element={<BusinessSetup />} />
                 <Route path="/consultorio/:slug" element={<PublicClinic />} />
                 <Route path="/consultorio/:slug/reservar" element={<PublicBooking />} />
+                <Route path="/embed/:slug" element={<PublicBooking embed />} />
                 <Route path="/pago-plan/:planId" element={<PlanPayment />} />
                 <Route path="/portal-paciente" element={<PatientPortal />} />
                 <Route path="/portal-paciente/invitacion" element={<PatientInvitation />} />

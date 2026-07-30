@@ -1,9 +1,9 @@
 import { useNavigate } from "react-router-dom";
-import { Building2, DollarSign, Users, Settings2, Server, ArrowLeft, Stethoscope, BarChart3, ChevronRight, type LucideIcon } from "lucide-react";
+import { Building2, DollarSign, Users, Settings2, Server, ArrowLeft, Stethoscope, BarChart3, ChevronRight, Code2, type LucideIcon } from "lucide-react";
 import digitalBuildersLogo from "@/assets/logo-digitalbuilders.webp";
 import consultorioDigitalLogo from "@/assets/logo-consultorio-digital-white.png";
 
-export type SaasSection = "home" | "consultorios" | "finanzas" | "usuarios" | "planes" | "sistema" | "estadisticas";
+export type SaasSection = "home" | "consultorios" | "finanzas" | "usuarios" | "planes" | "sistema" | "estadisticas" | "kitweb";
 
 interface ModuleItem {
   id: SaasSection;
@@ -17,6 +17,7 @@ const MODULES: ModuleItem[] = [
   { id: "consultorios", label: "Consultorios", description: "Gestión de clínicas, profesionales y pacientes.", icon: Building2, accent: "teal" },
   { id: "finanzas",     label: "Finanzas",     description: "Ingresos, MRR y suscripciones activas.",         icon: DollarSign, accent: "emerald" },
   { id: "estadisticas", label: "Estadísticas", description: "Métricas, crecimiento y distribución de planes.", icon: BarChart3, accent: "blue" },
+  { id: "kitweb",       label: "Kit Web",      description: "Snippets de reserva embebida para webs con dominio propio.", icon: Code2, accent: "violet" },
   { id: "usuarios",     label: "Usuarios",     description: "Cuentas, roles y permisos globales.",            icon: Users, accent: "blue" },
   { id: "planes",       label: "Planes",       description: "Configuración de planes y límites.",             icon: Settings2, accent: "violet" },
   { id: "sistema",      label: "Sistema",      description: "Salud técnica, logs y configuración global.",    icon: Server, accent: "cyan" },
@@ -26,6 +27,7 @@ const SECTION_LABELS: Record<Exclude<SaasSection, "home">, string> = {
   consultorios: "Consultorios",
   finanzas: "Finanzas",
   estadisticas: "Estadísticas",
+  kitweb: "Kit Web",
   usuarios: "Usuarios",
   planes: "Planes",
   sistema: "Sistema",

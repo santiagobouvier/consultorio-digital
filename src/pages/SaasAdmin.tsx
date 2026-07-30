@@ -45,6 +45,7 @@ import { isCurrentUserSuperAdmin } from "@/lib/admin-access";
 import { SaasAdminLayout, type SaasSection } from "@/components/saas-admin/SaasAdminLayout";
 import { EstadisticasSection } from "@/components/saas-admin/EstadisticasSection";
 import { FinanzasSection } from "@/components/saas-admin/FinanzasSection";
+import { EmbedKitSection } from "@/components/saas-admin/EmbedKitSection";
 import { buildShareUrl } from "@/config/app";
 
 // ── Types ──────────────────────────────────────────────
@@ -579,8 +580,9 @@ const SaasAdmin = () => {
     >
       {activeSection === "estadisticas" && <EstadisticasSection />}
       {activeSection === "finanzas" && <FinanzasSection />}
+      {activeSection === "kitweb" && <EmbedKitSection />}
 
-      {activeSection !== "consultorios" && activeSection !== "estadisticas" && activeSection !== "finanzas" && (
+      {activeSection !== "consultorios" && activeSection !== "estadisticas" && activeSection !== "finanzas" && activeSection !== "kitweb" && (
         <ComingSoonSection section={activeSection} />
       )}
 
@@ -1098,6 +1100,7 @@ const ComingSoonSection = ({ section }: { section: SaasSection }) => {
     home: { title: "Panel", desc: "" },
     consultorios: { title: "Consultorios", desc: "" },
     finanzas: { title: "Finanzas", desc: "Gráficos de ingresos por mes, MRR por plan, total cobrado vs proyectado." },
+    kitweb: { title: "Kit Web", desc: "Snippets de reserva embebida y botón de portal para webs con dominio propio." },
     estadisticas: { title: "Estadísticas", desc: "" },
     usuarios: { title: "Usuarios", desc: "Lista de profesionales registrados en la plataforma con búsqueda y filtros." },
     planes: { title: "Planes", desc: "Editor de nombre, precios y límites de cada plan." },
