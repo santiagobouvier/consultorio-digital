@@ -48,7 +48,11 @@ const GREEN_GLOW = "rgba(0, 199, 138, 0.15)";
 const faqItems = [
   {
     question: "¿Qué incluye cada plan?",
-    answer: "Todos los planes incluyen las mismas funcionalidades: portal del paciente, agenda, cobro online con Mercado Pago, recordatorios automáticos por WhatsApp y email, estadísticas, app instalable, marca blanca y más. La diferencia está en la cantidad de pacientes activos y de WhatsApps automáticos por mes."
+    answer: "Todos los planes incluyen el sistema completo: portal del paciente, agenda, cobro online con Mercado Pago, recordatorios automáticos por WhatsApp y email, expediente clínico, estadísticas, app instalable y marca blanca. La diferencia está en tres cosas: la cantidad de pacientes activos, la cantidad de WhatsApps automáticos por mes, y la web propia — incluida desde el plan Esencial."
+  },
+  {
+    question: "¿Cómo es eso de la web propia incluida?",
+    answer: "Desde el plan Esencial, el equipo te arma tu página web con tu logo, tu estilo y tu dominio propio (el dominio lo comprás vos, cuesta unos US$ 15 al año). En Esencial es una página completa con inicio, sobre vos, servicios, reservas y contacto. En Profesional el diseño es totalmente a medida. La reserva online queda integrada adentro: tus pacientes agendan sin salir de tu web."
   },
   {
     question: "¿Los recordatorios automáticos tienen costo extra?",
@@ -77,6 +81,7 @@ const problems = [
   { icon: AlertTriangle, text: "Pagos que se olvidan o no se registran" },
   { icon: AlertTriangle, text: "Pacientes que no recuerdan sus turnos" },
   { icon: AlertTriangle, text: "Información repartida en planillas y apps" },
+  { icon: AlertTriangle, text: "Sin una web propia donde te encuentren y reserven" },
 ];
 
 // Per-plan feature definitions. El item de recordatorios se personaliza por
@@ -286,6 +291,7 @@ const Landing = () => {
                     "Todo centralizado y claro",
                     "Acceso para vos y tus pacientes",
                     "Recordatorios automáticos por WhatsApp y email — salen solos",
+                    "Tu propia página web con tu dominio — la armamos por vos",
                   ].map((text, i) => (
                     <li key={i} className="flex items-start gap-3">
                       <Check className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: GREEN }} />
