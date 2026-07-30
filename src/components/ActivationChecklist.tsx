@@ -189,6 +189,7 @@ export const ActivationChecklist = ({ businessId, onAllDone }: Props) => {
     {
       key: "contact",
       done: state.contact,
+      to: "/mi-consultorio",
       title: "Completá los datos del consultorio",
       desc: "El email de contacto es adonde te llegan los avisos de cada reserva.",
       action: (
@@ -200,6 +201,7 @@ export const ActivationChecklist = ({ businessId, onAllDone }: Props) => {
     {
       key: "services",
       done: state.services,
+      to: "/horarios-disponibles",
       title: "Creá tus tipos de sesión",
       desc: "Nombre, duración y precio de lo que ofrecés (ej: Sesión individual, 60 min).",
       action: (
@@ -211,6 +213,7 @@ export const ActivationChecklist = ({ businessId, onAllDone }: Props) => {
     {
       key: "template",
       done: state.template,
+      to: "/horarios-disponibles",
       title: "Definí tu semana tipo",
       desc: "Marcá tus días y horarios; la disponibilidad se calcula sola.",
       action: (
@@ -222,6 +225,7 @@ export const ActivationChecklist = ({ businessId, onAllDone }: Props) => {
     {
       key: "mp",
       done: state.mp,
+      to: "/mi-consultorio?tab=pagos",
       title: "Conectá Mercado Pago",
       desc: "Para cobrar reservas online.",
       action: (
@@ -233,6 +237,7 @@ export const ActivationChecklist = ({ businessId, onAllDone }: Props) => {
     {
       key: "shared",
       done: state.shared,
+      to: null as string | null,
       title: "Compartí tu link público",
       desc: "Empezá a recibir reservas.",
       action: (
@@ -255,6 +260,7 @@ export const ActivationChecklist = ({ businessId, onAllDone }: Props) => {
     {
       key: "portal",
       done: state.portalCustomized,
+      to: "/personalizar-portal",
       title: "Personalizá tu portal",
       desc: "Subí tu logo y elegí tus colores: tu marca en la web y el portal.",
       action: (
@@ -266,6 +272,7 @@ export const ActivationChecklist = ({ businessId, onAllDone }: Props) => {
     {
       key: "invited",
       done: state.invited,
+      to: "/patients",
       title: "Invitá a tu primer paciente al portal",
       desc: "Desde su ficha: va a poder ver sus citas, pagar y reservar solo.",
       action: (
@@ -277,6 +284,7 @@ export const ActivationChecklist = ({ businessId, onAllDone }: Props) => {
     {
       key: "push",
       done: state.push,
+      to: "/mi-consultorio?tab=notificaciones",
       title: "Activá las notificaciones",
       desc: "Enterate al instante de cada reserva, incluso con la app cerrada.",
       action: (
@@ -293,7 +301,7 @@ export const ActivationChecklist = ({ businessId, onAllDone }: Props) => {
   const renderItem = (it: (typeof items)[number]) => (
     <li
       key={it.key}
-      className="flex items-center gap-3 rounded-md border border-border/50 bg-card px-3 py-2"
+      className="flex items-center gap-3 rounded-xl border border-border/60 bg-background/70 hover:bg-muted/40 transition-colors px-3.5 py-2.5"
     >
       {it.done ? (
         <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0" />
@@ -310,13 +318,32 @@ export const ActivationChecklist = ({ businessId, onAllDone }: Props) => {
         </p>
         <p className="text-xs text-muted-foreground truncate">{it.desc}</p>
       </div>
-      {!it.done && it.action}
+      {it.done ? (
+        // Ya está hecho, pero el acceso queda a la mano para volver cuando quieras
+        <Button
+          size="icon"
+          variant="ghost"
+          className="h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground rounded-lg"
+          title={it.key === "shared" ? "Copiar link" : "Ir a esta sección"}
+          onClick={() => (it.key === "shared" ? handleCopy() : it.to && navigate(it.to))}
+        >
+          {it.key === "shared" ? <Copy className="h-4 w-4" /> : <ArrowRight className="h-4 w-4" />}
+        </Button>
+      ) : (
+        it.action
+      )}
     </li>
   );
 
+  const totalSteps = items.length + extraItems.length;
+  const totalDone = doneCount + extrasDoneCount;
+  const progressPct = Math.round((totalDone / totalSteps) * 100);
+
   return (
-    <Card className="border-primary/40 bg-primary/5">
-      <CardContent className="p-4 sm:p-5 space-y-3">
+    <Card className="relative overflow-hidden rounded-2xl border-primary/25 bg-card shadow-[0_18px_50px_-24px_rgba(0,0,0,0.45)]">
+      <div aria-hidden className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-primary/50 via-primary to-primary/50" />
+      <div aria-hidden className="absolute inset-0 bg-gradient-to-br from-primary/[0.05] to-transparent pointer-events-none" />
+      <CardContent className="relative p-4 sm:p-5 space-y-3">
         {/* Cabecera: siempre visible, toca para expandir/achicar */}
         <button
           type="button"
@@ -340,8 +367,24 @@ export const ActivationChecklist = ({ businessId, onAllDone }: Props) => {
               )}
             </div>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <span className="text-sm font-medium text-muted-foreground">
+          <div className="flex items-center gap-3 shrink-0">
+            <div className="hidden sm:block w-28">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[10px] font-semibold text-muted-foreground tabular-nums">
+                  {essentialsDone
+                    ? `${extrasDoneCount}/${extraItems.length}`
+                    : `${doneCount}/${items.length}`}
+                </span>
+                <span className="text-[10px] font-semibold text-primary tabular-nums">{progressPct}%</span>
+              </div>
+              <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-primary transition-all duration-500"
+                  style={{ width: `${progressPct}%` }}
+                />
+              </div>
+            </div>
+            <span className="sm:hidden text-sm font-medium text-muted-foreground tabular-nums">
               {essentialsDone
                 ? `${extrasDoneCount}/${extraItems.length}`
                 : `${doneCount}/${items.length}`}
