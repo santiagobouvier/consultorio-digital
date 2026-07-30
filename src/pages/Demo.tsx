@@ -3,7 +3,7 @@
 // profesional en su panel).
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Globe, Smartphone, LayoutDashboard, Palette, ArrowLeft, ArrowRight, Lock } from "lucide-react";
+import { Globe, Smartphone, LayoutDashboard, Palette, FileText, ArrowLeft, ArrowRight, Lock } from "lucide-react";
 
 const BRAND = "#00a5a0";
 
@@ -59,6 +59,16 @@ const Demo = () => {
       onClick: () => navigate("/portal-paciente/demo"),
     },
     {
+      icon: FileText,
+      accent: "#38bdf8",
+      title: "El expediente clínico",
+      subtitle: "La historia de cada paciente",
+      description: "La ficha por sesión: notas clínicas, documentos y estado de pago, todo ordenado. Lo que hace la diferencia en el día a día.",
+      cta: "Ver el expediente",
+      enabled: true,
+      onClick: () => navigate("/demo/expediente"),
+    },
+    {
       icon: LayoutDashboard,
       accent: BRAND,
       title: "Tu agenda en el panel",
@@ -88,7 +98,7 @@ const Demo = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
           {blocks.map((b) => (
             <div
               key={b.title}
