@@ -56,7 +56,7 @@ const faqItems = [
   },
   {
     question: "¿Los recordatorios automáticos tienen costo extra?",
-    answer: "No. Cada plan incluye una cantidad generosa de recordatorios de WhatsApp por mes (200 en Emprendedor, 500 en Esencial, 1.500 en Profesional) y los de email son ilimitados en todos los planes. Si llegás al límite de WhatsApps, tus pacientes siguen recibiendo el aviso por email igual."
+    answer: "No. Cada plan incluye una cantidad generosa de recordatorios de WhatsApp por mes (250 en Emprendedor, 700 en Esencial, 1.500 en Profesional) y los de email son ilimitados en todos los planes. Si llegás al límite de WhatsApps, tus pacientes siguen recibiendo el aviso por email igual."
   },
   {
     question: "¿De qué número le llega el WhatsApp a mis pacientes?",

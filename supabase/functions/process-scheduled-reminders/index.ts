@@ -29,8 +29,8 @@ const WHATSAPP_LANG = "es";
 // src/lib/plan-definitions.ts). null = sin límite. Al llegar al tope, el
 // aviso whatsapp se cancela pero el de email sale igual.
 const WHATSAPP_MONTHLY_LIMITS: Record<string, number | null> = {
-  emprendedor: 200,
-  esencial: 500,
+  emprendedor: 250,
+  esencial: 700,
   profesional: 1500,
   consultorio: 3000,
   personalizado: null,
