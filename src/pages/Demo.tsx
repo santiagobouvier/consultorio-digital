@@ -26,6 +26,8 @@ const Demo = () => {
   const navigate = useNavigate();
   // La web personalizada se muestra embebida en un modal: la URL no se expone
   const [showCustomWeb, setShowCustomWeb] = useState(false);
+  // Vista del sitio embebido: pantalla completa o marco de celular
+  const [webView, setWebView] = useState<"desktop" | "mobile">("desktop");
 
   const blocks: DemoBlock[] = [
     {
@@ -142,13 +144,30 @@ const Demo = () => {
           onClick={() => setShowCustomWeb(false)}
         >
           <div
-            className="relative w-full max-w-6xl h-[88dvh] rounded-2xl overflow-hidden border border-white/15 bg-white shadow-2xl"
+            className="relative w-full max-w-6xl h-[88dvh] rounded-2xl overflow-hidden border border-white/15 shadow-2xl flex flex-col"
+            style={{ backgroundColor: "#0b0f0e" }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="absolute top-0 inset-x-0 z-10 flex items-center justify-between gap-3 px-4 py-2.5 bg-black/85 backdrop-blur-md border-b border-white/10">
-              <p className="text-xs sm:text-sm text-white/80 font-medium truncate">
-                Web personalizada de ejemplo — con la reserva de Consultorio Digital integrada
+            <div className="shrink-0 flex items-center justify-between gap-3 px-4 py-2.5 bg-black/85 backdrop-blur-md border-b border-white/10">
+              <p className="hidden sm:block text-xs sm:text-sm text-white/80 font-medium truncate">
+                Web personalizada de ejemplo — reserva integrada
               </p>
+              <div className="flex items-center gap-1 rounded-lg bg-white/10 p-1">
+                {([
+                  { id: "desktop", label: "Compu" },
+                  { id: "mobile", label: "Celular" },
+                ] as const).map((v) => (
+                  <button
+                    key={v.id}
+                    onClick={() => setWebView(v.id)}
+                    className={`px-3 py-1 rounded-md text-xs font-semibold transition-colors ${
+                      webView === v.id ? "bg-white text-black" : "text-white/60 hover:text-white"
+                    }`}
+                  >
+                    {v.label}
+                  </button>
+                ))}
+              </div>
               <button
                 onClick={() => setShowCustomWeb(false)}
                 className="shrink-0 inline-flex items-center gap-1.5 text-xs font-semibold text-white bg-white/10 hover:bg-white/20 rounded-lg px-3 py-1.5 transition-colors"
@@ -156,11 +175,24 @@ const Demo = () => {
                 Cerrar ✕
               </button>
             </div>
-            <iframe
-              src={CUSTOM_WEB_URL}
-              title="Web personalizada de ejemplo"
-              className="w-full h-full border-0 pt-11"
-            />
+            {webView === "desktop" ? (
+              <iframe
+                src={CUSTOM_WEB_URL}
+                title="Web personalizada de ejemplo"
+                className="w-full flex-1 border-0 bg-white"
+              />
+            ) : (
+              <div className="flex-1 overflow-hidden flex items-center justify-center p-4">
+                {/* Marco de celular: la misma web, como la ve un paciente desde el teléfono */}
+                <div className="h-full max-h-[720px] aspect-[390/800] rounded-[36px] bg-black p-2 shadow-2xl ring-1 ring-white/20">
+                  <iframe
+                    src={CUSTOM_WEB_URL}
+                    title="Web personalizada de ejemplo (celular)"
+                    className="w-full h-full border-0 rounded-[28px] bg-white"
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
