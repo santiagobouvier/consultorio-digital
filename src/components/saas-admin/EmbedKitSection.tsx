@@ -33,7 +33,6 @@ const buildEmbedSnippet = (slug: string, theme: "light" | "dark") => {
   f.style.border = "0";
   f.style.display = "block";
   f.style.minHeight = "680px";
-  f.setAttribute("loading", "lazy");
   f.setAttribute("allowtransparency", "true");
   f.style.background = "transparent";
   document.getElementById("cd-reserva").appendChild(f);
