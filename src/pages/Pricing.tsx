@@ -271,10 +271,14 @@ const PlanCard = ({ plan, billingCycle, onSelect }: PlanCardProps) => {
             text="Web pública del consultorio"
           />
         )}
-        {plan.customWebsite && (
+        {plan.customWebsite !== "none" && (
           <FeatureItem
             icon={<Globe className="w-4 h-4" />}
-            text="Web personalizada con tu dominio — la armamos por vos"
+            text={
+              plan.customWebsite === "custom"
+                ? "Web completamente personalizada con tu dominio — a medida"
+                : "Web propia con tu dominio — 1 página (inicio, servicios, reservas y contacto)"
+            }
           />
         )}
         <FeatureItem icon={<Check className="w-4 h-4" />} text="Agenda inteligente" />
