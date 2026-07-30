@@ -33,7 +33,7 @@ interface SharedDocument {
 
 interface PortalDocumentsProps {
   patientId: string;
-  /** En el demo no hay sesión de paciente real: no se muestra la sección. */
+  /** En el demo se muestran documentos de ejemplo (nada se descarga). */
   isDemo?: boolean;
 }
 
@@ -60,13 +60,44 @@ const fileIcon = (mime: string | null) => {
   return FileText;
 };
 
+// Documentos ficticios para el modo demo: se ven, no se descargan.
+const DEMO_DOCUMENTS: SharedDocument[] = [
+  {
+    id: "demo-doc-1",
+    file_name: "Informe_de_evolucion.pdf",
+    file_path: "demo",
+    file_size: 186000,
+    mime_type: "application/pdf",
+    document_type: "informe",
+    notes: null,
+    shared_at: new Date(Date.now() - 5 * 86400000).toISOString(),
+    created_at: new Date(Date.now() - 5 * 86400000).toISOString(),
+  },
+  {
+    id: "demo-doc-2",
+    file_name: "Ejercicios_para_casa.pdf",
+    file_path: "demo",
+    file_size: 92000,
+    mime_type: "application/pdf",
+    document_type: "indicaciones",
+    notes: "Material trabajado en la última sesión.",
+    shared_at: new Date(Date.now() - 12 * 86400000).toISOString(),
+    created_at: new Date(Date.now() - 12 * 86400000).toISOString(),
+  },
+] as SharedDocument[];
+
 export const PortalDocuments = ({ patientId, isDemo = false }: PortalDocumentsProps) => {
   const [documents, setDocuments] = useState<SharedDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isDemo || !patientId) {
+    if (isDemo) {
+      setDocuments(DEMO_DOCUMENTS);
+      setLoading(false);
+      return;
+    }
+    if (!patientId) {
       setLoading(false);
       return;
     }
@@ -88,6 +119,10 @@ export const PortalDocuments = ({ patientId, isDemo = false }: PortalDocumentsPr
   }, [patientId, isDemo]);
 
   const openDocument = async (doc: SharedDocument, download: boolean) => {
+    if (isDemo) {
+      toast({ title: "Modo demo", description: "En tu portal real acá se abre el documento." });
+      return;
+    }
     setBusyId(doc.id);
     // Para "Ver" abrimos la pestaña ANTES del await: si no, el bloqueador
     // de pop-ups del navegador la mata (el click ya no cuenta como gesto).
@@ -123,7 +158,7 @@ export const PortalDocuments = ({ patientId, isDemo = false }: PortalDocumentsPr
   };
 
   // Sin documentos compartidos, la sección no existe (cero ruido)
-  if (isDemo || loading || documents.length === 0) return null;
+  if (loading || documents.length === 0) return null;
 
   return (
     <div className="space-y-3 lg:space-y-4 pt-2">
