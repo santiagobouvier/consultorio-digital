@@ -20,8 +20,8 @@ interface BusinessRow {
 }
 
 /** El script que ajusta el alto del iframe según el contenido (postMessage). */
-const buildEmbedSnippet = (slug: string) => {
-  const src = buildShareUrl(`/embed/${slug}`);
+const buildEmbedSnippet = (slug: string, theme: "light" | "dark") => {
+  const src = buildShareUrl(`/embed/${slug}${theme === "dark" ? "?theme=dark" : ""}`);
   return `<!-- Reserva online — Consultorio Digital -->
 <div id="cd-reserva" style="width:100%"></div>
 <script>
@@ -34,6 +34,8 @@ const buildEmbedSnippet = (slug: string) => {
   f.style.display = "block";
   f.style.minHeight = "680px";
   f.setAttribute("loading", "lazy");
+  f.setAttribute("allowtransparency", "true");
+  f.style.background = "transparent";
   document.getElementById("cd-reserva").appendChild(f);
   window.addEventListener("message", function (e) {
     if (e.data && e.data.type === "cd-embed-height" && e.data.slug === "${slug}") {
@@ -62,6 +64,8 @@ export const EmbedKitSection = () => {
   const [selectedId, setSelectedId] = useState<string>("");
   const [copied, setCopied] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  // Tema del recuadro: elegí el que combine con la web del cliente
+  const [theme, setTheme] = useState<"light" | "dark">("light");
 
   useEffect(() => {
     (async () => {
@@ -84,7 +88,7 @@ export const EmbedKitSection = () => {
   );
   const slug = selected?.public_slug || null;
 
-  const embedSnippet = slug ? buildEmbedSnippet(slug) : "";
+  const embedSnippet = slug ? buildEmbedSnippet(slug, theme) : "";
   const portalSnippet = slug ? buildPortalSnippet(slug) : "";
 
   const copy = async (key: string, text: string) => {
@@ -174,27 +178,42 @@ export const EmbedKitSection = () => {
                     <Globe className="h-4 w-4 text-violet-400" /> 1 · Reserva incrustada
                   </p>
                   <p className="text-xs text-slate-400 mt-0.5">
-                    Pegá esto donde quieras que aparezca la reserva (se ajusta solo de alto).
+                    Pegá esto donde quieras: es un cuerpo puro sin encabezado ni fondo — se funde con la web del cliente y se ajusta solo de alto. Poné el título de la sección en la web (ej: "Agendá tu hora").
                   </p>
                 </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="rounded-lg gap-1.5 border-slate-700"
-                  onClick={() => setShowPreview((v) => !v)}
-                >
-                  {showPreview ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                  {showPreview ? "Ocultar vista previa" : "Vista previa"}
-                </Button>
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1 rounded-lg bg-slate-950/60 border border-slate-700 p-1">
+                    {(["light", "dark"] as const).map((t) => (
+                      <button
+                        key={t}
+                        onClick={() => setTheme(t)}
+                        className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+                          theme === t ? "bg-slate-700 text-white" : "text-slate-400 hover:text-white"
+                        }`}
+                      >
+                        {t === "light" ? "Claro" : "Oscuro"}
+                      </button>
+                    ))}
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="rounded-lg gap-1.5 border-slate-700"
+                    onClick={() => setShowPreview((v) => !v)}
+                  >
+                    {showPreview ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                    {showPreview ? "Ocultar vista previa" : "Vista previa"}
+                  </Button>
+                </div>
               </div>
               <CodeBlock id="embed" code={embedSnippet} />
               {showPreview && (
                 <div className="rounded-xl border border-slate-700 overflow-hidden bg-white">
                   <iframe
-                    src={buildShareUrl(`/embed/${slug}`)}
+                    src={`${window.location.origin}/embed/${slug}${theme === "dark" ? "?theme=dark" : ""}`}
                     title="Vista previa de la reserva"
                     className="w-full border-0"
-                    style={{ height: 640 }}
+                    style={{ height: 640, background: theme === "dark" ? "#0d1615" : "#ffffff" }}
                   />
                 </div>
               )}
