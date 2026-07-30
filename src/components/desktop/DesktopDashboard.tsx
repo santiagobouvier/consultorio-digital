@@ -20,6 +20,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ActivationChecklist } from "@/components/ActivationChecklist";
 import { PublicLinkCard } from "@/components/PublicLinkCard";
 import { PaymentLinkMenu } from "@/components/PaymentLinkMenu";
+import { AppointmentDetailModal } from "@/components/calendar/AppointmentDetailModal";
 import {
   ActivationCompleteModal,
   wasActivationCelebrated,
@@ -58,9 +59,13 @@ interface Appointment {
   end_at: string | null;
   status: string;
   modality: string | null;
+  location: string | null;
+  payment_status: string | null;
   patient_id: string | null;
+  service_id: string | null;
   professional_id: string | null;
-  patients: { full_name: string; whatsapp_phone: string | null } | null;
+  recurrence_group_id?: string | null;
+  patients: { full_name: string; whatsapp_phone: string | null; email?: string | null; avatar_url?: string | null } | null;
   services: { name: string } | null;
 }
 
@@ -116,6 +121,8 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
   const [apptsRecent, setApptsRecent] = useState<Array<{ start_at: string }>>([]);
 
   const [dataLoading, setDataLoading] = useState(true);
+  // Cita abierta en el modal de detalle (decisiones del día sin salir del dashboard)
+  const [selectedApt, setSelectedApt] = useState<Appointment | null>(null);
   const [showActivationDone, setShowActivationDone] = useState(false);
 
   // Reloj interno: mueve la cuenta regresiva, el EN CURSO y la línea de AHORA
@@ -148,7 +155,7 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
           // ayer para detectar sesiones sin nota clínica.
           supabase
             .from("appointments")
-            .select(`id, start_at, end_at, status, modality, patient_id, professional_id, patients (full_name, whatsapp_phone), services (name)`)
+            .select(`id, start_at, end_at, status, modality, location, payment_status, patient_id, service_id, professional_id, recurrence_group_id, patients (full_name, whatsapp_phone, email, avatar_url), services (name)`)
             .eq("business_id", businessId)
             .gte("start_at", yesterday.toISOString())
             .lt("start_at", tomorrow.toISOString())
@@ -156,7 +163,7 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
           // Próximas 72 hs (para el hero cuando hoy no hay nada)
           supabase
             .from("appointments")
-            .select(`id, start_at, end_at, status, modality, patient_id, professional_id, patients (full_name, whatsapp_phone), services (name)`)
+            .select(`id, start_at, end_at, status, modality, location, payment_status, patient_id, service_id, professional_id, recurrence_group_id, patients (full_name, whatsapp_phone, email, avatar_url), services (name)`)
             .eq("business_id", businessId)
             .gte("start_at", new Date().toISOString())
             .lt("start_at", dayAfter.toISOString())
@@ -649,7 +656,7 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
                           <div
                             key={row.apt.id}
                             role="button"
-                            onClick={() => navigate("/agenda")}
+                            onClick={() => setSelectedApt(row.apt)}
                             className={`relative pl-7 py-2.5 pr-3 rounded-xl cursor-pointer transition-colors hover:bg-muted/50 ${
                               row.state === "now" ? "bg-primary/[0.06] ring-1 ring-primary/30" : ""
                             } ${row.state === "cancelled" ? "opacity-45" : ""}`}
@@ -888,7 +895,12 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
                     </p>
                     <div className="space-y-2">
                       {tomorrowList.slice(0, 3).map((a) => (
-                        <div key={a.id} className="flex items-center gap-3 text-sm">
+                        <div
+                          key={a.id}
+                          role="button"
+                          onClick={() => setSelectedApt(a)}
+                          className="flex items-center gap-3 text-sm rounded-lg px-1 py-0.5 -mx-1 cursor-pointer hover:bg-muted/50 transition-colors"
+                        >
                           <span className="font-bold tabular-nums text-muted-foreground w-11">
                             {format(new Date(a.start_at), "HH:mm")}
                           </span>
@@ -918,6 +930,15 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
             <PublicLinkCard businessId={businessId} />
           </div>
         </div>
+
+        {/* Detalle de la cita: cobrar, reprogramar, cancelar — sin salir del dashboard */}
+        <AppointmentDetailModal
+          appointment={selectedApt as any}
+          open={!!selectedApt}
+          onClose={() => setSelectedApt(null)}
+          businessId={businessId}
+          onPaymentRegistered={() => fetchDashboardData(true)}
+        />
       </main>
     </div>
   );
