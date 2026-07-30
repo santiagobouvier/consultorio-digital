@@ -3,7 +3,7 @@
 // idéntico al producto de hoy, pero nada se guarda y nada dispara avisos
 // (ni WhatsApp ni emails). Tocar una cita abre un detalle de solo lectura.
 import { useState } from "react";
-import { format, addDays, subDays, addWeeks, subWeeks } from "date-fns";
+import { format, addDays, subDays, addWeeks, subWeeks, addMonths, subMonths } from "date-fns";
 import { es } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Video, MapPin, CreditCard, CalendarClock, MessageCircle, XCircle } from "lucide-react";
 import { DemoBanner } from "@/components/demo/DemoBanner";
@@ -16,6 +16,7 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { DayViewV2 } from "@/components/calendar-v2/DayViewV2";
 import { WeekViewV2 } from "@/components/calendar-v2/WeekViewV2";
+import { MonthViewV2 } from "@/components/calendar-v2/MonthViewV2";
 import {
   type CalendarAppointment,
   type DayPayment,
@@ -23,7 +24,7 @@ import {
   getPaymentColorInfo,
 } from "@/components/calendar-v2/types";
 
-type ViewType = "day" | "week";
+type ViewType = "day" | "week" | "month";
 
 // ── Citas de ejemplo ancladas a la semana actual ──
 const today = new Date();
@@ -75,6 +76,15 @@ const APPOINTMENTS: CalendarAppointment[] = [
   mk("a10", at(3, 9, 30), "Federico García", "in_person", "confirmed", "green"),
   mk("a11", at(4, 14, 0), "Agustina López", "online", "confirmed", "green", "Primera consulta", 90),
   mk("a12", at(-1, 16, 0), "Martín Acosta", "in_person", "attended", "green"),
+  // Resto del mes (para que la vista mensual se vea viva)
+  mk("a13", at(7, 10, 0), "María González", "in_person", "confirmed", "green"),
+  mk("a14", at(7, 15, 0), "Lucía Fernández", "online", "confirmed", "green"),
+  mk("a15", at(9, 11, 0), "Diego Martínez", "in_person", "confirmed", "orange"),
+  mk("a16", at(11, 14, 0), "Sofía Pereyra", "online", "confirmed", "green"),
+  mk("a17", at(14, 9, 0), "Camila Torres", "in_person", "confirmed", "green"),
+  mk("a18", at(-4, 10, 0), "Julián Rodríguez", "online", "attended", "green"),
+  mk("a19", at(-6, 15, 0), "Paula Núñez", "in_person", "attended", "green"),
+  mk("a20", at(-8, 11, 0), "Federico García", "in_person", "attended", "green"),
 ];
 
 // Un cobro del día, para mostrar el chip de pagos en la vista día
@@ -103,8 +113,10 @@ const DemoAgenda = () => {
   // Cita abierta en el detalle de solo lectura
   const [selected, setSelected] = useState<CalendarAppointment | null>(null);
 
-  const goPrev = () => setCurrentDate((d) => (viewType === "day" ? subDays(d, 1) : subWeeks(d, 1)));
-  const goNext = () => setCurrentDate((d) => (viewType === "day" ? addDays(d, 1) : addWeeks(d, 1)));
+  const goPrev = () =>
+    setCurrentDate((d) => (viewType === "day" ? subDays(d, 1) : viewType === "week" ? subWeeks(d, 1) : subMonths(d, 1)));
+  const goNext = () =>
+    setCurrentDate((d) => (viewType === "day" ? addDays(d, 1) : viewType === "week" ? addWeeks(d, 1) : addMonths(d, 1)));
 
   const payInfo = selected ? getPaymentColorInfo(selected.paymentColor) : null;
 
@@ -139,6 +151,7 @@ const DemoAgenda = () => {
           <TabsList className="rounded-xl h-11">
             <TabsTrigger value="day" className="rounded-lg px-4">Día</TabsTrigger>
             <TabsTrigger value="week" className="rounded-lg px-4">Semana</TabsTrigger>
+            <TabsTrigger value="month" className="rounded-lg px-4">Mes</TabsTrigger>
           </TabsList>
         </Tabs>
 
@@ -153,8 +166,20 @@ const DemoAgenda = () => {
             dayPayments={DAY_PAYMENTS}
             onPaymentClick={demoToast}
           />
-        ) : (
+        ) : viewType === "week" ? (
           <WeekViewV2
+            currentDate={currentDate}
+            appointments={APPOINTMENTS}
+            onAppointmentClick={(apt) => setSelected(apt)}
+            onDayClick={(date) => {
+              setCurrentDate(date);
+              setViewType("day");
+            }}
+            onAddAppointment={demoToast}
+            showProfessionalColors={false}
+          />
+        ) : (
+          <MonthViewV2
             currentDate={currentDate}
             appointments={APPOINTMENTS}
             onAppointmentClick={(apt) => setSelected(apt)}

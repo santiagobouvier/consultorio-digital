@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, isToday } from "date-fns";
 import { es } from "date-fns/locale";
-import { CalendarAppointment, DayPayment } from "./types";
+import { CalendarAppointment, DayPayment, getStatusColor, getPaymentColorInfo } from "./types";
 import { AppointmentCard } from "./AppointmentCard";
 import { cn } from "@/lib/utils";
 import { Plus, CreditCard } from "lucide-react";
@@ -183,70 +183,223 @@ export const WeekViewV2 = ({
 
       </div>
 
-      {/* Desktop Week View - Grid de 7 columnas (solo xl+, donde entra bien) */}
-      <div className="hidden xl:block overflow-x-auto pb-2 -mx-1 px-1">
-        <div className="grid grid-cols-7 gap-3 min-w-[980px] xl:min-w-0">
-        {days.map((day) => {
-          const dayAppointments = getAppointmentsForDay(day);
-          const dayPayments = getPaymentsForDay(day);
-          const isCurrentDay = isToday(day);
-          const totalCount = dayAppointments.length + dayPayments.length;
+      {/* ── Desktop Week: grilla horaria real (xl+), estilo Google Calendar ── */}
+      <div className="hidden xl:block">
+        {(() => {
+          const HOUR_H = 56;
+          // Rango horario dinámico: cubre todas las citas de la semana
+          let startHour = 8;
+          let endHour = 20;
+          for (const apt of appointments) {
+            const sD = new Date(apt.start_at);
+            const eD = new Date(apt.end_at);
+            if (days.some((d) => isSameDay(sD, d))) {
+              startHour = Math.min(startHour, sD.getHours());
+              endHour = Math.max(endHour, eD.getMinutes() > 0 ? eD.getHours() + 1 : eD.getHours());
+            }
+          }
+          const hours: number[] = [];
+          for (let h = startHour; h < endHour; h++) hours.push(h);
+          const bodyHeight = hours.length * HOUR_H;
+          const now = new Date();
+          const nowTop = ((now.getHours() * 60 + now.getMinutes()) / 60 - startHour) * HOUR_H;
+
+          // Distribución lado a lado cuando dos citas se pisan en el mismo día
+          const layoutDay = (dayAppts: CalendarAppointment[]) => {
+            const sorted = [...dayAppts].sort(
+              (a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime(),
+            );
+            const colEnds: number[] = [];
+            const placed = sorted.map((apt) => {
+              const sMs = new Date(apt.start_at).getTime();
+              const eMs = new Date(apt.end_at).getTime();
+              let col = colEnds.findIndex((end) => end <= sMs);
+              if (col === -1) {
+                col = colEnds.length;
+                colEnds.push(eMs);
+              } else {
+                colEnds[col] = eMs;
+              }
+              return { apt, col };
+            });
+            return { placed, cols: Math.max(colEnds.length, 1) };
+          };
+
+          const gridCols = { gridTemplateColumns: "3.25rem repeat(7, minmax(0, 1fr))" };
 
           return (
-            <div
-              key={day.toISOString()}
-              className={cn(
-                "bg-card rounded-2xl border p-3 min-h-[200px] flex flex-col min-w-0",
-                isCurrentDay && "ring-2 ring-primary"
-              )}
-            >
-              <button
-                onClick={() => onDayClick(day)}
-                className="flex items-center justify-between mb-3 hover:bg-muted/50 -mx-1 px-1 py-1 rounded-lg transition-colors"
-              >
-                <div>
-                  <p className="text-xs text-muted-foreground capitalize">
-                    {format(day, "EEEE", { locale: es })}
-                  </p>
-                  <p className={cn("text-xl font-bold", isCurrentDay && "text-primary")}>
-                    {format(day, "d")}
-                  </p>
-                </div>
-                {totalCount > 0 && (
-                  <span className="text-sm text-muted-foreground">{totalCount}</span>
-                )}
-              </button>
+            <div className="bg-card rounded-2xl border overflow-hidden">
+              {/* Encabezado de días */}
+              <div className="grid border-b" style={gridCols}>
+                <div className="bg-muted/30 border-r" />
+                {days.map((day) => {
+                  const count = getAppointmentsForDay(day).filter(
+                    (a) => a.status !== "cancelled" && a.status !== "cancelled_by_patient",
+                  ).length;
+                  const isCurrentDay = isToday(day);
+                  return (
+                    <button
+                      key={day.toISOString()}
+                      onClick={() => onDayClick(day)}
+                      className={cn(
+                        "py-2.5 text-center border-r last:border-r-0 transition-colors hover:bg-muted/40",
+                        isCurrentDay && "bg-primary/[0.06]",
+                      )}
+                    >
+                      <p className="text-[10px] uppercase font-semibold text-muted-foreground">
+                        {format(day, "EEE", { locale: es })}
+                      </p>
+                      <p
+                        className={cn(
+                          "text-lg font-bold leading-tight inline-flex items-center justify-center",
+                          isCurrentDay && "text-primary-foreground bg-primary rounded-full w-8 h-8 mt-0.5",
+                        )}
+                      >
+                        {format(day, "d")}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground h-3.5">
+                        {count > 0 ? `${count} cita${count !== 1 ? "s" : ""}` : ""}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
 
-              <div className="flex-1 space-y-2 overflow-y-auto">
-                {totalCount === 0 ? (
-                  <p className="text-xs text-muted-foreground text-center py-4">Sin actividad</p>
-                ) : (
-                  <>
-                    {dayAppointments.map((apt) => (
-                      <div key={apt.id} className="relative">
-                        <div className="flex items-center gap-1">
-                          <ProfessionalBadge appointment={apt} showColor={showProfessionalColors} />
-                          <div className="flex-1 min-w-0">
-                            <AppointmentCard
-                              appointment={apt}
-                              onClick={() => onAppointmentClick(apt)}
-                              showProfessionalColor={showProfessionalColors}
-                              compact
-                            />
-                          </div>
-                        </div>
+              {/* Strip de cobros del día (si hay) */}
+              {paymentsByDay && days.some((d) => getPaymentsForDay(d).length > 0) && (
+                <div className="grid border-b bg-muted/20" style={gridCols}>
+                  <div className="border-r flex items-center justify-center py-1.5">
+                    <CreditCard className="h-3 w-3 text-muted-foreground" />
+                  </div>
+                  {days.map((day) => {
+                    const pays = getPaymentsForDay(day);
+                    return (
+                      <div key={day.toISOString()} className="border-r last:border-r-0 p-1 space-y-1 min-w-0">
+                        {pays.slice(0, 2).map((p) => (
+                          <PaymentChip key={p.id} p={p} compact />
+                        ))}
+                        {pays.length > 2 && (
+                          <button
+                            onClick={() => onDayClick(day)}
+                            className="w-full text-[10px] text-primary font-medium hover:underline"
+                          >
+                            +{pays.length - 2} más
+                          </button>
+                        )}
                       </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Cuerpo: eje horario + columnas por día */}
+              <div className="overflow-y-auto max-h-[62vh]">
+                <div className="grid" style={gridCols}>
+                  {/* Eje de horas */}
+                  <div className="relative border-r bg-muted/20" style={{ height: bodyHeight }}>
+                    {hours.map((h, i) => (
+                      <span
+                        key={h}
+                        className="absolute right-1.5 text-[10px] text-muted-foreground font-medium tabular-nums"
+                        style={{ top: i * HOUR_H - (i === 0 ? 0 : 7) }}
+                      >
+                        {`${String(h).padStart(2, "0")}:00`}
+                      </span>
                     ))}
-                    {dayPayments.map((p) => (
-                      <PaymentChip key={`pay-${p.id}`} p={p} compact />
-                    ))}
-                  </>
-                )}
+                  </div>
+                  {days.map((day) => {
+                    const { placed, cols } = layoutDay(getAppointmentsForDay(day));
+                    const isCurrentDay = isToday(day);
+                    return (
+                      <div
+                        key={day.toISOString()}
+                        className={cn("relative border-r last:border-r-0", isCurrentDay && "bg-primary/[0.03]")}
+                        style={{ height: bodyHeight }}
+                        onClick={() => onDayClick(day)}
+                      >
+                        {/* Líneas de hora */}
+                        {hours.map((h, i) => (
+                          <div
+                            key={h}
+                            className="absolute inset-x-0 border-t border-border/50"
+                            style={{ top: i * HOUR_H }}
+                            aria-hidden
+                          />
+                        ))}
+
+                        {/* Bloques de citas */}
+                        {placed.map(({ apt, col }) => {
+                          const sD = new Date(apt.start_at);
+                          const eD = new Date(apt.end_at);
+                          const top = ((sD.getHours() * 60 + sD.getMinutes()) / 60 - startHour) * HOUR_H;
+                          const height = Math.max(((eD.getTime() - sD.getTime()) / 3600000) * HOUR_H - 3, 26);
+                          const compact = height < 44;
+                          const stColor = getStatusColor(apt.status);
+                          const payInfo = getPaymentColorInfo(apt.paymentColor);
+                          const widthPct = 100 / cols;
+                          const isCancelled = apt.status === "cancelled" || apt.status === "cancelled_by_patient";
+                          return (
+                            <div
+                              key={apt.id}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onAppointmentClick(apt);
+                              }}
+                              className={cn(
+                                "absolute rounded-lg border border-border/60 border-l-4 shadow-sm cursor-pointer overflow-hidden transition-all hover:shadow-md hover:z-20 bg-card",
+                                stColor.border,
+                                stColor.bgTint,
+                                apt.status === "attended" && "opacity-60",
+                                isCancelled && "opacity-40",
+                              )}
+                              style={{
+                                top,
+                                height,
+                                left: `calc(${col * widthPct}% + 3px)`,
+                                width: `calc(${widthPct}% - 6px)`,
+                              }}
+                            >
+                              <div className={cn("h-full flex flex-col", compact ? "px-1.5 py-0.5" : "p-1.5")}>
+                                <div className="flex items-center gap-1 min-w-0">
+                                  {showProfessionalColors && apt.professional && (
+                                    <span
+                                      className="w-2 h-2 rounded-full shrink-0"
+                                      style={{ backgroundColor: apt.professional.color }}
+                                    />
+                                  )}
+                                  <p className={cn("font-semibold truncate text-[11px] leading-tight", isCancelled && "line-through")}>
+                                    {apt.patients?.full_name || "Sin paciente"}
+                                  </p>
+                                  {payInfo && <span className={cn("w-1.5 h-1.5 rounded-full shrink-0 ml-auto", payInfo.className)} />}
+                                </div>
+                                {!compact && (
+                                  <p className="text-[10px] text-muted-foreground tabular-nums mt-auto">
+                                    {format(sD, "HH:mm")} – {format(eD, "HH:mm")}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+
+                        {/* Línea de AHORA (solo hoy) */}
+                        {isCurrentDay && nowTop >= 0 && nowTop <= bodyHeight && (
+                          <div
+                            className="absolute inset-x-0 z-10 pointer-events-none flex items-center"
+                            style={{ top: nowTop }}
+                          >
+                            <span className="w-2 h-2 rounded-full bg-destructive -ml-1" />
+                            <span className="flex-1 h-[2px] bg-destructive/80" />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           );
-        })}
-        </div>
+        })()}
       </div>
     </>
   );
