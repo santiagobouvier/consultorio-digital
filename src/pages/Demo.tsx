@@ -1,6 +1,7 @@
 // Demo hub: bloques para elegir qué probar. Muestra la misma experiencia desde
 // distintas miradas (paciente nuevo en la web, paciente fiel en su portal, y el
 // profesional en su panel).
+import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Globe, Smartphone, LayoutDashboard, Palette, ArrowLeft, ArrowRight, Lock } from "lucide-react";
 
@@ -8,7 +9,7 @@ const BRAND = "#00a5a0";
 
 // Web personalizada de muestra (proyecto Lovable con la reserva incrustada).
 // Cuando esté publicada, poné acá su URL para habilitar la tarjeta.
-const CUSTOM_WEB_URL = "";
+const CUSTOM_WEB_URL = "https://mentalcareuy.lovable.app";
 
 interface DemoBlock {
   icon: typeof Globe;
@@ -23,6 +24,8 @@ interface DemoBlock {
 
 const Demo = () => {
   const navigate = useNavigate();
+  // La web personalizada se muestra embebida en un modal: la URL no se expone
+  const [showCustomWeb, setShowCustomWeb] = useState(false);
 
   const blocks: DemoBlock[] = [
     {
@@ -43,7 +46,7 @@ const Demo = () => {
       description: "Una web hecha a tu medida, con tu marca y tu dominio — y la reserva de Consultorio Digital integrada adentro. Todo en uno.",
       cta: "Ver una web real",
       enabled: !!CUSTOM_WEB_URL,
-      onClick: () => window.open(CUSTOM_WEB_URL, "_blank", "noopener"),
+      onClick: () => setShowCustomWeb(true),
     },
     {
       icon: Smartphone,
@@ -121,6 +124,36 @@ const Demo = () => {
           ))}
         </div>
       </div>
+
+      {/* Web personalizada embebida: se ve el sitio, no la dirección */}
+      {showCustomWeb && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6"
+          onClick={() => setShowCustomWeb(false)}
+        >
+          <div
+            className="relative w-full max-w-6xl h-[88dvh] rounded-2xl overflow-hidden border border-white/15 bg-white shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="absolute top-0 inset-x-0 z-10 flex items-center justify-between gap-3 px-4 py-2.5 bg-black/85 backdrop-blur-md border-b border-white/10">
+              <p className="text-xs sm:text-sm text-white/80 font-medium truncate">
+                Web personalizada de ejemplo — con la reserva de Consultorio Digital integrada
+              </p>
+              <button
+                onClick={() => setShowCustomWeb(false)}
+                className="shrink-0 inline-flex items-center gap-1.5 text-xs font-semibold text-white bg-white/10 hover:bg-white/20 rounded-lg px-3 py-1.5 transition-colors"
+              >
+                Cerrar ✕
+              </button>
+            </div>
+            <iframe
+              src={CUSTOM_WEB_URL}
+              title="Web personalizada de ejemplo"
+              className="w-full h-full border-0 pt-11"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
