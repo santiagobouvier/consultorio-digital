@@ -712,14 +712,14 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
             {/* ── Números, en segundo plano ── */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {[
-                { icon: Wallet, label: "Cobrado hoy", value: formatCurrency(collectedToday), to: "/payments", cls: "text-emerald-600 dark:text-emerald-400" },
-                { icon: Wallet, label: "Cobrado este mes", value: formatCurrency(collectedThisMonth), to: "/payments", cls: "" },
+                { icon: Wallet, label: "Cobrado hoy", value: formatCurrency(collectedToday), to: "/pagos", cls: "text-emerald-600 dark:text-emerald-400" },
+                { icon: Wallet, label: "Cobrado este mes", value: formatCurrency(collectedThisMonth), to: "/pagos", cls: "" },
                 { icon: CalendarDays, label: "Citas esta semana", value: String(weekApptsCount), to: "/agenda", cls: "" },
                 {
                   icon: AlertTriangle,
                   label: "Vencido por reclamar",
                   value: overdueAmount > 0 ? formatCurrency(overdueAmount) : "—",
-                  to: "/payments",
+                  to: "/pagos",
                   cls: overdueAmount > 0 ? "text-rose-600 dark:text-rose-400" : "text-muted-foreground",
                 },
               ].map((k) => (
@@ -761,96 +761,114 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
                     <p className="text-xs text-muted-foreground mt-1">Nada espera una acción tuya ahora mismo.</p>
                   </div>
                 ) : (
-                  <div className="space-y-2.5">
-                    {/* Solicitudes de reserva */}
+                  <div className="space-y-5">
+                    {/* ── Solicitudes ── */}
                     {pendingRequestsCount > 0 && (
-                      <button
-                        onClick={() => navigate("/solicitudes")}
-                        className="w-full text-left rounded-xl border border-amber-500/35 bg-amber-500/[0.07] hover:bg-amber-500/[0.13] transition-colors p-3.5 flex items-center gap-3"
-                      >
-                        <span className="relative flex h-2.5 w-2.5 shrink-0">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-500 opacity-60" />
-                          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500" />
-                        </span>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold">
-                            {pendingRequestsCount} solicitud{pendingRequestsCount !== 1 ? "es" : ""} esperando
-                          </p>
-                          <p className="text-[11px] text-muted-foreground">Reservas y reprogramaciones por aprobar</p>
-                        </div>
-                        <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
-                      </button>
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
+                          <Inbox className="h-3 w-3" /> Solicitudes
+                        </p>
+                        <button
+                          onClick={() => navigate("/solicitudes")}
+                          className="w-full text-left rounded-xl border border-amber-500/35 bg-amber-500/[0.07] hover:bg-amber-500/[0.13] transition-colors p-3.5 flex items-center gap-3"
+                        >
+                          <span className="relative flex h-2.5 w-2.5 shrink-0">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-500 opacity-60" />
+                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500" />
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold">
+                              {pendingRequestsCount} solicitud{pendingRequestsCount !== 1 ? "es" : ""} esperando
+                            </p>
+                            <p className="text-[11px] text-muted-foreground">Reservas y reprogramaciones por aprobar</p>
+                          </div>
+                          <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                        </button>
+                      </div>
                     )}
 
-                    {/* Pagos vencidos */}
-                    {overduePayments.slice(0, 4).map((p) => (
-                      <div key={p.id} className="rounded-xl border border-rose-500/30 bg-rose-500/[0.05] p-3.5 flex items-center gap-3">
-                        <AlertTriangle className="h-4 w-4 text-rose-500 shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold truncate">{p.patientName}</p>
-                          <p className="text-[11px] text-muted-foreground">
-                            <b className="text-rose-600 dark:text-rose-400">{formatCurrency(p.amount)}</b> · venció el{" "}
-                            {format(new Date(p.due_date), "d MMM", { locale: es })}
-                          </p>
+                    {/* ── Cobros pendientes ── */}
+                    {(overduePayments.length > 0 || dueTodayPayments.length > 0) && (
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
+                          <Wallet className="h-3 w-3" /> Cobros por reclamar
+                        </p>
+                        <div className="space-y-2">
+                          {overduePayments.slice(0, 4).map((p) => (
+                            <div key={p.id} className="rounded-xl border border-rose-500/30 bg-rose-500/[0.05] p-3.5 flex items-center gap-3">
+                              <AlertTriangle className="h-4 w-4 text-rose-500 shrink-0" />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-semibold truncate">{p.patientName}</p>
+                                <p className="text-[11px] text-muted-foreground">
+                                  <b className="text-rose-600 dark:text-rose-400">{formatCurrency(p.amount)}</b> · venció el{" "}
+                                  {format(new Date(p.due_date), "d MMM", { locale: es })}
+                                </p>
+                              </div>
+                              <PaymentLinkMenu
+                                patientPhone={p.patientPhone || null}
+                                patientName={p.patientName || ""}
+                                getPaymentLink={mpConnected ? () => createPaymentLink(businessId, [p.id]) : undefined}
+                                compact
+                              />
+                            </div>
+                          ))}
+                          {dueTodayPayments.slice(0, 3).map((p) => (
+                            <div key={p.id} className="rounded-xl border border-amber-500/30 bg-amber-500/[0.05] p-3.5 flex items-center gap-3">
+                              <Wallet className="h-4 w-4 text-amber-500 shrink-0" />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-semibold truncate">{p.patientName}</p>
+                                <p className="text-[11px] text-muted-foreground">
+                                  <b>{formatCurrency(p.amount)}</b> · vence hoy
+                                </p>
+                              </div>
+                              <PaymentLinkMenu
+                                patientPhone={p.patientPhone || null}
+                                patientName={p.patientName || ""}
+                                getPaymentLink={mpConnected ? () => createPaymentLink(businessId, [p.id]) : undefined}
+                                compact
+                              />
+                            </div>
+                          ))}
+                          {overduePayments.length > 4 && (
+                            <button onClick={() => navigate("/pagos")} className="w-full text-center text-xs font-medium text-primary hover:underline py-1">
+                              Ver los {overduePayments.length} pagos vencidos →
+                            </button>
+                          )}
                         </div>
-                        <PaymentLinkMenu
-                          patientPhone={p.patientPhone || null}
-                          patientName={p.patientName || ""}
-                          getPaymentLink={mpConnected ? () => createPaymentLink(businessId, [p.id]) : undefined}
-                          compact
-                        />
                       </div>
-                    ))}
-                    {overduePayments.length > 4 && (
-                      <button onClick={() => navigate("/payments")} className="w-full text-center text-xs font-medium text-primary hover:underline py-1">
-                        Ver los {overduePayments.length} pagos vencidos →
-                      </button>
                     )}
 
-                    {/* Pagos que vencen hoy */}
-                    {dueTodayPayments.slice(0, 3).map((p) => (
-                      <div key={p.id} className="rounded-xl border border-amber-500/30 bg-amber-500/[0.05] p-3.5 flex items-center gap-3">
-                        <Wallet className="h-4 w-4 text-amber-500 shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold truncate">{p.patientName}</p>
-                          <p className="text-[11px] text-muted-foreground">
-                            <b>{formatCurrency(p.amount)}</b> · vence hoy
-                          </p>
+                    {/* ── Notas clínicas sin escribir ── */}
+                    {sessionsWithoutNote.length > 0 && (
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
+                          <StickyNote className="h-3 w-3" /> Notas clínicas sin escribir
+                        </p>
+                        <div className="space-y-2">
+                          {sessionsWithoutNote.slice(0, 3).map((a) => (
+                            <button
+                              key={a.id}
+                              onClick={() => a.patient_id && navigate(`/patients/${a.patient_id}`)}
+                              className="w-full text-left rounded-xl border border-border hover:border-primary/40 hover:bg-primary/[0.03] transition-colors p-3.5 flex items-center gap-3"
+                            >
+                              <StickyNote className="h-4 w-4 text-primary shrink-0" />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-semibold truncate">{a.patients?.full_name || "Sin paciente"}</p>
+                                <p className="text-[11px] text-muted-foreground capitalize">
+                                  sesión de {new Date(a.start_at).getTime() >= todayStart ? "hoy" : "ayer"} ·{" "}
+                                  {format(new Date(a.start_at), "HH:mm")} hs · tocá para escribirla
+                                </p>
+                              </div>
+                              <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                            </button>
+                          ))}
+                          {sessionsWithoutNote.length > 3 && (
+                            <p className="text-center text-[11px] text-muted-foreground">
+                              y {sessionsWithoutNote.length - 3} más
+                            </p>
+                          )}
                         </div>
-                        <PaymentLinkMenu
-                          patientPhone={p.patientPhone || null}
-                          patientName={p.patientName || ""}
-                          getPaymentLink={mpConnected ? () => createPaymentLink(businessId, [p.id]) : undefined}
-                          compact
-                        />
                       </div>
-                    ))}
-
-                    {/* Sesiones sin nota */}
-                    {sessionsWithoutNote.slice(0, 3).map((a) => (
-                      <button
-                        key={a.id}
-                        onClick={() => a.patient_id && navigate(`/patients/${a.patient_id}`)}
-                        className="w-full text-left rounded-xl border border-border hover:border-primary/40 hover:bg-primary/[0.03] transition-colors p-3.5 flex items-center gap-3"
-                      >
-                        <StickyNote className="h-4 w-4 text-primary shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold truncate">
-                            Nota pendiente · {a.patients?.full_name || "Sin paciente"}
-                          </p>
-                          <p className="text-[11px] text-muted-foreground capitalize">
-                            {new Date(a.start_at).getTime() >= todayStart ? "hoy" : "ayer"} ·{" "}
-                            {format(new Date(a.start_at), "HH:mm")} hs
-                          </p>
-                        </div>
-                        <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
-                      </button>
-                    ))}
-                    {sessionsWithoutNote.length > 3 && (
-                      <p className="text-center text-[11px] text-muted-foreground">
-                        y {sessionsWithoutNote.length - 3} nota{sessionsWithoutNote.length - 3 !== 1 ? "s" : ""} más pendiente
-                        {sessionsWithoutNote.length - 3 !== 1 ? "s" : ""}
-                      </p>
                     )}
                   </div>
                 )}
