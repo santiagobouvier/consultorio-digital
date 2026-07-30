@@ -356,6 +356,18 @@ const PublicBooking = ({ demo = false, embed = false }: { demo?: boolean; embed?
     return () => ro.disconnect();
   }, [embed, slug]);
 
+  // Embed: volver al inicio de la agenda para reservar de nuevo
+  const resetBooking = () => {
+    setSuccess(false);
+    setSelectedService(null);
+    setSelectedStart(null);
+    setSelectedDay(null);
+    setForm({ name: "", email: "", phone: "", message: "" });
+    setErrors({});
+    setStarts([]);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedService || !selectedStart || (!slug && !demo)) return;
@@ -521,7 +533,9 @@ const PublicBooking = ({ demo = false, embed = false }: { demo?: boolean; embed?
                 {paidReturn ? "¡Pago recibido y reserva confirmada!" : "¡Reserva confirmada!"}
               </h1>
               <p className="text-sm text-muted-foreground">
-                {paidReturn
+                {embed
+                  ? "Revisá tu email y tu WhatsApp: en un momento te llega la confirmación con todos los detalles de tu cita."
+                  : paidReturn
                   ? "Recibimos tu pago y tu cita quedó confirmada. Te enviamos los detalles a tu email."
                   : "Te enviamos los detalles a tu email. El consultorio se pondrá en contacto si necesita algo más."}
               </p>
@@ -539,7 +553,15 @@ const PublicBooking = ({ demo = false, embed = false }: { demo?: boolean; embed?
                 </p>
               </div>
             )}
-            {!embed && (
+            {embed ? (
+              <Button
+                className="w-full gap-2"
+                style={{ background: `hsl(var(--brand))`, color: "white" }}
+                onClick={resetBooking}
+              >
+                Agendar otra hora
+              </Button>
+            ) : (
               <Button
                 className="w-full gap-2"
                 style={{ background: `hsl(var(--brand))`, color: "white" }}
@@ -549,6 +571,7 @@ const PublicBooking = ({ demo = false, embed = false }: { demo?: boolean; embed?
                 {demo ? "Volver a la demo" : "Volver al consultorio"}
               </Button>
             )}
+            {!embed && (
             <div className="pt-4 border-t border-border space-y-2">
               <p className="text-xs text-muted-foreground px-2">
                 Tu profesional te enviará acceso a tu portal personal donde podrás ver tus citas y más.
@@ -556,17 +579,12 @@ const PublicBooking = ({ demo = false, embed = false }: { demo?: boolean; embed?
               <Button
                 variant="outline"
                 className="w-full"
-                onClick={() => {
-                  if (embed) {
-                    window.open(buildShareUrl(`/portal/${targetSlug}`), "_blank", "noopener");
-                  } else {
-                    navigate(demo ? "/portal-paciente/demo" : `/portal/${targetSlug}`);
-                  }
-                }}
+                onClick={() => navigate(demo ? "/portal-paciente/demo" : `/portal/${targetSlug}`)}
               >
                 Conocé tu portal
               </Button>
             </div>
+            )}
           </CardContent>
         </Card>
       </div>
