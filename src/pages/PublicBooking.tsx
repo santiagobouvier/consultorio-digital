@@ -337,9 +337,15 @@ const PublicBooking = ({ demo = false, embed = false }: { demo?: boolean; embed?
     [startsByDate, selectedDay]
   );
 
+  // Modo embed: tema pedido por la web madre (?theme=dark|light)
+  const embedTheme = embed && searchParams.get("theme") === "dark" ? "dark" : "light";
+
   // Modo embed: reportar el alto del contenido a la web que nos incrusta
+  // y dejar el fondo transparente para fundirse con la página madre.
   useEffect(() => {
     if (!embed) return;
+    document.documentElement.style.background = "transparent";
+    document.body.style.background = "transparent";
     const report = () => {
       const height = document.documentElement.scrollHeight;
       window.parent?.postMessage({ type: "cd-embed-height", slug, height }, "*");
@@ -499,7 +505,7 @@ const PublicBooking = ({ demo = false, embed = false }: { demo?: boolean; embed?
   if (success) {
     return (
       <div
-        className="min-h-screen flex items-center justify-center bg-background p-4"
+        className={`${embed ? `${embedTheme === "dark" ? "dark " : ""}bg-transparent py-6` : "min-h-screen bg-background"} flex items-center justify-center p-4`}
         style={brandStyle}
       >
         <Card className="w-full max-w-md">
@@ -576,7 +582,10 @@ const PublicBooking = ({ demo = false, embed = false }: { demo?: boolean; embed?
       : { background: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))" };
 
   return (
-    <div className="min-h-screen bg-background text-foreground" style={brandStyle}>
+    <div
+      className={`${embed ? `${embedTheme === "dark" ? "dark " : ""}bg-transparent` : "min-h-screen bg-background"} text-foreground`}
+      style={brandStyle}
+    >
       {/* Header: el botón de tema vive acá adentro (no flota) para que en
           mobile nunca se encime con el nombre del consultorio.
           En embed no se muestra: la web del cliente ya tiene su marca. */}
@@ -619,7 +628,7 @@ const PublicBooking = ({ demo = false, embed = false }: { demo?: boolean; embed?
       )}
 
       <main className={`container mx-auto max-w-4xl px-4 space-y-6 sm:space-y-8 ${embed ? "py-4 pb-10" : "py-6 sm:py-10 pb-28 sm:pb-10"}`}>
-        <div className="text-center space-y-2">
+        <div className={`text-center space-y-2 ${embed ? "hidden" : ""}`}>
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight">
             Reservá tu turno
           </h1>
