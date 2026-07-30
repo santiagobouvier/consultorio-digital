@@ -516,56 +516,108 @@ const Dashboard = () => {
           </Card>
         )}
 
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {/* Avatar with upload */}
-            <div className="relative group">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleFileChange}
+        {/* ── Banda hero: el cockpit del día, versión bolsillo ── */}
+        {(() => {
+          const CANCELLED_H = ["cancelled", "cancelled_by_patient", "no_show"];
+          const activeH = todayAppointments.filter((a) => !CANCELLED_H.includes(a.status));
+          const doneH = activeH.filter(
+            (a) => a.status === "attended" || (a.end_at && new Date(a.end_at).getTime() <= nowTick)
+          ).length;
+          const pct = activeH.length > 0 ? Math.min(1, doneH / activeH.length) : 0;
+          const r = 30;
+          const c = 2 * Math.PI * r;
+          return (
+            <div
+              className="relative overflow-hidden text-white -mx-4 sm:-mx-6 -mt-4 sm:-mt-6 px-4 sm:px-6 pt-5 pb-6 rounded-b-3xl"
+              style={{ background: "linear-gradient(130deg, hsl(182 20% 5%) 0%, hsl(180 32% 8%) 50%, hsl(176 65% 11%) 100%)" }}
+            >
+              <div
+                className="absolute -top-20 -right-12 w-[280px] h-[220px] pointer-events-none"
+                style={{ background: "radial-gradient(ellipse at center, hsl(176 90% 45% / 0.22), transparent 65%)" }}
               />
-              <Avatar
-                className="h-14 w-14 cursor-pointer ring-2 ring-border group-hover:ring-primary transition-all"
-                onClick={handleAvatarClick}
-              >
-                <AvatarImage src={avatarUrl || undefined} alt={userName} />
-                <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-                  {getInitials(userName)}
-                </AvatarFallback>
-              </Avatar>
-              <div 
-                className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                onClick={handleAvatarClick}
-              >
-                {uploadingAvatar ? (
-                  <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <Camera className="h-5 w-5 text-white" />
+              <div className="relative flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="relative group shrink-0">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleFileChange}
+                    />
+                    <Avatar
+                      className="h-12 w-12 cursor-pointer ring-2 ring-white/20"
+                      onClick={handleAvatarClick}
+                    >
+                      <AvatarImage src={avatarUrl || undefined} alt={userName} />
+                      <AvatarFallback className="bg-white/10 text-[#2dd4bf] font-semibold">
+                        {getInitials(userName)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div
+                      className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                      onClick={handleAvatarClick}
+                    >
+                      {uploadingAvatar ? (
+                        <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <Camera className="h-5 w-5 text-white" />
+                      )}
+                    </div>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[11px] text-white/55 capitalize">
+                      {(() => {
+                        const d = new Date(nowTick);
+                        const h = d.getHours();
+                        const saludo = h < 12 ? "Buenos días" : h < 19 ? "Buenas tardes" : "Buenas noches";
+                        return `${saludo} · ${d.toLocaleDateString("es-UY", { weekday: "long", day: "numeric", month: "long" })}`;
+                      })()}
+                    </p>
+                    <h1 className="text-lg font-bold truncate">Hola, {userName.split(" ")[0]} 👋</h1>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleLogout}
+                  className="text-white/50 hover:text-white hover:bg-white/10 h-10 w-10 shrink-0"
+                >
+                  <LogOut className="h-5 w-5" />
+                </Button>
+              </div>
+
+              <div className="relative flex items-center justify-between gap-4 mt-4">
+                <div>
+                  <p className="text-4xl font-extrabold tabular-nums tracking-tight leading-none">
+                    {new Date(nowTick).toLocaleTimeString("es-UY", { hour: "2-digit", minute: "2-digit" })}
+                  </p>
+                  <p className="text-[11px] text-white/55 mt-1.5">
+                    {activeH.length === 0
+                      ? "Hoy libre en la agenda"
+                      : `${doneH} de ${activeH.length} ${activeH.length === 1 ? "sesión" : "sesiones"} del día`}
+                  </p>
+                </div>
+                {activeH.length > 0 && (
+                  <div className="relative h-[68px] w-[68px] shrink-0">
+                    <svg viewBox="0 0 72 72" className="h-[68px] w-[68px] -rotate-90">
+                      <circle cx="36" cy="36" r={r} fill="none" strokeWidth="6" className="stroke-white/15" />
+                      <circle
+                        cx="36" cy="36" r={r} fill="none" strokeWidth="6" strokeLinecap="round"
+                        className="stroke-[#2dd4bf] transition-[stroke-dashoffset] duration-700"
+                        strokeDasharray={c} strokeDashoffset={c * (1 - pct)}
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <span className="text-base font-bold tabular-nums leading-none">{doneH}</span>
+                      <span className="text-[8px] text-white/50 mt-0.5">de {activeH.length}</span>
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
-            <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-foreground inline-flex items-center gap-2">
-                Hola, {userName}
-                <HelpTooltip id="dashboard" />
-              </h1>
-            </div>
-          </div>
-          {/* Solo cerrar sesión: la campanita confundía (parecía notificaciones
-              y llevaba a Recordatorios, que ya vive en el menú de módulos). */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleLogout}
-            className="text-muted-foreground hover:text-destructive h-10 w-10"
-          >
-            <LogOut className="h-5 w-5" />
-          </Button>
-        </div>
+          );
+        })()}
 
         {/* ══════════ 1) AHORA: la próxima sesión, protagonista ══════════ */}
         {(() => {

@@ -383,23 +383,23 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
       .toUpperCase();
 
   // Anillo de progreso del día (sesiones realizadas / total)
-  const DayRing = ({ done, total }: { done: number; total: number }) => {
+  const DayRing = ({ done, total, size = 76, onDark = false }: { done: number; total: number; size?: number; onDark?: boolean }) => {
     const pct = total > 0 ? Math.min(1, done / total) : 0;
     const r = 30;
     const c = 2 * Math.PI * r;
     return (
-      <div className="relative h-[76px] w-[76px] shrink-0">
-        <svg viewBox="0 0 72 72" className="h-[76px] w-[76px] -rotate-90">
-          <circle cx="36" cy="36" r={r} fill="none" strokeWidth="5.5" className="stroke-muted" />
+      <div className="relative shrink-0" style={{ width: size, height: size }}>
+        <svg viewBox="0 0 72 72" className="-rotate-90" style={{ width: size, height: size }}>
+          <circle cx="36" cy="36" r={r} fill="none" strokeWidth="5.5" className={onDark ? "stroke-white/15" : "stroke-muted"} />
           <circle
             cx="36" cy="36" r={r} fill="none" strokeWidth="5.5" strokeLinecap="round"
-            className="stroke-primary transition-[stroke-dashoffset] duration-700"
+            className={onDark ? "stroke-[#2dd4bf] transition-[stroke-dashoffset] duration-700" : "stroke-primary transition-[stroke-dashoffset] duration-700"}
             strokeDasharray={c} strokeDashoffset={c * (1 - pct)}
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-lg font-bold tabular-nums leading-none">{done}</span>
-          <span className="text-[9px] font-medium text-muted-foreground mt-0.5">de {total}</span>
+          <span className={`font-bold tabular-nums leading-none ${size >= 90 ? "text-2xl" : "text-lg"} ${onDark ? "text-white" : ""}`}>{done}</span>
+          <span className={`text-[9px] font-medium mt-0.5 ${onDark ? "text-white/50" : "text-muted-foreground"}`}>de {total}</span>
         </div>
       </div>
     );
@@ -429,12 +429,15 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
     ) : null;
 
   // ── Acciones rápidas de una sesión (hero) ──
-  const SessionActions = ({ apt }: { apt: Appointment }) => {
+  const SessionActions = ({ apt, onDark = false }: { apt: Appointment; onDark?: boolean }) => {
     const payment = paymentForAppointment(apt.id);
+    const cls = onDark
+      ? "rounded-xl gap-1.5 h-9 border-white/15 bg-white/[0.08] text-white hover:bg-white/[0.18] hover:text-white"
+      : "rounded-xl gap-1.5 h-9";
     return (
       <div className="flex items-center gap-2 flex-wrap">
         {apt.patient_id && (
-          <Button size="sm" variant="outline" className="rounded-xl gap-1.5 h-9" onClick={() => navigate(`/patients/${apt.patient_id}`)}>
+          <Button size="sm" variant="outline" className={cls} onClick={() => navigate(`/patients/${apt.patient_id}`)}>
             <User className="h-4 w-4" /> Ver ficha
           </Button>
         )}
@@ -442,7 +445,7 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
           <Button
             size="sm"
             variant="outline"
-            className="rounded-xl gap-1.5 h-9"
+            className={cls}
             onClick={() =>
               openWhatsApp(
                 apt.patients!.whatsapp_phone!,
@@ -454,7 +457,7 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
           </Button>
         )}
         {apt.patient_id && !notedAppointmentIds.has(apt.id) && (
-          <Button size="sm" variant="outline" className="rounded-xl gap-1.5 h-9" onClick={() => navigate(`/patients/${apt.patient_id}`)}>
+          <Button size="sm" variant="outline" className={cls} onClick={() => navigate(`/patients/${apt.patient_id}`)}>
             <StickyNote className="h-4 w-4" /> Escribir nota
           </Button>
         )}
@@ -516,42 +519,69 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
     );
   }
 
+  const tomorrowIso = format(addDays(new Date(nowTick), 1), "yyyy-MM-dd");
+  const tomorrowFirst = upcomingAppointments.find((a) => isTomorrow(new Date(a.start_at)));
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30">
-      {/* ── Header limpio: marca + fecha, selector, ir a la agenda ── */}
-      <header className="relative overflow-hidden border-b border-border/50">
-        <div className="absolute inset-0 bg-card/50 backdrop-blur-sm" />
+    <div className="min-h-screen bg-background">
+      {/* ══════════ BANDA HERO: el cockpit del día ══════════ */}
+      <section className="relative overflow-hidden text-white">
         <div
-          className="absolute -top-24 -left-16 w-[440px] h-[280px] pointer-events-none"
-          style={{ background: "radial-gradient(ellipse at center, hsl(var(--primary) / 0.14), transparent 70%)" }}
+          className="absolute inset-0"
+          style={{ background: "linear-gradient(130deg, hsl(182 20% 5%) 0%, hsl(180 32% 8%) 45%, hsl(176 65% 11%) 100%)" }}
         />
-        <div className="relative max-w-screen-2xl mx-auto px-10 py-5">
+        <div
+          className="absolute -top-32 right-[8%] w-[560px] h-[420px] pointer-events-none"
+          style={{ background: "radial-gradient(ellipse at center, hsl(176 90% 45% / 0.22), transparent 65%)" }}
+        />
+        <div
+          className="absolute -bottom-40 -left-24 w-[440px] h-[360px] pointer-events-none"
+          style={{ background: "radial-gradient(ellipse at center, hsl(176 90% 45% / 0.10), transparent 65%)" }}
+        />
+        <div
+          className="absolute inset-0 pointer-events-none opacity-[0.35]"
+          style={{
+            backgroundImage:
+              "linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px)",
+            backgroundSize: "56px 56px",
+            maskImage: "linear-gradient(to bottom, rgba(0,0,0,0.7), transparent 85%)",
+            WebkitMaskImage: "linear-gradient(to bottom, rgba(0,0,0,0.7), transparent 85%)",
+          }}
+        />
+
+        <div className="relative max-w-screen-2xl mx-auto px-10 pt-7 pb-16">
+          {/* Fila superior: marca · fecha/reloj · acciones */}
           <div className="flex items-center justify-between gap-6">
             <div className="flex items-center gap-4 min-w-0">
               {brandLogoUrl ? (
-                <img src={brandLogoUrl} alt="Logo" className="h-12 w-12 rounded-xl object-cover ring-2 ring-primary/25" />
+                <img src={brandLogoUrl} alt="Logo" className="h-12 w-12 rounded-xl object-cover ring-2 ring-white/20" />
               ) : (
-                <div className="h-12 w-12 rounded-xl bg-primary/10 ring-2 ring-primary/25 flex items-center justify-center">
-                  <Building2 className="h-6 w-6 text-primary" />
+                <div className="h-12 w-12 rounded-xl bg-white/10 ring-2 ring-white/15 flex items-center justify-center">
+                  <Building2 className="h-6 w-6 text-[#2dd4bf]" />
                 </div>
               )}
               <div className="min-w-0">
-                <p className="text-muted-foreground text-xs font-medium">
+                <p className="text-white/55 text-xs font-medium">
                   {getGreeting()}, {userName.split(" ")[0]} 👋
                 </p>
-                <h1 className="text-xl font-bold text-foreground tracking-tight leading-tight truncate">{businessName}</h1>
+                <h1 className="text-lg font-bold tracking-tight leading-tight truncate">{businessName}</h1>
               </div>
-              <div className="hidden xl:block pl-4 ml-2 border-l border-border/60">
-                <p className="text-sm font-semibold capitalize">
+            </div>
+            <div className="hidden lg:flex items-center gap-3 text-right">
+              <div>
+                <p className="text-sm font-semibold capitalize text-white/85">
                   {format(new Date(nowTick), "EEEE d 'de' MMMM", { locale: es })}
                 </p>
-                <p className="text-xs text-muted-foreground tabular-nums">{format(new Date(nowTick), "HH:mm")} hs</p>
+                <p className="text-[11px] text-white/45">Consultorio Digital</p>
+              </div>
+              <div className="text-4xl font-extrabold tabular-nums tracking-tight pl-3 border-l border-white/15">
+                {format(new Date(nowTick), "HH:mm")}
               </div>
             </div>
             <div className="flex items-center gap-3 shrink-0">
               {professionals.length > 1 && (
                 <Select value={selectedProfessionalId} onValueChange={setSelectedProfessionalId}>
-                  <SelectTrigger className="w-[190px] h-10 rounded-xl">
+                  <SelectTrigger className="w-[180px] h-10 rounded-xl border-white/15 bg-white/[0.07] text-white">
                     <SelectValue placeholder="Todos" />
                   </SelectTrigger>
                   <SelectContent>
@@ -567,16 +597,137 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
                   </SelectContent>
                 </Select>
               )}
-              <Button className="h-10 px-5 gap-2 rounded-xl font-semibold shadow-lg shadow-primary/20" onClick={() => navigate("/agenda")}>
+              <Button
+                className="h-10 px-5 gap-2 rounded-xl font-semibold bg-primary hover:bg-primary/90 shadow-[0_8px_30px_-8px_hsl(176_90%_45%/0.6)]"
+                onClick={() => navigate("/agenda")}
+              >
                 <CalendarDays className="h-4 w-4" />
                 Ver agenda
               </Button>
             </div>
           </div>
-        </div>
-      </header>
 
-      <main className="max-w-screen-2xl mx-auto px-10 py-7 space-y-6">
+          {/* Marquesina: el estado del día, en grande */}
+          <div className="mt-9 flex items-end justify-between gap-10 flex-wrap">
+            <div className="min-w-0 flex-1">
+              {currentSession ? (
+                <>
+                  <div className="flex items-center gap-2.5 mb-3">
+                    <span className="relative flex h-3 w-3">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#2dd4bf] opacity-60" />
+                      <span className="relative inline-flex rounded-full h-3 w-3 bg-[#2dd4bf]" />
+                    </span>
+                    <span className="text-xs font-bold tracking-[0.22em] text-[#2dd4bf]">EN SESIÓN</span>
+                    <span className="text-xs text-white/50">
+                      hasta las {format(new Date(endOf(currentSession)), "HH:mm")} hs
+                    </span>
+                  </div>
+                  <h2 className="text-[42px] leading-none font-extrabold tracking-tight truncate">
+                    {currentSession.patients?.full_name || "Sin paciente"}
+                  </h2>
+                  <p className="text-sm text-white/60 mt-3 flex items-center gap-2 flex-wrap">
+                    {format(new Date(currentSession.start_at), "HH:mm")} – {format(new Date(endOf(currentSession)), "HH:mm")} hs
+                    {currentSession.services?.name && <>· {currentSession.services.name}</>}
+                    {modalityChip(currentSession.modality) && <>· {modalityChip(currentSession.modality)}</>}
+                    {nextSession && (
+                      <>· después {format(new Date(nextSession.start_at), "HH:mm")} con {firstName(nextSession.patients?.full_name)}</>
+                    )}
+                  </p>
+                  <div className="mt-5">
+                    <SessionActions apt={currentSession} onDark />
+                  </div>
+                </>
+              ) : nextSession ? (
+                <>
+                  <p className="text-xs font-bold tracking-[0.22em] text-[#2dd4bf] mb-3">PRÓXIMA SESIÓN</p>
+                  <div className="flex items-baseline gap-4 flex-wrap">
+                    <span className="text-[52px] leading-none font-extrabold tabular-nums tracking-tight">
+                      {format(new Date(nextSession.start_at), "HH:mm")}
+                    </span>
+                    <span className="text-xl font-semibold text-[#2dd4bf]">
+                      {formatCountdown(new Date(nextSession.start_at).getTime() - nowTick)}
+                    </span>
+                  </div>
+                  <p className="text-xl font-bold mt-3 truncate">{nextSession.patients?.full_name || "Sin paciente"}</p>
+                  <p className="text-sm text-white/60 mt-1 flex items-center gap-2 flex-wrap">
+                    {nextSession.services?.name || "Sesión"}
+                    {modalityChip(nextSession.modality) && <>· {modalityChip(nextSession.modality)}</>}
+                  </p>
+                  <div className="mt-5">
+                    <SessionActions apt={nextSession} onDark />
+                  </div>
+                </>
+              ) : activeToday.length > 0 ? (
+                <>
+                  <p className="text-xs font-bold tracking-[0.22em] text-[#2dd4bf] mb-3 flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4" /> DÍA COMPLETADO
+                  </p>
+                  <div className="flex items-baseline gap-3 flex-wrap">
+                    <span className="text-[52px] leading-none font-extrabold tabular-nums tracking-tight">
+                      {formatCurrency(collectedToday)}
+                    </span>
+                    <span className="text-sm text-white/55">cobrado hoy</span>
+                  </div>
+                  <p className="text-sm text-white/60 mt-3">
+                    {activeToday.length} {activeToday.length === 1 ? "sesión realizada" : "sesiones realizadas"}
+                    {tomorrowFirst
+                      ? ` · mañana arrancás ${format(new Date(tomorrowFirst.start_at), "HH:mm")} hs con ${firstName(tomorrowFirst.patients?.full_name)}`
+                      : " · mañana no tenés sesiones agendadas"}
+                  </p>
+                  <div className="mt-5">
+                    <Button
+                      variant="outline"
+                      className="rounded-xl gap-2 h-9 border-white/15 bg-white/[0.08] text-white hover:bg-white/[0.18] hover:text-white"
+                      onClick={() => navigate(`/agenda?date=${tomorrowIso}`)}
+                    >
+                      Ver el día de mañana <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="text-xs font-bold tracking-[0.22em] text-[#2dd4bf] mb-3">HOY LIBRE</p>
+                  <h2 className="text-[36px] leading-tight font-extrabold tracking-tight">Sin sesiones para hoy</h2>
+                  <p className="text-sm text-white/60 mt-2">
+                    {upcomingAppointments.length > 0
+                      ? `La próxima es ${format(new Date(upcomingAppointments[0].start_at), "EEEE d 'a las' HH:mm", { locale: es })} hs con ${firstName(upcomingAppointments[0].patients?.full_name)}.`
+                      : "Aprovechá para compartir tu link de reservas."}
+                  </p>
+                  <div className="mt-5">
+                    <Button
+                      variant="outline"
+                      className="rounded-xl gap-2 h-9 border-white/15 bg-white/[0.08] text-white hover:bg-white/[0.18] hover:text-white"
+                      onClick={() => navigate("/agenda")}
+                    >
+                      <CalendarDays className="h-4 w-4" /> Ir a la agenda
+                    </Button>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Panel derecho de la banda: anillo + chips de vidrio */}
+            <div className="flex items-center gap-7 shrink-0">
+              <DayRing done={doneCount} total={Math.max(activeToday.length, 1)} size={104} onDark />
+              <div className="space-y-2.5">
+                {[
+                  { label: "Cobrado hoy", value: formatCurrency(collectedToday) },
+                  { label: "Pendientes", value: String(pendingCount) },
+                  { label: "Citas esta semana", value: String(weekApptsCount) },
+                ].map((c) => (
+                  <div key={c.label} className="rounded-xl border border-white/10 bg-white/[0.06] backdrop-blur-sm px-4 py-2 min-w-[170px]">
+                    <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-white/45">{c.label}</p>
+                    <p className="text-base font-bold tabular-nums">{c.value}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════ CUERPO: tarjetas montadas sobre la banda ══════════ */}
+      <main className="relative z-10 max-w-screen-2xl mx-auto px-10 -mt-7 pb-10 space-y-6">
         <ActivationChecklist
           businessId={businessId}
           onAllDone={() => {
@@ -586,146 +737,10 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
         <ActivationCompleteModal businessId={businessId} open={showActivationDone} onClose={() => setShowActivationDone(false)} />
 
         <div className="grid grid-cols-1 xl:grid-cols-[1fr_400px] gap-6 items-start">
-          {/* ══ Columna principal: EL DÍA ══ */}
+          {/* ── Columna principal ── */}
           <div className="space-y-6 min-w-0">
-            {/* ── Hero: ahora / próxima / día completo ── */}
-            {currentSession ? (
-              <Card className="rounded-3xl border-primary/40 ring-1 ring-primary/30 relative overflow-hidden shadow-[0_16px_60px_-16px_hsl(var(--primary)/0.45)] bg-gradient-to-br from-primary/[0.10] via-card to-card">
-                <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary/60 via-primary to-primary/60" />
-                <div
-                  className="absolute -top-24 -right-16 w-[340px] h-[280px] pointer-events-none"
-                  style={{ background: "radial-gradient(ellipse at center, hsl(var(--primary) / 0.18), transparent 70%)" }}
-                />
-                <CardContent className="relative p-7">
-                  <div className="flex items-start justify-between gap-6">
-                    <div className="flex items-start gap-5 min-w-0">
-                      <div className="relative shrink-0">
-                        <div className="h-16 w-16 rounded-2xl bg-primary/15 ring-2 ring-primary/30 flex items-center justify-center text-xl font-bold text-primary">
-                          {initialsOf(currentSession.patients?.full_name)}
-                        </div>
-                        <span className="absolute -bottom-1 -right-1 flex h-4 w-4">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-50" />
-                          <span className="relative inline-flex rounded-full h-4 w-4 bg-primary ring-2 ring-background" />
-                        </span>
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2 mb-1.5">
-                          <span className="text-[11px] font-bold tracking-[0.18em] text-primary">EN CURSO</span>
-                          <span className="text-[11px] text-muted-foreground">
-                            termina {format(new Date(endOf(currentSession)), "HH:mm")} hs
-                          </span>
-                        </div>
-                        <h2 className="text-[26px] leading-tight font-bold tracking-tight truncate">
-                          {currentSession.patients?.full_name || "Sin paciente"}
-                        </h2>
-                        <p className="text-sm text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
-                          {format(new Date(currentSession.start_at), "HH:mm")} –{" "}
-                          {format(new Date(endOf(currentSession)), "HH:mm")} hs
-                          {currentSession.services?.name && <>· {currentSession.services.name}</>}
-                          {modalityChip(currentSession.modality) && <>· {modalityChip(currentSession.modality)}</>}
-                        </p>
-                        <div className="mt-5">
-                          <SessionActions apt={currentSession} />
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-center gap-2 shrink-0">
-                      <DayRing done={doneCount} total={activeToday.length} />
-                      {nextSession && (
-                        <div className="text-center">
-                          <p className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">Después</p>
-                          <p className="text-xs font-semibold tabular-nums">
-                            {format(new Date(nextSession.start_at), "HH:mm")} · {firstName(nextSession.patients?.full_name)}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ) : nextSession ? (
-              <Card className="rounded-3xl relative overflow-hidden ring-1 ring-border shadow-[0_16px_50px_-20px_rgba(0,0,0,0.4)] bg-gradient-to-br from-primary/[0.06] via-card to-card">
-                <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary/40 via-primary/70 to-primary/40" />
-                <div
-                  className="absolute -top-24 -right-16 w-[340px] h-[280px] pointer-events-none"
-                  style={{ background: "radial-gradient(ellipse at center, hsl(var(--primary) / 0.12), transparent 70%)" }}
-                />
-                <CardContent className="relative p-7">
-                  <div className="flex items-start justify-between gap-6">
-                    <div className="flex items-start gap-5 min-w-0">
-                      <div className="h-16 w-16 shrink-0 rounded-2xl bg-primary/10 ring-2 ring-primary/20 flex items-center justify-center text-xl font-bold text-primary">
-                        {initialsOf(nextSession.patients?.full_name)}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                          <CalendarClock className="h-4 w-4 text-primary" />
-                          <span className="text-[11px] font-bold tracking-[0.18em] text-primary">PRÓXIMA SESIÓN</span>
-                          <Badge className="text-[11px] shadow-sm shadow-primary/30">
-                            {formatCountdown(new Date(nextSession.start_at).getTime() - nowTick)}
-                          </Badge>
-                        </div>
-                        <h2 className="text-[26px] leading-tight font-bold tracking-tight truncate">
-                          {nextSession.patients?.full_name || "Sin paciente"}
-                        </h2>
-                        <p className="text-sm text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
-                          <span className="font-semibold text-foreground tabular-nums">
-                            {format(new Date(nextSession.start_at), "HH:mm")} hs
-                          </span>
-                          {nextSession.services?.name && <>· {nextSession.services.name}</>}
-                          {modalityChip(nextSession.modality) && <>· {modalityChip(nextSession.modality)}</>}
-                        </p>
-                        <div className="mt-5">
-                          <SessionActions apt={nextSession} />
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-center shrink-0">
-                      <DayRing done={doneCount} total={activeToday.length} />
-                      <p className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground mt-1.5">Hoy</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ) : activeToday.length > 0 ? (
-              <Card className="rounded-2xl border-emerald-500/30 bg-emerald-500/[0.04]">
-                <CardContent className="p-6 flex items-center justify-between gap-4 flex-wrap">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-                      <h2 className="text-xl font-bold tracking-tight">Día completado</h2>
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      {activeToday.length} {activeToday.length === 1 ? "sesión" : "sesiones"} · cobrado hoy{" "}
-                      <b className="text-foreground">{formatCurrency(collectedToday)}</b>
-                    </p>
-                  </div>
-                  <Button variant="outline" className="rounded-xl gap-2" onClick={() => navigate("/agenda")}>
-                    Ver mañana <ArrowRight className="h-4 w-4" />
-                  </Button>
-                </CardContent>
-              </Card>
-            ) : (
-              <Card className="rounded-2xl">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between gap-4 flex-wrap">
-                    <div>
-                      <h2 className="text-xl font-bold tracking-tight">Hoy no tenés sesiones</h2>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {upcomingAppointments.length > 0
-                          ? `La próxima es ${format(new Date(upcomingAppointments[0].start_at), "EEEE d 'a las' HH:mm", { locale: es })} hs con ${firstName(upcomingAppointments[0].patients?.full_name)}.`
-                          : "Aprovechá para compartir tu link de reservas."}
-                      </p>
-                    </div>
-                    <Button className="rounded-xl gap-2" onClick={() => navigate("/agenda")}>
-                      <CalendarDays className="h-4 w-4" /> Ir a la agenda
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* ── La línea del día ── */}
-            <Card className="rounded-2xl">
+            {/* La línea del día */}
+            <Card className="rounded-2xl shadow-[0_18px_50px_-24px_rgba(0,0,0,0.45)]">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="font-bold flex items-center gap-2.5">
@@ -822,7 +837,7 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
               </CardContent>
             </Card>
 
-            {/* ── Números, en segundo plano (con pulso visual) ── */}
+            {/* Números con pulso */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {[
                 {
@@ -866,9 +881,9 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
             </div>
           </div>
 
-          {/* ══ Columna derecha: PARA HOY ══ */}
+          {/* ── Columna derecha: PARA HOY ── */}
           <div className="space-y-6">
-            <Card className="relative overflow-hidden rounded-2xl">
+            <Card className="relative overflow-hidden rounded-2xl shadow-[0_18px_50px_-24px_rgba(0,0,0,0.45)]">
               <div aria-hidden className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-primary/50 via-primary to-primary/50" />
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-4">
@@ -893,7 +908,6 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
                   </div>
                 ) : (
                   <div className="space-y-5">
-                    {/* ── Solicitudes ── */}
                     {pendingRequestsCount > 0 && (
                       <div>
                         <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
@@ -918,7 +932,6 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
                       </div>
                     )}
 
-                    {/* ── Cobros pendientes ── */}
                     {(overduePayments.length > 0 || dueTodayPayments.length > 0) && (
                       <div>
                         <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
@@ -969,7 +982,6 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
                       </div>
                     )}
 
-                    {/* ── Notas clínicas sin escribir ── */}
                     {sessionsWithoutNote.length > 0 && (
                       <div>
                         <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
