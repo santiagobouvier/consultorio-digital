@@ -331,6 +331,31 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
 
   const weekApptsCount = apptsRecent.length;
 
+  // Cobrado por día (últimos 14) y citas por día (últimos 7), normalizados
+  const collectedSpark = useMemo(() => {
+    const byDay = new Map<string, number>();
+    for (const p of paidRecent) {
+      const k = new Date(p.paid_at).toDateString();
+      byDay.set(k, (byDay.get(k) || 0) + (p.amount || 0));
+    }
+    const out: number[] = [];
+    for (let i = 13; i >= 0; i--) out.push(byDay.get(addDays(new Date(), -i).toDateString()) || 0);
+    const max = Math.max(...out, 1);
+    return out.map((v) => v / max);
+  }, [paidRecent]);
+
+  const citasSpark = useMemo(() => {
+    const byDay = new Map<string, number>();
+    for (const a of apptsRecent) {
+      const k = new Date(a.start_at).toDateString();
+      byDay.set(k, (byDay.get(k) || 0) + 1);
+    }
+    const out: number[] = [];
+    for (let i = 6; i >= 0; i--) out.push(byDay.get(addDays(new Date(), -i).toDateString()) || 0);
+    const max = Math.max(...out, 1);
+    return out.map((v) => v / max);
+  }, [apptsRecent]);
+
   const pendingCount =
     (pendingRequestsCount > 0 ? 1 : 0) + overduePayments.length + dueTodayPayments.length + sessionsWithoutNote.length;
 
@@ -348,6 +373,52 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
   };
 
   const firstName = (n?: string | null) => (n || "").split(" ")[0];
+
+  const initialsOf = (n?: string | null) =>
+    (n || "?")
+      .split(" ")
+      .map((x) => x[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase();
+
+  // Anillo de progreso del día (sesiones realizadas / total)
+  const DayRing = ({ done, total }: { done: number; total: number }) => {
+    const pct = total > 0 ? Math.min(1, done / total) : 0;
+    const r = 30;
+    const c = 2 * Math.PI * r;
+    return (
+      <div className="relative h-[76px] w-[76px] shrink-0">
+        <svg viewBox="0 0 72 72" className="h-[76px] w-[76px] -rotate-90">
+          <circle cx="36" cy="36" r={r} fill="none" strokeWidth="5.5" className="stroke-muted" />
+          <circle
+            cx="36" cy="36" r={r} fill="none" strokeWidth="5.5" strokeLinecap="round"
+            className="stroke-primary transition-[stroke-dashoffset] duration-700"
+            strokeDasharray={c} strokeDashoffset={c * (1 - pct)}
+          />
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className="text-lg font-bold tabular-nums leading-none">{done}</span>
+          <span className="text-[9px] font-medium text-muted-foreground mt-0.5">de {total}</span>
+        </div>
+      </div>
+    );
+  };
+
+  // Mini-barras para los KPIs (serie normalizada 0..1)
+  const SparkBars = ({ data, accent = false }: { data: number[]; accent?: boolean }) => (
+    <div className="flex items-end gap-[3px] h-8" aria-hidden>
+      {data.map((v, i) => (
+        <span
+          key={i}
+          className={`w-[5px] rounded-full ${
+            i === data.length - 1 ? (accent ? "bg-primary" : "bg-foreground/60") : accent ? "bg-primary/25" : "bg-foreground/15"
+          }`}
+          style={{ height: `${Math.max(14, v * 100)}%` }}
+        />
+      ))}
+    </div>
+  );
 
   const modalityChip = (m: string | null) =>
     m ? (
@@ -519,74 +590,99 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
           <div className="space-y-6 min-w-0">
             {/* ── Hero: ahora / próxima / día completo ── */}
             {currentSession ? (
-              <Card className="rounded-2xl border-primary/40 ring-1 ring-primary/30 relative overflow-hidden shadow-[0_8px_40px_-12px_hsl(var(--primary)/0.35)]">
+              <Card className="rounded-3xl border-primary/40 ring-1 ring-primary/30 relative overflow-hidden shadow-[0_16px_60px_-16px_hsl(var(--primary)/0.45)] bg-gradient-to-br from-primary/[0.10] via-card to-card">
                 <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary/60 via-primary to-primary/60" />
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between gap-4 flex-wrap">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="relative flex h-2.5 w-2.5">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-60" />
-                          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary" />
-                        </span>
-                        <span className="text-[11px] font-bold tracking-widest text-primary">EN CURSO</span>
-                        <span className="text-[11px] text-muted-foreground">
-                          termina {format(new Date(endOf(currentSession)), "HH:mm")} hs
+                <div
+                  className="absolute -top-24 -right-16 w-[340px] h-[280px] pointer-events-none"
+                  style={{ background: "radial-gradient(ellipse at center, hsl(var(--primary) / 0.18), transparent 70%)" }}
+                />
+                <CardContent className="relative p-7">
+                  <div className="flex items-start justify-between gap-6">
+                    <div className="flex items-start gap-5 min-w-0">
+                      <div className="relative shrink-0">
+                        <div className="h-16 w-16 rounded-2xl bg-primary/15 ring-2 ring-primary/30 flex items-center justify-center text-xl font-bold text-primary">
+                          {initialsOf(currentSession.patients?.full_name)}
+                        </div>
+                        <span className="absolute -bottom-1 -right-1 flex h-4 w-4">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-50" />
+                          <span className="relative inline-flex rounded-full h-4 w-4 bg-primary ring-2 ring-background" />
                         </span>
                       </div>
-                      <h2 className="text-2xl font-bold tracking-tight truncate">
-                        {currentSession.patients?.full_name || "Sin paciente"}
-                      </h2>
-                      <p className="text-sm text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
-                        {format(new Date(currentSession.start_at), "HH:mm")} –{" "}
-                        {format(new Date(endOf(currentSession)), "HH:mm")} hs
-                        {currentSession.services?.name && <>· {currentSession.services.name}</>}
-                        {modalityChip(currentSession.modality) && <>· {modalityChip(currentSession.modality)}</>}
-                      </p>
-                    </div>
-                    {nextSession && (
-                      <div className="text-right shrink-0">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Después</p>
-                        <p className="text-sm font-semibold mt-0.5">
-                          {format(new Date(nextSession.start_at), "HH:mm")} · {firstName(nextSession.patients?.full_name)}
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <span className="text-[11px] font-bold tracking-[0.18em] text-primary">EN CURSO</span>
+                          <span className="text-[11px] text-muted-foreground">
+                            termina {format(new Date(endOf(currentSession)), "HH:mm")} hs
+                          </span>
+                        </div>
+                        <h2 className="text-[26px] leading-tight font-bold tracking-tight truncate">
+                          {currentSession.patients?.full_name || "Sin paciente"}
+                        </h2>
+                        <p className="text-sm text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
+                          {format(new Date(currentSession.start_at), "HH:mm")} –{" "}
+                          {format(new Date(endOf(currentSession)), "HH:mm")} hs
+                          {currentSession.services?.name && <>· {currentSession.services.name}</>}
+                          {modalityChip(currentSession.modality) && <>· {modalityChip(currentSession.modality)}</>}
                         </p>
+                        <div className="mt-5">
+                          <SessionActions apt={currentSession} />
+                        </div>
                       </div>
-                    )}
-                  </div>
-                  <div className="mt-5">
-                    <SessionActions apt={currentSession} />
+                    </div>
+                    <div className="flex flex-col items-center gap-2 shrink-0">
+                      <DayRing done={doneCount} total={activeToday.length} />
+                      {nextSession && (
+                        <div className="text-center">
+                          <p className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">Después</p>
+                          <p className="text-xs font-semibold tabular-nums">
+                            {format(new Date(nextSession.start_at), "HH:mm")} · {firstName(nextSession.patients?.full_name)}
+                          </p>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </CardContent>
               </Card>
             ) : nextSession ? (
-              <Card className="rounded-2xl relative overflow-hidden">
+              <Card className="rounded-3xl relative overflow-hidden ring-1 ring-border shadow-[0_16px_50px_-20px_rgba(0,0,0,0.4)] bg-gradient-to-br from-primary/[0.06] via-card to-card">
                 <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary/40 via-primary/70 to-primary/40" />
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between gap-4 flex-wrap">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2 mb-2">
-                        <CalendarClock className="h-4 w-4 text-primary" />
-                        <span className="text-[11px] font-bold tracking-widest text-primary">PRÓXIMA SESIÓN</span>
-                        <Badge className="text-[11px]">{formatCountdown(new Date(nextSession.start_at).getTime() - nowTick)}</Badge>
+                <div
+                  className="absolute -top-24 -right-16 w-[340px] h-[280px] pointer-events-none"
+                  style={{ background: "radial-gradient(ellipse at center, hsl(var(--primary) / 0.12), transparent 70%)" }}
+                />
+                <CardContent className="relative p-7">
+                  <div className="flex items-start justify-between gap-6">
+                    <div className="flex items-start gap-5 min-w-0">
+                      <div className="h-16 w-16 shrink-0 rounded-2xl bg-primary/10 ring-2 ring-primary/20 flex items-center justify-center text-xl font-bold text-primary">
+                        {initialsOf(nextSession.patients?.full_name)}
                       </div>
-                      <h2 className="text-2xl font-bold tracking-tight truncate">
-                        {nextSession.patients?.full_name || "Sin paciente"}
-                      </h2>
-                      <p className="text-sm text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
-                        {format(new Date(nextSession.start_at), "HH:mm")} hs
-                        {nextSession.services?.name && <>· {nextSession.services.name}</>}
-                        {modalityChip(nextSession.modality) && <>· {modalityChip(nextSession.modality)}</>}
-                      </p>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                          <CalendarClock className="h-4 w-4 text-primary" />
+                          <span className="text-[11px] font-bold tracking-[0.18em] text-primary">PRÓXIMA SESIÓN</span>
+                          <Badge className="text-[11px] shadow-sm shadow-primary/30">
+                            {formatCountdown(new Date(nextSession.start_at).getTime() - nowTick)}
+                          </Badge>
+                        </div>
+                        <h2 className="text-[26px] leading-tight font-bold tracking-tight truncate">
+                          {nextSession.patients?.full_name || "Sin paciente"}
+                        </h2>
+                        <p className="text-sm text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
+                          <span className="font-semibold text-foreground tabular-nums">
+                            {format(new Date(nextSession.start_at), "HH:mm")} hs
+                          </span>
+                          {nextSession.services?.name && <>· {nextSession.services.name}</>}
+                          {modalityChip(nextSession.modality) && <>· {modalityChip(nextSession.modality)}</>}
+                        </p>
+                        <div className="mt-5">
+                          <SessionActions apt={nextSession} />
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-right shrink-0">
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Hoy</p>
-                      <p className="text-sm font-semibold mt-0.5 tabular-nums">
-                        {doneCount} de {activeToday.length} sesiones
-                      </p>
+                    <div className="flex flex-col items-center shrink-0">
+                      <DayRing done={doneCount} total={activeToday.length} />
+                      <p className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground mt-1.5">Hoy</p>
                     </div>
-                  </div>
-                  <div className="mt-5">
-                    <SessionActions apt={nextSession} />
                   </div>
                 </CardContent>
               </Card>
@@ -632,8 +728,11 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
             <Card className="rounded-2xl">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-bold flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-primary" /> La línea del día
+                  <h3 className="font-bold flex items-center gap-2.5">
+                    <span className="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <Clock className="h-4 w-4 text-primary" />
+                    </span>
+                    La línea del día
                   </h3>
                   <span className="text-xs text-muted-foreground tabular-nums">
                     {doneCount} de {activeToday.length} realizadas
@@ -657,8 +756,10 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
                             key={row.apt.id}
                             role="button"
                             onClick={() => setSelectedApt(row.apt)}
-                            className={`relative pl-7 py-2.5 pr-3 rounded-xl cursor-pointer transition-colors hover:bg-muted/50 ${
-                              row.state === "now" ? "bg-primary/[0.06] ring-1 ring-primary/30" : ""
+                            className={`relative pl-7 py-2.5 pr-3 rounded-xl cursor-pointer transition-all hover:bg-muted/50 ${
+                              row.state === "now"
+                                ? "bg-primary/[0.07] ring-1 ring-primary/35 shadow-[0_10px_30px_-14px_hsl(var(--primary)/0.5)]"
+                                : ""
                             } ${row.state === "cancelled" ? "opacity-45" : ""}`}
                           >
                             <span
@@ -675,8 +776,13 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
                             />
                             <div className="flex items-center justify-between gap-3">
                               <div className="flex items-center gap-3 min-w-0">
-                                <span className={`text-sm font-bold tabular-nums w-11 ${row.state === "cancelled" ? "line-through" : ""}`}>
-                                  {format(new Date(row.apt.start_at), "HH:mm")}
+                                <span className="w-11 shrink-0">
+                                  <span className={`block text-sm font-bold tabular-nums leading-tight ${row.state === "cancelled" ? "line-through" : ""}`}>
+                                    {format(new Date(row.apt.start_at), "HH:mm")}
+                                  </span>
+                                  <span className="block text-[10px] text-muted-foreground tabular-nums leading-tight">
+                                    {format(new Date(endOf(row.apt)), "HH:mm")}
+                                  </span>
                                 </span>
                                 <div className="min-w-0">
                                   <p className="text-sm font-semibold truncate">
@@ -716,30 +822,44 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
               </CardContent>
             </Card>
 
-            {/* ── Números, en segundo plano ── */}
+            {/* ── Números, en segundo plano (con pulso visual) ── */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {[
-                { icon: Wallet, label: "Cobrado hoy", value: formatCurrency(collectedToday), to: "/pagos", cls: "text-emerald-600 dark:text-emerald-400" },
-                { icon: Wallet, label: "Cobrado este mes", value: formatCurrency(collectedThisMonth), to: "/pagos", cls: "" },
-                { icon: CalendarDays, label: "Citas esta semana", value: String(weekApptsCount), to: "/agenda", cls: "" },
                 {
-                  icon: AlertTriangle,
-                  label: "Vencido por reclamar",
-                  value: overdueAmount > 0 ? formatCurrency(overdueAmount) : "—",
-                  to: "/pagos",
+                  icon: Wallet, label: "Cobrado hoy", value: formatCurrency(collectedToday), to: "/pagos",
+                  cls: "text-emerald-600 dark:text-emerald-400", spark: null as number[] | null, accent: "from-emerald-500/50 via-emerald-500 to-emerald-500/50",
+                },
+                {
+                  icon: Wallet, label: "Cobrado este mes", value: formatCurrency(collectedThisMonth), to: "/pagos",
+                  cls: "", spark: collectedSpark, accent: "from-primary/50 via-primary to-primary/50",
+                },
+                {
+                  icon: CalendarDays, label: "Citas esta semana", value: String(weekApptsCount), to: "/agenda",
+                  cls: "", spark: citasSpark, accent: "from-primary/50 via-primary to-primary/50",
+                },
+                {
+                  icon: AlertTriangle, label: "Vencido por reclamar",
+                  value: overdueAmount > 0 ? formatCurrency(overdueAmount) : "—", to: "/pagos",
                   cls: overdueAmount > 0 ? "text-rose-600 dark:text-rose-400" : "text-muted-foreground",
+                  spark: null, accent: overdueAmount > 0 ? "from-rose-500/50 via-rose-500 to-rose-500/50" : "from-border via-border to-border",
                 },
               ].map((k) => (
                 <Card
                   key={k.label}
                   onClick={() => navigate(k.to)}
-                  className="rounded-2xl cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all"
+                  className="relative overflow-hidden rounded-2xl cursor-pointer group hover:shadow-[0_14px_40px_-16px_rgba(0,0,0,0.35)] hover:-translate-y-0.5 transition-all duration-300"
                 >
+                  <div aria-hidden className={`absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r ${k.accent}`} />
                   <CardContent className="p-4">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                      <k.icon className="h-3.5 w-3.5" /> {k.label}
-                    </p>
-                    <p className={`text-xl font-bold tabular-nums mt-1.5 ${k.cls}`}>{k.value}</p>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                          <k.icon className="h-3.5 w-3.5" /> {k.label}
+                        </p>
+                        <p className={`text-[22px] font-bold tabular-nums tracking-tight mt-1.5 ${k.cls}`}>{k.value}</p>
+                      </div>
+                      {k.spark && <SparkBars data={k.spark} accent />}
+                    </div>
                   </CardContent>
                 </Card>
               ))}
@@ -748,11 +868,15 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
 
           {/* ══ Columna derecha: PARA HOY ══ */}
           <div className="space-y-6">
-            <Card className="rounded-2xl">
+            <Card className="relative overflow-hidden rounded-2xl">
+              <div aria-hidden className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-primary/50 via-primary to-primary/50" />
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-bold flex items-center gap-2">
-                    <Inbox className="h-4 w-4 text-primary" /> Para hoy
+                  <h3 className="font-bold flex items-center gap-2.5">
+                    <span className="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <Inbox className="h-4 w-4 text-primary" />
+                    </span>
+                    Para hoy
                   </h3>
                   {pendingCount > 0 && (
                     <Badge variant="outline" className="text-[11px] text-amber-600 dark:text-amber-400 border-amber-500/40">
