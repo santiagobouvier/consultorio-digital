@@ -2,9 +2,13 @@
 // distintas miradas (paciente nuevo en la web, paciente fiel en su portal, y el
 // profesional en su panel).
 import { useNavigate, Link } from "react-router-dom";
-import { Globe, Smartphone, LayoutDashboard, ArrowLeft, ArrowRight, Lock } from "lucide-react";
+import { Globe, Smartphone, LayoutDashboard, Palette, ArrowLeft, ArrowRight, Lock } from "lucide-react";
 
 const BRAND = "#00a5a0";
+
+// Web personalizada de muestra (proyecto Lovable con la reserva incrustada).
+// Cuando esté publicada, poné acá su URL para habilitar la tarjeta.
+const CUSTOM_WEB_URL = "";
 
 interface DemoBlock {
   icon: typeof Globe;
@@ -26,10 +30,20 @@ const Demo = () => {
       accent: "#00c78a",
       title: "Tu web pública",
       subtitle: "Lo que ve un paciente nuevo",
-      description: "Entra a tu web, ve tus horarios disponibles y reserva su turno solo, sin que tengas que escribirle.",
+      description: "Entra a tu web de Consultorio Digital, ve tus horarios disponibles y reserva su turno solo, sin que tengas que escribirle.",
       cta: "Reservar un turno",
       enabled: true,
       onClick: () => navigate("/demo/reservar"),
+    },
+    {
+      icon: Palette,
+      accent: "#f59e0b",
+      title: "Tu web personalizada",
+      subtitle: "Tu propio sitio, con dominio propio",
+      description: "Una web hecha a tu medida, con tu marca y tu dominio — y la reserva de Consultorio Digital integrada adentro. Todo en uno.",
+      cta: "Ver una web real",
+      enabled: !!CUSTOM_WEB_URL,
+      onClick: () => window.open(CUSTOM_WEB_URL, "_blank", "noopener"),
     },
     {
       icon: Smartphone,
@@ -71,7 +85,7 @@ const Demo = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
           {blocks.map((b) => (
             <div
               key={b.title}
