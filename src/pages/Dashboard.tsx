@@ -11,6 +11,7 @@ import LoadingPage from "@/components/LoadingPage";
 import { PublicLinkCard } from "@/components/PublicLinkCard";
 import { PatientForm } from "@/components/PatientForm";
 import { CreateAppointmentModal } from "@/components/CreateAppointmentModal";
+import { AppointmentDetailModal } from "@/components/calendar/AppointmentDetailModal";
 import { GlobalPaymentForm } from "@/components/GlobalPaymentForm";
 import { calculatePaymentStatus, formatCurrency } from "@/lib/payments";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -69,6 +70,8 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [showPatientForm, setShowPatientForm] = useState(false);
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
+  // Cita abierta en el modal de detalle (tocar una fila de 'Tu día')
+  const [detailAppointment, setDetailAppointment] = useState<any | null>(null);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [privacyMode, setPrivacyMode] = useState(() => {
     const saved = localStorage.getItem(PRIVACY_MODE_KEY);
@@ -124,9 +127,34 @@ const Dashboard = () => {
     fetchDashboardData();
   }, [authReady, ctxBusinessLoading, user?.id, businessId]);
 
-  const fetchDashboardData = async () => {
+  // Tiempo real: la base avisa (citas/pagos) y el dashboard se refresca solo
+  useEffect(() => {
+    if (!businessId) return;
+    let timer: ReturnType<typeof setTimeout>;
+    const scheduleRefetch = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => fetchDashboardData(true), 500);
+    };
+    const channel = supabase
+      .channel(`dashboard-mobile-${businessId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "appointments", filter: `business_id=eq.${businessId}` }, scheduleRefetch)
+      .on("postgres_changes", { event: "*", schema: "public", table: "payments", filter: `business_id=eq.${businessId}` }, scheduleRefetch)
+      .subscribe();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") scheduleRefetch();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      supabase.removeChannel(channel);
+      document.removeEventListener("visibilitychange", onVisible);
+      clearTimeout(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [businessId]);
+
+  const fetchDashboardData = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
 
       if (!user || !businessId) return;
 
@@ -170,7 +198,7 @@ const Dashboard = () => {
         // 5. Today appointments count
         supabase.from("appointments").select("*", { count: "exact", head: true }).eq("business_id", currentBusinessId).gte("start_at", today.toISOString()).lt("start_at", tomorrow.toISOString()).not("status", "in", '("cancelled","no_show")'),
         // 6. Today appointments list (con end_at/modalidad/teléfono para el hero "Ahora")
-        supabase.from("appointments").select(`id, start_at, end_at, status, modality, contact_name, patient_id, patients (full_name, whatsapp_phone)`).eq("business_id", currentBusinessId).gte("start_at", today.toISOString()).lt("start_at", tomorrow.toISOString()).order("start_at", { ascending: true }),
+        supabase.from("appointments").select(`id, start_at, end_at, status, modality, location, payment_status, contact_name, patient_id, service_id, recurrence_group_id, patients (full_name, whatsapp_phone, email, avatar_url)`).eq("business_id", currentBusinessId).gte("start_at", today.toISOString()).lt("start_at", tomorrow.toISOString()).order("start_at", { ascending: true }),
         // 6b. Tomorrow appointments (primera cita de mañana + sin confirmar)
         supabase.from("appointments").select(`id, start_at, status, patients (full_name)`).eq("business_id", currentBusinessId).gte("start_at", tomorrow.toISOString()).lt("start_at", dayAfterTomorrow.toISOString()).not("status", "in", '("cancelled","cancelled_by_patient","no_show")').order("start_at", { ascending: true }),
         // 7. Unpaid payments
@@ -779,7 +807,9 @@ const Dashboard = () => {
                   return (
                     <div
                       key={appointment.id}
-                      className={`flex items-center gap-3 py-2.5 border-b border-border/60 last:border-0 ${done || cancelled ? "opacity-55" : ""}`}
+                      role="button"
+                      onClick={() => setDetailAppointment(appointment)}
+                      className={`flex items-center gap-3 py-2.5 border-b border-border/60 last:border-0 active:bg-muted/40 rounded-lg transition-colors cursor-pointer ${done || cancelled ? "opacity-55" : ""}`}
                     >
                       <span
                         className={`h-2 w-2 rounded-full shrink-0 ${
@@ -964,6 +994,15 @@ const Dashboard = () => {
         onOpenChange={setShowAppointmentModal}
         patientId={null}
         onSuccess={fetchDashboardData}
+      />
+
+      {/* Detalle de la cita: cobrar, reprogramar, cancelar — sin salir del dashboard */}
+      <AppointmentDetailModal
+        appointment={detailAppointment}
+        open={!!detailAppointment}
+        onClose={() => setDetailAppointment(null)}
+        businessId={businessId}
+        onPaymentRegistered={() => fetchDashboardData(true)}
       />
 
       {businessId && (
