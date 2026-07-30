@@ -82,7 +82,9 @@ const problems = [
 // Per-plan feature definitions. El item de recordatorios se personaliza por
 // plan con su límite mensual de WhatsApps (getPricingPlans).
 const REMINDERS_FEATURE = "Recordatorios automáticos por WhatsApp y email";
+const CUSTOM_WEB_FEATURE = "Web personalizada con tu dominio propio — la armamos por vos";
 const allFeatures = [
+  CUSTOM_WEB_FEATURE,
   "Portal del paciente",
   "Agenda privada",
   "Gestión de pagos y alertas",
@@ -98,7 +100,8 @@ const allFeatures = [
 ];
 
 const planFeatures: Record<string, string[]> = {
-  emprendedor: allFeatures,
+  // Emprendedor no incluye la web personalizada (la razón para subir de plan)
+  emprendedor: allFeatures.filter((f) => f !== CUSTOM_WEB_FEATURE),
   esencial: allFeatures,
   profesional: allFeatures,
   consultorio: allFeatures,
@@ -944,12 +947,13 @@ const Landing = () => {
                   ¿Necesitás algo a medida?
                 </h3>
                 <p className="text-gray-400 text-sm sm:text-base mb-6 sm:mb-8 max-w-lg mx-auto leading-relaxed">
-                  ¿Necesitás más capacidad o una configuración especial?
+                  ¿Son varios profesionales en un mismo consultorio, o necesitás más capacidad
+                  o una configuración especial?
                   <br />
                   Te armamos un plan a tu medida.
                 </p>
                 <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 mb-8 text-sm sm:text-base text-gray-300">
-                  {["Más pacientes", "Más capacidad", "Configuraciones a medida"].map((text, i) => (
+                  {["Equipos de varios profesionales", "Más pacientes", "Configuraciones a medida"].map((text, i) => (
                     <div key={i} className="flex items-center gap-2">
                       <Check className="w-5 h-5 flex-shrink-0" style={{ color: GREEN }} />
                       <span>{text}</span>
