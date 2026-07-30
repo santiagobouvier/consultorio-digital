@@ -12,6 +12,8 @@ export interface PlanDefinition {
   /** Recordatorios automáticos de WhatsApp incluidos por mes. null = sin límite (a medida). */
   whatsappMonthly: number | null;
   hasPublicWeb: boolean;
+  /** Web personalizada con dominio propio, armada por el equipo (incluida en el plan). */
+  customWebsite: boolean;
   isHighlighted?: boolean;
   highlightLabel?: string;
 }
@@ -22,10 +24,11 @@ export const PLAN_DEFINITIONS: Record<string, PlanDefinition> = {
     name: "Emprendedor",
     description: "Para empezar tu consultorio digital",
     maxProfessionals: 1,
-    maxPatients: 20,
+    maxPatients: 30,
     priceAnnual: 1290,
     priceMonthly: 1590,
     whatsappMonthly: 200,
+    customWebsite: false,
     hasPublicWeb: true,
   },
   esencial: {
@@ -33,10 +36,11 @@ export const PLAN_DEFINITIONS: Record<string, PlanDefinition> = {
     name: "Esencial",
     description: "Para el profesional independiente establecido",
     maxProfessionals: 1,
-    maxPatients: 50,
-    priceAnnual: 2500,
-    priceMonthly: 2990,
+    maxPatients: 75,
+    priceAnnual: 2800,
+    priceMonthly: 3290,
     whatsappMonthly: 500,
+    customWebsite: true,
     hasPublicWeb: true,
     isHighlighted: true,
     highlightLabel: "Más elegido",
@@ -50,6 +54,7 @@ export const PLAN_DEFINITIONS: Record<string, PlanDefinition> = {
     priceAnnual: 4500,
     priceMonthly: 5490,
     whatsappMonthly: 1500,
+    customWebsite: true,
     hasPublicWeb: true,
   },
   consultorio: {
@@ -61,6 +66,7 @@ export const PLAN_DEFINITIONS: Record<string, PlanDefinition> = {
     priceAnnual: 8000,
     priceMonthly: 10000,
     whatsappMonthly: 3000,
+    customWebsite: true,
     hasPublicWeb: true,
   },
   personalizado: {
@@ -72,6 +78,7 @@ export const PLAN_DEFINITIONS: Record<string, PlanDefinition> = {
     priceAnnual: 0,
     priceMonthly: 0,
     whatsappMonthly: null,
+    customWebsite: true,
     hasPublicWeb: true,
   },
 };
