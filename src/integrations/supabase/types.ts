@@ -588,6 +588,7 @@ export type Database = {
         Row: {
           account_holder: string
           account_number: string
+          account_number_other_banks: string | null
           bank_name: string
           business_id: string
           created_at: string
@@ -599,6 +600,7 @@ export type Database = {
         Insert: {
           account_holder: string
           account_number: string
+          account_number_other_banks?: string | null
           bank_name: string
           business_id: string
           created_at?: string
@@ -610,6 +612,7 @@ export type Database = {
         Update: {
           account_holder?: string
           account_number?: string
+          account_number_other_banks?: string | null
           bank_name?: string
           business_id?: string
           created_at?: string

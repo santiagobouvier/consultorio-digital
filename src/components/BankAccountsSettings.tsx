@@ -27,6 +27,7 @@ interface BankAccount {
   bank_name: string;
   account_holder: string;
   account_number: string;
+  account_number_other_banks: string | null;
   currency: string;
   notes: string | null;
 }
@@ -39,6 +40,7 @@ const EMPTY_FORM = {
   bank_name: "",
   account_holder: "",
   account_number: "",
+  account_number_other_banks: "",
   currency: "UYU",
   notes: "",
 };
@@ -55,7 +57,7 @@ export const BankAccountsSettings = ({ businessId }: Props) => {
   const fetchAccounts = async () => {
     const { data, error } = await supabase
       .from("business_bank_accounts")
-      .select("id, bank_name, account_holder, account_number, currency, notes")
+      .select("id, bank_name, account_holder, account_number, account_number_other_banks, currency, notes")
       .eq("business_id", businessId)
       .order("created_at");
     if (error) {
@@ -78,6 +80,7 @@ export const BankAccountsSettings = ({ businessId }: Props) => {
         bank_name: account.bank_name,
         account_holder: account.account_holder,
         account_number: account.account_number,
+        account_number_other_banks: account.account_number_other_banks ?? "",
         currency: account.currency,
         notes: account.notes ?? "",
       });
@@ -103,6 +106,7 @@ export const BankAccountsSettings = ({ businessId }: Props) => {
         bank_name: form.bank_name.trim(),
         account_holder: form.account_holder.trim(),
         account_number: form.account_number.trim(),
+        account_number_other_banks: form.account_number_other_banks.trim() || null,
         currency: form.currency,
         notes: form.notes.trim() || null,
       };
@@ -262,6 +266,19 @@ export const BankAccountsSettings = ({ businessId }: Props) => {
                 placeholder="001234567-00001"
                 className="h-11 rounded-xl"
               />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Número para transferencias desde otros bancos</Label>
+              <Input
+                value={form.account_number_other_banks}
+                onChange={(e) => setForm((f) => ({ ...f, account_number_other_banks: e.target.value }))}
+                placeholder="Opcional — si tu banco usa otro código"
+                className="h-11 rounded-xl"
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Varios bancos usan un código distinto cuando la plata viene de otro banco.
+                Si lo cargás, el mensaje de WhatsApp muestra los dos.
+              </p>
             </div>
             <div className="space-y-1.5">
               <Label>Aclaración (opcional)</Label>

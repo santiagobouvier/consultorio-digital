@@ -18,6 +18,7 @@ interface BankAccount {
   bank_name: string;
   account_holder: string;
   account_number: string;
+  account_number_other_banks: string | null;
   currency: string;
   notes: string | null;
 }
@@ -57,7 +58,13 @@ const accountBlock = (a: BankAccount) =>
   [
     `🏦 ${a.bank_name} — ${a.currency === "USD" ? "dólares" : "pesos"}`,
     `Titular: ${a.account_holder}`,
-    `Cuenta: ${a.account_number}`,
+    // Con número alternativo, se aclara cuál es cuál; si no, "Cuenta" a secas
+    ...(a.account_number_other_banks
+      ? [
+          `Cuenta (desde ${a.bank_name}): ${a.account_number}`,
+          `Cuenta (desde otros bancos): ${a.account_number_other_banks}`,
+        ]
+      : [`Cuenta: ${a.account_number}`]),
     ...(a.notes ? [a.notes] : []),
   ].join("\n");
 
@@ -94,7 +101,7 @@ export function PaymentWhatsAppMenu({
     if (!businessId || accounts !== null) return;
     const { data } = await supabase
       .from("business_bank_accounts")
-      .select("id, bank_name, account_holder, account_number, currency, notes")
+      .select("id, bank_name, account_holder, account_number, account_number_other_banks, currency, notes")
       .eq("business_id", businessId)
       .order("created_at");
     setAccounts((data as BankAccount[]) || []);
