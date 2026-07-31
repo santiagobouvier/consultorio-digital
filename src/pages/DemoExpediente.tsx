@@ -18,6 +18,7 @@ import {
   FileText, StickyNote, Paperclip, ClipboardList, CalendarClock, CalendarPlus,
   MessageCircle, Pencil, UserPlus, MapPin, Video, Maximize2, Plus, Upload,
   Download, Eye, Trash2, CalendarDays, Check, CreditCard, Clock,
+  AlertTriangle, HeartPulse, Pill, Stethoscope,
 } from "lucide-react";
 
 const demoToast = () =>
@@ -182,6 +183,52 @@ const DemoExpediente = () => {
 
           {/* ══ Expediente ══ */}
           <div className="min-w-0 space-y-5">
+            {/* Estado actual: el estado presente del paciente, arriba de la cronología */}
+            <Card className="rounded-2xl border-primary/25 bg-gradient-to-b from-primary/[0.05] to-transparent">
+              <CardContent className="p-4 sm:p-5">
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-primary flex items-center gap-1.5">
+                    <HeartPulse className="h-3.5 w-3.5" /> Estado actual
+                  </p>
+                  <Button size="sm" variant="ghost" className="h-7 rounded-lg gap-1.5 text-xs -mr-1" onClick={demoToast}>
+                    <Pencil className="h-3 w-3" /> Editar
+                  </Button>
+                </div>
+                <div className="space-y-4 pt-2">
+                  <div className="rounded-xl border p-3 flex items-start gap-2.5 bg-amber-500/10 border-amber-500/40">
+                    <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-amber-500" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-amber-700 dark:text-amber-400">Requiere seguimiento</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Monitorear evolución del sueño; acordado control mensual con psiquiatra.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="shrink-0 h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center mt-0.5">
+                      <Pill className="h-4 w-4 text-primary" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Medicación actual</p>
+                      <p className="text-sm mt-0.5 leading-relaxed">Sertralina 50 mg/día (desde marzo 2026).</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="shrink-0 h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center mt-0.5">
+                      <Stethoscope className="h-4 w-4 text-primary" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Diagnóstico / cuadro actual</p>
+                      <p className="text-sm mt-0.5 leading-relaxed">Trastorno de ansiedad generalizada, en tratamiento.</p>
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground pt-1 border-t border-border/50">
+                    Actualizado el {format(day(-2, 16), "d 'de' MMMM yyyy, HH:mm", { locale: es })}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Motivo de consulta */}
             <Card className="rounded-2xl border-primary/20 bg-primary/[0.03]">
               <CardContent className="p-4">
