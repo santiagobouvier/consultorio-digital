@@ -55,6 +55,16 @@ import {
   type PaymentStatus,
   type RecurrenceType,
 } from "@/lib/payments";
+import {
+  AGREED_FREQUENCY_LABELS,
+  PAYMENT_TYPE_LABELS,
+  TREATMENT_STATUS_LABELS,
+  computeAge,
+  isMinor,
+  type AgreedFrequency,
+  type PaymentType,
+  type TreatmentStatus,
+} from "@/lib/patient-profile";
 
 interface Patient {
   id: string;
@@ -68,6 +78,21 @@ interface Patient {
   avatar_url: string | null;
   created_at: string;
   auth_user_id: string | null;
+  // Perfil v2 — todos opcionales; vacío no se muestra
+  birth_date: string | null;
+  document_id: string | null;
+  emergency_contact_name: string | null;
+  emergency_contact_relationship: string | null;
+  emergency_contact_phone: string | null;
+  guardian_name: string | null;
+  guardian_relationship: string | null;
+  guardian_phone: string | null;
+  guardian_email: string | null;
+  health_insurance: string | null;
+  payment_type: string | null;
+  first_consultation_date: string | null;
+  referred_by: string | null;
+  agreed_frequency: string | null;
 }
 
 interface Appointment {
@@ -105,11 +130,21 @@ const statusLabels: Record<string, string> = {
 
 const CANCELLED_STATUSES = ["cancelled", "cancelled_by_patient"];
 
+// Color del badge de estado del tratamiento (clínico, distinto del
+// activo/inactivo administrativo que gobierna el límite del plan).
+const TREATMENT_BADGE_CLASS: Record<TreatmentStatus, string> = {
+  activo: "bg-emerald-600 text-white",
+  en_pausa: "bg-amber-500 text-white",
+  alta: "bg-sky-600 text-white",
+  abandono: "bg-muted text-muted-foreground",
+};
+
 const PatientDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
   const [patient, setPatient] = useState<Patient | null>(null);
+  const [treatmentStatus, setTreatmentStatus] = useState<TreatmentStatus | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -165,6 +200,15 @@ const PatientDetail = () => {
       }
 
       setPatient(patientData as Patient);
+
+      // Estado clínico (tabla aparte, solo visible para el profesional):
+      // acá solo se usa el estado del tratamiento para el badge de la ficha.
+      const { data: clinicalData } = await supabase
+        .from("patient_clinical_status")
+        .select("treatment_status")
+        .eq("patient_id", id)
+        .maybeSingle();
+      setTreatmentStatus((clinicalData?.treatment_status as TreatmentStatus | null) ?? null);
 
       const { data: appointmentsData } = await supabase
         .from("appointments")
@@ -255,9 +299,11 @@ const PatientDetail = () => {
 
   const hasPortal = !!patient?.auth_user_id;
 
-  const openWhatsApp = () => {
-    if (!patient?.whatsapp_phone) return;
-    const digits = patient.whatsapp_phone.replace(/\D/g, "");
+  // Sirve para el paciente y también para el contacto de emergencia / adulto
+  // responsable: misma normalización de número en todos lados.
+  const openWhatsAppNumber = (raw?: string | null) => {
+    if (!raw) return;
+    const digits = raw.replace(/\D/g, "");
     const phone = digits.startsWith("0")
       ? "598" + digits.slice(1)
       : digits.startsWith("598") || digits.length > 9
@@ -265,6 +311,7 @@ const PatientDetail = () => {
         : "598" + digits;
     window.open(`https://wa.me/${phone}`, "_blank");
   };
+  const openWhatsApp = () => openWhatsAppNumber(patient?.whatsapp_phone);
 
   // Cobrar pide confirmación (igual que en el módulo Pagos): un toque
   // accidental no debe marcar nada como pagado.
@@ -498,6 +545,16 @@ const PatientDetail = () => {
                     Sin portal
                   </Badge>
                 )}
+                {computeAge(patient.birth_date) !== null && (
+                  <Badge variant="outline" className="rounded-full text-xs text-muted-foreground">
+                    {computeAge(patient.birth_date)} años
+                  </Badge>
+                )}
+                {isMinor(patient.birth_date) && (
+                  <Badge className="rounded-full text-xs bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                    Menor de edad
+                  </Badge>
+                )}
               </div>
             </div>
 
@@ -651,13 +708,14 @@ const PatientDetail = () => {
             <TabsTrigger value="docs" className="rounded-lg text-xs sm:text-sm">Docs</TabsTrigger>
           </TabsList>
 
-          {/* Resumen */}
+          {/* Resumen: secciones del perfil. Campo vacío no se renderiza. */}
           <TabsContent value="resumen" className="mt-4 space-y-4">
+            {/* ── Datos personales ── */}
             <Card className="rounded-2xl border-border/50">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base font-bold flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-primary" />
-                  Información de contacto
+                  <UserIcon className="h-4 w-4 text-primary" />
+                  Datos personales
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -680,16 +738,32 @@ const PatientDetail = () => {
                       </p>
                     </div>
                   </div>
+                  {patient.birth_date && (
+                    <div className="flex items-start gap-3">
+                      <Calendar className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide">Nacimiento</p>
+                        <p className="text-sm font-medium text-foreground">
+                          {format(new Date(`${patient.birth_date}T00:00:00`), "d MMM yyyy", { locale: es })}
+                          {computeAge(patient.birth_date) !== null && (
+                            <span className="text-muted-foreground font-normal">
+                              {" "}· {computeAge(patient.birth_date)} años
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  {patient.document_id && (
+                    <div className="flex items-start gap-3">
+                      <FileText className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide">Documento</p>
+                        <p className="text-sm font-medium text-foreground break-all">{patient.document_id}</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
-
-                {patient.reason_for_consultation && (
-                  <div>
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
-                      Motivo de consulta
-                    </p>
-                    <p className="text-sm text-foreground">{patient.reason_for_consultation}</p>
-                  </div>
-                )}
 
                 {patient.private_notes && (
                   <div className="rounded-xl bg-muted/40 border border-border/50 p-3">
@@ -705,6 +779,182 @@ const PatientDetail = () => {
                 </p>
               </CardContent>
             </Card>
+
+            {/* ── Adulto responsable: solo si es menor de 18 ── */}
+            {isMinor(patient.birth_date) && (
+              <Card className="rounded-2xl border-amber-500/30 bg-amber-500/[0.04]">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base font-bold flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-amber-500" />
+                    Adulto responsable
+                  </CardTitle>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Paciente menor de edad — los recordatorios se envían al adulto responsable.
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  {patient.guardian_name || patient.guardian_phone || patient.guardian_email ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {patient.guardian_name && (
+                        <div className="min-w-0">
+                          <p className="text-xs text-muted-foreground uppercase tracking-wide">Nombre</p>
+                          <p className="text-sm font-medium text-foreground">
+                            {patient.guardian_name}
+                            {patient.guardian_relationship && (
+                              <span className="text-muted-foreground font-normal"> · {patient.guardian_relationship}</span>
+                            )}
+                          </p>
+                        </div>
+                      )}
+                      {patient.guardian_phone && (
+                        <div className="min-w-0">
+                          <p className="text-xs text-muted-foreground uppercase tracking-wide">Teléfono</p>
+                          <button
+                            onClick={() => openWhatsAppNumber(patient.guardian_phone)}
+                            className="text-sm font-medium text-primary inline-flex items-center gap-1.5 hover:underline"
+                          >
+                            <MessageCircle className="h-3.5 w-3.5" />
+                            {patient.guardian_phone}
+                          </button>
+                        </div>
+                      )}
+                      {patient.guardian_email && (
+                        <div className="min-w-0">
+                          <p className="text-xs text-muted-foreground uppercase tracking-wide">Email</p>
+                          <p className="text-sm font-medium text-foreground break-all">{patient.guardian_email}</p>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      Sin datos del adulto responsable — completalos desde "Editar".
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* ── Contacto de emergencia: solo si hay algo cargado ── */}
+            {(patient.emergency_contact_name || patient.emergency_contact_phone) && (
+              <Card className="rounded-2xl border-border/50">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base font-bold flex items-center gap-2">
+                    <Phone className="h-4 w-4 text-primary" />
+                    Contacto de emergencia
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {patient.emergency_contact_name && (
+                      <div className="min-w-0">
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide">Nombre</p>
+                        <p className="text-sm font-medium text-foreground">
+                          {patient.emergency_contact_name}
+                          {patient.emergency_contact_relationship && (
+                            <span className="text-muted-foreground font-normal"> · {patient.emergency_contact_relationship}</span>
+                          )}
+                        </p>
+                      </div>
+                    )}
+                    {patient.emergency_contact_phone && (
+                      <div className="min-w-0">
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide">Teléfono</p>
+                        <button
+                          onClick={() => openWhatsAppNumber(patient.emergency_contact_phone)}
+                          className="text-sm font-medium text-primary inline-flex items-center gap-1.5 hover:underline"
+                        >
+                          <MessageCircle className="h-3.5 w-3.5" />
+                          {patient.emergency_contact_phone}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* ── Tratamiento ── */}
+            {(treatmentStatus || patient.reason_for_consultation || patient.first_consultation_date || patient.referred_by || patient.agreed_frequency) && (
+              <Card className="rounded-2xl border-border/50">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <CardTitle className="text-base font-bold flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-primary" />
+                      Tratamiento
+                    </CardTitle>
+                    {treatmentStatus && (
+                      <Badge className={cn("rounded-full text-xs", TREATMENT_BADGE_CLASS[treatmentStatus])}>
+                        {TREATMENT_STATUS_LABELS[treatmentStatus]}
+                      </Badge>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {patient.reason_for_consultation && (
+                    <div>
+                      <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                        Motivo de consulta inicial
+                      </p>
+                      <p className="text-sm text-foreground whitespace-pre-line">{patient.reason_for_consultation}</p>
+                    </div>
+                  )}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {patient.first_consultation_date && (
+                      <div className="min-w-0">
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide">Primera consulta</p>
+                        <p className="text-sm font-medium text-foreground">
+                          {format(new Date(`${patient.first_consultation_date}T00:00:00`), "d MMM yyyy", { locale: es })}
+                        </p>
+                      </div>
+                    )}
+                    {patient.agreed_frequency && (
+                      <div className="min-w-0">
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide">Frecuencia acordada</p>
+                        <p className="text-sm font-medium text-foreground">
+                          {AGREED_FREQUENCY_LABELS[patient.agreed_frequency as AgreedFrequency] ?? patient.agreed_frequency}
+                        </p>
+                      </div>
+                    )}
+                    {patient.referred_by && (
+                      <div className="min-w-0">
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide">Derivado por</p>
+                        <p className="text-sm font-medium text-foreground">{patient.referred_by}</p>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* ── Administrativo: solo si hay algo cargado ── */}
+            {(patient.health_insurance || patient.payment_type) && (
+              <Card className="rounded-2xl border-border/50">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base font-bold flex items-center gap-2">
+                    <CreditCard className="h-4 w-4 text-primary" />
+                    Administrativo
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {patient.health_insurance && (
+                      <div className="min-w-0">
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide">Mutualista u obra social</p>
+                        <p className="text-sm font-medium text-foreground">{patient.health_insurance}</p>
+                      </div>
+                    )}
+                    {patient.payment_type && (
+                      <div className="min-w-0">
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide">Tipo de atención</p>
+                        <p className="text-sm font-medium text-foreground">
+                          {PAYMENT_TYPE_LABELS[patient.payment_type as PaymentType] ?? patient.payment_type}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             <Card className="rounded-2xl border-border/50">
               <CardHeader className="pb-3">
@@ -1011,7 +1261,22 @@ const PatientDetail = () => {
           full_name: patient.full_name,
           email: patient.email || "",
           whatsapp_phone: patient.whatsapp_phone || "",
+          birth_date: patient.birth_date || "",
+          document_id: patient.document_id || "",
+          emergency_contact_name: patient.emergency_contact_name || "",
+          emergency_contact_relationship: patient.emergency_contact_relationship || "",
+          emergency_contact_phone: patient.emergency_contact_phone || "",
+          guardian_name: patient.guardian_name || "",
+          guardian_relationship: patient.guardian_relationship || "",
+          guardian_phone: patient.guardian_phone || "",
+          guardian_email: patient.guardian_email || "",
           reason_for_consultation: patient.reason_for_consultation || "",
+          first_consultation_date: patient.first_consultation_date || "",
+          referred_by: patient.referred_by || "",
+          treatment_status: treatmentStatus || "",
+          agreed_frequency: patient.agreed_frequency || "",
+          health_insurance: patient.health_insurance || "",
+          payment_type: patient.payment_type || "",
           private_notes: patient.private_notes || "",
           is_active: patient.is_active,
           avatar_url: patient.avatar_url,
