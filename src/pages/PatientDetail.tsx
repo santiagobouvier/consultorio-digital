@@ -1076,6 +1076,9 @@ const PatientDetail = () => {
                               <PaymentWhatsAppMenu
                                 patientPhone={patient.whatsapp_phone}
                                 patientName={patient.full_name}
+                                businessId={patient.business_id}
+                                amount={payment.amount}
+                                currency={payment.currency}
                                 getPaymentLink={mpConnected ? async () => {
                                   const url = await createPaymentLink(patient.business_id, [payment.id]);
                                   fetchData();

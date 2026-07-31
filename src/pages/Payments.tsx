@@ -759,6 +759,9 @@ const Payments = () => {
                             patientPhone={payment.patients?.whatsapp_phone || null}
                             patientName={payment.patients?.full_name || ""}
                             getPaymentLink={mpConnected ? () => ensurePaymentLink([payment.id]) : undefined}
+                            businessId={businessId || undefined}
+                            amount={payment.amount}
+                            currency={payment.currency}
                           />
                           <Button
                             variant="outline"
@@ -821,6 +824,9 @@ const Payments = () => {
                         patientPhone={payment.patients?.whatsapp_phone || null}
                         patientName={payment.patients?.full_name || ""}
                         getPaymentLink={mpConnected ? () => ensurePaymentLink([payment.id]) : undefined}
+                        businessId={businessId || undefined}
+                        amount={payment.amount}
+                        currency={payment.currency}
                       />
                       <Button
                         variant="outline"
