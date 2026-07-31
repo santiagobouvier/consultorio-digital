@@ -26,12 +26,14 @@ import { format, parseISO, isToday, isTomorrow, differenceInCalendarDays } from 
 import { es } from "date-fns/locale";
 import {
   User, Calendar, CreditCard, Clock, MapPin, Video,
-  Phone, Mail, Building2, FileText,
+  Phone, Mail, Building2, FileText, FolderOpen,
   LayoutDashboard, Heart, TrendingUp, CalendarCheck,
   ChevronRight, CheckCircle2, AlertCircle, Sun, Moon,
   Download, Smartphone, Camera, Save, Edit2, X, LogOut, Plus,
   Loader2, Star, ArrowLeft, RefreshCw, XCircle,
 } from "lucide-react";
+import { useSharedDocuments, openSharedDocument } from "@/components/portal/use-shared-documents";
+import { resolveDocType } from "@/lib/document-types";
 import { formatCurrency } from "@/lib/payments";
 import { downloadReceiptPdf, buildReceiptNumber } from "@/lib/receipt-pdf";
 import { toast as sonnerToast } from "sonner";
@@ -190,6 +192,7 @@ const TABS = [
   { id: "resumen", label: "Resumen", icon: LayoutDashboard },
   { id: "citas", label: "Citas", icon: Calendar },
   { id: "historial", label: "Historial", icon: FileText },
+  { id: "documentos", label: "Docs", icon: FolderOpen },
   { id: "pagos", label: "Pagos", icon: CreditCard },
   { id: "perfil", label: "Perfil", icon: User },
 ] as const;
@@ -243,6 +246,33 @@ export function PatientPortalView(props: PatientPortalViewProps) {
 
   const [tab, setTab] = useState<TabId>("resumen");
   const overdueSectionRef = useRef<HTMLDivElement>(null);
+
+  // Documentos compartidos: un solo fetch alimenta la pestaña "Docs" y los
+  // adjuntos que se muestran dentro de cada sesión del historial.
+  const {
+    documents: sharedDocuments,
+    customTypes: sharedDocTypes,
+    loading: sharedDocsLoading,
+  } = useSharedDocuments(patient.id, isDemo);
+  const sharedDocsByAppointment = useMemo(() => {
+    const map = new Map<string, typeof sharedDocuments>();
+    for (const d of sharedDocuments) {
+      if (!d.appointment_id) continue;
+      const list = map.get(d.appointment_id) ?? [];
+      list.push(d);
+      map.set(d.appointment_id, list);
+    }
+    return map;
+  }, [sharedDocuments]);
+  const [portalDocBusyId, setPortalDocBusyId] = useState<string | null>(null);
+  const openSessionDoc = async (doc: (typeof sharedDocuments)[number], download: boolean) => {
+    setPortalDocBusyId(doc.id);
+    try {
+      await openSharedDocument(doc, download, isDemo);
+    } finally {
+      setPortalDocBusyId(null);
+    }
+  };
 
   // Profile editing
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -935,11 +965,10 @@ export function PatientPortalView(props: PatientPortalViewProps) {
   );
 
   // ========= HistorialTab =========
+  // (Los documentos tienen su propia pestaña "Docs"; acá cada sesión muestra
+  // los suyos, anclados a la tarjeta.)
   const HistorialTab = () => (
     <div className="space-y-4 lg:space-y-6">
-      {/* Mis documentos: lo que el profesional compartió (si no hay, no aparece) */}
-      <PortalDocuments patientId={patient.id} isDemo={isDemo} />
-
       <div className="flex items-center justify-between">
         <h2 className="text-lg lg:text-xl font-bold flex items-center gap-2">
           <FileText className="h-5 w-5 text-primary" /> Historial de sesiones
@@ -1011,6 +1040,42 @@ export function PatientPortalView(props: PatientPortalViewProps) {
                         </div>
                       ) : (
                         <p className="text-xs text-muted-foreground italic">Sin notas para esta sesión</p>
+                      )}
+                      {/* Documentos de ESTA sesión (los mismos de la pestaña Docs) */}
+                      {(sharedDocsByAppointment.get(apt.id) ?? []).length > 0 && (
+                        <div className="mt-3 space-y-1.5">
+                          {(sharedDocsByAppointment.get(apt.id) ?? []).map((doc) => {
+                            const { Icon } = resolveDocType(doc.document_type, sharedDocTypes);
+                            return (
+                              <div
+                                key={doc.id}
+                                className="flex items-center gap-2 rounded-lg border border-border/60 bg-muted/30 px-2.5 py-2"
+                              >
+                                <Icon className="h-3.5 w-3.5 text-primary shrink-0" />
+                                <button
+                                  onClick={() => void openSessionDoc(doc, false)}
+                                  disabled={portalDocBusyId === doc.id}
+                                  className="text-xs font-medium truncate flex-1 text-left hover:text-primary transition-colors"
+                                  title={doc.file_name}
+                                >
+                                  {doc.file_name}
+                                </button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  title="Descargar"
+                                  className="h-7 w-7 p-0 rounded-lg shrink-0 text-muted-foreground"
+                                  onClick={() => void openSessionDoc(doc, true)}
+                                  disabled={portalDocBusyId === doc.id}
+                                >
+                                  {portalDocBusyId === doc.id
+                                    ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                    : <Download className="h-3.5 w-3.5" />}
+                                </Button>
+                              </div>
+                            );
+                          })}
+                        </div>
                       )}
                       {linkedPayment && (
                         <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
@@ -1441,6 +1506,14 @@ export function PatientPortalView(props: PatientPortalViewProps) {
     resumen: <ResumenTab />,
     citas: <CitasTab />,
     historial: <HistorialTab />,
+    documentos: (
+      <PortalDocuments
+        documents={sharedDocuments}
+        customTypes={sharedDocTypes}
+        loading={sharedDocsLoading}
+        isDemo={isDemo}
+      />
+    ),
     pagos: <PagosTab />,
     perfil: <PerfilTab />,
   };
