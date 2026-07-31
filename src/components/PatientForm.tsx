@@ -24,22 +24,64 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Camera, Loader2, User as UserIcon, X } from "lucide-react";
+import { Camera, Loader2, User as UserIcon, X, ShieldAlert } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import {
+  AGREED_FREQUENCY_LABELS,
+  PAYMENT_TYPE_LABELS,
+  TREATMENT_STATUS_LABELS,
+  computeAge,
+  isMinor,
+} from "@/lib/patient-profile";
+
+const emailField = z
+  .string()
+  .max(255)
+  .optional()
+  .refine(
+    (val) => !val || val === "" || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val),
+    "Email inválido"
+  );
 
 const patientSchema = z.object({
   full_name: z.string().min(1, "El nombre es obligatorio").max(100),
-  email: z
+  email: emailField,
+  whatsapp_phone: z.string().max(50).optional(),
+  // Datos personales
+  birth_date: z
     .string()
-    .max(255)
     .optional()
     .refine(
-      (val) => !val || val === "" || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val),
-      "Email inválido"
+      (val) => !val || val <= new Date().toISOString().slice(0, 10),
+      "La fecha de nacimiento no puede ser futura"
     ),
-  whatsapp_phone: z.string().max(50).optional(),
+  document_id: z.string().max(50).optional(),
+  // Contacto de emergencia
+  emergency_contact_name: z.string().max(100).optional(),
+  emergency_contact_relationship: z.string().max(50).optional(),
+  emergency_contact_phone: z.string().max(50).optional(),
+  // Adulto responsable (menores)
+  guardian_name: z.string().max(100).optional(),
+  guardian_relationship: z.string().max(50).optional(),
+  guardian_phone: z.string().max(50).optional(),
+  guardian_email: emailField,
+  // Tratamiento
   reason_for_consultation: z.string().max(500).optional(),
+  first_consultation_date: z.string().optional(),
+  referred_by: z.string().max(100).optional(),
+  treatment_status: z.string().optional(),
+  agreed_frequency: z.string().optional(),
+  // Administrativo
+  health_insurance: z.string().max(100).optional(),
+  payment_type: z.string().optional(),
   private_notes: z.string().max(2000).optional(),
   is_active: z.boolean().default(true),
 });
@@ -79,17 +121,40 @@ export function PatientForm({
   // before the DB insert. Reset each time the dialog opens for a new patient.
   const preGeneratedId = useMemo(() => crypto.randomUUID(), [open, patientId]);
 
+  const emptyValues: PatientFormData = {
+    full_name: "",
+    email: "",
+    whatsapp_phone: "",
+    birth_date: "",
+    document_id: "",
+    emergency_contact_name: "",
+    emergency_contact_relationship: "",
+    emergency_contact_phone: "",
+    guardian_name: "",
+    guardian_relationship: "",
+    guardian_phone: "",
+    guardian_email: "",
+    reason_for_consultation: "",
+    first_consultation_date: "",
+    referred_by: "",
+    treatment_status: "",
+    agreed_frequency: "",
+    health_insurance: "",
+    payment_type: "",
+    private_notes: "",
+    is_active: true,
+  };
+
   const form = useForm<PatientFormData>({
     resolver: zodResolver(patientSchema),
-    defaultValues: initialData || {
-      full_name: "",
-      email: "",
-      whatsapp_phone: "",
-      reason_for_consultation: "",
-      private_notes: "",
-      is_active: true,
-    },
+    defaultValues: initialData ? { ...emptyValues, ...initialData } : emptyValues,
   });
+
+  // La sección de adulto responsable aparece sola cuando la fecha de
+  // nacimiento indica que el paciente es menor de 18.
+  const watchedBirthDate = form.watch("birth_date");
+  const patientIsMinor = isMinor(watchedBirthDate || null);
+  const patientAge = computeAge(watchedBirthDate || null);
 
   // Resetear estado al abrir/cerrar
   useEffect(() => {
@@ -276,14 +341,44 @@ export function PatientForm({
         }
       }
 
+      const opt = (v: string | undefined) => v?.trim() || null;
       const cleanData = {
         full_name: data.full_name.trim(),
         email: cleanEmail,
         whatsapp_phone: cleanPhoneRaw,
-        reason_for_consultation: data.reason_for_consultation?.trim() || null,
-        private_notes: data.private_notes?.trim() || null,
+        birth_date: opt(data.birth_date),
+        document_id: opt(data.document_id),
+        emergency_contact_name: opt(data.emergency_contact_name),
+        emergency_contact_relationship: opt(data.emergency_contact_relationship),
+        emergency_contact_phone: opt(data.emergency_contact_phone),
+        guardian_name: opt(data.guardian_name),
+        guardian_relationship: opt(data.guardian_relationship),
+        guardian_phone: opt(data.guardian_phone),
+        guardian_email: data.guardian_email?.trim().toLowerCase() || null,
+        reason_for_consultation: opt(data.reason_for_consultation),
+        first_consultation_date: opt(data.first_consultation_date),
+        referred_by: opt(data.referred_by),
+        agreed_frequency: opt(data.agreed_frequency),
+        health_insurance: opt(data.health_insurance),
+        payment_type: opt(data.payment_type),
+        private_notes: opt(data.private_notes),
         is_active: data.is_active,
         avatar_url: avatarUrl,
+      };
+
+      // El estado del tratamiento es clínico: vive en patient_clinical_status
+      // (tabla que el paciente no puede leer), no en patients.
+      const saveTreatmentStatus = async (pid: string) => {
+        const ts = opt(data.treatment_status);
+        const changed = ts !== (initialData?.treatment_status?.trim() || null);
+        if (!changed) return;
+        const { error } = await supabase
+          .from("patient_clinical_status")
+          .upsert(
+            { patient_id: pid, business_id: business!.id, treatment_status: ts },
+            { onConflict: "patient_id" }
+          );
+        if (error) throw error;
       };
 
       if (patientId) {
@@ -293,6 +388,7 @@ export function PatientForm({
           .eq("id", patientId);
 
         if (error) throw error;
+        await saveTreatmentStatus(patientId);
 
         toast({ title: "Éxito", description: "Paciente actualizado correctamente" });
         form.reset();
@@ -305,6 +401,7 @@ export function PatientForm({
           .single();
 
         if (error) throw error;
+        if (newPatient?.id) await saveTreatmentStatus(newPatient.id);
 
         toast({ title: "Éxito", description: "Paciente creado correctamente" });
         form.reset();
@@ -363,7 +460,7 @@ export function PatientForm({
       document.body
     )}
     <Dialog open={open} onOpenChange={(v) => { if (!isSubmitting) onOpenChange(v); }}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader className="pb-2">
           <DialogTitle className="text-xl font-bold">
             {patientId ? "Editar paciente" : "Nuevo paciente"}
@@ -434,82 +531,396 @@ export function PatientForm({
               </div>
             )}
 
-            <FormField
-              control={form.control}
-              name="full_name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-semibold">Nombre completo *</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      placeholder="Juan Pérez"
-                      className="h-12 text-base rounded-xl"
-                      disabled={isSubmitting}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {/* ── Datos personales ── */}
+            <div className="space-y-4">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Datos personales
+              </p>
 
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-semibold">Email</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      type="email"
-                      placeholder="juan@ejemplo.com"
-                      className="h-12 text-base rounded-xl"
-                      disabled={isSubmitting}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              <FormField
+                control={form.control}
+                name="full_name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-semibold">Nombre completo *</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        placeholder="Juan Pérez"
+                        className="h-12 text-base rounded-xl"
+                        disabled={isSubmitting}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <FormField
-              control={form.control}
-              name="whatsapp_phone"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-semibold">Teléfono WhatsApp</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      placeholder="+598 99 123 456"
-                      className="h-12 text-base rounded-xl"
-                      disabled={isSubmitting}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="birth_date"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-semibold">
+                        Fecha de nacimiento
+                        {patientAge !== null && (
+                          <span className="ml-2 font-normal text-muted-foreground">
+                            ({patientAge} {patientAge === 1 ? "año" : "años"})
+                          </span>
+                        )}
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          type="date"
+                          max={new Date().toISOString().slice(0, 10)}
+                          className="h-12 text-base rounded-xl"
+                          disabled={isSubmitting}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="document_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-semibold">Documento</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder="CI 1.234.567-8"
+                          className="h-12 text-base rounded-xl"
+                          disabled={isSubmitting}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
-            <FormField
-              control={form.control}
-              name="reason_for_consultation"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-sm font-semibold">Motivo de consulta</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      placeholder="Breve descripción"
-                      className="h-12 text-base rounded-xl"
-                      disabled={isSubmitting}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-semibold">Email</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          type="email"
+                          placeholder="juan@ejemplo.com"
+                          className="h-12 text-base rounded-xl"
+                          disabled={isSubmitting}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="whatsapp_phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-semibold">Teléfono WhatsApp</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder="+598 99 123 456"
+                          className="h-12 text-base rounded-xl"
+                          disabled={isSubmitting}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+
+            {/* ── Adulto responsable: aparece solo si es menor de 18 ── */}
+            {patientIsMinor && (
+              <div className="space-y-4 rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
+                <div className="flex items-start gap-2.5">
+                  <ShieldAlert className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                      Adulto responsable
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Paciente menor de edad — los recordatorios se envían al adulto responsable.
+                    </p>
+                  </div>
+                </div>
+                <FormField
+                  control={form.control}
+                  name="guardian_name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-semibold">Nombre</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="María Pérez" className="h-12 text-base rounded-xl" disabled={isSubmitting} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="guardian_relationship"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-semibold">Vínculo</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="Madre, padre, tutor..." className="h-12 text-base rounded-xl" disabled={isSubmitting} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="guardian_phone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-semibold">Teléfono</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="+598 99 123 456" className="h-12 text-base rounded-xl" disabled={isSubmitting} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <FormField
+                  control={form.control}
+                  name="guardian_email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-semibold">Email</FormLabel>
+                      <FormControl>
+                        <Input {...field} type="email" placeholder="maria@ejemplo.com" className="h-12 text-base rounded-xl" disabled={isSubmitting} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            )}
+
+            {/* ── Contacto de emergencia ── */}
+            <div className="space-y-4">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Contacto de emergencia
+              </p>
+              <FormField
+                control={form.control}
+                name="emergency_contact_name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-semibold">Nombre</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="Ana Rodríguez" className="h-12 text-base rounded-xl" disabled={isSubmitting} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="emergency_contact_relationship"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-semibold">Vínculo</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Hermana, pareja..." className="h-12 text-base rounded-xl" disabled={isSubmitting} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="emergency_contact_phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-semibold">Teléfono</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="+598 99 123 456" className="h-12 text-base rounded-xl" disabled={isSubmitting} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+
+            {/* ── Tratamiento ── */}
+            <div className="space-y-4">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Tratamiento
+              </p>
+              <FormField
+                control={form.control}
+                name="reason_for_consultation"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-semibold">Motivo de consulta inicial</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        {...field}
+                        placeholder="Por qué consulta"
+                        rows={2}
+                        className="text-base rounded-xl resize-none"
+                        disabled={isSubmitting}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="first_consultation_date"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-semibold">Primera consulta</FormLabel>
+                      <FormControl>
+                        <Input {...field} type="date" className="h-12 text-base rounded-xl" disabled={isSubmitting} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="referred_by"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-semibold">Derivado por</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Colega, mutualista, conocido..." className="h-12 text-base rounded-xl" disabled={isSubmitting} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="treatment_status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-semibold">Estado del tratamiento</FormLabel>
+                      <Select
+                        value={field.value || "none"}
+                        onValueChange={(v) => field.onChange(v === "none" ? "" : v)}
+                        disabled={isSubmitting}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="h-12 text-base rounded-xl">
+                            <SelectValue placeholder="Sin especificar" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="none">Sin especificar</SelectItem>
+                          {Object.entries(TREATMENT_STATUS_LABELS).map(([value, label]) => (
+                            <SelectItem key={value} value={value}>{label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="agreed_frequency"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-semibold">Frecuencia acordada</FormLabel>
+                      <Select
+                        value={field.value || "none"}
+                        onValueChange={(v) => field.onChange(v === "none" ? "" : v)}
+                        disabled={isSubmitting}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="h-12 text-base rounded-xl">
+                            <SelectValue placeholder="Sin especificar" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="none">Sin especificar</SelectItem>
+                          {Object.entries(AGREED_FREQUENCY_LABELS).map(([value, label]) => (
+                            <SelectItem key={value} value={value}>{label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+
+            {/* ── Administrativo ── */}
+            <div className="space-y-4">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Administrativo
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="health_insurance"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-semibold">Mutualista u obra social</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Ej: Médica Uruguaya" className="h-12 text-base rounded-xl" disabled={isSubmitting} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="payment_type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-semibold">Tipo de atención</FormLabel>
+                      <Select
+                        value={field.value || "none"}
+                        onValueChange={(v) => field.onChange(v === "none" ? "" : v)}
+                        disabled={isSubmitting}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="h-12 text-base rounded-xl">
+                            <SelectValue placeholder="Sin especificar" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="none">Sin especificar</SelectItem>
+                          {Object.entries(PAYMENT_TYPE_LABELS).map(([value, label]) => (
+                            <SelectItem key={value} value={value}>{label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
 
             <FormField
               control={form.control}
