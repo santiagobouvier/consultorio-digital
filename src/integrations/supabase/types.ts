@@ -2029,6 +2029,7 @@ export type Database = {
           p_duration_minutes: number
           p_from: string
           p_professional_user_id: string
+          p_public?: boolean
           p_to: string
         }
         Returns: {
