@@ -1034,12 +1034,18 @@ export function PatientPortalView(props: PatientPortalViewProps) {
                     </div>
                     <div className="flex-1 min-w-0">
                       {apt.service_name && <p className="text-xs text-primary font-medium mb-1.5">{apt.service_name}</p>}
+                      {/* apt.notes acá es patient_note: lo que el profesional
+                          escribió PARA el paciente (las notas internas nunca
+                          llegan al portal) */}
                       {apt.notes ? (
                         <div className="rounded-xl bg-muted/40 p-3">
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">
+                            Indicación de tu profesional
+                          </p>
                           <p className="text-xs lg:text-sm text-foreground leading-relaxed whitespace-pre-wrap">{apt.notes}</p>
                         </div>
                       ) : (
-                        <p className="text-xs text-muted-foreground italic">Sin notas para esta sesión</p>
+                        <p className="text-xs text-muted-foreground italic">Sin indicaciones para esta sesión</p>
                       )}
                       {/* Documentos de ESTA sesión (los mismos de la pestaña Docs) */}
                       {(sharedDocsByAppointment.get(apt.id) ?? []).length > 0 && (

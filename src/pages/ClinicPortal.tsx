@@ -215,16 +215,17 @@ const ClinicPortal = () => {
 
   const reloadPatientData = useCallback(async (patientId: string, bizId: string) => {
     const nowIso = new Date().toISOString();
+    // Solo patient_note: las "Notas internas" de la cita nunca llegan al portal
     const { data: appts } = await supabase
       .from("appointments")
-      .select("id, start_at, end_at, status, modality, location, notes, payment_status, services(name)")
+      .select("id, start_at, end_at, status, modality, location, patient_note, payment_status, services(name)")
       .eq("business_id", bizId)
       .eq("patient_id", patientId)
       .order("start_at", { ascending: false });
 
     const all = (appts || []).map((a: any): PortalAppointment => ({
       id: a.id, start_at: a.start_at, end_at: a.end_at, status: a.status,
-      modality: a.modality, location: a.location, notes: a.notes,
+      modality: a.modality, location: a.location, notes: a.patient_note,
       service_name: a.services?.name ?? null, payment_status: a.payment_status,
     }));
     setUpcomingAppointments(all.filter(a => a.start_at >= nowIso && a.status !== "cancelled").reverse());

@@ -167,6 +167,7 @@ export type Database = {
           modality: string | null
           notes: string | null
           patient_id: string | null
+          patient_note: string | null
           payment_status: string | null
           professional_id: string | null
           recurrence_group_id: string | null
@@ -196,6 +197,7 @@ export type Database = {
           modality?: string | null
           notes?: string | null
           patient_id?: string | null
+          patient_note?: string | null
           payment_status?: string | null
           professional_id?: string | null
           recurrence_group_id?: string | null
@@ -225,6 +227,7 @@ export type Database = {
           modality?: string | null
           notes?: string | null
           patient_id?: string | null
+          patient_note?: string | null
           payment_status?: string | null
           professional_id?: string | null
           recurrence_group_id?: string | null
