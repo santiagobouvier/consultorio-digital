@@ -266,6 +266,9 @@ export const PaymentDayDrawer = ({
               <PaymentWhatsAppMenu
                 patientPhone={payment.patient_phone}
                 patientName={payment.patient_name}
+                businessId={businessId}
+                amount={payment.amount}
+                currency={payment.currency}
               />
               <Button
                 variant="ghost"

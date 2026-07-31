@@ -25,6 +25,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
+import { BankAccountsSettings } from "@/components/BankAccountsSettings";
 
 type PolicyType = "none" | "optional" | "required";
 
@@ -262,7 +263,7 @@ export const PaymentPolicySettings = ({ businessId }: Props) => {
   return (
     // Desktop: política de cobro protagonista (izquierda) + conexión MP al costado
     <div className="grid grid-cols-1 lg:grid-cols-5 gap-5 items-start">
-      <div className="order-1 lg:order-2 lg:col-span-2">
+      <div className="order-1 lg:order-2 lg:col-span-2 space-y-5">
       {/* 1. Conectar Mercado Pago */}
       <Card>
         <CardHeader>
@@ -302,6 +303,9 @@ export const PaymentPolicySettings = ({ businessId }: Props) => {
           )}
         </CardContent>
       </Card>
+
+      {/* 2. Cuentas bancarias para transferencias */}
+      <BankAccountsSettings businessId={businessId} />
 
       </div>
 
