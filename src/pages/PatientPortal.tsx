@@ -57,8 +57,11 @@ const PatientPortal = () => {
         .eq("user_id", user.id).eq("role", "patient").maybeSingle();
       if (!roleData) { navigate("/dashboard"); return; }
 
+      // Lista explícita de columnas: el portal del paciente solo trae lo que
+      // muestra. Nunca agregar acá campos clínicos ni administrativos.
       const { data: patientData, error: patientError } = await supabase
-        .from("patients").select("*")
+        .from("patients")
+        .select("id, business_id, full_name, email, whatsapp_phone, avatar_url, reason_for_consultation, private_notes, created_at")
         .eq("auth_user_id", user.id).maybeSingle();
       if (patientError) throw patientError;
       if (!patientData) {
