@@ -940,55 +940,158 @@ export type Database = {
           },
         ]
       }
+      patient_clinical_status: {
+        Row: {
+          business_id: string
+          created_at: string
+          current_diagnosis: string | null
+          current_medication: string | null
+          medical_history: string | null
+          patient_id: string
+          risk_flag: string
+          risk_notes: string | null
+          treatment_status: string | null
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          current_diagnosis?: string | null
+          current_medication?: string | null
+          medical_history?: string | null
+          patient_id: string
+          risk_flag?: string
+          risk_notes?: string | null
+          treatment_status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          current_diagnosis?: string | null
+          current_medication?: string | null
+          medical_history?: string | null
+          patient_id?: string
+          risk_flag?: string
+          risk_notes?: string | null
+          treatment_status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_clinical_status_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: true
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_clinical_status_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_clinical_status_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public_branding"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       patients: {
         Row: {
+          agreed_frequency: string | null
           assigned_professional_id: string | null
           auth_user_id: string | null
           avatar_url: string | null
+          birth_date: string | null
           business_id: string
           created_at: string
           created_by: string | null
+          document_id: string | null
           email: string | null
+          emergency_contact_name: string | null
+          emergency_contact_phone: string | null
+          emergency_contact_relationship: string | null
+          first_consultation_date: string | null
           full_name: string
+          guardian_email: string | null
+          guardian_name: string | null
+          guardian_phone: string | null
+          guardian_relationship: string | null
+          health_insurance: string | null
           id: string
           is_active: boolean
           payment_policy_override: Database["public"]["Enums"]["patient_payment_override"]
+          payment_type: string | null
           private_notes: string | null
           reason_for_consultation: string | null
+          referred_by: string | null
           updated_at: string
           whatsapp_phone: string | null
         }
         Insert: {
+          agreed_frequency?: string | null
           assigned_professional_id?: string | null
           auth_user_id?: string | null
           avatar_url?: string | null
+          birth_date?: string | null
           business_id: string
           created_at?: string
           created_by?: string | null
+          document_id?: string | null
           email?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          emergency_contact_relationship?: string | null
+          first_consultation_date?: string | null
           full_name: string
+          guardian_email?: string | null
+          guardian_name?: string | null
+          guardian_phone?: string | null
+          guardian_relationship?: string | null
+          health_insurance?: string | null
           id?: string
           is_active?: boolean
           payment_policy_override?: Database["public"]["Enums"]["patient_payment_override"]
+          payment_type?: string | null
           private_notes?: string | null
           reason_for_consultation?: string | null
+          referred_by?: string | null
           updated_at?: string
           whatsapp_phone?: string | null
         }
         Update: {
+          agreed_frequency?: string | null
           assigned_professional_id?: string | null
           auth_user_id?: string | null
           avatar_url?: string | null
+          birth_date?: string | null
           business_id?: string
           created_at?: string
           created_by?: string | null
+          document_id?: string | null
           email?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          emergency_contact_relationship?: string | null
+          first_consultation_date?: string | null
           full_name?: string
+          guardian_email?: string | null
+          guardian_name?: string | null
+          guardian_phone?: string | null
+          guardian_relationship?: string | null
+          health_insurance?: string | null
           id?: string
           is_active?: boolean
           payment_policy_override?: Database["public"]["Enums"]["patient_payment_override"]
+          payment_type?: string | null
           private_notes?: string | null
           reason_for_consultation?: string | null
+          referred_by?: string | null
           updated_at?: string
           whatsapp_phone?: string | null
         }
