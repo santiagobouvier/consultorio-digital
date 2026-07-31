@@ -1,50 +1,28 @@
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { toast } from "@/hooks/use-toast";
+import { Input } from "@/components/ui/input";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
+import { Download, ExternalLink, FolderOpen, Loader2, Search } from "lucide-react";
+import { resolveDocType, type BusinessDocType } from "@/lib/document-types";
 import {
-  FileText,
-  FileImage,
-  FileType,
-  Download,
-  ExternalLink,
-  FolderOpen,
-  Loader2,
-} from "lucide-react";
+  openSharedDocument,
+  type SharedDocument,
+} from "@/components/portal/use-shared-documents";
 
-// "Mis documentos" en el portal del paciente: SOLO los documentos que el
-// profesional compartió explícitamente (RLS garantiza que no vea otra cosa).
-
-interface SharedDocument {
-  id: string;
-  file_path: string;
-  file_name: string;
-  file_size: number | null;
-  mime_type: string | null;
-  document_type: string;
-  notes: string | null;
-  shared_at: string | null;
-  created_at: string;
-}
+// Pestaña "Documentos" del portal del paciente: todo lo que el profesional
+// compartió, en filas compactas con el ícono de su tipo, la sesión de la que
+// viene (si tiene) y Ver/Descargar. Con buscador cuando se acumulan.
 
 interface PortalDocumentsProps {
-  patientId: string;
+  documents: SharedDocument[];
+  customTypes: BusinessDocType[];
+  loading: boolean;
   /** En el demo se muestran documentos de ejemplo (nada se descarga). */
   isDemo?: boolean;
 }
-
-const TYPE_LABELS: Record<string, string> = {
-  consentimiento: "Consentimiento",
-  informe: "Informe",
-  evaluacion: "Evaluación",
-  indicaciones: "Indicaciones / Material",
-  recibo: "Recibo",
-  otro: "Documento",
-};
 
 const formatBytes = (bytes: number | null) => {
   if (!bytes) return "";
@@ -53,186 +31,135 @@ const formatBytes = (bytes: number | null) => {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
 
-const fileIcon = (mime: string | null) => {
-  if (!mime) return FileText;
-  if (mime.startsWith("image/")) return FileImage;
-  if (mime.includes("pdf")) return FileType;
-  return FileText;
-};
-
-// Documentos ficticios para el modo demo: se ven, no se descargan.
-const DEMO_DOCUMENTS: SharedDocument[] = [
-  {
-    id: "demo-doc-1",
-    file_name: "Informe_de_evolucion.pdf",
-    file_path: "demo",
-    file_size: 186000,
-    mime_type: "application/pdf",
-    document_type: "informe",
-    notes: null,
-    shared_at: new Date(Date.now() - 5 * 86400000).toISOString(),
-    created_at: new Date(Date.now() - 5 * 86400000).toISOString(),
-  },
-  {
-    id: "demo-doc-2",
-    file_name: "Ejercicios_para_casa.pdf",
-    file_path: "demo",
-    file_size: 92000,
-    mime_type: "application/pdf",
-    document_type: "indicaciones",
-    notes: "Material trabajado en la última sesión.",
-    shared_at: new Date(Date.now() - 12 * 86400000).toISOString(),
-    created_at: new Date(Date.now() - 12 * 86400000).toISOString(),
-  },
-] as SharedDocument[];
-
-export const PortalDocuments = ({ patientId, isDemo = false }: PortalDocumentsProps) => {
-  const [documents, setDocuments] = useState<SharedDocument[]>([]);
-  const [loading, setLoading] = useState(true);
+export const PortalDocuments = ({ documents, customTypes, loading, isDemo = false }: PortalDocumentsProps) => {
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
 
-  useEffect(() => {
-    if (isDemo) {
-      setDocuments(DEMO_DOCUMENTS);
-      setLoading(false);
-      return;
-    }
-    if (!patientId) {
-      setLoading(false);
-      return;
-    }
-    let cancelled = false;
-    (async () => {
-      const { data, error } = await supabase
-        .from("patient_documents")
-        .select("id, file_path, file_name, file_size, mime_type, document_type, notes, shared_at, created_at")
-        .eq("patient_id", patientId)
-        .eq("shared_with_patient", true)
-        .order("shared_at", { ascending: false });
-      if (!cancelled) {
-        if (error) console.error("Error loading shared documents:", error);
-        setDocuments((data as SharedDocument[]) || []);
-        setLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [patientId, isDemo]);
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return documents;
+    return documents.filter(
+      (d) => d.file_name.toLowerCase().includes(q) || (d.notes || "").toLowerCase().includes(q),
+    );
+  }, [documents, search]);
 
-  const openDocument = async (doc: SharedDocument, download: boolean) => {
-    if (isDemo) {
-      toast({ title: "Modo demo", description: "En tu portal real acá se abre el documento." });
-      return;
-    }
+  const open = async (doc: SharedDocument, download: boolean) => {
     setBusyId(doc.id);
-    // Para "Ver" abrimos la pestaña ANTES del await: si no, el bloqueador
-    // de pop-ups del navegador la mata (el click ya no cuenta como gesto).
-    const win = download ? null : window.open("", "_blank");
     try {
-      const { data, error } = await supabase.storage
-        .from("patient-documents")
-        .createSignedUrl(doc.file_path, 60, download ? { download: doc.file_name } : undefined);
-      if (error || !data?.signedUrl) throw error || new Error("Sin URL");
-      if (download) {
-        const a = document.createElement("a");
-        a.href = data.signedUrl;
-        a.download = doc.file_name;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-      } else if (win) {
-        win.location.href = data.signedUrl;
-      } else {
-        window.open(data.signedUrl, "_blank", "noopener,noreferrer");
-      }
-    } catch (err) {
-      if (win) win.close();
-      console.error("Open shared document error:", err);
-      toast({
-        title: "No se pudo abrir el documento",
-        description: "Probá de nuevo en unos segundos.",
-        variant: "destructive",
-      });
+      await openSharedDocument(doc, download, isDemo);
     } finally {
       setBusyId(null);
     }
   };
 
-  // Sin documentos compartidos, la sección no existe (cero ruido)
-  if (loading || documents.length === 0) return null;
-
   return (
-    <div className="space-y-3 lg:space-y-4 pt-2">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
         <h2 className="text-lg lg:text-xl font-bold flex items-center gap-2">
           <FolderOpen className="h-5 w-5 text-primary" /> Mis documentos
         </h2>
-        <Badge variant="secondary" className="text-xs">
-          {documents.length} documento{documents.length !== 1 ? "s" : ""}
-        </Badge>
+        {documents.length > 0 && (
+          <Badge variant="secondary" className="text-xs">
+            {documents.length} documento{documents.length !== 1 ? "s" : ""}
+          </Badge>
+        )}
       </div>
-      <p className="text-xs text-muted-foreground -mt-1">
-        Documentos que tu profesional compartió con vos.
+      <p className="text-xs text-muted-foreground -mt-2">
+        Todo lo que tu profesional compartió con vos: informes, materiales, recibos.
       </p>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {documents.map((doc) => {
-          const Icon = fileIcon(doc.mime_type);
-          const sharedDate = doc.shared_at || doc.created_at;
-          return (
-            <Card key={doc.id} className="hover:shadow-md transition-all">
-              <CardContent className="p-4 flex flex-col gap-3 h-full">
-                <div className="flex items-start gap-3">
-                  <div className="shrink-0 h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                    <Icon className="h-5 w-5 text-primary" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold break-all leading-snug">{doc.file_name}</p>
-                    <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
-                      <Badge variant="secondary" className="text-[10px]">
-                        {TYPE_LABELS[doc.document_type] || "Documento"}
-                      </Badge>
-                      <span className="text-[11px] text-muted-foreground">
-                        {format(parseISO(sharedDate), "d MMM yyyy", { locale: es })}
-                        {doc.file_size ? ` · ${formatBytes(doc.file_size)}` : ""}
-                      </span>
+      {loading ? (
+        <div className="py-10 flex justify-center text-muted-foreground">
+          <Loader2 className="h-5 w-5 animate-spin" />
+        </div>
+      ) : documents.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <FolderOpen className="h-12 w-12 text-muted-foreground/40 mx-auto mb-3" />
+            <p className="text-muted-foreground font-medium">Todavía no hay documentos</p>
+            <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
+              Cuando tu profesional te comparta un informe o material, aparece acá
+              y te llega una notificación.
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          {documents.length > 5 && (
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar un documento..."
+                className="h-10 pl-9 rounded-xl text-sm"
+              />
+            </div>
+          )}
+
+          {filtered.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-6">
+              Nada coincide con la búsqueda.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {filtered.map((doc) => {
+                const { label, Icon } = resolveDocType(doc.document_type, customTypes);
+                const sharedDate = doc.shared_at || doc.created_at;
+                return (
+                  <div
+                    key={doc.id}
+                    className="flex items-center gap-2.5 sm:gap-3 rounded-xl border bg-card hover:shadow-sm transition-all px-3 py-2.5"
+                  >
+                    <div className="shrink-0 h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <Icon className="h-5 w-5 text-primary" />
                     </div>
-                    {doc.notes && (
-                      <p className="text-xs text-muted-foreground mt-1.5 whitespace-pre-wrap break-words">
-                        {doc.notes}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold truncate leading-snug" title={doc.file_name}>
+                        {doc.file_name}
                       </p>
-                    )}
+                      <p className="text-[11px] text-muted-foreground truncate mt-0.5">
+                        {label}
+                        {" · "}{format(parseISO(sharedDate), "d MMM yyyy", { locale: es })}
+                        {doc.appointments?.start_at
+                          ? ` · Sesión del ${format(parseISO(doc.appointments.start_at), "d MMM", { locale: es })}`
+                          : ""}
+                        {doc.file_size ? ` · ${formatBytes(doc.file_size)}` : ""}
+                        {doc.notes ? ` · ${doc.notes}` : ""}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <Button
+                        size="sm"
+                        className="rounded-lg h-9 gap-1.5 px-2.5 sm:px-3"
+                        onClick={() => void open(doc, false)}
+                        disabled={busyId === doc.id}
+                      >
+                        {busyId === doc.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <ExternalLink className="h-4 w-4" />
+                        )}
+                        <span className="hidden sm:inline">Ver</span>
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        title="Descargar"
+                        className="rounded-lg h-9 w-9 p-0"
+                        onClick={() => void open(doc, true)}
+                        disabled={busyId === doc.id}
+                      >
+                        <Download className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
-                </div>
-                <div className="flex gap-2 mt-auto">
-                  <Button
-                    size="sm"
-                    className="rounded-lg flex-1 gap-1.5"
-                    onClick={() => openDocument(doc, false)}
-                    disabled={busyId === doc.id}
-                  >
-                    {busyId === doc.id ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <ExternalLink className="h-4 w-4" />
-                    )}
-                    Ver
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="rounded-lg flex-1 gap-1.5"
-                    onClick={() => openDocument(doc, true)}
-                    disabled={busyId === doc.id}
-                  >
-                    <Download className="h-4 w-4" />
-                    Descargar
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+                );
+              })}
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 };
