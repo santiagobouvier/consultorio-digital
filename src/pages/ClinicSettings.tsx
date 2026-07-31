@@ -16,6 +16,7 @@ import {
   Bell,
   Building2,
   CreditCard,
+  ShieldCheck,
 } from "lucide-react";
 import { NotificationActivationCard } from "@/components/NotificationActivationCard";
 import { useDashboardBranding } from "@/contexts/DashboardBrandingContext";
@@ -388,30 +389,70 @@ const ClinicSettings = () => {
               </CardContent>
             </Card>
 
-            <Card>
+            {/* Protección de agenda: la config más importante para el día a
+                día — bien grande, con color y ejemplos vivos, imposible no
+                entenderla */}
+            <Card className="border-primary/30 bg-primary/[0.04]">
               <CardHeader>
-                <CardTitle className="text-base">Ventana de reservas online</CardTitle>
-                <p className="text-xs text-muted-foreground">
-                  Aplica a la reserva desde tu web pública y el portal. En tu panel vos agendás cuando quieras.
+                <CardTitle className="text-lg font-bold flex items-center gap-2.5">
+                  <span className="h-9 w-9 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
+                    <ShieldCheck className="h-5 w-5 text-primary" />
+                  </span>
+                  Protegé tu agenda de reservas sobre la hora
+                </CardTitle>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Sin esto, alguien puede reservarte a las 20:55 la sesión de las 21:00 y agarrarte
+                  desprevenido. Acá definís cuánto aviso previo exigís. Aplica a tu web pública y al
+                  portal — <span className="font-medium text-foreground">en tu panel vos agendás cuando quieras</span>.
                 </p>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="minBookingNotice">Anticipación mínima para reservar (horas)</Label>
-                  <Input
-                    id="minBookingNotice"
-                    type="number"
-                    min={0}
-                    max={720}
-                    value={minBookingNoticeHours}
-                    onChange={(e) => setMinBookingNoticeHours(parseInt(e.target.value || "0", 10))}
-                    className="h-11 max-w-[120px]"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Con cuánta anticipación mínima querés que te puedan reservar. Los horarios más
-                    próximos que esto dejan de aparecer como disponibles. Ej: con 24, nadie puede
-                    reservarte para dentro de un rato.
+              <CardContent className="space-y-6">
+                {/* ── Anticipación mínima ── */}
+                <div className="space-y-3 rounded-xl border border-border/60 bg-background p-4">
+                  <Label htmlFor="minBookingNotice" className="text-base font-bold">
+                    ¿Con cuánto aviso previo te pueden reservar?
+                  </Label>
+                  <p className="text-sm text-muted-foreground -mt-1">
+                    Los horarios más cercanos que esto <span className="font-semibold text-foreground">desaparecen</span> de
+                    la reserva online: nadie te puede reservar de golpe.
                   </p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {[2, 12, 24, 48].map((h) => (
+                      <button
+                        key={h}
+                        type="button"
+                        onClick={() => setMinBookingNoticeHours(h)}
+                        className={`px-3.5 py-1.5 rounded-full text-sm font-semibold border transition-colors ${
+                          minBookingNoticeHours === h
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "border-border text-muted-foreground hover:border-primary/50 hover:text-foreground"
+                        }`}
+                      >
+                        {h} h
+                      </button>
+                    ))}
+                    <div className="flex items-center gap-1.5">
+                      <Input
+                        id="minBookingNotice"
+                        type="number"
+                        min={0}
+                        max={720}
+                        value={minBookingNoticeHours}
+                        onChange={(e) => setMinBookingNoticeHours(parseInt(e.target.value || "0", 10))}
+                        className="h-9 w-[80px] text-center font-semibold"
+                      />
+                      <span className="text-sm text-muted-foreground">horas</span>
+                    </div>
+                  </div>
+                  {Number.isFinite(minBookingNoticeHours) && minBookingNoticeHours >= 0 && (
+                    <p className="text-sm font-medium text-primary bg-primary/10 border border-primary/20 rounded-lg px-3 py-2">
+                      ✓ Con {minBookingNoticeHours} horas: lo más pronto que te pueden reservar ahora
+                      mismo es el{" "}
+                      {new Date(Date.now() + minBookingNoticeHours * 3600000).toLocaleString("es-UY", {
+                        weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit",
+                      })} hs.
+                    </p>
+                  )}
                   {Number.isFinite(minBookingNoticeHours) &&
                     Number.isFinite(reminderHoursBefore) &&
                     minBookingNoticeHours < reminderHoursBefore && (
@@ -426,21 +467,52 @@ const ClinicSettings = () => {
                     </div>
                   )}
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="maxBookingHorizon">Reservas hasta (días hacia adelante)</Label>
-                  <Input
-                    id="maxBookingHorizon"
-                    type="number"
-                    min={1}
-                    max={365}
-                    value={maxBookingHorizonDays}
-                    onChange={(e) => setMaxBookingHorizonDays(parseInt(e.target.value || "0", 10))}
-                    className="h-11 max-w-[120px]"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Hasta cuántos días hacia adelante se puede reservar online. Ej: con 60, nadie
-                    te reserva un turno para dentro de cuatro meses.
+
+                {/* ── Horizonte máximo ── */}
+                <div className="space-y-3 rounded-xl border border-border/60 bg-background p-4">
+                  <Label htmlFor="maxBookingHorizon" className="text-base font-bold">
+                    ¿Hasta cuándo a futuro te pueden reservar?
+                  </Label>
+                  <p className="text-sm text-muted-foreground -mt-1">
+                    Para que no te reserven un turno para dentro de cuatro meses cuando ni sabés
+                    cómo va a estar tu agenda.
                   </p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {[30, 60, 90].map((d) => (
+                      <button
+                        key={d}
+                        type="button"
+                        onClick={() => setMaxBookingHorizonDays(d)}
+                        className={`px-3.5 py-1.5 rounded-full text-sm font-semibold border transition-colors ${
+                          maxBookingHorizonDays === d
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "border-border text-muted-foreground hover:border-primary/50 hover:text-foreground"
+                        }`}
+                      >
+                        {d} días
+                      </button>
+                    ))}
+                    <div className="flex items-center gap-1.5">
+                      <Input
+                        id="maxBookingHorizon"
+                        type="number"
+                        min={1}
+                        max={365}
+                        value={maxBookingHorizonDays}
+                        onChange={(e) => setMaxBookingHorizonDays(parseInt(e.target.value || "0", 10))}
+                        className="h-9 w-[80px] text-center font-semibold"
+                      />
+                      <span className="text-sm text-muted-foreground">días</span>
+                    </div>
+                  </div>
+                  {Number.isFinite(maxBookingHorizonDays) && maxBookingHorizonDays > 0 && (
+                    <p className="text-sm font-medium text-primary bg-primary/10 border border-primary/20 rounded-lg px-3 py-2">
+                      ✓ Se puede reservar hasta el{" "}
+                      {new Date(Date.now() + maxBookingHorizonDays * 86400000).toLocaleDateString("es-UY", {
+                        weekday: "long", day: "numeric", month: "long",
+                      })} inclusive.
+                    </p>
+                  )}
                 </div>
               </CardContent>
             </Card>
