@@ -57,6 +57,45 @@ const buildPortalSnippet = (slug: string) => {
 </a>`;
 };
 
+// Sección completa "Portal de pacientes" para pegar en la web del cliente:
+// se ve integrada a la página (título, texto y botón), pero el ingreso abre
+// el portal en una pestaña nueva. El login NUNCA va dentro de un iframe:
+// Safari/iPhone bloquea las cookies de terceros y los pacientes no podrían
+// iniciar sesión — por eso es sección + botón y no un recuadro incrustado.
+const buildPortalSectionSnippet = (slug: string, theme: "light" | "dark") => {
+  const href = buildShareUrl(`/portal/${slug}`);
+  const text = theme === "dark" ? "#e5e7eb" : "#1f2937";
+  const muted = theme === "dark" ? "#9ca3af" : "#6b7280";
+  const cardBg = theme === "dark" ? "rgba(255,255,255,.04)" : "#ffffff";
+  const border = theme === "dark" ? "rgba(255,255,255,.12)" : "#e5e7eb";
+  return `<!-- Sección "Portal de pacientes" — Consultorio Digital -->
+<section style="max-width:620px;margin:0 auto;padding:8px">
+  <div style="border:1px solid ${border};background:${cardBg};border-radius:20px;
+              padding:32px 24px;text-align:center;font-family:inherit">
+    <div style="width:56px;height:56px;border-radius:16px;background:rgba(0,163,150,.14);
+                display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:26px">
+      🔐
+    </div>
+    <h3 style="font-size:22px;font-weight:700;color:${text};margin:0 0 8px">
+      Portal de pacientes
+    </h3>
+    <p style="font-size:15px;color:${muted};margin:0 auto 20px;max-width:420px;line-height:1.6">
+      Tu espacio personal: próximas sesiones, reservas, documentos que te compartieron
+      y pagos, todo en un solo lugar.
+    </p>
+    <a href="${href}" target="_blank" rel="noopener"
+       style="display:inline-flex;align-items:center;gap:8px;background:#00a396;color:#fff;
+              font-weight:600;font-size:15px;padding:13px 26px;border-radius:12px;
+              text-decoration:none">
+      Ingresar a mi portal
+    </a>
+    <p style="font-size:12px;color:${muted};margin:14px 0 0">
+      ¿Primera vez? Tu profesional te envía la invitación de acceso.
+    </p>
+  </div>
+</section>`;
+};
+
 export const EmbedKitSection = () => {
   const [businesses, setBusinesses] = useState<BusinessRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -89,6 +128,7 @@ export const EmbedKitSection = () => {
 
   const embedSnippet = slug ? buildEmbedSnippet(slug, theme) : "";
   const portalSnippet = slug ? buildPortalSnippet(slug) : "";
+  const portalSectionSnippet = slug ? buildPortalSectionSnippet(slug, theme) : "";
 
   const copy = async (key: string, text: string) => {
     try {
@@ -219,15 +259,33 @@ export const EmbedKitSection = () => {
             </CardContent>
           </Card>
 
-          {/* 2. Botón acceso pacientes */}
+          {/* 2. Sección Portal de pacientes */}
           <Card className="rounded-2xl bg-slate-900/60 border-slate-800">
             <CardContent className="p-5 space-y-3">
               <div>
                 <p className="font-bold text-sm flex items-center gap-2">
-                  <Users className="h-4 w-4 text-violet-400" /> 2 · Botón "Acceso pacientes"
+                  <Users className="h-4 w-4 text-violet-400" /> 2 · Sección "Portal de pacientes"
                 </p>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Abre el portal del paciente en una pestaña nueva (el portal no va incrustado: ahí hay login).
+                  Sección completa para la web del cliente: título, explicación y botón de ingreso,
+                  integrada al diseño (respeta el tema Claro/Oscuro elegido arriba). El ingreso abre
+                  el portal en pestaña nueva — el login nunca va en iframe porque Safari/iPhone
+                  bloquea las cookies de terceros y los pacientes no podrían entrar.
+                </p>
+              </div>
+              <CodeBlock id="portal-section" code={portalSectionSnippet} />
+            </CardContent>
+          </Card>
+
+          {/* 3. Botón acceso pacientes (versión mini, para header/footer) */}
+          <Card className="rounded-2xl bg-slate-900/60 border-slate-800">
+            <CardContent className="p-5 space-y-3">
+              <div>
+                <p className="font-bold text-sm flex items-center gap-2">
+                  <Users className="h-4 w-4 text-violet-400" /> 3 · Botón "Acceso pacientes" (header o footer)
+                </p>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  La versión mínima: solo el botón, para el menú superior o el pie de la web.
                 </p>
               </div>
               <CodeBlock id="portal" code={portalSnippet} />
