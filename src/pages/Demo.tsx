@@ -182,13 +182,15 @@ const Demo = () => {
                 className="w-full flex-1 border-0 bg-white"
               />
             ) : (
-              <div className="flex-1 overflow-hidden flex items-center justify-center p-4">
-                {/* Marco de celular: la misma web, como la ve un paciente desde el teléfono */}
-                <div className="h-full max-h-[720px] aspect-[390/800] rounded-[36px] bg-black p-2 shadow-2xl ring-1 ring-white/20">
+              <div className="flex-1 overflow-hidden flex items-center justify-center p-1.5 sm:p-4">
+                {/* Marco de celular: la misma web, como la ve un paciente desde
+                    el teléfono. En pantallas chicas el marco es finito y casi
+                    sin margen, para que el sitio se vea GRANDE. */}
+                <div className="h-full max-h-[780px] max-w-full aspect-[390/800] rounded-[26px] sm:rounded-[36px] bg-black p-1 sm:p-2 shadow-2xl ring-1 ring-white/20">
                   <iframe
                     src={CUSTOM_WEB_URL}
                     title="Web personalizada de ejemplo (celular)"
-                    className="w-full h-full border-0 rounded-[28px] bg-white"
+                    className="w-full h-full border-0 rounded-[22px] sm:rounded-[28px] bg-white"
                   />
                 </div>
               </div>
