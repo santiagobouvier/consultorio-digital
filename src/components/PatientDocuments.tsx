@@ -43,8 +43,6 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import {
   FileText,
-  FileImage,
-  FileType,
   Download,
   Trash2,
   Upload,
@@ -56,6 +54,7 @@ import {
   ExternalLink,
   Search,
   MoreVertical,
+  Plus,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/AuthContext";
@@ -63,14 +62,20 @@ import { useDashboardBranding } from "@/contexts/DashboardBrandingContext";
 import { notifyPatient } from "@/lib/push-notifications";
 import { ListPagination, ITEMS_PER_PAGE } from "@/components/ListPagination";
 import { cn } from "@/lib/utils";
+import { BUILT_IN_DOC_TYPES, resolveDocType } from "@/lib/document-types";
+import { useDocumentTypes } from "@/hooks/use-document-types";
+import { CreateDocTypeDialog } from "@/components/documents/CreateDocTypeDialog";
 
 // DOCUMENTOS del paciente, pensado para acumular muchos sin volverse un
 // pantano: filas compactas de una línea, buscador + filtros arriba, el
 // destino (privado / compartido) se decide al subir, y las acciones viven
-// en un menú — nada de toggles y botoneras repetidas por fila.
+// en un menú. Los tipos de documento son los de fábrica más los que crea
+// cada consultorio con su ícono (business_document_types).
 
-type DocumentType = "consentimiento" | "informe" | "evaluacion" | "indicaciones" | "recibo" | "otro";
 type ShareFilter = "all" | "shared" | "private";
+
+/** Valor del Select de subida que abre el creador de tipos. */
+const NEW_TYPE_VALUE = "__new__";
 
 interface PatientDocument {
   id: string;
@@ -81,7 +86,7 @@ interface PatientDocument {
   file_name: string;
   file_size: number | null;
   mime_type: string | null;
-  document_type: DocumentType;
+  document_type: string;
   notes: string | null;
   created_at: string;
   shared_with_patient: boolean;
@@ -97,27 +102,11 @@ const MAX_FILE_SIZE = 15 * 1024 * 1024; // 15 MB
 const ACCEPTED_MIME =
   ".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp,.gif,.heic,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/*";
 
-const typeLabels: Record<DocumentType, string> = {
-  consentimiento: "Consentimiento",
-  informe: "Informe",
-  evaluacion: "Evaluación",
-  indicaciones: "Indicaciones / Material",
-  recibo: "Recibo",
-  otro: "Otro",
-};
-
 const formatBytes = (bytes: number | null) => {
   if (!bytes) return "";
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-};
-
-const fileIcon = (mime: string | null) => {
-  if (!mime) return FileText;
-  if (mime.startsWith("image/")) return FileImage;
-  if (mime.includes("pdf")) return FileType;
-  return FileText;
 };
 
 export const PatientDocuments = ({ patientId, businessId }: PatientDocumentsProps) => {
@@ -128,8 +117,11 @@ export const PatientDocuments = ({ patientId, businessId }: PatientDocumentsProp
   const [loading, setLoading] = useState(true);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
-  const [docType, setDocType] = useState<DocumentType>("informe");
+  const [docType, setDocType] = useState<string>("informe");
   const [notes, setNotes] = useState("");
+  // Tipos propios del consultorio + creador ("Radiografía", "Receta"...)
+  const { customTypes, refresh: refreshTypes } = useDocumentTypes(businessId);
+  const [createTypeOpen, setCreateTypeOpen] = useState(false);
   const [shareOnUpload, setShareOnUpload] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [deletingDoc, setDeletingDoc] = useState<PatientDocument | null>(null);
@@ -141,7 +133,7 @@ export const PatientDocuments = ({ patientId, businessId }: PatientDocumentsProp
 
   // ── Filtros: para cuando los documentos se acumulan ──
   const [search, setSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState<"all" | DocumentType>("all");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
   const [shareFilter, setShareFilter] = useState<ShareFilter>("all");
 
   const fetchDocuments = async () => {
@@ -194,6 +186,14 @@ export const PatientDocuments = ({ patientId, businessId }: PatientDocumentsProp
     setNotes("");
     setShareOnUpload(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleUploadTypeChange = (v: string) => {
+    if (v === NEW_TYPE_VALUE) {
+      setCreateTypeOpen(true);
+      return; // el valor se setea cuando el tipo nuevo queda creado
+    }
+    setDocType(v);
   };
 
   const handleFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -458,8 +458,11 @@ export const PatientDocuments = ({ patientId, businessId }: PatientDocumentsProp
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos los tipos</SelectItem>
-                  {Object.entries(typeLabels).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>{label}</SelectItem>
+                  {BUILT_IN_DOC_TYPES.map((t) => (
+                    <SelectItem key={t.code} value={t.code}>{t.label}</SelectItem>
+                  ))}
+                  {customTypes.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>{t.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -499,7 +502,7 @@ export const PatientDocuments = ({ patientId, businessId }: PatientDocumentsProp
           </div>
         ) : (
           pageDocs.map((doc) => {
-            const Icon = fileIcon(doc.mime_type);
+            const { label: typeLabel, Icon } = resolveDocType(doc.document_type, customTypes);
             const busy = downloadingId === doc.id || togglingShareId === doc.id;
             return (
               // Fila compacta de UNA línea: nombre truncado, meta abajo,
@@ -517,7 +520,7 @@ export const PatientDocuments = ({ patientId, businessId }: PatientDocumentsProp
                     {doc.file_name}
                   </p>
                   <p className="text-[11px] text-muted-foreground truncate mt-0.5">
-                    {typeLabels[doc.document_type] || doc.document_type}
+                    {typeLabel}
                     {" · "}{format(new Date(doc.created_at), "d MMM yyyy", { locale: es })}
                     {doc.file_size ? ` · ${formatBytes(doc.file_size)}` : ""}
                     {doc.notes ? ` · ${doc.notes}` : ""}
@@ -639,17 +642,36 @@ export const PatientDocuments = ({ patientId, businessId }: PatientDocumentsProp
           <div className="space-y-4">
             <div className="space-y-1.5">
               <Label>Tipo de documento</Label>
-              <Select
-                value={docType}
-                onValueChange={(v) => setDocType(v as DocumentType)}
-              >
+              <Select value={docType} onValueChange={handleUploadTypeChange}>
                 <SelectTrigger className="rounded-xl">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.entries(typeLabels).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>{label}</SelectItem>
-                  ))}
+                  {BUILT_IN_DOC_TYPES.map((t) => {
+                    const { Icon } = resolveDocType(t.code, customTypes);
+                    return (
+                      <SelectItem key={t.code} value={t.code}>
+                        <span className="flex items-center gap-2">
+                          <Icon className="h-3.5 w-3.5 text-muted-foreground" /> {t.label}
+                        </span>
+                      </SelectItem>
+                    );
+                  })}
+                  {customTypes.map((t) => {
+                    const { Icon } = resolveDocType(t.id, customTypes);
+                    return (
+                      <SelectItem key={t.id} value={t.id}>
+                        <span className="flex items-center gap-2">
+                          <Icon className="h-3.5 w-3.5 text-primary" /> {t.label}
+                        </span>
+                      </SelectItem>
+                    );
+                  })}
+                  <SelectItem value={NEW_TYPE_VALUE}>
+                    <span className="flex items-center gap-2 font-medium text-primary">
+                      <Plus className="h-3.5 w-3.5" /> Crear tipo nuevo...
+                    </span>
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -713,6 +735,17 @@ export const PatientDocuments = ({ patientId, businessId }: PatientDocumentsProp
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Crear tipo de documento propio (nombre + ícono) */}
+      <CreateDocTypeDialog
+        open={createTypeOpen}
+        onOpenChange={setCreateTypeOpen}
+        businessId={businessId}
+        onCreated={(t) => {
+          void refreshTypes();
+          setDocType(t.id);
+        }}
+      />
 
       {/* Confirmación de compartir con el paciente */}
       <AlertDialog
