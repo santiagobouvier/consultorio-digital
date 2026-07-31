@@ -848,6 +848,67 @@ export type Database = {
         }
         Relationships: []
       }
+      patient_clinical_status: {
+        Row: {
+          business_id: string
+          created_at: string
+          current_diagnosis: string | null
+          current_medication: string | null
+          medical_history: string | null
+          patient_id: string
+          risk_flag: string
+          risk_notes: string | null
+          treatment_status: string | null
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          current_diagnosis?: string | null
+          current_medication?: string | null
+          medical_history?: string | null
+          patient_id: string
+          risk_flag?: string
+          risk_notes?: string | null
+          treatment_status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          current_diagnosis?: string | null
+          current_medication?: string | null
+          medical_history?: string | null
+          patient_id?: string
+          risk_flag?: string
+          risk_notes?: string | null
+          treatment_status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_clinical_status_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_clinical_status_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public_branding"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_clinical_status_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: true
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       patient_documents: {
         Row: {
           appointment_id: string | null
@@ -1029,67 +1090,6 @@ export type Database = {
             columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "patients"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      patient_clinical_status: {
-        Row: {
-          business_id: string
-          created_at: string
-          current_diagnosis: string | null
-          current_medication: string | null
-          medical_history: string | null
-          patient_id: string
-          risk_flag: string
-          risk_notes: string | null
-          treatment_status: string | null
-          updated_at: string
-        }
-        Insert: {
-          business_id: string
-          created_at?: string
-          current_diagnosis?: string | null
-          current_medication?: string | null
-          medical_history?: string | null
-          patient_id: string
-          risk_flag?: string
-          risk_notes?: string | null
-          treatment_status?: string | null
-          updated_at?: string
-        }
-        Update: {
-          business_id?: string
-          created_at?: string
-          current_diagnosis?: string | null
-          current_medication?: string | null
-          medical_history?: string | null
-          patient_id?: string
-          risk_flag?: string
-          risk_notes?: string | null
-          treatment_status?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "patient_clinical_status_patient_id_fkey"
-            columns: ["patient_id"]
-            isOneToOne: true
-            referencedRelation: "patients"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "patient_clinical_status_business_id_fkey"
-            columns: ["business_id"]
-            isOneToOne: false
-            referencedRelation: "businesses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "patient_clinical_status_business_id_fkey"
-            columns: ["business_id"]
-            isOneToOne: false
-            referencedRelation: "businesses_public_branding"
             referencedColumns: ["id"]
           },
         ]
