@@ -1008,14 +1008,21 @@ export const PatientRecord = ({ patientId, businessId, reasonForConsultation }: 
         </DialogContent>
       </Dialog>
 
-      {/* ── Crear tipo de documento propio (nombre + ícono) ── */}
+      {/* ── Tipos de documento propios: crear y eliminar ── */}
       <CreateDocTypeDialog
         open={createTypeOpen}
         onOpenChange={setCreateTypeOpen}
         businessId={businessId}
+        customTypes={customTypes}
         onCreated={(t) => {
           void refreshTypes();
           setAttachType(t.id);
+        }}
+        onDeleted={(deletedId) => {
+          void refreshTypes();
+          if (attachType === deletedId) setAttachType("otro");
+          // Los documentos afectados pasaron a "Otro": refrescar el expediente
+          void fetchAll();
         }}
       />
 

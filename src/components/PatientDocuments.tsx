@@ -82,6 +82,7 @@ interface PatientDocument {
   business_id: string;
   patient_id: string;
   uploaded_by: string;
+  appointment_id: string | null;
   file_path: string;
   file_name: string;
   file_size: number | null;
@@ -91,6 +92,8 @@ interface PatientDocument {
   created_at: string;
   shared_with_patient: boolean;
   shared_at: string | null;
+  /** Sesión a la que está anclado (join) — une Documentos con el expediente. */
+  appointments?: { start_at: string } | null;
 }
 
 interface PatientDocumentsProps {
@@ -122,6 +125,10 @@ export const PatientDocuments = ({ patientId, businessId }: PatientDocumentsProp
   // Tipos propios del consultorio + creador ("Radiografía", "Receta"...)
   const { customTypes, refresh: refreshTypes } = useDocumentTypes(businessId);
   const [createTypeOpen, setCreateTypeOpen] = useState(false);
+  // Vincular la subida a una sesión (opcional): el documento aparece
+  // también en la tarjeta de esa sesión en el expediente.
+  const [sessionOptions, setSessionOptions] = useState<{ id: string; start_at: string }[]>([]);
+  const [linkedAppointment, setLinkedAppointment] = useState<string>("none");
   const [shareOnUpload, setShareOnUpload] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [deletingDoc, setDeletingDoc] = useState<PatientDocument | null>(null);
@@ -138,9 +145,12 @@ export const PatientDocuments = ({ patientId, businessId }: PatientDocumentsProp
 
   const fetchDocuments = async () => {
     setLoading(true);
+    // El join con appointments trae la fecha de la sesión: acá se ven TODOS
+    // los documentos del paciente, incluidos los adjuntados desde el
+    // expediente (misma tabla, un solo sistema).
     const { data, error } = await (supabase as any)
       .from("patient_documents")
-      .select("*")
+      .select("*, appointments(start_at)")
       .eq("patient_id", patientId)
       .order("created_at", { ascending: false });
 
@@ -185,7 +195,20 @@ export const PatientDocuments = ({ patientId, businessId }: PatientDocumentsProp
     setDocType("informe");
     setNotes("");
     setShareOnUpload(false);
+    setLinkedAppointment("none");
     if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  // Sesiones del paciente para el select de "Vincular a una sesión"
+  const loadSessionOptions = async () => {
+    const { data } = await supabase
+      .from("appointments")
+      .select("id, start_at")
+      .eq("patient_id", patientId)
+      .not("status", "in", '("cancelled","cancelled_by_patient")')
+      .order("start_at", { ascending: false })
+      .limit(30);
+    setSessionOptions((data as { id: string; start_at: string }[]) || []);
   };
 
   const handleUploadTypeChange = (v: string) => {
@@ -209,6 +232,7 @@ export const PatientDocuments = ({ patientId, businessId }: PatientDocumentsProp
     }
     setPendingFile(file);
     setUploadOpen(true);
+    void loadSessionOptions();
   };
 
   // Aviso al paciente cuando algo se comparte (push + email, best-effort)
@@ -282,6 +306,8 @@ export const PatientDocuments = ({ patientId, businessId }: PatientDocumentsProp
           mime_type: pendingFile.type || null,
           document_type: docType,
           notes: notes.trim() || null,
+          // Anclado a una sesión (opcional): aparece también en el expediente
+          appointment_id: linkedAppointment !== "none" ? linkedAppointment : null,
           // El destino se decide al subir: privado o directo al portal
           shared_with_patient: shareOnUpload,
           shared_at: shareOnUpload ? new Date().toISOString() : null,
@@ -522,6 +548,9 @@ export const PatientDocuments = ({ patientId, businessId }: PatientDocumentsProp
                   <p className="text-[11px] text-muted-foreground truncate mt-0.5">
                     {typeLabel}
                     {" · "}{format(new Date(doc.created_at), "d MMM yyyy", { locale: es })}
+                    {doc.appointments?.start_at
+                      ? ` · Sesión del ${format(new Date(doc.appointments.start_at), "d MMM", { locale: es })}`
+                      : ""}
                     {doc.file_size ? ` · ${formatBytes(doc.file_size)}` : ""}
                     {doc.notes ? ` · ${doc.notes}` : ""}
                   </p>
@@ -686,6 +715,29 @@ export const PatientDocuments = ({ patientId, businessId }: PatientDocumentsProp
                 className="resize-none rounded-xl"
               />
             </div>
+            {sessionOptions.length > 0 && (
+              <div className="space-y-1.5">
+                <Label>Vincular a una sesión (opcional)</Label>
+                <Select value={linkedAppointment} onValueChange={setLinkedAppointment}>
+                  <SelectTrigger className="rounded-xl">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sin sesión — documento general</SelectItem>
+                    {sessionOptions.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        <span className="capitalize">
+                          {format(new Date(s.start_at), "EEE d MMM yyyy · HH:mm", { locale: es })}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-muted-foreground">
+                  Si lo vinculás, también aparece en esa sesión dentro del expediente.
+                </p>
+              </div>
+            )}
             {/* Destino: se decide acá, no después revolviendo la lista */}
             <label className="flex items-start gap-3 rounded-xl border border-border/60 bg-muted/30 p-3 cursor-pointer select-none">
               <Switch
@@ -736,14 +788,22 @@ export const PatientDocuments = ({ patientId, businessId }: PatientDocumentsProp
         </DialogContent>
       </Dialog>
 
-      {/* Crear tipo de documento propio (nombre + ícono) */}
+      {/* Tipos de documento propios: crear y eliminar (con reasignación a "Otro") */}
       <CreateDocTypeDialog
         open={createTypeOpen}
         onOpenChange={setCreateTypeOpen}
         businessId={businessId}
+        customTypes={customTypes}
         onCreated={(t) => {
           void refreshTypes();
           setDocType(t.id);
+        }}
+        onDeleted={(deletedId) => {
+          void refreshTypes();
+          if (docType === deletedId) setDocType("otro");
+          if (typeFilter === deletedId) setTypeFilter("all");
+          // Los documentos afectados pasaron a "Otro": refrescar la lista
+          void fetchDocuments();
         }}
       />
 
