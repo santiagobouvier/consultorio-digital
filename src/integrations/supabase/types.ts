@@ -701,6 +701,8 @@ export type Database = {
           is_demo: boolean
           is_private_clinic: boolean
           late_cancellation_message: string | null
+          max_booking_horizon_days: number
+          min_booking_notice_hours: number
           name: string
           onboarding_completed: boolean
           onboarding_link_shared_at: string | null
@@ -739,6 +741,8 @@ export type Database = {
           is_demo?: boolean
           is_private_clinic?: boolean
           late_cancellation_message?: string | null
+          max_booking_horizon_days?: number
+          min_booking_notice_hours?: number
           name: string
           onboarding_completed?: boolean
           onboarding_link_shared_at?: string | null
@@ -777,6 +781,8 @@ export type Database = {
           is_demo?: boolean
           is_private_clinic?: boolean
           late_cancellation_message?: string | null
+          max_booking_horizon_days?: number
+          min_booking_notice_hours?: number
           name?: string
           onboarding_completed?: boolean
           onboarding_link_shared_at?: string | null
