@@ -90,27 +90,29 @@ const PatientPortal = () => {
       }
 
       const now = new Date().toISOString();
+      // El portal muestra SOLO patient_note (la nota escrita para el
+      // paciente). Las "Notas internas" de la cita no se piden nunca acá.
       const { data: upcomingData } = await supabase
         .from("appointments")
-        .select("id, start_at, end_at, status, modality, location, notes, services(name)")
+        .select("id, start_at, end_at, status, modality, location, patient_note, services(name)")
         .eq("patient_id", patientData.id).eq("business_id", patientData.business_id)
         .gte("start_at", now).neq("status", "cancelled")
         .order("start_at", { ascending: true });
       setUpcomingAppointments((upcomingData || []).map((a: any): PortalAppointment => ({
         id: a.id, start_at: a.start_at, end_at: a.end_at, status: a.status,
-        modality: a.modality, location: a.location, notes: a.notes,
+        modality: a.modality, location: a.location, notes: a.patient_note,
         service_name: a.services?.name ?? null, payment_status: null,
       })));
 
       const { data: pastData } = await supabase
         .from("appointments")
-        .select("id, start_at, end_at, status, modality, location, notes, services(name)")
+        .select("id, start_at, end_at, status, modality, location, patient_note, services(name)")
         .eq("patient_id", patientData.id).eq("business_id", patientData.business_id)
         .lt("start_at", now)
         .order("start_at", { ascending: false }).limit(50);
       setPastAppointments((pastData || []).map((a: any): PortalAppointment => ({
         id: a.id, start_at: a.start_at, end_at: a.end_at, status: a.status,
-        modality: a.modality, location: a.location, notes: a.notes,
+        modality: a.modality, location: a.location, notes: a.patient_note,
         service_name: a.services?.name ?? null, payment_status: null,
       })));
 

@@ -154,6 +154,7 @@ export function CreateAppointmentModal({
   const [modality, setModality] = useState("presencial");
   const [location, setLocation] = useState("");
   const [notes, setNotes] = useState("");
+  const [patientNote, setPatientNote] = useState("");
   const [sessionPrice, setSessionPrice] = useState<string>("");
   const [isRecurrent, setIsRecurrent] = useState(false);
   const [recurrenceFrequency, setRecurrenceFrequency] = useState<RecurrenceFrequency>("weekly");
@@ -217,6 +218,7 @@ export function CreateAppointmentModal({
     setModality("presencial");
     setLocation("");
     setNotes("");
+    setPatientNote("");
     setSessionPrice("");
     setIsRecurrent(false);
     setRecurrenceFrequency("weekly");
@@ -398,6 +400,7 @@ export function CreateAppointmentModal({
             modality,
             location: location.trim() || null,
             notes: notes.trim() || null,
+            patient_note: patientNote.trim() || null,
             status: "pending" as const,
             payment_status: "pendiente",
             recurrence_group_id: groupId,
@@ -466,6 +469,7 @@ export function CreateAppointmentModal({
           modality,
           location: location.trim() || null,
           notes: notes.trim() || null,
+          patient_note: patientNote.trim() || null,
           status: "pending",
           payment_status: "pendiente",
           session_price: sessionPrice ? Number(sessionPrice) : null,
@@ -1040,7 +1044,7 @@ export function CreateAppointmentModal({
               </div>
             )}
 
-            {/* Notas */}
+            {/* Notas: dos campos, dos destinos clarísimos */}
             <div className="space-y-1.5">
               <Label htmlFor="notes" className="text-sm font-semibold">Notas internas</Label>
               <Textarea
@@ -1049,6 +1053,20 @@ export function CreateAppointmentModal({
                 onChange={(e) => setNotes(e.target.value)}
                 rows={2}
                 placeholder="Notas solo visibles para el profesional"
+                className="rounded-xl resize-none"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="patient-note" className="text-sm font-semibold">
+                Nota para el paciente
+                <span className="ml-2 font-normal text-xs text-muted-foreground">la ve en su portal</span>
+              </Label>
+              <Textarea
+                id="patient-note"
+                value={patientNote}
+                onChange={(e) => setPatientNote(e.target.value)}
+                rows={2}
+                placeholder='Ej: "Traé los estudios" — el paciente la ve en esta cita'
                 className="rounded-xl resize-none"
               />
             </div>
