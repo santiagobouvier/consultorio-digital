@@ -638,6 +638,45 @@ export type Database = {
           },
         ]
       }
+      business_document_types: {
+        Row: {
+          business_id: string
+          created_at: string
+          icon: string
+          id: string
+          label: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          icon?: string
+          id?: string
+          label: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          icon?: string
+          id?: string
+          label?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_document_types_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_document_types_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public_branding"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       businesses: {
         Row: {
           billing_period: string

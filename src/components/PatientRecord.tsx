@@ -25,6 +25,9 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { ClinicalStatusBlock } from "@/components/ClinicalStatusBlock";
+import { BUILT_IN_DOC_TYPES, resolveDocType } from "@/lib/document-types";
+import { useDocumentTypes } from "@/hooks/use-document-types";
+import { CreateDocTypeDialog } from "@/components/documents/CreateDocTypeDialog";
 
 // EXPEDIENTE del paciente: la historia clínica organizada POR SESIÓN.
 // Cada sesión es una entrada de la línea de tiempo con su nota clínica,
@@ -80,17 +83,12 @@ const MAX_FILE_SIZE = 15 * 1024 * 1024;
 const ACCEPTED_MIME =
   ".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp,.gif,.heic,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/*";
 
-const DOC_TYPE_LABELS: Record<string, string> = {
-  consentimiento: "Consentimiento",
-  informe: "Informe",
-  evaluacion: "Evaluación",
-  indicaciones: "Indicaciones / Material",
-  recibo: "Recibo",
-  otro: "Otro",
-};
-
-// Orden fijo de los grupos en el modal de adjuntos
+// Orden fijo de los grupos de fábrica en el modal de adjuntos; los tipos
+// propios del consultorio van después, ordenados por nombre.
 const DOC_TYPE_ORDER = ["informe", "evaluacion", "consentimiento", "indicaciones", "recibo", "otro"];
+
+/** Valor del Select de adjuntar que abre el creador de tipos. */
+const NEW_TYPE_VALUE = "__new__";
 
 const formatBytes = (bytes: number | null) => {
   if (!bytes) return "";
@@ -147,6 +145,9 @@ export const PatientRecord = ({ patientId, businessId, reasonForConsultation }: 
   const [attachTarget, setAttachTarget] = useState<{ appointmentId: string; label: string } | null>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [attachType, setAttachType] = useState("informe");
+  // Tipos de documento propios del consultorio + creador
+  const { customTypes, refresh: refreshTypes } = useDocumentTypes(businessId);
+  const [createTypeOpen, setCreateTypeOpen] = useState(false);
   const [attachNotes, setAttachNotes] = useState("");
   const [uploading, setUploading] = useState(false);
   const [busyDocId, setBusyDocId] = useState<string | null>(null);
@@ -739,13 +740,24 @@ export const PatientRecord = ({ patientId, businessId, reasonForConsultation }: 
               : null;
 
             const docs = docsByAppointment.get(apt.id) ?? [];
-            const groups = DOC_TYPE_ORDER
-              .map((type) => ({ type, items: docs.filter((d) => (d.document_type || "otro") === type) }))
-              .filter((g) => g.items.length > 0);
-            // Tipos fuera del catálogo (por si hubiera datos viejos)
-            const known = new Set(DOC_TYPE_ORDER);
-            const rest = docs.filter((d) => !known.has(d.document_type || "otro"));
-            if (rest.length > 0) groups.push({ type: "otro", items: rest });
+            // Grupos: primero los tipos de fábrica en su orden, después los
+            // propios del consultorio (y cualquier código viejo) por nombre.
+            const codes = Array.from(new Set(docs.map((d) => d.document_type || "otro")));
+            const orderOf = (c: string) => {
+              const i = DOC_TYPE_ORDER.indexOf(c);
+              return i >= 0 ? i : DOC_TYPE_ORDER.length;
+            };
+            const groups = codes
+              .sort(
+                (a, b) =>
+                  orderOf(a) - orderOf(b) ||
+                  resolveDocType(a, customTypes).label.localeCompare(resolveDocType(b, customTypes).label)
+              )
+              .map((type) => ({
+                type,
+                ...resolveDocType(type, customTypes),
+                items: docs.filter((d) => (d.document_type || "otro") === type),
+              }));
 
             return (
               <>
@@ -825,10 +837,11 @@ export const PatientRecord = ({ patientId, businessId, reasonForConsultation }: 
                         Esta sesión todavía no tiene documentos adjuntos.
                       </p>
                     )}
-                    {groups.map(({ type, items }) => (
+                    {groups.map(({ type, label, Icon, items }) => (
                       <div key={type}>
-                        <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/80 mb-1.5">
-                          {DOC_TYPE_LABELS[type] || "Otro"}{items.length > 1 ? `s · ${items.length}` : ""}
+                        <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/80 mb-1.5 flex items-center gap-1.5">
+                          <Icon className="h-3 w-3" />
+                          {label}{items.length > 1 ? ` · ${items.length}` : ""}
                         </p>
                         <div className="space-y-2">
                           {items.map((doc) => (
@@ -837,7 +850,7 @@ export const PatientRecord = ({ patientId, businessId, reasonForConsultation }: 
                               className="flex items-center gap-3 rounded-xl border border-border/60 bg-muted/30 p-2.5 transition-colors hover:bg-muted/50"
                             >
                               <div className="shrink-0 h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
-                                <FileText className="h-4 w-4 text-primary" />
+                                <Icon className="h-4 w-4 text-primary" />
                               </div>
                               <div className="min-w-0 flex-1">
                                 <p className="text-sm font-medium break-all leading-snug">{doc.file_name}</p>
@@ -920,12 +933,43 @@ export const PatientRecord = ({ patientId, businessId, reasonForConsultation }: 
           <div className="space-y-4">
             <div className="space-y-1.5">
               <Label>Tipo de documento</Label>
-              <Select value={attachType} onValueChange={setAttachType}>
+              <Select
+                value={attachType}
+                onValueChange={(v) => {
+                  if (v === NEW_TYPE_VALUE) {
+                    setCreateTypeOpen(true);
+                    return; // el valor se setea cuando el tipo nuevo queda creado
+                  }
+                  setAttachType(v);
+                }}
+              >
                 <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {Object.entries(DOC_TYPE_LABELS).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>{label}</SelectItem>
-                  ))}
+                  {BUILT_IN_DOC_TYPES.map((t) => {
+                    const { Icon } = resolveDocType(t.code, customTypes);
+                    return (
+                      <SelectItem key={t.code} value={t.code}>
+                        <span className="flex items-center gap-2">
+                          <Icon className="h-3.5 w-3.5 text-muted-foreground" /> {t.label}
+                        </span>
+                      </SelectItem>
+                    );
+                  })}
+                  {customTypes.map((t) => {
+                    const { Icon } = resolveDocType(t.id, customTypes);
+                    return (
+                      <SelectItem key={t.id} value={t.id}>
+                        <span className="flex items-center gap-2">
+                          <Icon className="h-3.5 w-3.5 text-primary" /> {t.label}
+                        </span>
+                      </SelectItem>
+                    );
+                  })}
+                  <SelectItem value={NEW_TYPE_VALUE}>
+                    <span className="flex items-center gap-2 font-medium text-primary">
+                      <Plus className="h-3.5 w-3.5" /> Crear tipo nuevo...
+                    </span>
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -963,6 +1007,17 @@ export const PatientRecord = ({ patientId, businessId, reasonForConsultation }: 
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ── Crear tipo de documento propio (nombre + ícono) ── */}
+      <CreateDocTypeDialog
+        open={createTypeOpen}
+        onOpenChange={setCreateTypeOpen}
+        businessId={businessId}
+        onCreated={(t) => {
+          void refreshTypes();
+          setAttachType(t.id);
+        }}
+      />
 
       {/* ── Confirmar borrado de nota ── */}
       <AlertDialog open={!!deletingNoteId} onOpenChange={(o) => !o && setDeletingNoteId(null)}>
