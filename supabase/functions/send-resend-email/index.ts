@@ -7,7 +7,12 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const FROM_EMAIL = "Consultorio Digital <noreply@consultoriodigital.app>";
+// Sender: usa RESEND_FROM_EMAIL si está configurado (ej: "Consultorio Digital
+// <noreply@consultoriodigital.app>" una vez verificado el dominio en Resend).
+// Mientras el dominio no esté verificado, Resend responde 403; el fallback
+// onboarding@resend.dev solo entrega al email dueño de la cuenta Resend.
+const FROM_EMAIL =
+  Deno.env.get("RESEND_FROM_EMAIL") || "Consultorio Digital <onboarding@resend.dev>";
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY")!;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
