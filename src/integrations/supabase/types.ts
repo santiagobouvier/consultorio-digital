@@ -684,6 +684,8 @@ export type Database = {
         Row: {
           billing_period: string
           cancellation_hours_notice: number
+          max_booking_horizon_days: number
+          min_booking_notice_hours: number
           contact_email: string
           created_at: string
           custom_domain: string | null
@@ -720,6 +722,8 @@ export type Database = {
         Insert: {
           billing_period?: string
           cancellation_hours_notice?: number
+          max_booking_horizon_days?: number
+          min_booking_notice_hours?: number
           contact_email: string
           created_at?: string
           custom_domain?: string | null
@@ -756,6 +760,8 @@ export type Database = {
         Update: {
           billing_period?: string
           cancellation_hours_notice?: number
+          max_booking_horizon_days?: number
+          min_booking_notice_hours?: number
           contact_email?: string
           created_at?: string
           custom_domain?: string | null

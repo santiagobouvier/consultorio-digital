@@ -41,6 +41,12 @@ const ClinicSettings = () => {
   const [cancellationHoursNotice, setCancellationHoursNotice] = useState<number>(24);
   const [lateCancellationMessage, setLateCancellationMessage] = useState<string>("");
   const [defaultSessionPrice, setDefaultSessionPrice] = useState<string>("");
+  // Ventana de reservas online (aplica solo a la reserva pública y al portal;
+  // en tu panel vos agendás cuando quieras)
+  const [minBookingNoticeHours, setMinBookingNoticeHours] = useState<number>(24);
+  const [maxBookingHorizonDays, setMaxBookingHorizonDays] = useState<number>(60);
+  // Lead del recordatorio automático (para advertir el cruce de ventanas)
+  const [reminderHoursBefore, setReminderHoursBefore] = useState<number>(24);
 
   // Initial snapshot to detect dirty state
   const [initialSnapshot, setInitialSnapshot] = useState<string>("");
@@ -63,6 +69,8 @@ const ClinicSettings = () => {
       cancellationHoursNotice,
       lateCancellationMessage,
       defaultSessionPrice,
+      minBookingNoticeHours,
+      maxBookingHorizonDays,
     });
 
   const isDirty = !loading && initialSnapshot !== "" && buildSnapshot() !== initialSnapshot;
@@ -92,7 +100,7 @@ const ClinicSettings = () => {
 
       let { data: business } = await supabase
         .from("businesses")
-        .select("id, public_slug, owner_user_id, is_private_clinic, cancellation_hours_notice, late_cancellation_message, default_session_price, contact_email")
+        .select("id, public_slug, owner_user_id, is_private_clinic, cancellation_hours_notice, late_cancellation_message, default_session_price, contact_email, min_booking_notice_hours, max_booking_horizon_days")
         .eq("owner_user_id", user.id)
         .maybeSingle();
 
@@ -107,7 +115,7 @@ const ClinicSettings = () => {
         if (userRole?.business_id) {
           const { data: memberBusiness } = await supabase
             .from("businesses")
-            .select("id, public_slug, owner_user_id, is_private_clinic, cancellation_hours_notice, late_cancellation_message, default_session_price, contact_email")
+            .select("id, public_slug, owner_user_id, is_private_clinic, cancellation_hours_notice, late_cancellation_message, default_session_price, contact_email, min_booking_notice_hours, max_booking_horizon_days")
             .eq("id", userRole.business_id)
             .single();
           business = memberBusiness;
@@ -147,6 +155,8 @@ const ClinicSettings = () => {
         setLateCancellationMessage((business as any).late_cancellation_message ?? "");
         const dsp = (business as any).default_session_price;
         setDefaultSessionPrice(dsp != null ? String(dsp) : "");
+        setMinBookingNoticeHours((business as any).min_booking_notice_hours ?? 24);
+        setMaxBookingHorizonDays((business as any).max_booking_horizon_days ?? 60);
       }
 
       const { data: settings } = await supabase
@@ -160,6 +170,7 @@ const ClinicSettings = () => {
         loadedClinicName = settings.clinic_name || "";
         loadedSpecialty = settings.specialty || "";
         loadedWelcome = settings.welcome_message || "";
+        setReminderHoursBefore((settings as any).reminder_hours_before ?? 24);
       }
 
       setClinicName(loadedClinicName);
@@ -222,6 +233,10 @@ const ClinicSettings = () => {
           cancellation_hours_notice: Number.isFinite(cancellationHoursNotice) ? cancellationHoursNotice : 24,
           late_cancellation_message: lateCancellationMessage.trim() || null,
           default_session_price: defaultSessionPrice.trim() === "" ? null : Number(defaultSessionPrice),
+          min_booking_notice_hours: Number.isFinite(minBookingNoticeHours)
+            ? Math.min(Math.max(minBookingNoticeHours, 0), 720) : 24,
+          max_booking_horizon_days: Number.isFinite(maxBookingHorizonDays)
+            ? Math.min(Math.max(maxBookingHorizonDays, 1), 365) : 60,
         };
         if (clinicName && clinicName.trim()) {
           businessUpdate.name = clinicName.trim();
@@ -370,6 +385,63 @@ const ClinicSettings = () => {
                   </p>
                 </div>
                 <Switch checked={isPrivateClinic} onCheckedChange={setIsPrivateClinic} />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Ventana de reservas online</CardTitle>
+                <p className="text-xs text-muted-foreground">
+                  Aplica a la reserva desde tu web pública y el portal. En tu panel vos agendás cuando quieras.
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="minBookingNotice">Anticipación mínima para reservar (horas)</Label>
+                  <Input
+                    id="minBookingNotice"
+                    type="number"
+                    min={0}
+                    max={720}
+                    value={minBookingNoticeHours}
+                    onChange={(e) => setMinBookingNoticeHours(parseInt(e.target.value || "0", 10))}
+                    className="h-11 max-w-[120px]"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Con cuánta anticipación mínima querés que te puedan reservar. Los horarios más
+                    próximos que esto dejan de aparecer como disponibles. Ej: con 24, nadie puede
+                    reservarte para dentro de un rato.
+                  </p>
+                  {Number.isFinite(minBookingNoticeHours) &&
+                    Number.isFinite(reminderHoursBefore) &&
+                    minBookingNoticeHours < reminderHoursBefore && (
+                    <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-300">
+                      <p className="font-semibold">Ojo con los recordatorios</p>
+                      <p className="mt-1">
+                        Tu recordatorio automático sale {reminderHoursBefore} horas antes de la sesión.
+                        Las reservas que entren con menos de {reminderHoursBefore} horas de anticipación
+                        no van a recibir recordatorio automático (la confirmación sí les llega).
+                        Podés dejarlo así a propósito, pero que no te sorprenda.
+                      </p>
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="maxBookingHorizon">Reservas hasta (días hacia adelante)</Label>
+                  <Input
+                    id="maxBookingHorizon"
+                    type="number"
+                    min={1}
+                    max={365}
+                    value={maxBookingHorizonDays}
+                    onChange={(e) => setMaxBookingHorizonDays(parseInt(e.target.value || "0", 10))}
+                    className="h-11 max-w-[120px]"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Hasta cuántos días hacia adelante se puede reservar online. Ej: con 60, nadie
+                    te reserva un turno para dentro de cuatro meses.
+                  </p>
+                </div>
               </CardContent>
             </Card>
 
