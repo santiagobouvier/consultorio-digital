@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
+import { ClinicalStatusBlock } from "@/components/ClinicalStatusBlock";
 
 // EXPEDIENTE del paciente: la historia clínica organizada POR SESIÓN.
 // Cada sesión es una entrada de la línea de tiempo con su nota clínica,
@@ -446,6 +447,9 @@ export const PatientRecord = ({ patientId, businessId, reasonForConsultation }: 
   return (
     <div className="space-y-5">
       <input ref={fileInputRef} type="file" accept={ACCEPTED_MIME} className="hidden" onChange={onFileSelected} />
+
+      {/* ── Estado actual: fijo arriba de la cronología, nunca en el portal ── */}
+      <ClinicalStatusBlock patientId={patientId} businessId={businessId} onSaved={fetchAll} />
 
       {/* ── Contexto clínico ── */}
       {reasonForConsultation && (
