@@ -587,11 +587,15 @@ export function CreateAppointmentModal({
       if (window.location.pathname.startsWith("/agenda")) {
         navigate("/agenda");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating appointment:", error);
+      // Índice único de la base: ya existe una cita activa en ese horario
+      const isDuplicate = error?.code === "23505" || String(error?.message || "").includes("uniq_appointments_professional_start");
       toast({
-        title: "Error",
-        description: "No se pudo crear la cita",
+        title: isDuplicate ? "Horario ocupado" : "Error",
+        description: isDuplicate
+          ? "Ya tenés una cita activa que empieza exactamente a esa hora. Elegí otro horario."
+          : "No se pudo crear la cita",
         variant: "destructive",
       });
     } finally {

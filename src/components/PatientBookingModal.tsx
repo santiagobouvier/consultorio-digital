@@ -205,12 +205,15 @@ export const PatientBookingModal = ({
       const today = new Date().toISOString().slice(0, 10);
       const maxDate = addDays(new Date(), 60).toISOString().slice(0, 10);
 
+      // p_public: el paciente respeta la ventana de reservas del consultorio
+      // (anticipación mínima y horizonte), igual que en la web pública.
       const { data, error } = await (supabase as any).rpc("get_available_starts", {
         p_business_id: businessId,
         p_professional_user_id: profId,
         p_duration_minutes: svc.duration_minutes,
         p_from: today,
         p_to: maxDate,
+        p_public: true,
       });
       if (error) throw error;
 

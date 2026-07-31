@@ -202,7 +202,15 @@ const PatientPortal = () => {
       await loadData();
     } catch (err: any) {
       console.error(err);
-      toast({ title: "Error", description: "No se pudo cancelar la cita.", variant: "destructive" });
+      // Trigger de la base: cancelación fuera del plazo del consultorio
+      const windowClosed = String(err?.message || "").includes("cancellation_window_closed");
+      toast({
+        title: windowClosed ? "Ya no se puede cancelar desde acá" : "Error",
+        description: windowClosed
+          ? "Falta poco para tu cita: para cancelarla contactá directamente a tu profesional."
+          : "No se pudo cancelar la cita.",
+        variant: "destructive",
+      });
     }
   };
 

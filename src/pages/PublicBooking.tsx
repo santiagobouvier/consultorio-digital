@@ -409,7 +409,9 @@ const PublicBooking = ({ demo = false, embed = false }: { demo?: boolean; embed?
       if (error || (data && (data as any).error)) {
         const errCode = (data as any)?.error || error?.message;
         if (errCode === "start_not_available") {
-          toast.error("Ese horario se acaba de ocupar. Elegí otro.");
+          // Cubre dos casos: se lo ganaron de mano, o el plazo mínimo de
+          // anticipación se venció con la página abierta.
+          toast.error("Ese horario ya no está disponible para reservar online. Elegí otro de la lista.");
           await loadStarts(selectedService);
         } else {
           toast.error("No pudimos confirmar tu reserva. Intentá de nuevo.");

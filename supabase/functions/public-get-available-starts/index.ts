@@ -83,12 +83,15 @@ serve(async (req) => {
     const toDate = new Date();
     toDate.setDate(toDate.getDate() + horizon);
 
+    // p_public: aplica la ventana del consultorio (anticipación mínima y
+    // horizonte máximo) del lado del servidor — el cliente no decide nada.
     const { data: starts, error } = await supabase.rpc("get_available_starts", {
       p_business_id: business.id,
       p_professional_user_id: null,
       p_duration_minutes: service.duration_minutes,
       p_from: from,
       p_to: toDate.toISOString().slice(0, 10),
+      p_public: true,
     });
 
     if (error) throw error;

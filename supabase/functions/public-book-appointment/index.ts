@@ -90,13 +90,17 @@ serve(async (req) => {
       .maybeSingle();
     if (!service) return json({ error: "service_not_found" }, 404);
 
-    // Revalidar que el inicio siga libre (puede haberse ocupado recién)
+    // Revalidar que el inicio siga libre Y dentro de la ventana de reservas,
+    // contra la hora real del servidor. Esta es LA validación: aunque el
+    // paciente tenga la página abierta hace media hora con horarios viejos,
+    // acá se rechaza si el plazo se venció (start_not_available).
     const { data: starts, error: startsError } = await supabase.rpc("get_available_starts", {
       p_business_id: business.id,
       p_professional_user_id: null,
       p_duration_minutes: service.duration_minutes,
       p_from: date,
       p_to: date,
+      p_public: true,
     });
     if (startsError) throw startsError;
     const wanted = `${startTime}:00`;
@@ -185,6 +189,11 @@ serve(async (req) => {
       .maybeSingle();
 
     if (appointmentError || !appointment) {
+      // Carrera de reserva doble: el índice único de la base rechaza al
+      // segundo que confirma el mismo horario (unique_violation).
+      if ((appointmentError as { code?: string } | null)?.code === "23505") {
+        return json({ error: "start_not_available" }, 409);
+      }
       console.error("Error creating appointment:", appointmentError);
       return json({ error: "appointment_creation_failed" }, 500);
     }

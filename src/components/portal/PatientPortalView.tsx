@@ -652,18 +652,26 @@ export function PatientPortalView(props: PatientPortalViewProps) {
                     </Button>
                   )}
                   {upcomingAppointments[0].status !== "reschedule_requested" && (onRescheduleAppointment || onCancelAppointment) && (
-                    <div className="grid grid-cols-2 gap-2">
-                      {onRescheduleAppointment && (
-                        <Button variant="outline" size="sm" onClick={() => onRescheduleAppointment(upcomingAppointments[0])} className="gap-1.5">
-                          <RefreshCw className="h-3.5 w-3.5" /> Reprogramar
-                        </Button>
+                    <>
+                      <div className={`grid gap-2 ${onRescheduleAppointment && onCancelAppointment && !isLateCancellation(upcomingAppointments[0]) ? "grid-cols-2" : "grid-cols-1"}`}>
+                        {onRescheduleAppointment && (
+                          <Button variant="outline" size="sm" onClick={() => onRescheduleAppointment(upcomingAppointments[0])} className="gap-1.5">
+                            <RefreshCw className="h-3.5 w-3.5" /> Reprogramar
+                          </Button>
+                        )}
+                        {onCancelAppointment && !isLateCancellation(upcomingAppointments[0]) && (
+                          <Button variant="outline" size="sm" onClick={() => openCancelDialog(upcomingAppointments[0])} className="gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive">
+                            <XCircle className="h-3.5 w-3.5" /> Cancelar
+                          </Button>
+                        )}
+                      </div>
+                      {onCancelAppointment && isLateCancellation(upcomingAppointments[0]) && (
+                        <p className="text-[11px] text-muted-foreground">
+                          Para cancelar con menos de {cancellationHoursNotice} horas de anticipación,
+                          contactá directamente a tu profesional.
+                        </p>
                       )}
-                      {onCancelAppointment && (
-                        <Button variant="outline" size="sm" onClick={() => openCancelDialog(upcomingAppointments[0])} className="gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive">
-                          <XCircle className="h-3.5 w-3.5" /> Cancelar
-                        </Button>
-                      )}
-                    </div>
+                    </>
                   )}
                   <Button variant="ghost" size="sm" onClick={() => setTab("citas")} className="gap-1 text-xs">
                     Ver todas <ChevronRight className="h-3.5 w-3.5" />
@@ -924,7 +932,7 @@ export function PatientPortalView(props: PatientPortalViewProps) {
                 {apt.status !== "reschedule_requested" && (onRescheduleAppointment || onCancelAppointment) && (
                   <>
                     <Separator />
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className={`grid gap-2 ${onRescheduleAppointment && onCancelAppointment && !isLateCancellation(apt) ? "grid-cols-2" : "grid-cols-1"}`}>
                       {onRescheduleAppointment && (
                         <Button
                           variant="outline"
@@ -935,7 +943,7 @@ export function PatientPortalView(props: PatientPortalViewProps) {
                           <RefreshCw className="h-3.5 w-3.5" /> Reprogramar
                         </Button>
                       )}
-                      {onCancelAppointment && (
+                      {onCancelAppointment && !isLateCancellation(apt) && (
                         <Button
                           variant="outline"
                           size="sm"
@@ -946,6 +954,14 @@ export function PatientPortalView(props: PatientPortalViewProps) {
                         </Button>
                       )}
                     </div>
+                    {/* Cancelación tardía: el botón no aparece; el candado real
+                        está también en la base (trigger) */}
+                    {onCancelAppointment && isLateCancellation(apt) && (
+                      <p className="text-[11px] text-muted-foreground">
+                        Para cancelar con menos de {cancellationHoursNotice} horas de anticipación,
+                        contactá directamente a tu profesional.
+                      </p>
+                    )}
                   </>
                 )}
                 {apt.status === "reschedule_requested" && (
@@ -1722,42 +1738,54 @@ export function PatientPortalView(props: PatientPortalViewProps) {
             <AlertDialogHeader>
               <AlertDialogTitle>¿Cancelar esta cita?</AlertDialogTitle>
               <AlertDialogDescription asChild>
-                <div className="space-y-3">
-                  <p>
-                    Si necesitás reprogramarla, podés usar el botón "Reprogramar" en lugar de cancelar.
-                  </p>
-                  {cancelTarget && isLateCancellation(cancelTarget) && (
+                {/* Dentro del plazo: confirmación normal. Fuera del plazo (por
+                    si el diálogo quedó abierto justo en el borde): sin botón de
+                    confirmar — la base además lo rechaza (trigger). */}
+                {cancelTarget && isLateCancellation(cancelTarget) ? (
+                  <div className="space-y-3">
                     <div className="rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60 p-3 text-sm text-amber-700 dark:text-amber-300">
                       {branding.lateCancellationMessage?.trim() ||
-                        `Faltan menos de ${cancellationHoursNotice} horas para tu cita. La cancelación tardía puede tener cargo según la política del consultorio.`}
+                        `Faltan menos de ${cancellationHoursNotice} horas para tu cita, así que ya no se puede cancelar desde acá.`}
                     </div>
-                  )}
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-foreground">
-                      ¿Querés contarle al profesional el motivo? (opcional)
-                    </label>
-                    <Textarea
-                      value={cancelReason}
-                      onChange={(e) => setCancelReason(e.target.value)}
-                      placeholder="Motivo de la cancelación..."
-                      rows={3}
-                      className="resize-none text-sm"
-                    />
+                    <p>
+                      Para cancelar con menos de {cancellationHoursNotice} horas de anticipación,
+                      contactá directamente a tu profesional.
+                    </p>
                   </div>
-                </div>
+                ) : (
+                  <div className="space-y-3">
+                    <p>
+                      Si necesitás reprogramarla, podés usar el botón "Reprogramar" en lugar de cancelar.
+                    </p>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-foreground">
+                        ¿Querés contarle al profesional el motivo? (opcional)
+                      </label>
+                      <Textarea
+                        value={cancelReason}
+                        onChange={(e) => setCancelReason(e.target.value)}
+                        placeholder="Motivo de la cancelación..."
+                        rows={3}
+                        className="resize-none text-sm"
+                      />
+                    </div>
+                  </div>
+                )}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter className="gap-2 sm:gap-2">
               <AlertDialogCancel disabled={cancelSubmitting} className="mt-0">
-                Volver
+                {cancelTarget && isLateCancellation(cancelTarget) ? "Entendido" : "Volver"}
               </AlertDialogCancel>
-              <AlertDialogAction
-                onClick={(e) => { e.preventDefault(); confirmCancel(); }}
-                disabled={cancelSubmitting}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-                {cancelSubmitting ? "Cancelando..." : "Confirmar cancelación"}
-              </AlertDialogAction>
+              {!(cancelTarget && isLateCancellation(cancelTarget)) && (
+                <AlertDialogAction
+                  onClick={(e) => { e.preventDefault(); confirmCancel(); }}
+                  disabled={cancelSubmitting}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {cancelSubmitting ? "Cancelando..." : "Confirmar cancelación"}
+                </AlertDialogAction>
+              )}
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
