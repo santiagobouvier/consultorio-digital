@@ -486,188 +486,210 @@ const PatientDetail = () => {
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(340px,390px)_1fr] gap-5 lg:gap-6 items-start">
         <div className="space-y-5 lg:sticky lg:top-6">
 
-        {/* ── Cabecera "carnet" ──
-            Desktop (riel): tarjeta vertical centrada, con el nombre COMPLETO
-            (envuelve, nunca se corta). Mobile: fila horizontal como siempre. */}
-        <div className="relative rounded-2xl border bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-4 sm:p-6">
-          <div className="flex items-start gap-3 sm:gap-4 lg:flex-col lg:items-center lg:gap-3 lg:pt-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate("/patients")}
-              className="shrink-0 -ml-2 lg:absolute lg:left-3 lg:top-3 lg:ml-0"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
+        {/* ── Carnet: banda oscura premium (mismo lenguaje que el Dashboard).
+            Mobile/tablet: full-bleed arriba, redondeada abajo. Desktop: la
+            credencial del riel, sticky, con todo a mano. ── */}
+        <div
+          className="relative overflow-hidden text-white -mx-4 -mt-4 rounded-b-3xl px-4 pt-3 pb-5 sm:-mx-6 sm:-mt-6 sm:px-6 sm:pt-4 sm:pb-6 lg:mx-0 lg:mt-0 lg:rounded-2xl lg:border lg:border-white/10 lg:px-5 lg:pt-4 lg:pb-5"
+          style={{
+            background:
+              "linear-gradient(135deg, hsl(182 22% 6%) 0%, hsl(178 45% 9%) 55%, hsl(176 60% 12%) 100%)",
+          }}
+        >
+          {/* Glows decorativos */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -top-24 -right-16 h-56 w-56 rounded-full opacity-25 blur-3xl"
+            style={{ background: "hsl(176 85% 42%)" }}
+          />
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -bottom-28 -left-20 h-64 w-64 rounded-full opacity-[0.12] blur-3xl"
+            style={{ background: "hsl(190 80% 50%)" }}
+          />
 
-            <Avatar className="h-16 w-16 sm:h-20 sm:w-20 lg:h-24 lg:w-24 rounded-2xl shrink-0 ring-2 ring-primary/20">
-              {patient.avatar_url && (
-                <AvatarImage src={patient.avatar_url} alt={patient.full_name} className="object-cover" />
-              )}
-              <AvatarFallback className="rounded-2xl bg-primary/10 text-primary font-bold text-xl lg:text-2xl">
-                {initials || <UserIcon className="h-7 w-7" />}
-              </AvatarFallback>
-            </Avatar>
+          <div className="relative">
+            {/* Barra superior: volver + menú ⋯ */}
+            <div className="flex items-center justify-between">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate("/patients")}
+                className="rounded-xl -ml-2 text-white/70 hover:text-white hover:bg-white/10"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="rounded-xl -mr-2 text-white/70 hover:text-white hover:bg-white/10"
+                  >
+                    <MoreHorizontal className="h-5 w-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="rounded-xl">
+                  <DropdownMenuItem onClick={() => setShowInviteModal(true)} className="gap-2 cursor-pointer">
+                    <UserPlus className="h-4 w-4" />
+                    Invitar al portal
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => setShowDeletePatient(true)}
+                    className="gap-2 cursor-pointer text-destructive focus:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Eliminar paciente
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
 
-            <div className="min-w-0 flex-1 lg:flex-none lg:w-full lg:text-center">
-              <h1 className="text-xl sm:text-2xl font-bold text-foreground break-words leading-tight">
-                {patient.full_name}
-              </h1>
-              {/* Chips que cuentan la historia en 2 segundos */}
-              <div className="flex items-center gap-1.5 mt-2 flex-wrap lg:justify-center">
-                <Badge
-                  variant={patient.is_active ? "default" : "secondary"}
-                  className="rounded-full text-xs"
-                >
-                  {patient.is_active ? "Activo" : "Inactivo"}
-                </Badge>
-                {!paymentsError && (
-                  hasOverdue ? (
-                    <Badge className="rounded-full text-xs bg-destructive text-destructive-foreground gap-1">
-                      <AlertTriangle className="h-3 w-3" />
-                      Debe {formatCurrency(debt, "UYU")}
-                    </Badge>
-                  ) : unpaid.length > 0 ? (
-                    <Badge className="rounded-full text-xs bg-amber-500 text-white">
-                      Pagos pendientes
-                    </Badge>
-                  ) : payments.length > 0 ? (
-                    <Badge className="rounded-full text-xs bg-emerald-600 text-white">
-                      Al día
-                    </Badge>
-                  ) : null
+            {/* Identidad */}
+            <div className="flex items-center gap-4 mt-1 lg:flex-col lg:gap-3 lg:text-center">
+              <Avatar className="h-16 w-16 sm:h-20 sm:w-20 lg:h-24 lg:w-24 rounded-2xl shrink-0 ring-2 ring-white/25 shadow-xl">
+                {patient.avatar_url && (
+                  <AvatarImage src={patient.avatar_url} alt={patient.full_name} className="object-cover" />
                 )}
-                {hasPortal ? (
-                  <Badge variant="outline" className="rounded-full text-xs gap-1 border-primary/30 text-primary">
-                    <Check className="h-3 w-3" />
-                    Portal activo
-                  </Badge>
-                ) : (
-                  <Badge variant="secondary" className="rounded-full text-xs text-muted-foreground">
-                    Sin portal
-                  </Badge>
-                )}
-                {computeAge(patient.birth_date) !== null && (
-                  <Badge variant="outline" className="rounded-full text-xs text-muted-foreground">
-                    {computeAge(patient.birth_date)} años
-                  </Badge>
-                )}
-                {isMinor(patient.birth_date) && (
-                  <Badge className="rounded-full text-xs bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
-                    Menor de edad
-                  </Badge>
-                )}
+                <AvatarFallback className="rounded-2xl bg-white/10 text-white font-bold text-xl lg:text-2xl">
+                  {initials || <UserIcon className="h-7 w-7" />}
+                </AvatarFallback>
+              </Avatar>
+
+              <div className="min-w-0 flex-1 lg:flex-none lg:w-full">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40">
+                  Paciente
+                </p>
+                <h1 className="text-2xl sm:text-3xl lg:text-2xl font-bold break-words leading-tight mt-0.5">
+                  {patient.full_name}
+                </h1>
+                {/* Chips de vidrio: la historia del paciente en 2 segundos */}
+                <div className="flex items-center gap-1.5 mt-2.5 flex-wrap lg:justify-center">
+                  <span className={cn(
+                    "inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold border",
+                    patient.is_active
+                      ? "bg-emerald-400/15 text-emerald-300 border-emerald-400/25"
+                      : "bg-white/10 text-white/60 border-white/10"
+                  )}>
+                    {patient.is_active ? "Activo" : "Inactivo"}
+                  </span>
+                  {!paymentsError && (
+                    hasOverdue ? (
+                      <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-rose-500/20 text-rose-200 border border-rose-400/30">
+                        <AlertTriangle className="h-3 w-3" />
+                        Debe {formatCurrency(debt, "UYU")}
+                      </span>
+                    ) : unpaid.length > 0 ? (
+                      <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-amber-400/15 text-amber-200 border border-amber-400/25">
+                        Pagos pendientes
+                      </span>
+                    ) : payments.length > 0 ? (
+                      <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-emerald-400/15 text-emerald-300 border border-emerald-400/25">
+                        Al día
+                      </span>
+                    ) : null
+                  )}
+                  {hasPortal && (
+                    <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-white/10 text-white/85 border border-white/15">
+                      <Check className="h-3 w-3" />
+                      Portal activo
+                    </span>
+                  )}
+                  {computeAge(patient.birth_date) !== null && (
+                    <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium bg-white/10 text-white/70 border border-white/10">
+                      {computeAge(patient.birth_date)} años
+                    </span>
+                  )}
+                  {isMinor(patient.birth_date) && (
+                    <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-amber-400/15 text-amber-200 border border-amber-400/25">
+                      Menor de edad
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* Menú ⋯ (acciones sensibles escondidas del camino) */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="shrink-0 rounded-xl lg:absolute lg:right-3 lg:top-3">
-                  <MoreHorizontal className="h-5 w-5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="rounded-xl">
-                <DropdownMenuItem onClick={() => setShowInviteModal(true)} className="gap-2 cursor-pointer">
-                  <UserPlus className="h-4 w-4" />
-                  Invitar al portal
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={() => setShowDeletePatient(true)}
-                  className="gap-2 cursor-pointer text-destructive focus:text-destructive"
-                >
-                  <Trash2 className="h-4 w-4" />
-                  Eliminar paciente
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+            {/* Números clave: tiles de vidrio adentro del carnet */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 gap-2.5 mt-5">
+              <div className="rounded-xl bg-white/[0.07] border border-white/10 px-3 py-2.5">
+                <p className="text-[10px] font-medium uppercase tracking-wider text-white/45 flex items-center gap-1">
+                  <Calendar className="h-3 w-3" /> Próxima cita
+                </p>
+                {nextAppointment ? (
+                  <p className="text-sm font-bold mt-1 capitalize">
+                    {format(new Date(nextAppointment.start_at), "EEE d MMM · HH:mm", { locale: es })}
+                  </p>
+                ) : (
+                  <p className="text-sm font-bold mt-1 text-amber-300">Sin agendar</p>
+                )}
+              </div>
+              <div className="rounded-xl bg-white/[0.07] border border-white/10 px-3 py-2.5">
+                <p className="text-[10px] font-medium uppercase tracking-wider text-white/45 flex items-center gap-1">
+                  <Check className="h-3 w-3" /> Sesiones
+                </p>
+                <p className="text-sm font-bold mt-1">{pastSessions.length}</p>
+              </div>
+              <div className="rounded-xl bg-white/[0.07] border border-white/10 px-3 py-2.5">
+                <p className="text-[10px] font-medium uppercase tracking-wider text-white/45 flex items-center gap-1">
+                  <CreditCard className="h-3 w-3" /> Pendiente
+                </p>
+                <p className={cn("text-sm font-bold mt-1", hasOverdue ? "text-rose-300" : debt > 0 ? "text-amber-300" : "text-emerald-300")}>
+                  {paymentsError ? "—" : debt > 0 ? formatCurrency(debt, "UYU") : "$ 0"}
+                </p>
+              </div>
+              <div className="rounded-xl bg-white/[0.07] border border-white/10 px-3 py-2.5">
+                <p className="text-[10px] font-medium uppercase tracking-wider text-white/45 flex items-center gap-1">
+                  <Clock className="h-3 w-3" /> Última sesión
+                </p>
+                <p className="text-sm font-bold mt-1">
+                  {lastSession ? formatDate(lastSession.start_at) : "—"}
+                </p>
+              </div>
+            </div>
 
-          {/* Acciones principales */}
-          {/* Mobile: "Agendar cita" (e "Invitar") a lo ancho y el resto en dos
-              columnas — tres botones en una fila de 360px se desbordaban.
-              Desktop: fila (sm) o grilla 2x2 en el riel (lg), como siempre. */}
-          <div className="grid grid-cols-2 sm:flex lg:grid lg:grid-cols-2 gap-2 mt-4 sm:pl-[4.5rem] lg:pl-0">
-            <Button
-              onClick={() => setShowCreateAppointment(true)}
-              className="rounded-xl gap-2 h-10 col-span-2 lg:col-span-1"
-            >
-              <CalendarPlus className="h-4 w-4" />
-              <span className="text-xs sm:text-sm">Agendar cita</span>
-            </Button>
-            {/* Sin portal: invitar es la acción que más valor agrega — bien visible */}
-            {!hasPortal && (
+            {/* Acciones: la principal brillante, el resto en vidrio */}
+            <div className="grid grid-cols-2 sm:flex lg:grid lg:grid-cols-2 gap-2 mt-4">
+              <Button
+                onClick={() => setShowCreateAppointment(true)}
+                className="rounded-xl gap-2 h-10 col-span-2 lg:col-span-1 shadow-lg shadow-primary/25 sm:flex-1"
+              >
+                <CalendarPlus className="h-4 w-4" />
+                <span className="text-xs sm:text-sm">Agendar cita</span>
+              </Button>
+              {/* Sin portal: invitar es la acción que más valor agrega — bien visible */}
+              {!hasPortal && (
+                <Button
+                  variant="outline"
+                  onClick={() => setShowInviteModal(true)}
+                  className="rounded-xl gap-2 h-10 col-span-2 lg:col-span-1 sm:flex-1 bg-white/[0.07] border-white/20 text-white hover:bg-white/15 hover:text-white"
+                >
+                  <UserPlus className="h-4 w-4" />
+                  <span className="text-xs sm:text-sm">Invitar al portal</span>
+                </Button>
+              )}
               <Button
                 variant="outline"
-                onClick={() => setShowInviteModal(true)}
-                className="rounded-xl gap-2 h-10 col-span-2 lg:col-span-1 border-primary/50 text-primary hover:bg-primary/10 hover:text-primary"
+                onClick={openWhatsApp}
+                disabled={!patient.whatsapp_phone}
+                className="rounded-xl gap-2 h-10 sm:flex-1 bg-white/[0.07] border-white/20 text-white hover:bg-white/15 hover:text-white disabled:opacity-40"
               >
-                <UserPlus className="h-4 w-4" />
-                <span className="text-xs sm:text-sm">Invitar al portal</span>
+                <MessageCircle className="h-4 w-4" />
+                <span className="text-xs sm:text-sm">WhatsApp</span>
               </Button>
-            )}
-            <Button
-              variant="outline"
-              onClick={openWhatsApp}
-              disabled={!patient.whatsapp_phone}
-              className="rounded-xl gap-2 h-10"
-            >
-              <MessageCircle className="h-4 w-4" />
-              <span className="text-xs sm:text-sm">WhatsApp</span>
-            </Button>
-            <Button variant="outline" onClick={() => setShowEditPatient(true)} className="rounded-xl gap-2 h-10">
-              <Pencil className="h-4 w-4" />
-              <span className="text-xs sm:text-sm">Editar</span>
-            </Button>
+              <Button
+                variant="outline"
+                onClick={() => setShowEditPatient(true)}
+                className="rounded-xl gap-2 h-10 sm:flex-1 bg-white/[0.07] border-white/20 text-white hover:bg-white/15 hover:text-white"
+              >
+                <Pencil className="h-4 w-4" />
+                <span className="text-xs sm:text-sm">Editar</span>
+              </Button>
+            </div>
           </div>
         </div>
 
-        {/* ── 4 números clave (2x2 en el riel de desktop) ── */}
-        <div className="grid grid-cols-2 gap-3">
-          <Card className="rounded-2xl border-border/50">
-            <CardContent className="p-3.5">
-              <p className="text-xs text-muted-foreground inline-flex items-center gap-1.5">
-                <Calendar className="h-3.5 w-3.5" /> Próxima cita
-              </p>
-              {nextAppointment ? (
-                <p className="text-sm font-bold mt-1">
-                  {format(new Date(nextAppointment.start_at), "EEE d MMM · HH:mm", { locale: es })}
-                </p>
-              ) : (
-                <p className="text-sm font-bold mt-1 text-amber-500">Sin agendar</p>
-              )}
-            </CardContent>
-          </Card>
-          <Card className="rounded-2xl border-border/50">
-            <CardContent className="p-3.5">
-              <p className="text-xs text-muted-foreground inline-flex items-center gap-1.5">
-                <Check className="h-3.5 w-3.5" /> Sesiones
-              </p>
-              <p className="text-sm font-bold mt-1">{pastSessions.length}</p>
-            </CardContent>
-          </Card>
-          <Card className="rounded-2xl border-border/50">
-            <CardContent className="p-3.5">
-              <p className="text-xs text-muted-foreground inline-flex items-center gap-1.5">
-                <CreditCard className="h-3.5 w-3.5" /> Pendiente de pago
-              </p>
-              <p className={cn("text-sm font-bold mt-1", hasOverdue && "text-destructive")}>
-                {paymentsError ? "—" : debt > 0 ? formatCurrency(debt, "UYU") : "$ 0"}
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="rounded-2xl border-border/50">
-            <CardContent className="p-3.5">
-              <p className="text-xs text-muted-foreground inline-flex items-center gap-1.5">
-                <Clock className="h-3.5 w-3.5" /> Última sesión
-              </p>
-              <p className="text-sm font-bold mt-1">
-                {lastSession ? formatDate(lastSession.start_at) : "—"}
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+        {/* (Los 4 números clave viven ahora adentro del carnet, en tiles de vidrio) */}
 
         {/* ── Datos de contacto: solo en el riel de desktop. En mobile es
             redundante — el Resumen muestra lo mismo justo abajo. ── */}
