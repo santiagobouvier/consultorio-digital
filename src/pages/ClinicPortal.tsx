@@ -18,7 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import { usePWAInstall } from "@/hooks/use-pwa-install";
 import { PortalWelcomeInstall } from "@/components/portal/PortalWelcomeInstall";
 import { PatientBookingModal } from "@/components/PatientBookingModal";
-import { Building2, Sun, Moon, Eye, EyeOff, Loader2, AlertCircle, LogOut, ArrowLeft } from "lucide-react";
+import { Building2, Sun, Moon, Eye, EyeOff, Loader2, AlertCircle, LogOut, ArrowLeft, MessageCircle } from "lucide-react";
 import {
   PatientPortalView,
   type PortalBranding,
@@ -81,6 +81,32 @@ const BrandedLogin = ({
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  // WhatsApp del profesional: para el que todavía no tiene usuario
+  const [contactPhone, setContactPhone] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!branding.slug) return;
+    (async () => {
+      const { data } = await (supabase as any).rpc("get_portal_contact_phone", {
+        p_slug: branding.slug,
+      });
+      if (typeof data === "string" && data.trim()) setContactPhone(data.trim());
+    })();
+  }, [branding.slug]);
+
+  const openAccessWhatsApp = () => {
+    if (!contactPhone) return;
+    const digits = contactPhone.replace(/\D/g, "");
+    const phone = digits.startsWith("0")
+      ? "598" + digits.slice(1)
+      : digits.startsWith("598") || digits.length > 9
+        ? digits
+        : "598" + digits;
+    const msg = encodeURIComponent(
+      `Hola! Quiero acceso al portal de pacientes de ${branding.displayName}.`
+    );
+    window.open(`https://wa.me/${phone}?text=${msg}`, "_blank");
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -150,9 +176,25 @@ const BrandedLogin = ({
                   Ingresar
                 </Button>
               </form>
-              <p className="text-xs text-center text-muted-foreground mt-4">
-                ¿No tenés acceso? Contactá a tu profesional.
-              </p>
+              {/* Sin usuario todavía: camino directo al WhatsApp del profesional */}
+              <div className="mt-5 pt-4 border-t border-border/60 text-center space-y-2.5">
+                <p className="text-xs text-muted-foreground">¿Todavía no tenés usuario?</p>
+                {contactPhone ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={openAccessWhatsApp}
+                    className="w-full gap-2 rounded-xl border-emerald-500/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-600"
+                  >
+                    <MessageCircle className="h-4 w-4" />
+                    Pedir acceso por WhatsApp
+                  </Button>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    Pedile la invitación de acceso a tu profesional.
+                  </p>
+                )}
+              </div>
             </CardContent>
           </Card>
           <div className="text-center">
