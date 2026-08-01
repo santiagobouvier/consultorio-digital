@@ -355,34 +355,37 @@ export const PortalWelcomeInstall = ({
                 })}
               </div>
 
-              {/* CTAs */}
+              {/* CTAs — jerarquía: la gente llega desde la web del consultorio
+                  queriendo ENTRAR. Ingresar es lo principal; instalar la app
+                  es un plus opcional, discreto abajo. */}
               <div
                 className="space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-500"
                 style={{ animationDelay: "200ms", animationFillMode: "backwards" }}
               >
                 <Button
-                  onClick={handleInstallClick}
-                  disabled={installing}
+                  onClick={onContinue}
                   className="w-full h-12 text-base font-semibold"
                   size="lg"
                   style={{ backgroundColor: "hsl(var(--primary))" }}
                 >
-                  <Download className="mr-2 h-5 w-5" />
-                  {installing ? "Instalando..." : "Instalar app gratis"}
+                  Ingresar a mi portal
+                  <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
 
                 <Button
                   variant="outline"
-                  onClick={onContinue}
-                  className="w-full h-12 text-base font-medium"
+                  onClick={handleInstallClick}
+                  disabled={installing}
+                  className="w-full h-11 text-sm font-medium text-muted-foreground hover:text-foreground"
                   size="lg"
                 >
-                  Continuar al portal
-                  <ArrowRight className="ml-2 h-4 w-4" />
+                  <Download className="mr-2 h-4 w-4" />
+                  {installing ? "Instalando..." : "Instalar la app gratis (opcional)"}
                 </Button>
 
                 <p className="text-xs text-muted-foreground/80 text-center leading-tight pt-1">
-                  Sin pasar por la App Store · Ocupa menos de 1MB
+                  La app no pasa por la App Store y ocupa menos de 1MB — ideal para
+                  entrar con un toque la próxima vez.
                 </p>
               </div>
 
