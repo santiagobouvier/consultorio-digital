@@ -546,8 +546,17 @@ const ClinicPortal = () => {
     setPatientLoading(false); setPatientChecked(false);
   };
 
+  // Sin Mercado Pago conectado no hay "Error": se explica la situación real.
+  const warnNoOnlinePayments = () => {
+    toast({
+      title: "Pago online no disponible",
+      description: `${branding?.displayName || "Tu profesional"} todavía no habilitó los pagos desde la plataforma. Podés coordinar el pago directamente en tu sesión.`,
+    });
+  };
+
   const handlePaySession = async (appointmentId: string) => {
     if (!branding) return;
+    if (!mpConnected) { warnNoOnlinePayments(); return; }
     try {
       setPayingAppointment(appointmentId);
       const { data: existingPayment } = await supabase
@@ -576,6 +585,7 @@ const ClinicPortal = () => {
 
   const startBatchCheckout = async (paymentIds: string[]) => {
     if (!branding) return;
+    if (!mpConnected) { warnNoOnlinePayments(); return; }
     try {
       setPayingPaymentIds(paymentIds);
       const { data, error } = await supabase.functions.invoke("create-patient-payment", {
