@@ -16,9 +16,11 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { usePWAInstall } from "@/hooks/use-pwa-install";
-import { PortalWelcomeInstall } from "@/components/portal/PortalWelcomeInstall";
+import { IOSInstallTutorial } from "@/components/pwa/IOSInstallTutorial";
+import { DesktopSafariTutorial } from "@/components/pwa/DesktopSafariTutorial";
+import { UnsupportedBrowserModal } from "@/components/pwa/UnsupportedBrowserModal";
 import { PatientBookingModal } from "@/components/PatientBookingModal";
-import { Building2, Sun, Moon, Eye, EyeOff, Loader2, AlertCircle, LogOut, ArrowLeft, MessageCircle } from "lucide-react";
+import { Building2, Sun, Moon, Eye, EyeOff, Loader2, AlertCircle, LogOut, ArrowLeft, MessageCircle, Download } from "lucide-react";
 import {
   PatientPortalView,
   type PortalBranding,
@@ -83,6 +85,18 @@ const BrandedLogin = ({
   const [loading, setLoading] = useState(false);
   // WhatsApp del profesional: para el que todavía no tiene usuario
   const [contactPhone, setContactPhone] = useState<string | null>(null);
+  // Instalar la app: opción discreta acá mismo (sin pantalla intermedia)
+  const { isInstalled: pwaInstalled, triggerInstall } = usePWAInstall();
+  const [showIOS, setShowIOS] = useState(false);
+  const [showSafari, setShowSafari] = useState(false);
+  const [showUnsupported, setShowUnsupported] = useState(false);
+
+  const handleInstallApp = async () => {
+    const result = await triggerInstall();
+    if (result === "ios") setShowIOS(true);
+    else if (result === "desktop-safari") setShowSafari(true);
+    else if (result === "unsupported") setShowUnsupported(true);
+  };
 
   useEffect(() => {
     if (!branding.slug) return;
@@ -197,11 +211,25 @@ const BrandedLogin = ({
               </div>
             </CardContent>
           </Card>
-          <div className="text-center">
-            <p className="text-xs text-muted-foreground">Powered by Tu Consultorio Digital</p>
+          <div className="text-center space-y-3">
+            {/* App: opción secundaria, chiquita — el protagonista es entrar */}
+            {!pwaInstalled && (
+              <button
+                type="button"
+                onClick={handleInstallApp}
+                className="mx-auto inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-4 decoration-muted-foreground/40"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Instalar la app de {branding.displayName} (gratis)
+              </button>
+            )}
+            <p className="text-xs text-muted-foreground/70">Powered by Tu Consultorio Digital</p>
           </div>
         </div>
       </div>
+      <IOSInstallTutorial open={showIOS} onClose={() => setShowIOS(false)} clinicName={branding.displayName} />
+      <DesktopSafariTutorial open={showSafari} onClose={() => setShowSafari(false)} clinicName={branding.displayName} />
+      <UnsupportedBrowserModal open={showUnsupported} onClose={() => setShowUnsupported(false)} />
     </div>
   );
 };
@@ -228,7 +256,6 @@ const ClinicPortal = () => {
   // Watchdog: si algún spinner queda girando demasiado, ofrecemos recargar.
   const [gateTimedOut, setGateTimedOut] = useState(false);
   const [isDark, setIsDark] = useState(true);
-  const [welcomeSeen, setWelcomeSeen] = useState<boolean>(true);
   const [payingAppointment, setPayingAppointment] = useState<string | null>(null);
   const [payingPaymentIds, setPayingPaymentIds] = useState<string[]>([]);
   const [mpConnected, setMpConnected] = useState(false);
@@ -241,19 +268,6 @@ const ClinicPortal = () => {
   const [payments, setPayments] = useState<PortalPayment[]>([]);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [rescheduleTarget, setRescheduleTarget] = useState<PortalAppointment | null>(null);
-
-  useEffect(() => {
-    if (!slug) return;
-    try {
-      setWelcomeSeen(localStorage.getItem(`portal-welcome-seen:${slug}`) === "1");
-    } catch { setWelcomeSeen(true); }
-  }, [slug]);
-
-  const markWelcomeSeen = useCallback(() => {
-    if (!slug) return;
-    try { localStorage.setItem(`portal-welcome-seen:${slug}`, "1"); } catch {}
-    setWelcomeSeen(true);
-  }, [slug]);
 
   const reloadPatientData = useCallback(async (patientId: string, bizId: string) => {
     const nowIso = new Date().toISOString();
@@ -710,15 +724,9 @@ const ClinicPortal = () => {
     );
   }
   if (!session) {
-    if (!welcomeSeen) {
-      return (
-        <PortalWelcomeInstall
-          branding={{ displayName: branding.displayName, specialty: branding.specialty, logoUrl: branding.logoUrl, slug: branding.slug }}
-          themeStyle={themeStyleLogin}
-          onContinue={markWelcomeSeen}
-        />
-      );
-    }
+    // Directo al login: la gente llega desde la web del consultorio para
+    // ENTRAR. La app se ofrece discreta dentro del propio login (y también
+    // adentro del portal con el banner de siempre) — sin pantalla intermedia.
     return <BrandedLogin branding={branding} isDark={isDark} setIsDark={setIsDark} themeStyle={themeStyleLogin} />;
   }
   if (session && (!patientChecked || patientLoading)) {
