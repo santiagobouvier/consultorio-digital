@@ -684,8 +684,6 @@ export type Database = {
         Row: {
           billing_period: string
           cancellation_hours_notice: number
-          max_booking_horizon_days: number
-          min_booking_notice_hours: number
           contact_email: string
           created_at: string
           custom_domain: string | null
@@ -724,8 +722,6 @@ export type Database = {
         Insert: {
           billing_period?: string
           cancellation_hours_notice?: number
-          max_booking_horizon_days?: number
-          min_booking_notice_hours?: number
           contact_email: string
           created_at?: string
           custom_domain?: string | null
@@ -764,8 +760,6 @@ export type Database = {
         Update: {
           billing_period?: string
           cancellation_hours_notice?: number
-          max_booking_horizon_days?: number
-          min_booking_notice_hours?: number
           contact_email?: string
           created_at?: string
           custom_domain?: string | null
@@ -2064,6 +2058,7 @@ export type Database = {
           max_professionals: number
         }[]
       }
+      get_portal_contact_phone: { Args: { p_slug: string }; Returns: string }
       get_portal_payment_config: {
         Args: { p_business_id: string }
         Returns: {
