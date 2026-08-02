@@ -198,6 +198,28 @@ serve(async (req) => {
       return json({ error: "appointment_creation_failed" }, 500);
     }
 
+    // Los WhatsApps de la reserva (confirmación al paciente + aviso al
+    // profesional) los crea el trigger con salida inmediata, pero los envía
+    // el robot que corre cada 5 minutos. Lo pateamos AHORA para que salgan
+    // en segundos. Best-effort: si falla, el robot los manda en su pasada.
+    try {
+      const kick = fetch(`${supabaseUrl}/functions/v1/process-scheduled-reminders`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${serviceRoleKey}`,
+        },
+        body: JSON.stringify({ source: "public-booking-kick" }),
+      }).then(() => {}).catch((e) => console.warn("Reminder kick failed:", e));
+      // @ts-ignore — EdgeRuntime existe en el runtime de Supabase
+      if (typeof EdgeRuntime !== "undefined" && EdgeRuntime?.waitUntil) {
+        // @ts-ignore
+        EdgeRuntime.waitUntil(kick);
+      }
+    } catch (kickErr) {
+      console.warn("Reminder kick error:", kickErr);
+    }
+
     // Pago requerido: crear la preferencia de Mercado Pago y devolver el
     // checkout. Los mails de confirmación los manda el webhook al aprobarse.
     if (requiresPayment && policy) {
