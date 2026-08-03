@@ -1,8 +1,7 @@
-import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Save, Plus, X } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import {
@@ -12,6 +11,45 @@ import {
   DayKey,
   DayConfig,
 } from "@/hooks/use-availability-template";
+
+// Horarios cada 30 min (06:00 a 23:30): elegir de una lista prolija es más
+// rápido y menos propenso a errores que el input de hora nativo del navegador.
+const TIME_OPTIONS: string[] = (() => {
+  const out: string[] = [];
+  for (let h = 6; h <= 23; h++) {
+    for (const m of [0, 30]) out.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
+  }
+  return out;
+})();
+
+const addMinutesCapped = (hhmm: string, mins: number): string => {
+  const [h, m] = hhmm.split(":").map(Number);
+  const total = Math.min(h * 60 + m + mins, 23 * 60 + 30);
+  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+};
+
+// Selector de hora: lista desplegable que abre ya posicionada en el valor
+// actual. Si el valor guardado no es múltiplo de 30 (ej: 09:15), se agrega
+// a la lista para no romper configuraciones existentes.
+const TimeSelect = ({ value, onChange }: { value: string | null; onChange: (v: string) => void }) => {
+  const options = value && !TIME_OPTIONS.includes(value)
+    ? [...TIME_OPTIONS, value].sort()
+    : TIME_OPTIONS;
+  return (
+    <Select value={value ?? ""} onValueChange={onChange}>
+      <SelectTrigger className="h-9 w-[100px] tabular-nums font-medium bg-background">
+        <SelectValue placeholder="--:--" />
+      </SelectTrigger>
+      <SelectContent className="max-h-72 min-w-[100px]">
+        {options.map((t) => (
+          <SelectItem key={t} value={t} className="tabular-nums">
+            {t}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+};
 
 interface Props {
   template: AvailabilityTemplate;
@@ -39,6 +77,19 @@ export const WeeklyTemplateEditor = ({ template, onChange, onSave, saving }: Pro
 
   const addSecondRange = (key: DayKey) => {
     updateDay(key, { start2: "15:00", end2: "19:00" });
+  };
+
+  // Al cambiar un inicio, si el fin quedó antes o igual, lo empuja 1 hora
+  // después: nunca queda un rango imposible a mano.
+  const setRangeStart = (key: DayKey, which: 1 | 2, v: string) => {
+    const d = template.days[key];
+    const end = which === 1 ? d.end1 : d.end2;
+    const patch: Partial<DayConfig> = which === 1 ? { start1: v } : { start2: v };
+    if (end && v >= end) {
+      if (which === 1) (patch as any).end1 = addMinutesCapped(v, 60);
+      else (patch as any).end2 = addMinutesCapped(v, 60);
+    }
+    updateDay(key, patch);
   };
 
   const removeSecondRange = (key: DayKey) => {
@@ -98,36 +149,16 @@ export const WeeklyTemplateEditor = ({ template, onChange, onSave, saving }: Pro
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-muted-foreground w-16">Mañana</span>
-                      <Input
-                        type="time"
-                        value={day.start1 ?? ""}
-                        onChange={(e) => updateDay(key, { start1: e.target.value })}
-                        className="h-9"
-                      />
-                      <span className="text-muted-foreground">-</span>
-                      <Input
-                        type="time"
-                        value={day.end1 ?? ""}
-                        onChange={(e) => updateDay(key, { end1: e.target.value })}
-                        className="h-9"
-                      />
+                      <TimeSelect value={day.start1} onChange={(v) => setRangeStart(key, 1, v)} />
+                      <span className="text-muted-foreground">–</span>
+                      <TimeSelect value={day.end1} onChange={(v) => updateDay(key, { end1: v })} />
                     </div>
                     {day.start2 && (
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-muted-foreground w-16">Tarde</span>
-                        <Input
-                          type="time"
-                          value={day.start2 ?? ""}
-                          onChange={(e) => updateDay(key, { start2: e.target.value })}
-                          className="h-9"
-                        />
-                        <span className="text-muted-foreground">-</span>
-                        <Input
-                          type="time"
-                          value={day.end2 ?? ""}
-                          onChange={(e) => updateDay(key, { end2: e.target.value })}
-                          className="h-9"
-                        />
+                        <TimeSelect value={day.start2} onChange={(v) => setRangeStart(key, 2, v)} />
+                        <span className="text-muted-foreground">–</span>
+                        <TimeSelect value={day.end2} onChange={(v) => updateDay(key, { end2: v })} />
                         <Button size="icon" variant="ghost" className="h-9 w-9" onClick={() => removeSecondRange(key)}>
                           <X className="h-3.5 w-3.5" />
                         </Button>
