@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, CalendarDays, CheckCircle2, Clock, Loader2, Stethoscope, Video, MapPin } from "lucide-react";
+import { ArrowLeft, CalendarDays, CheckCircle2, Clock, CreditCard, Loader2, Stethoscope, Video, MapPin } from "lucide-react";
 import LoadingPage from "@/components/LoadingPage";
 import { toast } from "sonner";
 import NotFound from "./NotFound";
@@ -143,6 +143,8 @@ const PublicBooking = ({ demo = false, embed = false }: { demo?: boolean; embed?
 
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+  // Pago opcional: la reserva ya quedó confirmada, pero ofrecemos pagarla ahora
+  const [optionalPay, setOptionalPay] = useState<{ url: string; amount: number } | null>(null);
 
   const [form, setForm] = useState({ name: "", email: "", phone: "", message: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -359,6 +361,7 @@ const PublicBooking = ({ demo = false, embed = false }: { demo?: boolean; embed?
   // Embed: volver al inicio de la agenda para reservar de nuevo
   const resetBooking = () => {
     setSuccess(false);
+    setOptionalPay(null);
     setSelectedService(null);
     setSelectedStart(null);
     setSelectedDay(null);
@@ -435,6 +438,17 @@ const PublicBooking = ({ demo = false, embed = false }: { demo?: boolean; embed?
           window.location.href = initPoint;
         }
         return;
+      }
+
+      // Política "pago opcional": la reserva ya está confirmada y además
+      // ofrecemos pagarla ahora en la pantalla de éxito.
+      if ((data as any)?.optional_payment && (data as any)?.init_point) {
+        setOptionalPay({
+          url: (data as any).init_point as string,
+          amount: Number((data as any).amount) || 0,
+        });
+      } else {
+        setOptionalPay(null);
       }
 
       setSuccess(true);
@@ -555,10 +569,51 @@ const PublicBooking = ({ demo = false, embed = false }: { demo?: boolean; embed?
                 </p>
               </div>
             )}
+            {optionalPay && !paidReturn && (
+              <div
+                className="rounded-xl border p-4 text-left space-y-3"
+                style={{
+                  background: `hsl(var(--brand) / 0.08)`,
+                  borderColor: `hsl(var(--brand) / 0.35)`,
+                }}
+              >
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold text-foreground">
+                    ¿Querés dejar tu sesión paga?
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Pagala ahora y llegá con todo pronto: sin efectivo ni vueltos el día de la sesión.
+                  </p>
+                </div>
+                <Button
+                  className="w-full gap-2"
+                  style={{ background: `hsl(var(--brand))`, color: "white" }}
+                  onClick={() => {
+                    const url = optionalPay.url;
+                    if (embed) {
+                      try {
+                        window.top!.location.href = url;
+                      } catch {
+                        window.open(url, "_blank", "noopener");
+                      }
+                    } else {
+                      window.location.href = url;
+                    }
+                  }}
+                >
+                  <CreditCard className="h-4 w-4" />
+                  Pagar ahora{optionalPay.amount > 0 ? ` $${optionalPay.amount.toLocaleString("es-UY")}` : ""} con Mercado Pago
+                </Button>
+                <p className="text-[11px] text-muted-foreground text-center">
+                  O podés pagarla directamente en la sesión — tu reserva ya está confirmada igual.
+                </p>
+              </div>
+            )}
             {embed ? (
               <Button
                 className="w-full gap-2"
-                style={{ background: `hsl(var(--brand))`, color: "white" }}
+                variant={optionalPay && !paidReturn ? "outline" : "default"}
+                style={optionalPay && !paidReturn ? undefined : { background: `hsl(var(--brand))`, color: "white" }}
                 onClick={resetBooking}
               >
                 Agendar otra hora
@@ -566,7 +621,8 @@ const PublicBooking = ({ demo = false, embed = false }: { demo?: boolean; embed?
             ) : (
               <Button
                 className="w-full gap-2"
-                style={{ background: `hsl(var(--brand))`, color: "white" }}
+                variant={optionalPay && !paidReturn ? "outline" : "default"}
+                style={optionalPay && !paidReturn ? undefined : { background: `hsl(var(--brand))`, color: "white" }}
                 onClick={() => navigate(demo ? "/demo" : `/consultorio/${targetSlug}`)}
               >
                 <ArrowLeft className="h-4 w-4" />
