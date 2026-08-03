@@ -185,8 +185,28 @@ const ClinicSettings = () => {
       setSpecialty(loadedSpecialty);
       setWelcomeMessage(loadedWelcome);
 
-      setTimeout(() => setInitialSnapshot(buildSnapshot()), 0);
-      // cache-bust: ensure HMR drops stale slug references
+      // Snapshot inicial construido con los valores RECIÉN CARGADOS (no con
+      // el estado, que en este render todavía tiene los defaults). El viejo
+      // setTimeout(buildSnapshot) capturaba los defaults → la página se creía
+      // "con cambios sin guardar" siempre, y el navegador preguntaba al salir
+      // (ej: al conectar Mercado Pago). El orden de claves debe calcar
+      // buildSnapshot().
+      setInitialSnapshot(JSON.stringify({
+        clinicName: loadedClinicName,
+        ownerName: ownProfile?.name || "",
+        specialty: loadedSpecialty,
+        welcomeMessage: loadedWelcome,
+        contactEmail: (business as any)?.contact_email || "",
+        isPrivateClinic: (business as any)?.is_private_clinic || false,
+        cancellationHoursNotice: (business as any)?.cancellation_hours_notice ?? 24,
+        lateCancellationMessage: (business as any)?.late_cancellation_message ?? "",
+        defaultSessionPrice:
+          (business as any)?.default_session_price != null
+            ? String((business as any).default_session_price)
+            : "",
+        minBookingNoticeHours: (business as any)?.min_booking_notice_hours ?? 24,
+        maxBookingHorizonDays: (business as any)?.max_booking_horizon_days ?? 60,
+      }));
     } catch (error) {
       console.error("Error loading settings:", error);
       toast({ title: "Error", description: "No se pudo cargar la configuración", variant: "destructive" });
