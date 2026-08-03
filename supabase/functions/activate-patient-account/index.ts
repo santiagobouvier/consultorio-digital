@@ -80,9 +80,20 @@ Deno.serve(async (req) => {
 
     if (updateError) {
       console.error("Error updating password:", updateError);
+      // Supabase rechaza contraseñas filtradas/conocidas (AuthWeakPasswordError).
+      // Devolvemos 200 con `error` para que el paciente vea el motivo real y
+      // pueda elegir otra — un 4xx/5xx llega al front como mensaje genérico.
+      const errText = String((updateError as { message?: string }).message || "").toLowerCase();
+      const isWeak =
+        (updateError as { code?: string }).code === "weak_password" ||
+        errText.includes("weak") || errText.includes("easy to guess");
       return new Response(
-        JSON.stringify({ error: "Failed to set password" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({
+          error: isWeak
+            ? "Esa contraseña es demasiado común y fácil de adivinar. Elegí una más única: combiná palabras, números o símbolos (ej: Camila.2026)."
+            : "No se pudo establecer la contraseña. Intentá de nuevo en unos minutos.",
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
