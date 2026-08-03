@@ -359,6 +359,9 @@ const SaasAdmin = () => {
       if (newPlanCode === "custom" && customLimits) { updateData.custom_max_professionals = customLimits.maxProfessionals; updateData.custom_max_patients = customLimits.maxPatients; }
       const { error } = await supabase.from("businesses").update(updateData).eq("id", businessId);
       if (error) throw error;
+      // La página "Mi plan" del cliente lee la SUSCRIPCIÓN: se sincroniza
+      // siempre para que el panel admin y lo que ve el cliente nunca difieran.
+      await supabase.from("subscriptions").update({ plan_code: newPlanCode }).eq("business_id", businessId);
       toast({ title: "Plan actualizado", description: `Plan cambiado a ${getPlanName(newPlanCode)}` });
       await loadData();
     } catch (error: any) { toast({ title: "Error", description: error.message || "No se pudo cambiar el plan", variant: "destructive" }); }
@@ -424,6 +427,8 @@ const SaasAdmin = () => {
         }
       }
       if (error) throw error;
+      // Sincronizar el plan también en la suscripción (lo que ve el cliente)
+      await supabase.from("subscriptions").update({ plan_code: editPlan }).eq("business_id", businessToEdit.id);
       toast({ title: "Consultorio actualizado" }); setShowEditModal(false); setBusinessToEdit(null); await loadData();
     } catch (error: any) { toast({ title: "Error", description: error.message || "No se pudo actualizar", variant: "destructive" }); } finally { setSaving(false); }
   };
