@@ -1,6 +1,8 @@
 // Processes scheduled_reminders rows that are due and should auto-send.
-// Canales: email (Resend) y whatsapp (Cloud API de Meta con la plantilla
-// aprobada "recordatorio_cita"). Triggered every 5 minutes via pg_cron.
+// Canales: email (Resend) y whatsapp (Cloud API de Meta con plantillas
+// aprobadas). Lo dispara pg_cron cada minuto Y el "empujón" instantáneo de
+// public-book-appointment: pueden correr a la vez, por eso cada aviso se
+// reclama de forma atómica (solo el proceso que gana la marca lo envía).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -170,12 +172,19 @@ Deno.serve(async (req) => {
         }
 
         try {
-          // Mark as sending to avoid double send if cron overlaps
-          await supabase
+          // Reclamo atómico: si otro proceso (cron + empujón instantáneo
+          // corriendo a la vez) ya lo marcó, el update no devuelve fila y
+          // este proceso NO lo envía. Evita mensajes duplicados.
+          const { data: claimed } = await supabase
             .from("scheduled_reminders")
             .update({ status: "sending" as any })
             .eq("id", r.id)
-            .eq("status", "scheduled");
+            .eq("status", "scheduled")
+            .select("id");
+          if (!claimed || claimed.length === 0) {
+            summary.skipped++;
+            continue;
+          }
 
           const resp = await fetch(`${SUPABASE_URL}/functions/v1/send-resend-email`, {
             method: "POST",
@@ -241,11 +250,18 @@ Deno.serve(async (req) => {
       }
 
       try {
-        await supabase
+        // Reclamo atómico (ver arriba): si otro proceso ya se lo llevó,
+        // este NO lo envía. Un WhatsApp por aviso, siempre.
+        const { data: claimed } = await supabase
           .from("scheduled_reminders")
           .update({ status: "sending" as any })
           .eq("id", r.id)
-          .eq("status", "scheduled");
+          .eq("status", "scheduled")
+          .select("id");
+        if (!claimed || claimed.length === 0) {
+          summary.skipped++;
+          continue;
+        }
 
         // Parámetros: pre-armados (avisos al profesional) o construidos acá
         // (avisos al paciente: nombre, consultorio, fecha larga, hora, contacto)
