@@ -29,7 +29,7 @@ import {
 import { toast } from "@/hooks/use-toast";
 import {
   Building2, Users, UserCog, DollarSign, Plus, ArrowLeft, Eye, UserPlus,
-  Loader2, AlertTriangle, ChevronDown, Copy, Check, X, Globe, Shield,
+  Loader2, AlertTriangle, ChevronDown, Copy, Check, X, Shield,
   Sparkles, Play, Trash2, Pencil, Search, MoreHorizontal, LogIn,
   Rows3, LayoutGrid, Activity, TrendingUp, Zap, Terminal,
 } from "lucide-react";
@@ -144,9 +144,6 @@ const SaasAdmin = () => {
   const [professionalLimitError, setProfessionalLimitError] = useState<string | null>(null);
   const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const [showPrivateClinicModal, setShowPrivateClinicModal] = useState(false);
-  const [editingPrivateClinic, setEditingPrivateClinic] = useState({ isPrivateClinic: false, customSubdomain: "", customDomain: "" });
-  const [savingPrivateClinic, setSavingPrivateClinic] = useState(false);
   const [creatingDemo, setCreatingDemo] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [businessToDelete, setBusinessToDelete] = useState<BusinessWithDetails | null>(null);
@@ -319,22 +316,6 @@ const SaasAdmin = () => {
     } catch (error: any) { toast({ title: "Error", description: error.message || "No se pudo cambiar el plan", variant: "destructive" }); }
   };
 
-  const openPrivateClinicModal = (business: BusinessWithDetails) => {
-    setSelectedBusiness(business);
-    setEditingPrivateClinic({ isPrivateClinic: business.isPrivateClinic, customSubdomain: business.customSubdomain || "", customDomain: business.customDomain || "" });
-    setShowPrivateClinicModal(true);
-  };
-
-  const handleSavePrivateClinic = async () => {
-    if (!selectedBusiness) return;
-    try {
-      setSavingPrivateClinic(true);
-      const { error } = await supabase.from("businesses").update({ is_private_clinic: editingPrivateClinic.isPrivateClinic, custom_subdomain: editingPrivateClinic.customSubdomain.trim() || null, custom_domain: editingPrivateClinic.customDomain.trim() || null }).eq("id", selectedBusiness.id);
-      if (error) throw error;
-      toast({ title: "Configuración guardada" }); setShowPrivateClinicModal(false); await loadData();
-    } catch (error: any) { toast({ title: "Error", description: error.message || "No se pudo guardar", variant: "destructive" }); } finally { setSavingPrivateClinic(false); }
-  };
-
   const enterBusiness = (id: string) => { sessionStorage.setItem("saas_selected_business", id); navigate("/dashboard"); };
 
   const openDeleteModal = async (b: BusinessWithDetails) => {
@@ -469,29 +450,6 @@ const SaasAdmin = () => {
       });
     } finally {
       setActivating(false);
-    }
-  };
-
-  // Marcar/desmarcar un consultorio como NO facturable (demo/cortesía):
-  // sale de todos los cálculos de Finanzas y Estadísticas, pero sigue
-  // funcionando normal para quien lo usa.
-  const handleToggleBillable = async (business: { id: string; name: string; isDemo: boolean }) => {
-    const next = !business.isDemo;
-    try {
-      const { error } = await supabase
-        .from("businesses")
-        .update({ is_demo: next })
-        .eq("id", business.id);
-      if (error) throw error;
-      toast({
-        title: next ? "Marcado como no facturable" : "Marcado como facturable",
-        description: next
-          ? `${business.name} ya no cuenta en Finanzas (demo/cortesía).`
-          : `${business.name} vuelve a contar en Finanzas.`,
-      });
-      await loadData();
-    } catch (error: any) {
-      toast({ title: "Error", description: error.message || "No se pudo actualizar", variant: "destructive" });
     }
   };
 
@@ -738,7 +696,6 @@ const SaasAdmin = () => {
                           <DropdownMenuSeparator />
                           <DropdownMenuItem onClick={() => openEditModal(business)}><Pencil className="h-4 w-4 mr-2" />Editar</DropdownMenuItem>
                           <DropdownMenuItem onClick={() => openActivateModal(business)}><Zap className="h-4 w-4 mr-2" />Activar suscripción</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => openPrivateClinicModal(business)}><Globe className="h-4 w-4 mr-2" />Dominio</DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem onClick={() => openDeleteModal(business)} className="text-destructive focus:text-destructive focus:bg-destructive/10"><Trash2 className="h-4 w-4 mr-2" />Eliminar</DropdownMenuItem>
                         </DropdownMenuContent>
@@ -844,11 +801,6 @@ const SaasAdmin = () => {
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem onClick={() => openEditModal(business)}><Pencil className="h-4 w-4 mr-2" />Editar</DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => openActivateModal(business)}><Zap className="h-4 w-4 mr-2" />Activar suscripción</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleToggleBillable(business)}>
-                                  <Sparkles className="h-4 w-4 mr-2" />
-                                  {business.isDemo ? "Marcar como facturable" : "No facturable (demo)"}
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => openPrivateClinicModal(business)}><Globe className="h-4 w-4 mr-2" />Dominio</DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem onClick={() => openDeleteModal(business)} className="text-destructive focus:text-destructive focus:bg-destructive/10"><Trash2 className="h-4 w-4 mr-2" />Eliminar</DropdownMenuItem>
                               </DropdownMenuContent>
@@ -953,25 +905,6 @@ const SaasAdmin = () => {
               </div>
             </div>
           )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Private Clinic */}
-      <Dialog open={showPrivateClinicModal} onOpenChange={setShowPrivateClinicModal}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader><DialogTitle className="flex items-center gap-2"><Globe className="h-5 w-5" />Consultorio Privado</DialogTitle><DialogDescription>Dominio personalizado de {selectedBusiness?.name}</DialogDescription></DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-              <div><Label className="text-sm font-semibold">Consultorio privado</Label><p className="text-xs text-muted-foreground">Habilitar dominio personalizado</p></div>
-              <Switch checked={editingPrivateClinic.isPrivateClinic} onCheckedChange={checked => setEditingPrivateClinic({ ...editingPrivateClinic, isPrivateClinic: checked })} />
-            </div>
-            <div className="space-y-2"><Label>Subdominio</Label><div className="flex items-center gap-1"><Input value={editingPrivateClinic.customSubdomain} onChange={e => setEditingPrivateClinic({ ...editingPrivateClinic, customSubdomain: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "") })} placeholder="psilaura" className="flex-1" /><span className="text-sm text-muted-foreground">.tudominio.com</span></div></div>
-            <div className="space-y-2"><Label>Dominio propio (opcional)</Label><Input value={editingPrivateClinic.customDomain} onChange={e => setEditingPrivateClinic({ ...editingPrivateClinic, customDomain: e.target.value.toLowerCase() })} placeholder="psicologalaura.com" /></div>
-            {selectedBusiness && (editingPrivateClinic.customDomain || editingPrivateClinic.customSubdomain) && (
-              <div className="space-y-2"><Label>URL calculada</Label><div className="p-3 bg-muted rounded-md text-sm font-mono break-all">{editingPrivateClinic.customDomain ? `https://${editingPrivateClinic.customDomain}` : `https://${editingPrivateClinic.customSubdomain}.tudominio.com`}</div></div>
-            )}
-          </div>
-          <div className="flex gap-3"><Button variant="outline" className="flex-1" onClick={() => setShowPrivateClinicModal(false)}>Cancelar</Button><Button className="flex-1" onClick={handleSavePrivateClinic} disabled={savingPrivateClinic}>{savingPrivateClinic && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Guardar</Button></div>
         </DialogContent>
       </Dialog>
 
