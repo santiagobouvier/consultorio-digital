@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -69,16 +69,19 @@ export const PaymentPolicySettings = ({ businessId }: Props) => {
     loadMpConfig();
   }, [businessId]);
 
-  // Handle OAuth callback
+  // Handle OAuth callback — cada código se procesa UNA sola vez, aunque el
+  // efecto se dispare de nuevo (remonta, recarga, StrictMode): sin esto, un
+  // mismo code podía intentar canjearse dos veces y el segundo intento
+  // fallaba con error a la vista.
+  const processedOAuthCode = useRef<string | null>(null);
   useEffect(() => {
     const code = searchParams.get("code");
     const mpConnectedParam = searchParams.get("mp_connected");
     const mpCode = searchParams.get("mp_code");
-    if (code && mpConnectedParam === "true") {
-      handleMPOAuthCallback(code);
-    } else if (mpCode) {
-      handleMPOAuthCallback(mpCode);
-    }
+    const oauthCode = code && mpConnectedParam === "true" ? code : mpCode;
+    if (!oauthCode || processedOAuthCode.current === oauthCode) return;
+    processedOAuthCode.current = oauthCode;
+    handleMPOAuthCallback(oauthCode);
   }, [searchParams]);
 
   const loadMpConfig = async () => {
@@ -143,17 +146,17 @@ export const PaymentPolicySettings = ({ businessId }: Props) => {
 
       toast({ title: "¡Mercado Pago conectado!", description: "Ya podés configurar los cobros online." });
       setMpConnected(true);
-      // Clean URL params
-      searchParams.delete("code");
-      searchParams.delete("mp_connected");
-      searchParams.delete("mp_code");
-      searchParams.delete("tab");
-      setSearchParams(searchParams, { replace: true });
       await loadPolicy();
     } catch (err) {
       console.error("MP OAuth error:", err);
       toast({ title: "Error", description: "No se pudo conectar Mercado Pago. Intentá de nuevo.", variant: "destructive" });
     } finally {
+      // Limpiar los params SIEMPRE (éxito o error): un code de OAuth es de un
+      // solo uso — si queda en la URL, cada recarga lo reintenta y falla.
+      searchParams.delete("code");
+      searchParams.delete("mp_connected");
+      searchParams.delete("mp_code");
+      setSearchParams(searchParams, { replace: true });
       setProcessingOAuth(false);
     }
   };
