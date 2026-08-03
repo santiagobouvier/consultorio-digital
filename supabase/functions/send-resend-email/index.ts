@@ -19,7 +19,7 @@ const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 interface SendEmailRequest {
   to: string;
-  template: "appointment_confirmation" | "appointment_reminder" | "patient_invite" | "raw";
+  template: "appointment_confirmation" | "appointment_reminder" | "patient_invite" | "business_activation" | "raw";
   businessId?: string;
   data: Record<string, any>;
 }
@@ -144,6 +144,34 @@ function tplPatientInvite(branding: BrandingInfo, d: any): { subject: string; ht
   return { subject: `Invitación al portal — ${branding.name}`, html: shell(branding, body) };
 }
 
+// Invitación para que un profesional active su consultorio (la manda el
+// admin desde el panel). Botón grande y protagonista: es el primer contacto
+// del cliente con la marca, tiene que verse impecable.
+function tplBusinessActivation(branding: BrandingInfo, d: any): { subject: string; html: string } {
+  const accent = `hsl(${branding.primaryColor})`;
+  const url = String(d.activationUrl || "");
+  const body = `
+    <h1 style="font-size:22px;margin:0 0 6px;text-align:center;">¡Tu consultorio te está esperando! 🎉</h1>
+    <p style="color:#374151;line-height:1.6;margin:0 0 18px;text-align:center;">
+      Te damos la bienvenida a <strong>Consultorio Digital</strong>. Activá tu cuenta,
+      definí tu contraseña y dejá tu consultorio funcionando en minutos.
+    </p>
+    ${btn("Activar mi consultorio", url, accent)}
+    <div style="background:#f8fafc;border:1px solid #e6e8eb;border-radius:10px;padding:14px 18px;margin:20px 0;">
+      <p style="margin:0 0 8px;color:#111;font-weight:600;font-size:13px;">Lo que vas a tener desde hoy:</p>
+      <p style="margin:5px 0;color:#374151;font-size:13px;">✓ Agenda online y reservas desde tu propia página</p>
+      <p style="margin:5px 0;color:#374151;font-size:13px;">✓ Recordatorios automáticos por WhatsApp para tus pacientes</p>
+      <p style="margin:5px 0;color:#374151;font-size:13px;">✓ Portal del paciente, pagos y ficha clínica en un solo lugar</p>
+    </div>
+    <p style="color:#6b7280;font-size:12px;line-height:1.5;margin:14px 0 0;">
+      El enlace es personal y vence en 7 días. Si el botón no funciona, copiá y pegá esta URL en tu navegador:<br />
+      <a href="${escapeHtml(url)}" style="color:#374151;word-break:break-all;">${escapeHtml(url)}</a>
+    </p>
+    <p style="color:#6b7280;font-size:12px;margin:10px 0 0;">Si no esperabas este correo, podés ignorarlo.</p>
+  `;
+  return { subject: "Activá tu consultorio — te toma 2 minutos 🚀", html: shell(branding, body) };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -174,6 +202,8 @@ Deno.serve(async (req) => {
       ({ subject, html } = tplAppointmentReminder(branding, data || {}));
     } else if (template === "patient_invite") {
       ({ subject, html } = tplPatientInvite(branding, data || {}));
+    } else if (template === "business_activation") {
+      ({ subject, html } = tplBusinessActivation(branding, data || {}));
     } else if (template === "raw") {
       subject = data?.subject || `Mensaje — ${branding.name}`;
       html = shell(branding, `<p style="color:#374151;line-height:1.6;white-space:pre-line;">${escapeHtml(data?.message || "")}</p>`);

@@ -130,18 +130,8 @@ Deno.serve(async (req) => {
           },
           body: JSON.stringify({
             to: email,
-            template: "raw",
-            data: {
-              subject: `Activá tu consultorio en Consultorio Digital`,
-              message:
-                `¡Hola!\n\n` +
-                `Te damos la bienvenida a Consultorio Digital. Para activar el consultorio "${trimmedName}" ` +
-                `y empezar a usarlo, hacé clic en el siguiente enlace y definí tu contraseña de acceso:\n\n` +
-                `${activationUrl}\n\n` +
-                `Este enlace es personal y vence en 7 días.\n\n` +
-                `Si no esperabas este correo, podés ignorarlo.\n\n` +
-                `— El equipo de Consultorio Digital`,
-            },
+            template: "business_activation",
+            data: { activationUrl },
           }),
         });
         emailSent = emailResp.ok;
