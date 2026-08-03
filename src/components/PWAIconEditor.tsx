@@ -4,6 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
 import { Upload, Building2, RotateCcw } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
+
+// Las fotos de cámara/stock pueden medir 4000-6000px: cargarlas enteras al
+// recortador infla la memoria de la pestaña hasta tirarla abajo (se veía
+// como una página que se recarga en bucle). Para un ícono de 512px alcanza
+// con mucho menos: se reescala la imagen ANTES de entrar al editor.
+const MAX_SOURCE_DIM = 1600;
+const MAX_FILE_MB = 12;
 
 interface PWAIconEditorProps {
   /** URL pública del ícono ya generado (preview tras guardar). */
@@ -50,14 +58,33 @@ export const PWAIconEditor = ({
     }
   }, [sourceImage, croppedAreaPixels, bgColor, onPendingChange]);
 
-  const handleFile = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      setSourceImage(reader.result as string);
+  const handleFile = async (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "Ese archivo no es una imagen", description: "Subí un PNG, JPG o SVG.", variant: "destructive" });
+      return;
+    }
+    if (file.size > MAX_FILE_MB * 1024 * 1024) {
+      toast({ title: "Imagen demasiado pesada", description: `El máximo es ${MAX_FILE_MB}MB. Probá con una versión más liviana.`, variant: "destructive" });
+      return;
+    }
+    try {
+      const objectUrl = URL.createObjectURL(file);
+      const img = await loadImage(objectUrl);
+      const scale = Math.min(1, MAX_SOURCE_DIM / Math.max(img.width, img.height, 1));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(img.width * scale));
+      canvas.height = Math.max(1, Math.round(img.height * scale));
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("Canvas no disponible");
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(objectUrl);
+      setSourceImage(canvas.toDataURL("image/png"));
       setCrop({ x: 0, y: 0 });
       setZoom(1);
-    };
-    reader.readAsDataURL(file);
+    } catch (e) {
+      console.error("[PWAIconEditor] No se pudo procesar la imagen:", e);
+      toast({ title: "No pudimos leer esa imagen", description: "Probá con otro archivo (PNG o JPG).", variant: "destructive" });
+    }
   };
 
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -196,7 +223,8 @@ export const PWAIconEditor = ({
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Este ícono es el que ven los pacientes cuando instalan tu consultorio en el celular. PNG, JPG o SVG. Máx 2MB.
+        Este ícono es el que ven los pacientes cuando instalan tu consultorio en el celular.
+        PNG, JPG o SVG — si la foto es muy grande, la ajustamos solos.
       </p>
     </div>
   );
