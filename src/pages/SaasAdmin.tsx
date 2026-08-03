@@ -181,6 +181,7 @@ const SaasAdmin = () => {
   const [editEmail, setEditEmail] = useState("");
   const [editPlan, setEditPlan] = useState("");
   const [editIsActive, setEditIsActive] = useState(true);
+  const [editNoBilling, setEditNoBilling] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showActivateModal, setShowActivateModal] = useState(false);
   const [businessToActivate, setBusinessToActivate] = useState<BusinessWithDetails | null>(null);
@@ -392,14 +393,14 @@ const SaasAdmin = () => {
   };
 
   const openEditModal = (b: BusinessWithDetails) => {
-    setBusinessToEdit(b); setEditName(b.name); setEditEmail(b.ownerEmail || ""); setEditPlan(b.planCode); setEditIsActive(b.isActive); setShowEditModal(true);
+    setBusinessToEdit(b); setEditName(b.name); setEditEmail(b.ownerEmail || ""); setEditPlan(b.planCode); setEditIsActive(b.isActive); setEditNoBilling(b.isDemo); setShowEditModal(true);
   };
 
   const handleEditBusiness = async () => {
     if (!businessToEdit || !editName.trim()) { toast({ title: "Error", description: "El nombre es requerido", variant: "destructive" }); return; }
     try {
       setSaving(true);
-      const { error } = await supabase.from("businesses").update({ name: editName.trim(), plan_code: editPlan, is_active: editIsActive }).eq("id", businessToEdit.id);
+      const { error } = await supabase.from("businesses").update({ name: editName.trim(), plan_code: editPlan, is_active: editIsActive, is_demo: editNoBilling }).eq("id", businessToEdit.id);
       if (error) throw error;
       toast({ title: "Consultorio actualizado" }); setShowEditModal(false); setBusinessToEdit(null); await loadData();
     } catch (error: any) { toast({ title: "Error", description: error.message || "No se pudo actualizar", variant: "destructive" }); } finally { setSaving(false); }
@@ -1218,6 +1219,13 @@ const SaasAdmin = () => {
             <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
               <div><Label className="text-sm font-semibold">Estado activo</Label><p className="text-xs text-muted-foreground">Desactivar pausa el acceso</p></div>
               <Switch checked={editIsActive} onCheckedChange={setEditIsActive} />
+            </div>
+            <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+              <div>
+                <Label className="text-sm font-semibold">Desactivar cobro en el sistema</Label>
+                <p className="text-xs text-muted-foreground">Sigue funcionando normal, pero no cuenta en Finanzas ni en los KPIs (cortesía/prueba)</p>
+              </div>
+              <Switch checked={editNoBilling} onCheckedChange={setEditNoBilling} />
             </div>
           </div>
           <div className="flex gap-3"><Button variant="outline" className="flex-1" onClick={() => { setShowEditModal(false); setBusinessToEdit(null); }}>Cancelar</Button><Button className="flex-1" onClick={handleEditBusiness} disabled={saving}>{saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Guardar</Button></div>
