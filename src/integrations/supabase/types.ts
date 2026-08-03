@@ -702,6 +702,7 @@ export type Database = {
           max_booking_horizon_days: number
           min_booking_notice_hours: number
           name: string
+          no_billing_until: string | null
           onboarding_completed: boolean
           onboarding_link_shared_at: string | null
           owner_user_id: string
@@ -740,6 +741,7 @@ export type Database = {
           max_booking_horizon_days?: number
           min_booking_notice_hours?: number
           name: string
+          no_billing_until?: string | null
           onboarding_completed?: boolean
           onboarding_link_shared_at?: string | null
           owner_user_id: string
@@ -778,6 +780,7 @@ export type Database = {
           max_booking_horizon_days?: number
           min_booking_notice_hours?: number
           name?: string
+          no_billing_until?: string | null
           onboarding_completed?: boolean
           onboarding_link_shared_at?: string | null
           owner_user_id?: string
