@@ -118,7 +118,13 @@ export const PaymentPolicySettings = ({ businessId }: Props) => {
           setDepositPercentage(50);
         }
       }
-
+    } catch (err) {
+      console.error("Error loading payment policy:", err);
+    } finally {
+      setLoading(false);
+    }
+    // Precio de sesión: fuera del camino crítico, no bloquea el render
+    try {
       const { data: biz } = await supabase
         .from("businesses")
         .select("default_session_price")
@@ -135,18 +141,18 @@ export const PaymentPolicySettings = ({ businessId }: Props) => {
   const handleMPOAuthCallback = async (code: string) => {
     try {
       setProcessingOAuth(true);
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-
-      const { data, error } = await supabase.functions.invoke("connect-mercadopago", {
+      // El invoke ya viaja autenticado; el único paso que de verdad lleva
+      // tiempo es el intercambio de credenciales con Mercado Pago.
+      const { error } = await supabase.functions.invoke("connect-mercadopago", {
         body: { code, business_id: businessId },
       });
 
       if (error) throw error;
 
+      // Éxito: se muestra YA — el refresco de la política corre de fondo.
       toast({ title: "¡Mercado Pago conectado!", description: "Ya podés configurar los cobros online." });
       setMpConnected(true);
-      await loadPolicy();
+      void loadPolicy();
     } catch (err) {
       console.error("MP OAuth error:", err);
       toast({ title: "Error", description: "No se pudo conectar Mercado Pago. Intentá de nuevo.", variant: "destructive" });
