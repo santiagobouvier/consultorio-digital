@@ -112,11 +112,12 @@ const AvailableSlots = () => {
             </span>
             <div className="min-w-0">
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight inline-flex items-center gap-2">
-                Horarios
+                Horarios y sesiones
                 <HelpTooltip id="schedules" />
               </h1>
               <p className="text-sm text-muted-foreground">
-                Definí cuándo atendés — los horarios para reservar se calculan solos.
+                Definí cuándo atendés y qué tipos de sesión ofrecés (duración y precio) —
+                la reserva online se arma sola con esto.
               </p>
             </div>
           </div>

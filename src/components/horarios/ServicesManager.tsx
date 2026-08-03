@@ -153,7 +153,8 @@ export function ServicesManager({ businessId }: Props) {
               Tipos de sesión
             </CardTitle>
             <CardDescription>
-              Lo que ofrecés: cada tipo tiene su duración y precio. Tus pacientes van a elegir uno al reservar.
+              Lo que ofrecés en tu reserva online: cada tipo tiene su duración y su precio.
+              Acá cambiás precios o agregás sesiones nuevas cuando quieras.
             </CardDescription>
           </div>
           <Button size="sm" onClick={openCreate}>

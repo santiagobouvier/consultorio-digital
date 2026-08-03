@@ -38,7 +38,7 @@ const dashboardItems = [
 
 const agendaItems = [
   { title: "Agenda", url: "/agenda", icon: CalendarDays },
-  { title: "Horarios", url: "/horarios-disponibles", icon: AlarmClock },
+  { title: "Horarios y sesiones", url: "/horarios-disponibles", icon: AlarmClock },
   { title: "Solicitudes", url: "/solicitudes", icon: FileText },
 ];
 
