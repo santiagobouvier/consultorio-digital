@@ -71,9 +71,9 @@ const SuperAdminGuard = lazy(() => import("./components/SuperAdminGuard"));
 
 class ChunkLoadRecoveryBoundary extends Component<
   { children: ReactNode },
-  { chunkLoadFailed: boolean; error: unknown }
+  { chunkLoadFailed: boolean; error: unknown; needsManualReload: boolean }
 > {
-  state = { chunkLoadFailed: false, error: null };
+  state = { chunkLoadFailed: false, error: null, needsManualReload: false };
 
   static getDerivedStateFromError(error: unknown) {
     return { chunkLoadFailed: isChunkLoadFailure(error), error };
@@ -81,7 +81,12 @@ class ChunkLoadRecoveryBoundary extends Component<
 
   componentDidCatch(error: unknown, errorInfo: ErrorInfo) {
     if (isChunkLoadFailure(error)) {
-      void recoverFromChunkLoadFailure({ unregisterServiceWorkers: true });
+      // La recuperación automática tiene un freno anti-bucle (1 recarga cada
+      // 2 min por pestaña). Si declina recargar, NO dejamos el spinner eterno:
+      // mostramos un botón para que la persona recargue cuando quiera.
+      void recoverFromChunkLoadFailure({ unregisterServiceWorkers: true }).then((reloading) => {
+        if (!reloading) this.setState({ needsManualReload: true });
+      });
       return;
     }
 
@@ -90,6 +95,27 @@ class ChunkLoadRecoveryBoundary extends Component<
 
   render() {
     if (this.state.chunkLoadFailed) {
+      if (this.state.needsManualReload) {
+        return (
+          <div className="min-h-screen flex items-center justify-center bg-background p-6">
+            <div className="max-w-sm w-full text-center space-y-4">
+              <p className="text-lg font-semibold text-foreground">
+                Hay una versión nueva de la app
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Se actualizó mientras esta pestaña estaba abierta. Recargá para
+                seguir donde estabas.
+              </p>
+              <button
+                onClick={() => window.location.reload()}
+                className="w-full h-11 rounded-xl bg-primary text-primary-foreground font-semibold text-sm"
+              >
+                Recargar ahora
+              </button>
+            </div>
+          </div>
+        );
+      }
       return <LoadingPage />;
     }
 
