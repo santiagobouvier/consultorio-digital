@@ -68,10 +68,18 @@ interface BusinessWithDetails {
   customSubdomain?: string | null;
   customDomain?: string | null;
   isDemo: boolean;
+  /** Cortesía con fecha: al llegar, el listado avisa para retomar el cobro */
+  noBillingUntil: string | null;
   subscriptionStatus: "trial" | "active" | "expired" | "cancelled" | "none";
   trialDaysLeft: number | null;
   mpConnected: boolean; // true si la suscripción tiene cobro automático por Mercado Pago
 }
+
+const noBillingDue = (b: { isDemo: boolean; noBillingUntil: string | null }) =>
+  b.isDemo && !!b.noBillingUntil && new Date(b.noBillingUntil + "T23:59:59") < new Date();
+
+const formatShortDate = (iso: string) =>
+  new Date(iso + "T12:00:00").toLocaleDateString("es-UY", { day: "numeric", month: "short" });
 
 interface SaasMetrics {
   totalBusinesses: number;
@@ -182,6 +190,7 @@ const SaasAdmin = () => {
   const [editPlan, setEditPlan] = useState("");
   const [editIsActive, setEditIsActive] = useState(true);
   const [editNoBilling, setEditNoBilling] = useState(false);
+  const [editNoBillingUntil, setEditNoBillingUntil] = useState("");
   const [saving, setSaving] = useState(false);
   const [showActivateModal, setShowActivateModal] = useState(false);
   const [businessToActivate, setBusinessToActivate] = useState<BusinessWithDetails | null>(null);
@@ -244,6 +253,7 @@ const SaasAdmin = () => {
         customMaxProfessionals: b.custom_max_professionals, customMaxPatients: b.custom_max_patients,
         billingPeriod: b.billing_period || "annual", isPrivateClinic: b.is_private_clinic || false,
         customSubdomain: b.custom_subdomain || null, customDomain: b.custom_domain || null, isDemo: b.is_demo || false,
+        noBillingUntil: (b as any).no_billing_until || null,
       }));
       setBusinesses(businessesWithDetails);
       const estimatedRevenue = businessesWithDetails.reduce((sum, b) => sum + getPlanMonthlyRevenue(b.planCode, b.billingPeriod), 0);
@@ -393,14 +403,26 @@ const SaasAdmin = () => {
   };
 
   const openEditModal = (b: BusinessWithDetails) => {
-    setBusinessToEdit(b); setEditName(b.name); setEditEmail(b.ownerEmail || ""); setEditPlan(b.planCode); setEditIsActive(b.isActive); setEditNoBilling(b.isDemo); setShowEditModal(true);
+    setBusinessToEdit(b); setEditName(b.name); setEditEmail(b.ownerEmail || ""); setEditPlan(b.planCode); setEditIsActive(b.isActive); setEditNoBilling(b.isDemo); setEditNoBillingUntil(b.noBillingUntil ? b.noBillingUntil.slice(0, 10) : ""); setShowEditModal(true);
   };
 
   const handleEditBusiness = async () => {
     if (!businessToEdit || !editName.trim()) { toast({ title: "Error", description: "El nombre es requerido", variant: "destructive" }); return; }
     try {
       setSaving(true);
-      const { error } = await supabase.from("businesses").update({ name: editName.trim(), plan_code: editPlan, is_active: editIsActive, is_demo: editNoBilling }).eq("id", businessToEdit.id);
+      const payload: any = {
+        name: editName.trim(), plan_code: editPlan, is_active: editIsActive, is_demo: editNoBilling,
+        no_billing_until: editNoBilling && editNoBillingUntil ? editNoBillingUntil : null,
+      };
+      let { error } = await supabase.from("businesses").update(payload).eq("id", businessToEdit.id);
+      if (error && String(error.message || "").includes("no_billing_until")) {
+        // La columna todavía no existe en la base: guardamos el resto igual.
+        delete payload.no_billing_until;
+        ({ error } = await supabase.from("businesses").update(payload).eq("id", businessToEdit.id));
+        if (!error && editNoBillingUntil) {
+          toast({ title: "Falta un paso en la base", description: "La fecha de aviso no se guardó: corré el SQL de la columna no_billing_until.", variant: "destructive" });
+        }
+      }
       if (error) throw error;
       toast({ title: "Consultorio actualizado" }); setShowEditModal(false); setBusinessToEdit(null); await loadData();
     } catch (error: any) { toast({ title: "Error", description: error.message || "No se pudo actualizar", variant: "destructive" }); } finally { setSaving(false); }
@@ -546,8 +568,10 @@ const SaasAdmin = () => {
     }
   };
 
-  const demoBusinessExists = businesses.some(b => b.isDemo);
-  const demoBusiness = businesses.find(b => b.isDemo);
+  // La demo "de verdad" es la que crea "Crear Demo" (slug demo-psicologia-*);
+  // un consultorio real con cobro desactivado (cortesía) no cuenta como demo.
+  const demoBusiness = businesses.find(b => b.isDemo && b.public_slug?.startsWith("demo-psicologia"));
+  const demoBusinessExists = !!demoBusiness;
 
   const handleCreateDemo = async () => {
     try {
@@ -631,6 +655,9 @@ const SaasAdmin = () => {
     () => invites.filter(i => !i.used_at && new Date(i.expires_at) >= new Date()).length,
     [invites],
   );
+
+  // Cortesías que llegaron a su fecha de aviso: hora de retomar el cobro
+  const noBillingDueList = useMemo(() => businesses.filter(noBillingDue), [businesses]);
 
   // Count businesses at limit
   const atLimitCount = useMemo(() => businesses.filter(b => {
@@ -720,6 +747,18 @@ const SaasAdmin = () => {
             </div>
           ))}
         </div>
+
+        {/* Cortesías vencidas: retomar el cobro */}
+        {noBillingDueList.length > 0 && (
+          <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-500/10 border border-amber-500/25 text-sm">
+            <DollarSign className="h-4 w-4 text-amber-500 shrink-0" />
+            <span className="text-amber-500 font-medium">
+              {noBillingDueList.length === 1
+                ? `"${noBillingDueList[0].name}" llegó a su fecha límite sin cobro — hora de retomar el cobro`
+                : `${noBillingDueList.length} consultorios llegaron a su fecha límite sin cobro — hora de retomar el cobro`}
+            </span>
+          </div>
+        )}
 
         {/* Alert bar for businesses at limit */}
         {atLimitCount > 0 && (
@@ -829,7 +868,7 @@ const SaasAdmin = () => {
                           <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${statusDot}`} />
                           <h3 className="font-medium text-sm text-foreground truncate">{business.name}</h3>
                           {business.isDemo && (
-                            <span className="text-[9px] uppercase tracking-wider text-amber-600 font-semibold shrink-0">Demo</span>
+                            <span className={`text-[9px] uppercase tracking-wider font-semibold shrink-0 ${noBillingDue(business) ? "text-destructive" : "text-amber-600"}`}>Sin cobro</span>
                           )}
                         </div>
                         <div className="flex items-center gap-2 text-xs text-muted-foreground tabular-nums">
@@ -844,7 +883,7 @@ const SaasAdmin = () => {
                           </span>
                           <span className="text-muted-foreground/40">·</span>
                           <span className={`shrink-0 ${business.subscriptionStatus === "active" ? (business.mpConnected ? "text-success" : "text-amber-500") : business.subscriptionStatus === "expired" ? "text-destructive" : business.subscriptionStatus === "trial" ? "text-amber-500" : ""}`}>
-                            {business.isDemo ? "Demo" : business.subscriptionStatus === "active" ? (business.mpConnected ? "Pagando" : "Activa (manual)") : business.subscriptionStatus === "trial" ? `Prueba ${business.trialDaysLeft}d` : business.subscriptionStatus === "expired" ? "Expirado" : business.subscriptionStatus === "cancelled" ? "Cancelado" : !business.isActive ? "Inactivo" : "Sin plan"}
+                            {business.isDemo ? (noBillingDue(business) ? "Sin cobro · retomar" : "Sin cobro") : business.subscriptionStatus === "active" ? (business.mpConnected ? "Pagando" : "Activa (manual)") : business.subscriptionStatus === "trial" ? `Prueba ${business.trialDaysLeft}d` : business.subscriptionStatus === "expired" ? "Expirado" : business.subscriptionStatus === "cancelled" ? "Cancelado" : !business.isActive ? "Inactivo" : "Sin plan"}
                           </span>
                         </div>
                       </div>
@@ -911,7 +950,7 @@ const SaasAdmin = () => {
                               <div className="min-w-0">
                                 <div className="flex items-center gap-2">
                                   <span className={`font-medium text-foreground truncate max-w-[200px] ${compactMode ? 'text-sm' : 'text-base'}`}>{business.name}</span>
-                                  {business.isDemo && <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-500 text-amber-600">Demo</Badge>}
+                                  {business.isDemo && <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${noBillingDue(business) ? "border-destructive text-destructive" : "border-amber-500 text-amber-600"}`}>Sin cobro</Badge>}
                                   {business.isPrivateClinic && <Shield className="h-3.5 w-3.5 text-muted-foreground" />}
                                 </div>
                               </div>
@@ -943,7 +982,11 @@ const SaasAdmin = () => {
                           </TableCell>
                           <TableCell className={`text-center ${compactMode ? 'py-2.5' : 'py-4'}`}>
                             {(() => {
-                              if (business.isDemo) return <Badge variant="outline" className="text-[10px] px-2 py-0.5 border-amber-500/40 text-amber-500">Demo</Badge>;
+                              if (business.isDemo) {
+                                if (noBillingDue(business)) return <Badge variant="secondary" className="text-[10px] px-2 py-0.5 bg-destructive/10 text-destructive">Sin cobro · retomar</Badge>;
+                                if (business.noBillingUntil) return <Badge variant="outline" className="text-[10px] px-2 py-0.5 border-amber-500/40 text-amber-500">Sin cobro · hasta {formatShortDate(business.noBillingUntil)}</Badge>;
+                                return <Badge variant="outline" className="text-[10px] px-2 py-0.5 border-amber-500/40 text-amber-500">Sin cobro</Badge>;
+                              }
                               if (!business.isActive) return <Badge variant="secondary" className="text-[10px] px-2 py-0.5 bg-muted text-muted-foreground">Inactivo</Badge>;
                               if (business.subscriptionStatus === "active") return business.mpConnected
                                 ? <Badge variant="secondary" className="text-[10px] px-2 py-0.5 bg-success/10 text-success">Pagando</Badge>
@@ -1220,12 +1263,23 @@ const SaasAdmin = () => {
               <div><Label className="text-sm font-semibold">Estado activo</Label><p className="text-xs text-muted-foreground">Desactivar pausa el acceso</p></div>
               <Switch checked={editIsActive} onCheckedChange={setEditIsActive} />
             </div>
-            <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-              <div>
-                <Label className="text-sm font-semibold">Desactivar cobro en el sistema</Label>
-                <p className="text-xs text-muted-foreground">Sigue funcionando normal, pero no cuenta en Finanzas ni en los KPIs (cortesía/prueba)</p>
+            <div className="p-3 bg-muted/50 rounded-lg space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-sm font-semibold">Desactivar cobro en el sistema</Label>
+                  <p className="text-xs text-muted-foreground">Sigue funcionando normal, pero no cuenta en Finanzas ni en los KPIs (cortesía/prueba)</p>
+                </div>
+                <Switch checked={editNoBilling} onCheckedChange={setEditNoBilling} />
               </div>
-              <Switch checked={editNoBilling} onCheckedChange={setEditNoBilling} />
+              {editNoBilling && (
+                <div className="space-y-1.5 pt-1 border-t border-border/50">
+                  <Label className="text-xs font-semibold">Avisarme a partir de (opcional)</Label>
+                  <Input type="date" value={editNoBillingUntil} onChange={e => setEditNoBillingUntil(e.target.value)} className="h-9" />
+                  <p className="text-xs text-muted-foreground">
+                    Cuando llegue esa fecha, el listado te muestra un aviso para retomar el cobro. Vacío = sin límite.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
           <div className="flex gap-3"><Button variant="outline" className="flex-1" onClick={() => { setShowEditModal(false); setBusinessToEdit(null); }}>Cancelar</Button><Button className="flex-1" onClick={handleEditBusiness} disabled={saving}>{saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Guardar</Button></div>
