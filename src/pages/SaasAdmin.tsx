@@ -447,14 +447,17 @@ const SaasAdmin = () => {
     if (!businessToActivate) return;
     try {
       setActivating(true);
-      // "trial" → prueba de 15 días que vence sola. "active" → cuenta activa
-      // (acceso pleno, sin cobro automático; se cobra manual hasta que se suscriba por MP).
-      const newStatus = activateType === "trial" ? "trial" : "active";
-      // Duración elegible: activar de nuevo con más días = extender el acceso
-      // (Billing lee esta misma ficha, así que se refleja al instante).
+      // "trial" → prueba con días elegibles que vence sola. "active" → cuenta
+      // activa SIN vencimiento (acceso pleno, sin cobro automático): se corta
+      // a mano desde Editar cuando haga falta.
+      const isTrial = activateType === "trial";
+      const newStatus = isTrial ? "trial" : "active";
       const days = Math.max(1, parseInt(activateDays) || 15);
-      const trialEnd = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
-      const periodEnd = trialEnd;
+      const trialEnd = isTrial
+        ? new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString()
+        : null;
+      // Sin vencimiento real: fecha lejana para que nada lo bloquee por período
+      const periodEnd = trialEnd ?? new Date("2099-01-01T00:00:00Z").toISOString();
 
       // Buscar suscripción actual
       const { data: existingSub } = await supabase
@@ -502,7 +505,7 @@ const SaasAdmin = () => {
       toast({
         title: activateType === "trial"
           ? `Prueba de ${days} días activada`
-          : `Cuenta activada por ${days} días (sin cobro automático)`,
+          : "Cuenta activada sin vencimiento (sin cobro automático)",
       });
       setShowActivateModal(false);
       setBusinessToActivate(null);
@@ -1311,24 +1314,26 @@ const SaasAdmin = () => {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label>Duración del acceso</Label>
-              <Select value={activateDays} onValueChange={setActivateDays}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="7">7 días</SelectItem>
-                  <SelectItem value="15">15 días</SelectItem>
-                  <SelectItem value="30">30 días</SelectItem>
-                  <SelectItem value="60">60 días</SelectItem>
-                  <SelectItem value="90">90 días</SelectItem>
-                  <SelectItem value="180">180 días</SelectItem>
-                  <SelectItem value="365">1 año</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                Volver a activar con más días extiende el acceso; Billing lo refleja al instante.
-              </p>
-            </div>
+            {activateType === "trial" && (
+              <div className="space-y-2">
+                <Label>Duración de la prueba</Label>
+                <Select value={activateDays} onValueChange={setActivateDays}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="7">7 días</SelectItem>
+                    <SelectItem value="15">15 días</SelectItem>
+                    <SelectItem value="30">30 días</SelectItem>
+                    <SelectItem value="60">60 días</SelectItem>
+                    <SelectItem value="90">90 días</SelectItem>
+                    <SelectItem value="180">180 días</SelectItem>
+                    <SelectItem value="365">1 año</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Volver a activar con más días extiende la prueba; Billing lo refleja al instante.
+                </p>
+              </div>
+            )}
             <div className="space-y-2">
               <Label>Plan a asignar</Label>
               <Select value={activatePlan} onValueChange={setActivatePlan}>
@@ -1345,7 +1350,7 @@ const SaasAdmin = () => {
               <AlertDescription className="text-xs">
                 {activateType === "trial"
                   ? `Crea una prueba gratuita de ${activateDays} días. Al vencer, la cuenta se bloquea y la persona paga por Mercado Pago.`
-                  : `Deja la cuenta activa ${activateDays} días con acceso pleno y SIN cobro automático. Al vencer se bloquea; la cobrás manualmente y la volvés a extender desde acá, hasta que se suscriba por Mercado Pago.`}
+                  : "Deja la cuenta activa con acceso pleno, SIN cobro automático y SIN vencimiento. La cobrás por fuera (transferencia, etc.) y si el cliente deja de pagar, la cortás vos desde Editar o pasándola a una prueba."}
               </AlertDescription>
             </Alert>
           </div>
