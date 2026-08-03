@@ -292,46 +292,51 @@ export function PremiumSidebar() {
 
         {/* Content */}
         <div className="relative flex flex-col h-full">
-          {/* Logo area: la marca del consultorio con presencia */}
-          <div className={cn("flex items-center h-[72px]", expanded ? "px-3" : "justify-center px-0")}>
-            <div className="flex items-center gap-3 min-w-0">
-              {logoUrl ? (
-                <img
-                  src={logoUrl}
-                  alt="Logo"
-                  loading="lazy"
-                  decoding="async"
-                  className="w-11 h-11 rounded-xl object-cover shrink-0"
-                  style={{
-                    boxShadow: `0 0 0 2px ${brandHsla(0.35)}, 0 8px 24px -6px ${brandHsla(0.5)}`,
-                  }}
-                />
-              ) : (
-                <span
-                  className="w-11 h-11 rounded-xl shrink-0 flex items-center justify-center"
-                  style={{
-                    background: brandHsla(0.12),
-                    boxShadow: `0 0 0 2px ${brandHsla(0.3)}, 0 8px 24px -6px ${brandHsla(0.4)}`,
-                  }}
-                >
-                  <img
-                    src={consultorioLogo}
-                    alt="Consultorio Digital"
-                    className="h-8 w-8 object-contain"
-                  />
-                </span>
-              )}
+          {/* Logo area: la marca del consultorio con presencia. Aire generoso
+              y nombre hasta en dos líneas: "Consultorio Camila Rodriguez"
+              tiene que verse tan bien como "Mente Clara". */}
+          <div
+            className={cn(
+              "flex items-center border-b border-white/[0.06]",
+              expanded ? "gap-3 px-4 py-4 min-h-[76px]" : "justify-center px-0 h-[72px]"
+            )}
+          >
+            {logoUrl ? (
+              <img
+                src={logoUrl}
+                alt="Logo"
+                loading="lazy"
+                decoding="async"
+                className="w-11 h-11 rounded-xl object-cover shrink-0"
+                style={{
+                  boxShadow: `0 0 0 2px ${brandHsla(0.35)}, 0 8px 24px -6px ${brandHsla(0.5)}`,
+                }}
+              />
+            ) : (
               <span
-                className={cn(
-                  "text-sm font-semibold text-white/85 whitespace-nowrap tracking-tight transition-all duration-200",
-                  expanded
-                    ? "opacity-100 translate-x-0"
-                    : "opacity-0 -translate-x-2 absolute pointer-events-none"
-                )}
+                className="w-11 h-11 rounded-xl shrink-0 flex items-center justify-center"
+                style={{
+                  background: brandHsla(0.12),
+                  boxShadow: `0 0 0 2px ${brandHsla(0.3)}, 0 8px 24px -6px ${brandHsla(0.4)}`,
+                }}
               >
-                {displayName || "Consultorio"}
+                <img
+                  src={consultorioLogo}
+                  alt="Consultorio Digital"
+                  className="h-8 w-8 object-contain"
+                />
               </span>
-            </div>
+            )}
+            <span
+              className={cn(
+                "text-[13px] font-semibold text-white/90 leading-snug tracking-tight transition-all duration-200 min-w-0 break-words line-clamp-2 pr-1",
+                expanded
+                  ? "opacity-100 translate-x-0"
+                  : "opacity-0 -translate-x-2 absolute pointer-events-none"
+              )}
+            >
+              {displayName || "Consultorio"}
+            </span>
           </div>
 
           {/* Main nav: mismos grupos que el lanzador mobile */}
