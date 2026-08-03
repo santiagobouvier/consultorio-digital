@@ -109,15 +109,29 @@ serve(async (req) => {
     );
     if (!match) return json({ error: "start_not_available" }, 409);
 
-    // Paciente: buscar por teléfono, crear si no existe
-    const { data: existingPatient } = await supabase
+    // Paciente: buscar por teléfono exacto y después por email (el teléfono
+    // puede venir escrito distinto — "+598 98..." vs "098..." — pero el email
+    // es único por consultorio). Crear solo si no existe por ningún camino.
+    const emailPattern = cleanEmail.replace(/([\\%_])/g, "\\$1");
+    const { data: byPhone } = await supabase
       .from("patients")
-      .select("id, email, full_name")
+      .select("id")
       .eq("business_id", business.id)
       .eq("whatsapp_phone", cleanPhone)
       .maybeSingle();
 
-    let patientId = existingPatient?.id;
+    let patientId = byPhone?.id;
+    if (!patientId) {
+      const { data: byEmail } = await supabase
+        .from("patients")
+        .select("id")
+        .eq("business_id", business.id)
+        .ilike("email", emailPattern)
+        .limit(1)
+        .maybeSingle();
+      patientId = byEmail?.id;
+    }
+
     if (!patientId) {
       const { data: newPatient, error: patientError } = await supabase
         .from("patients")
@@ -135,10 +149,27 @@ serve(async (req) => {
         .select("id")
         .maybeSingle();
       if (patientError || !newPatient) {
-        console.error("Error creating patient:", patientError);
-        return json({ error: "patient_creation_failed" }, 500);
+        // 23505 = la ficha ya existía (carrera o duplicado por candado único):
+        // reusarla en vez de tirar la reserva abajo.
+        if ((patientError as { code?: string } | null)?.code === "23505") {
+          const { data: dup } = await supabase
+            .from("patients")
+            .select("id")
+            .eq("business_id", business.id)
+            .ilike("email", emailPattern)
+            .limit(1)
+            .maybeSingle();
+          if (dup?.id) {
+            patientId = dup.id;
+          }
+        }
+        if (!patientId) {
+          console.error("Error creating patient:", patientError);
+          return json({ error: "patient_creation_failed" }, 500);
+        }
+      } else {
+        patientId = newPatient.id;
       }
-      patientId = newPatient.id;
     }
 
     // Modalidad final según el servicio
