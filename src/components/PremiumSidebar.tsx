@@ -66,7 +66,7 @@ const MODULE_GROUPS: { label: string | null; items: NavItem[] }[] = [
   {
     label: "Configuración",
     items: [
-      { title: "Horarios", url: "/horarios-disponibles", icon: AlarmClock, tint: "262 80% 66%" },
+      { title: "Horarios y sesiones", url: "/horarios-disponibles", icon: AlarmClock, tint: "262 80% 66%" },
       { title: "Recordatorios", url: "/recordatorios-pendientes", icon: Clock, tint: "22 90% 58%" },
       { title: "Mi consultorio", url: "/mi-consultorio", icon: Settings, tint: "215 15% 65%" },
       { title: "Portal", url: "/personalizar-portal", icon: Palette, tint: "320 75% 62%" },
