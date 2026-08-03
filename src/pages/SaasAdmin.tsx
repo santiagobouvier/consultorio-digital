@@ -32,6 +32,7 @@ import {
   Loader2, AlertTriangle, ChevronDown, Copy, Check, X, Shield,
   Sparkles, Play, Trash2, Pencil, Search, MoreHorizontal, LogIn,
   Rows3, LayoutGrid, Activity, TrendingUp, Zap, Terminal,
+  Mail, RefreshCw, Ban,
 } from "lucide-react";
 import LoadingPage from "@/components/LoadingPage";
 import { getPlanName, getPlanConfig, checkProfessionalLimit } from "@/hooks/use-plan-limits";
@@ -78,6 +79,30 @@ interface SaasMetrics {
   totalPatients: number;
   estimatedRevenue: number;
 }
+
+// Invitación por email pendiente de activar (pending_business_activations)
+interface PendingInvite {
+  id: string;
+  business_name: string;
+  owner_email: string;
+  plan_code: string;
+  token: string;
+  expires_at: string;
+  used_at: string | null;
+  created_at: string;
+}
+
+const inviteStatus = (inv: PendingInvite): { label: string; cls: string } => {
+  if (inv.used_at) return { label: "Activada", cls: "bg-success/10 text-success" };
+  if (new Date(inv.expires_at) < new Date()) return { label: "Vencida", cls: "bg-destructive/10 text-destructive" };
+  return { label: "Pendiente", cls: "bg-amber-500/10 text-amber-500" };
+};
+
+const inviteActivationUrl = (inv: PendingInvite) =>
+  `https://consultoriodigital.app/activar-consultorio?token=${inv.token}`;
+
+const daysUntil = (iso: string) =>
+  Math.ceil((new Date(iso).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
 
 // ── Helpers ────────────────────────────────────────────
 const getPlanMonthlyRevenue = (planCode: string, billingCycle: string): number => {
@@ -134,7 +159,7 @@ const SaasAdmin = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [newBusinessName, setNewBusinessName] = useState("");
   const [newBusinessEmail, setNewBusinessEmail] = useState("");
-  const [newBusinessPlan, setNewBusinessPlan] = useState("inicial");
+  const [newBusinessPlan, setNewBusinessPlan] = useState("esencial");
   const [createMode, setCreateMode] = useState<"test" | "invite">("test");
   const [newBusinessPassword, setNewBusinessPassword] = useState("");
   const [ownerInviteLink, setOwnerInviteLink] = useState<string | null>(null);
@@ -164,6 +189,10 @@ const SaasAdmin = () => {
   const [activateDays, setActivateDays] = useState("15");
   const [activating, setActivating] = useState(false);
   const [activeSection, setActiveSection] = useState<SaasSection>("home");
+  const [invites, setInvites] = useState<PendingInvite[]>([]);
+  const [inviteToCancel, setInviteToCancel] = useState<PendingInvite | null>(null);
+  const [cancellingInvite, setCancellingInvite] = useState(false);
+  const [resendingInviteId, setResendingInviteId] = useState<string | null>(null);
 
   useEffect(() => { checkAccessAndLoad(); }, []);
 
@@ -218,6 +247,14 @@ const SaasAdmin = () => {
       setBusinesses(businessesWithDetails);
       const estimatedRevenue = businessesWithDetails.reduce((sum, b) => sum + getPlanMonthlyRevenue(b.planCode, b.billingPeriod), 0);
       setMetrics({ totalBusinesses: businessesWithDetails.length, totalProfessionals: rolesData?.length || 0, totalPatients: patientsData?.length || 0, estimatedRevenue });
+
+      // Registro de invitaciones enviadas (RLS: solo super_admin las ve)
+      const { data: invitesData } = await supabase
+        .from("pending_business_activations")
+        .select("id, business_name, owner_email, plan_code, token, expires_at, used_at, created_at")
+        .order("created_at", { ascending: false })
+        .limit(50);
+      setInvites((invitesData ?? []) as PendingInvite[]);
     } catch (error) { console.error("Error loading data:", error); toast({ title: "Error", description: "No se pudo cargar la información", variant: "destructive" }); } finally { setLoading(false); }
   };
 
@@ -269,7 +306,7 @@ const SaasAdmin = () => {
   };
 
   const resetCreateForm = () => {
-    setNewBusinessName(""); setNewBusinessEmail(""); setNewBusinessPlan("inicial");
+    setNewBusinessName(""); setNewBusinessEmail(""); setNewBusinessPlan("esencial");
     setCreateMode("test"); setNewBusinessPassword(""); setOwnerInviteLink(null);
   };
 
@@ -453,6 +490,61 @@ const SaasAdmin = () => {
     }
   };
 
+  // ── Invitaciones: cancelar (el enlace muere al instante) y reenviar ──
+  const handleCancelInvite = async () => {
+    if (!inviteToCancel) return;
+    try {
+      setCancellingInvite(true);
+      const { error } = await supabase
+        .from("pending_business_activations")
+        .delete()
+        .eq("id", inviteToCancel.id);
+      if (error) throw error;
+      setInvites(prev => prev.filter(i => i.id !== inviteToCancel.id));
+      toast({
+        title: "Invitación cancelada",
+        description: `El enlace enviado a ${inviteToCancel.owner_email} quedó inválido: si lo abren, van a ver que ya no sirve.`,
+      });
+      setInviteToCancel(null);
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message || "No se pudo cancelar la invitación", variant: "destructive" });
+    } finally {
+      setCancellingInvite(false);
+    }
+  };
+
+  const handleResendInvite = async (inv: PendingInvite) => {
+    try {
+      setResendingInviteId(inv.id);
+      // create-business-owner borra la invitación anterior sin usar y crea una
+      // nueva con otro token: el correo viejo queda inválido solo.
+      const { data, error } = await supabase.functions.invoke("create-business-owner", {
+        body: {
+          businessName: inv.business_name || "Consultorio (pendiente de configurar)",
+          ownerEmail: inv.owner_email,
+          planCode: inv.plan_code,
+          mode: "invite",
+        },
+      });
+      if (error || data?.error) throw new Error(data?.error || "No se pudo reenviar");
+      toast({ title: "Invitación reenviada", description: `Correo nuevo enviado a ${inv.owner_email}. El enlace anterior quedó inválido.` });
+      await loadData();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message || "No se pudo reenviar la invitación", variant: "destructive" });
+    } finally {
+      setResendingInviteId(null);
+    }
+  };
+
+  const copyInviteLink = async (inv: PendingInvite) => {
+    try {
+      await navigator.clipboard.writeText(inviteActivationUrl(inv));
+      toast({ title: "Enlace copiado", description: "Podés mandárselo por WhatsApp si el correo no le llegó." });
+    } catch {
+      toast({ title: "Error", description: "No se pudo copiar", variant: "destructive" });
+    }
+  };
+
   const demoBusinessExists = businesses.some(b => b.isDemo);
   const demoBusiness = businesses.find(b => b.isDemo);
 
@@ -522,6 +614,23 @@ const SaasAdmin = () => {
   const hasActiveFilters = planFilter !== "all" || usageFilter !== "all" || searchQuery.trim() !== "";
   const clearFilters = () => { setPlanFilter("all"); setUsageFilter("all"); setSearchQuery(""); };
 
+  // KPIs de la sección Consultorios (solo negocios reales, sin demos)
+  const kpi = useMemo(() => {
+    const real = businesses.filter(b => !b.isDemo);
+    const paying = real.filter(b => b.subscriptionStatus === "active" && b.mpConnected).length;
+    const manual = real.filter(b => b.subscriptionStatus === "active" && !b.mpConnected).length;
+    const trial = real.filter(b => b.subscriptionStatus === "trial").length;
+    const expired = real.filter(b => b.subscriptionStatus === "expired").length;
+    const mrr = real.reduce((sum, b) =>
+      b.subscriptionStatus === "active" ? sum + getPlanMonthlyRevenue(b.planCode, b.billingPeriod) : sum, 0);
+    return { total: real.length, paying, manual, active: paying + manual, trial, expired, mrr };
+  }, [businesses]);
+
+  const pendingInvitesCount = useMemo(
+    () => invites.filter(i => !i.used_at && new Date(i.expires_at) >= new Date()).length,
+    [invites],
+  );
+
   // Count businesses at limit
   const atLimitCount = useMemo(() => businesses.filter(b => {
     const cl = b.planCode === "custom" ? { maxProfessionals: b.customMaxProfessionals ?? null, maxPatients: b.customMaxPatients ?? null } : undefined;
@@ -554,6 +663,62 @@ const SaasAdmin = () => {
           </div>
         </div>
 
+        {/* ─── KPIs del negocio (glass tiles) ─── */}
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+          {[
+            {
+              label: "Consultorios",
+              icon: Building2,
+              accent: "hsl(190 90% 55%)",
+              value: kpi.total,
+              prefix: "",
+              sub: `${kpi.active} activo${kpi.active !== 1 ? "s" : ""} hoy`,
+            },
+            {
+              label: "Cobrando",
+              icon: DollarSign,
+              accent: "hsl(152 70% 45%)",
+              value: kpi.active,
+              prefix: "",
+              sub: `${kpi.paying} por Mercado Pago · ${kpi.manual} manual`,
+            },
+            {
+              label: "En prueba",
+              icon: Activity,
+              accent: "hsl(38 95% 55%)",
+              value: kpi.trial,
+              prefix: "",
+              sub: kpi.expired > 0 ? `${kpi.expired} expirado${kpi.expired !== 1 ? "s" : ""} para rescatar` : "sin expirados",
+            },
+            {
+              label: "Ingreso mensual",
+              icon: TrendingUp,
+              accent: "hsl(262 80% 66%)",
+              value: kpi.mrr,
+              prefix: "$",
+              sub: "estimado, planes activos",
+            },
+          ].map(({ label, icon: Icon, accent, value, prefix, sub }) => (
+            <div
+              key={label}
+              className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.06] to-white/[0.02] px-5 py-4 transition-colors hover:border-white/20"
+            >
+              <span
+                aria-hidden
+                className="absolute -top-12 -right-12 h-28 w-28 rounded-full blur-3xl opacity-25 pointer-events-none"
+                style={{ background: accent }}
+              />
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] uppercase tracking-[0.16em] text-slate-400 font-semibold">{label}</p>
+                <Icon className="h-4 w-4" style={{ color: accent }} />
+              </div>
+              <p className="mt-2 text-2xl font-bold text-white tabular-nums leading-none">
+                {prefix}<AnimatedNumber value={value} />
+              </p>
+              <p className="text-[11px] text-slate-500 mt-1.5 truncate">{sub}</p>
+            </div>
+          ))}
+        </div>
 
         {/* Alert bar for businesses at limit */}
         {atLimitCount > 0 && (
@@ -814,9 +979,112 @@ const SaasAdmin = () => {
               </div>
             )}
           </div>
+
+        {/* ─── Registro de invitaciones enviadas ─── */}
+        <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+          <div className="px-4 lg:px-6 py-4 border-b border-border bg-muted/30 flex items-center gap-3">
+            <span className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+              <Mail className="h-4 w-4 text-primary" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-base font-semibold text-foreground">Invitaciones enviadas</h2>
+              <p className="text-xs text-muted-foreground">
+                Cancelá una invitación y el enlace del correo muere al instante. También podés reenviarla o copiar el enlace.
+              </p>
+            </div>
+            {pendingInvitesCount > 0 && (
+              <Badge variant="secondary" className="bg-amber-500/10 text-amber-500 shrink-0">
+                {pendingInvitesCount} pendiente{pendingInvitesCount !== 1 ? "s" : ""}
+              </Badge>
+            )}
+          </div>
+
+          {invites.length === 0 ? (
+            <div className="py-10 text-center">
+              <Mail className="h-8 w-8 mx-auto text-muted-foreground/30 mb-2" />
+              <p className="text-sm text-muted-foreground">Todavía no enviaste invitaciones por email.</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-border/40">
+              {invites.map(inv => {
+                const st = inviteStatus(inv);
+                const isPending = st.label === "Pendiente";
+                const dLeft = daysUntil(inv.expires_at);
+                return (
+                  <div key={inv.id} className="px-4 lg:px-6 py-3 flex items-center gap-4 hover:bg-muted/30 transition-colors">
+                    <Badge variant="secondary" className={`text-[10px] px-2 py-0.5 shrink-0 w-20 justify-center ${st.cls}`}>
+                      {st.label}
+                    </Badge>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-foreground truncate">{inv.owner_email}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {getPlanName(inv.plan_code)} · enviada {formatDate(inv.created_at)}
+                        {isPending && dLeft > 0 && <> · vence en {dLeft} día{dLeft !== 1 ? "s" : ""}</>}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      {isPending && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={() => copyInviteLink(inv)}>
+                              <Copy className="h-3.5 w-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Copiar enlace de activación</TooltipContent>
+                        </Tooltip>
+                      )}
+                      {!inv.used_at && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={() => handleResendInvite(inv)} disabled={resendingInviteId === inv.id}>
+                              {resendingInviteId === inv.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Reenviar (correo nuevo, enlace nuevo)</TooltipContent>
+                        </Tooltip>
+                      )}
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => setInviteToCancel(inv)}>
+                            <Ban className="h-3.5 w-3.5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>{isPending ? "Cancelar invitación" : "Borrar del registro"}</TooltipContent>
+                      </Tooltip>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
         </TooltipProvider>
       </div>
       )}
+
+      {/* Cancelar invitación */}
+      <AlertDialog open={!!inviteToCancel} onOpenChange={(open) => { if (!open) setInviteToCancel(null); }}>
+        <AlertDialogContent className="sm:max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Ban className="h-5 w-5 text-destructive" />
+              Cancelar invitación
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Vas a cancelar la invitación enviada a <strong>{inviteToCancel?.owner_email}</strong>.
+              El enlace del correo queda inválido al instante: si la persona lo abre, va a ver que ya no sirve.
+              No se borra ningún consultorio ni dato.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex gap-3">
+            <Button variant="outline" className="flex-1" onClick={() => setInviteToCancel(null)}>Volver</Button>
+            <Button variant="destructive" className="flex-1" onClick={handleCancelInvite} disabled={cancellingInvite}>
+              {cancellingInvite && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Cancelar invitación
+            </Button>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Create Business */}
       <Dialog open={showCreateModal} onOpenChange={(open) => { if (!open) resetCreateForm(); setShowCreateModal(open); }}>
@@ -856,7 +1124,7 @@ const SaasAdmin = () => {
 
               <div className="space-y-2"><Label>Plan</Label>
                 <Select value={newBusinessPlan} onValueChange={setNewBusinessPlan}><SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{PLAN_ORDER.map(c => { const p = PLAN_DEFINITIONS[c]; return <SelectItem key={c} value={c}>{p.name} ({p.maxProfessionals === null ? "a medida" : `${p.maxProfessionals} prof, ${p.maxPatients} pac`})</SelectItem>; })}</SelectContent>
+                  <SelectContent>{PLAN_ORDER.map(c => { const p = PLAN_DEFINITIONS[c]; return <SelectItem key={c} value={c}>{p.name} ({p.maxProfessionals === null ? "a medida" : p.maxPatients === null ? `${p.maxProfessionals} prof, pacientes ilimitados` : `${p.maxProfessionals} prof, ${p.maxPatients} pac`})</SelectItem>; })}</SelectContent>
                 </Select>
               </div>
               <div className="flex gap-3"><Button variant="outline" className="flex-1" onClick={() => { resetCreateForm(); setShowCreateModal(false); }}>Cancelar</Button><Button className="flex-1" onClick={handleCreateBusiness} disabled={creating}>{creating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}{createMode === "test" ? "Crear" : "Enviar invitación por email"}</Button></div>
