@@ -296,6 +296,66 @@ serve(async (req) => {
       }
     }
 
+    // Pago OPCIONAL: la cita ya quedó confirmada igual, pero si el consultorio
+    // tiene Mercado Pago conectado generamos el checkout y lo devolvemos para
+    // OFRECER el pago en la pantalla de éxito (paga ahora o en la sesión).
+    let optionalInitPoint: string | null = null;
+    let optionalAmount = 0;
+    if (policy?.policy_type === "optional" && policy.mp_access_token && chargeBase > 0) {
+      try {
+        const [oy, om, od] = date.split("-").map(Number);
+        const oFmtDate = `${String(od).padStart(2, "0")}/${String(om).padStart(2, "0")}/${oy}`;
+        const oTitle = `Sesión ${oFmtDate} ${startTime} - ${business.name}`;
+        const oBackSlug = business.public_slug || slug;
+        const oBackBase = `https://consultoriodigital.app/consultorio/${oBackSlug}`;
+        const oResp = await fetch("https://api.mercadopago.com/checkout/preferences", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${policy.mp_access_token}`,
+          },
+          body: JSON.stringify({
+            items: [{ title: oTitle, quantity: 1, unit_price: chargeBase, currency_id: "UYU" }],
+            back_urls: {
+              success: `${oBackBase}?payment=success`,
+              failure: `${oBackBase}?payment=failure`,
+              pending: `${oBackBase}?payment=pending`,
+            },
+            auto_return: "approved",
+            external_reference: JSON.stringify({
+              type: "session_payment",
+              appointment_id: appointment.id,
+              business_id: business.id,
+              patient_id: patientId,
+            }),
+            notification_url: `${supabaseUrl}/functions/v1/mercadopago-webhook`,
+          }),
+        });
+        if (oResp.ok) {
+          const oPref = await oResp.json();
+          const { data: oPending } = await supabase
+            .from("payments")
+            .select("id")
+            .eq("appointment_id", appointment.id)
+            .eq("status", "pending")
+            .maybeSingle();
+          if (oPending) {
+            await supabase
+              .from("payments")
+              .update({ mp_preference_id: oPref.id, method: "mercadopago", notes: oTitle })
+              .eq("id", oPending.id);
+          }
+          optionalInitPoint = oPref.init_point;
+          optionalAmount = chargeBase;
+        } else {
+          console.warn("Optional MP preference failed:", oResp.status, await oResp.text());
+        }
+      } catch (optErr) {
+        // Nunca rompe la reserva: sin checkout, el pago queda para la sesión
+        console.warn("Optional payment setup failed:", optErr);
+      }
+    }
+
     // Best-effort: mail de confirmación al paciente
     try {
       const [y, m, d] = date.split("-").map(Number);
@@ -374,7 +434,12 @@ serve(async (req) => {
       console.warn("Push notification to owner failed:", pushErr);
     }
 
-    return json({ success: true });
+    return json({
+      success: true,
+      ...(optionalInitPoint
+        ? { optional_payment: true, init_point: optionalInitPoint, amount: optionalAmount }
+        : {}),
+    });
   } catch (error) {
     console.error("Unexpected error in public-book-appointment:", error);
     return json({ error: "unexpected_error" }, 500);
