@@ -1,5 +1,89 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
+
+// Fecha de nacimiento: se TIPEA (DD/MM/AAAA con barras automáticas) en vez del
+// calendario nativo — scrollear décadas para llegar a 1985 era un suplicio.
+// Guarda ISO (yyyy-mm-dd) recién cuando la fecha está completa y es real.
+const isoToDisplayDate = (iso: string) => {
+  if (!iso) return "";
+  const [y, m, d] = iso.split("-");
+  return y && m && d ? `${d}/${m}/${y}` : "";
+};
+
+const BirthDateInput = ({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: string;
+  onChange: (iso: string) => void;
+  disabled?: boolean;
+}) => {
+  const [text, setText] = useState(() => isoToDisplayDate(value));
+  const [invalid, setInvalid] = useState(false);
+  const lastIso = useRef(value);
+
+  // Si el valor cambia desde afuera (ej: se abre el modal para editar),
+  // sincronizamos el texto visible.
+  useEffect(() => {
+    if (value !== lastIso.current) {
+      lastIso.current = value;
+      setText(isoToDisplayDate(value));
+      setInvalid(false);
+    }
+  }, [value]);
+
+  const handleChange = (raw: string) => {
+    const digits = raw.replace(/\D/g, "").slice(0, 8);
+    let out = digits;
+    if (digits.length > 4) out = `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+    else if (digits.length > 2) out = `${digits.slice(0, 2)}/${digits.slice(2)}`;
+    setText(out);
+
+    if (digits.length === 8) {
+      const d = Number(digits.slice(0, 2));
+      const m = Number(digits.slice(2, 4));
+      const y = Number(digits.slice(4));
+      const parsed = new Date(y, m - 1, d);
+      const isReal =
+        y >= 1900 &&
+        parsed.getFullYear() === y &&
+        parsed.getMonth() === m - 1 &&
+        parsed.getDate() === d &&
+        parsed <= new Date();
+      if (isReal) {
+        const iso = `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+        lastIso.current = iso;
+        onChange(iso);
+        setInvalid(false);
+        return;
+      }
+      lastIso.current = "";
+      onChange("");
+      setInvalid(true);
+      return;
+    }
+    lastIso.current = "";
+    onChange("");
+    setInvalid(false);
+  };
+
+  return (
+    <div className="space-y-1">
+      <Input
+        inputMode="numeric"
+        placeholder="DD/MM/AAAA"
+        value={text}
+        onChange={(e) => handleChange(e.target.value)}
+        className="h-12 text-base rounded-xl tabular-nums"
+        disabled={disabled}
+      />
+      {invalid && (
+        <p className="text-xs text-destructive">Esa fecha no existe — revisala (día/mes/año).</p>
+      )}
+    </div>
+  );
+};
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -571,11 +655,9 @@ export function PatientForm({
                         )}
                       </FormLabel>
                       <FormControl>
-                        <Input
-                          {...field}
-                          type="date"
-                          max={new Date().toISOString().slice(0, 10)}
-                          className="h-12 text-base rounded-xl"
+                        <BirthDateInput
+                          value={field.value || ""}
+                          onChange={field.onChange}
                           disabled={isSubmitting}
                         />
                       </FormControl>
