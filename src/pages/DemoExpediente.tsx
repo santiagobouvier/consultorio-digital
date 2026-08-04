@@ -197,6 +197,62 @@ const DemoExpediente = () => {
 
           {/* ══ Expediente ══ */}
           <div className="min-w-0 space-y-5">
+            <Tabs defaultValue="resumen" className="w-full">
+              <TabsList className="w-full grid grid-cols-5 rounded-xl h-auto p-1">
+                <TabsTrigger value="resumen" className="rounded-lg text-[11px] sm:text-sm py-1.5">Resumen</TabsTrigger>
+                <TabsTrigger value="notes" className="rounded-lg text-[11px] sm:text-sm py-1.5">Expediente</TabsTrigger>
+                <TabsTrigger value="payments" className="rounded-lg text-[11px] sm:text-sm py-1.5">Pagos</TabsTrigger>
+                <TabsTrigger value="appointments" className="rounded-lg text-[11px] sm:text-sm py-1.5">Citas</TabsTrigger>
+                <TabsTrigger value="docs" className="rounded-lg text-[11px] sm:text-sm py-1.5">Docs</TabsTrigger>
+              </TabsList>
+
+              {/* ── Resumen ── */}
+              <TabsContent value="resumen" className="mt-4 space-y-5">
+                <Card className="rounded-2xl border-primary/25 bg-gradient-to-b from-primary/[0.05] to-transparent">
+                  <CardContent className="p-4 sm:p-5">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-primary flex items-center gap-1.5">
+                      <CalendarClock className="h-3.5 w-3.5" /> Próxima cita
+                    </p>
+                    <p className="text-sm font-bold mt-1.5 capitalize">
+                      {format(UPCOMING[0], "EEEE d 'de' MMMM · HH:mm", { locale: es })} hs
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Sesión individual · Presencial</p>
+                  </CardContent>
+                </Card>
+
+                <Card className="rounded-2xl">
+                  <CardContent className="p-4 sm:p-5 space-y-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                      <UserIcon className="h-3.5 w-3.5" /> Datos de contacto
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                      <p className="flex items-center gap-2 min-w-0">
+                        <Mail className="h-4 w-4 text-primary shrink-0" />
+                        <span className="truncate">juan.perez@example.com</span>
+                      </p>
+                      <p className="flex items-center gap-2 min-w-0">
+                        <Phone className="h-4 w-4 text-primary shrink-0" />
+                        <span className="truncate">+598 99 123 456</span>
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="rounded-2xl">
+                  <CardContent className="p-4 sm:p-5">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                      <AlertTriangle className="h-3.5 w-3.5" /> Alertas de pago
+                    </p>
+                    <p className="text-sm mt-1.5">
+                      1 pago pendiente por <strong>$ 1.500</strong> — sesión del{" "}
+                      {format(SESSIONS[2].start, "d 'de' MMMM", { locale: es })}.
+                    </p>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* ── Expediente ── */}
+              <TabsContent value="notes" className="mt-4 space-y-5">
             {/* Estado actual: el estado presente del paciente, arriba de la cronología */}
             <Card className="rounded-2xl border-primary/25 bg-gradient-to-b from-primary/[0.05] to-transparent">
               <CardContent className="p-4 sm:p-5">
