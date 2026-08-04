@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { getPanelBrand } from "@/lib/panel-brand-cache";
 
 const FLAG_KEY = "clinic_entrance_pending";
 const START_EVENT = "clinic-entrance-start";
