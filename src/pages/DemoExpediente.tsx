@@ -135,12 +135,25 @@ const DemoExpediente = () => {
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(320px,380px)_1fr] gap-6 items-start">
           {/* ══ Carnet del paciente ══ */}
           <div className="space-y-5 lg:sticky lg:top-20">
-            <Card className="rounded-2xl">
-              <CardContent className="p-6 text-center">
-                <div className="h-20 w-20 rounded-3xl bg-primary/10 ring-2 ring-primary/20 mx-auto flex items-center justify-center text-2xl font-bold text-primary">
+            {/* Credencial: mismo tratamiento visual que el expediente real */}
+            <div
+              className="relative overflow-hidden rounded-2xl border border-white/10 text-white p-6 text-center"
+              style={{
+                background:
+                  "linear-gradient(135deg, hsl(182 22% 6%) 0%, hsl(178 45% 9%) 55%, hsl(176 60% 12%) 100%)",
+              }}
+            >
+              <div
+                aria-hidden
+                className="pointer-events-none absolute -top-24 -right-16 h-56 w-56 rounded-full opacity-25 blur-3xl"
+                style={{ background: "hsl(176 85% 42%)" }}
+              />
+              <div className="relative">
+                <div className="h-20 w-20 rounded-2xl bg-white/10 ring-2 ring-white/25 mx-auto flex items-center justify-center text-2xl font-bold text-white shadow-xl">
                   JP
                 </div>
                 <h2 className="text-xl font-bold mt-3">Juan Pérez</h2>
+                <p className="text-xs text-white/60 mt-0.5">Paciente desde marzo 2026</p>
                 <div className="flex items-center justify-center gap-1.5 flex-wrap mt-2">
                   <Badge className="text-[10px] bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/15">Activo</Badge>
                   <Badge variant="outline" className="text-[10px] text-amber-600 dark:text-amber-400 border-amber-500/40">Pagos pendientes</Badge>
@@ -150,18 +163,18 @@ const DemoExpediente = () => {
                   <Button size="sm" className="rounded-xl gap-1.5" onClick={demoToast}>
                     <CalendarPlus className="h-3.5 w-3.5" /> Agendar cita
                   </Button>
-                  <Button size="sm" variant="outline" className="rounded-xl gap-1.5" onClick={demoToast}>
+                  <Button size="sm" variant="outline" className="rounded-xl gap-1.5 bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white" onClick={demoToast}>
                     <UserPlus className="h-3.5 w-3.5" /> Invitar al portal
                   </Button>
-                  <Button size="sm" variant="outline" className="rounded-xl gap-1.5" onClick={demoToast}>
+                  <Button size="sm" variant="outline" className="rounded-xl gap-1.5 bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white" onClick={demoToast}>
                     <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
                   </Button>
-                  <Button size="sm" variant="outline" className="rounded-xl gap-1.5" onClick={demoToast}>
+                  <Button size="sm" variant="outline" className="rounded-xl gap-1.5 bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white" onClick={demoToast}>
                     <Pencil className="h-3.5 w-3.5" /> Editar
                   </Button>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
             <div className="grid grid-cols-2 gap-3">
               {[
