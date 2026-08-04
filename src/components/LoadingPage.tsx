@@ -1,4 +1,5 @@
 import { getCachedClinicBrand } from "@/lib/clinic-brand-cache";
+import { getPanelBrand } from "@/lib/panel-brand-cache";
 
 // Pantalla de carga global. Respeta el modo claro/oscuro y es consciente de
 // DÓNDE se está mostrando:
@@ -16,15 +17,6 @@ const PANEL_PREFIXES = [
   "/personalizar-portal", "/billing", "/estadisticas", "/centro-control",
   "/appointments", "/ayuda",
 ];
-
-const getPanelBrand = (): { logoUrl: string | null; color: string | null } | null => {
-  try {
-    const raw = localStorage.getItem("panel_brand");
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-};
 
 const LoadingPage = () => {
   const path = typeof window !== "undefined" ? window.location.pathname : "";
