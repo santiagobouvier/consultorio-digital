@@ -14,11 +14,12 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   FileText, StickyNote, Paperclip, ClipboardList, CalendarClock, CalendarPlus,
   MessageCircle, Pencil, UserPlus, MapPin, Video, Maximize2, Plus, Upload,
   Download, Eye, Trash2, CalendarDays, Check, CreditCard, Clock,
-  AlertTriangle, HeartPulse, Pill, Stethoscope,
+  AlertTriangle, HeartPulse, Pill, Stethoscope, Mail, Phone, FolderOpen, User as UserIcon,
 } from "lucide-react";
 
 const demoToast = () =>
@@ -134,12 +135,25 @@ const DemoExpediente = () => {
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(320px,380px)_1fr] gap-6 items-start">
           {/* ══ Carnet del paciente ══ */}
           <div className="space-y-5 lg:sticky lg:top-20">
-            <Card className="rounded-2xl">
-              <CardContent className="p-6 text-center">
-                <div className="h-20 w-20 rounded-3xl bg-primary/10 ring-2 ring-primary/20 mx-auto flex items-center justify-center text-2xl font-bold text-primary">
+            {/* Credencial: mismo tratamiento visual que el expediente real */}
+            <div
+              className="relative overflow-hidden rounded-2xl border border-white/10 text-white p-6 text-center"
+              style={{
+                background:
+                  "linear-gradient(135deg, hsl(182 22% 6%) 0%, hsl(178 45% 9%) 55%, hsl(176 60% 12%) 100%)",
+              }}
+            >
+              <div
+                aria-hidden
+                className="pointer-events-none absolute -top-24 -right-16 h-56 w-56 rounded-full opacity-25 blur-3xl"
+                style={{ background: "hsl(176 85% 42%)" }}
+              />
+              <div className="relative">
+                <div className="h-20 w-20 rounded-2xl bg-white/10 ring-2 ring-white/25 mx-auto flex items-center justify-center text-2xl font-bold text-white shadow-xl">
                   JP
                 </div>
                 <h2 className="text-xl font-bold mt-3">Juan Pérez</h2>
+                <p className="text-xs text-white/60 mt-0.5">Paciente desde marzo 2026</p>
                 <div className="flex items-center justify-center gap-1.5 flex-wrap mt-2">
                   <Badge className="text-[10px] bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/15">Activo</Badge>
                   <Badge variant="outline" className="text-[10px] text-amber-600 dark:text-amber-400 border-amber-500/40">Pagos pendientes</Badge>
@@ -149,18 +163,18 @@ const DemoExpediente = () => {
                   <Button size="sm" className="rounded-xl gap-1.5" onClick={demoToast}>
                     <CalendarPlus className="h-3.5 w-3.5" /> Agendar cita
                   </Button>
-                  <Button size="sm" variant="outline" className="rounded-xl gap-1.5" onClick={demoToast}>
+                  <Button size="sm" variant="outline" className="rounded-xl gap-1.5 bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white" onClick={demoToast}>
                     <UserPlus className="h-3.5 w-3.5" /> Invitar al portal
                   </Button>
-                  <Button size="sm" variant="outline" className="rounded-xl gap-1.5" onClick={demoToast}>
+                  <Button size="sm" variant="outline" className="rounded-xl gap-1.5 bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white" onClick={demoToast}>
                     <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
                   </Button>
-                  <Button size="sm" variant="outline" className="rounded-xl gap-1.5" onClick={demoToast}>
+                  <Button size="sm" variant="outline" className="rounded-xl gap-1.5 bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white" onClick={demoToast}>
                     <Pencil className="h-3.5 w-3.5" /> Editar
                   </Button>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
             <div className="grid grid-cols-2 gap-3">
               {[
@@ -183,6 +197,62 @@ const DemoExpediente = () => {
 
           {/* ══ Expediente ══ */}
           <div className="min-w-0 space-y-5">
+            <Tabs defaultValue="resumen" className="w-full">
+              <TabsList className="w-full grid grid-cols-5 rounded-xl h-auto p-1">
+                <TabsTrigger value="resumen" className="rounded-lg text-[11px] sm:text-sm py-1.5">Resumen</TabsTrigger>
+                <TabsTrigger value="notes" className="rounded-lg text-[11px] sm:text-sm py-1.5">Expediente</TabsTrigger>
+                <TabsTrigger value="payments" className="rounded-lg text-[11px] sm:text-sm py-1.5">Pagos</TabsTrigger>
+                <TabsTrigger value="appointments" className="rounded-lg text-[11px] sm:text-sm py-1.5">Citas</TabsTrigger>
+                <TabsTrigger value="docs" className="rounded-lg text-[11px] sm:text-sm py-1.5">Docs</TabsTrigger>
+              </TabsList>
+
+              {/* ── Resumen ── */}
+              <TabsContent value="resumen" className="mt-4 space-y-5">
+                <Card className="rounded-2xl border-primary/25 bg-gradient-to-b from-primary/[0.05] to-transparent">
+                  <CardContent className="p-4 sm:p-5">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-primary flex items-center gap-1.5">
+                      <CalendarClock className="h-3.5 w-3.5" /> Próxima cita
+                    </p>
+                    <p className="text-sm font-bold mt-1.5 capitalize">
+                      {format(UPCOMING[0], "EEEE d 'de' MMMM · HH:mm", { locale: es })} hs
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Sesión individual · Presencial</p>
+                  </CardContent>
+                </Card>
+
+                <Card className="rounded-2xl">
+                  <CardContent className="p-4 sm:p-5 space-y-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                      <UserIcon className="h-3.5 w-3.5" /> Datos de contacto
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                      <p className="flex items-center gap-2 min-w-0">
+                        <Mail className="h-4 w-4 text-primary shrink-0" />
+                        <span className="truncate">juan.perez@example.com</span>
+                      </p>
+                      <p className="flex items-center gap-2 min-w-0">
+                        <Phone className="h-4 w-4 text-primary shrink-0" />
+                        <span className="truncate">+598 99 123 456</span>
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="rounded-2xl">
+                  <CardContent className="p-4 sm:p-5">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                      <AlertTriangle className="h-3.5 w-3.5" /> Alertas de pago
+                    </p>
+                    <p className="text-sm mt-1.5">
+                      1 pago pendiente por <strong>$ 1.500</strong> — sesión del{" "}
+                      {format(SESSIONS[2].start, "d 'de' MMMM", { locale: es })}.
+                    </p>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* ── Expediente ── */}
+              <TabsContent value="notes" className="mt-4 space-y-5">
             {/* Estado actual: el estado presente del paciente, arriba de la cronología */}
             <Card className="rounded-2xl border-primary/25 bg-gradient-to-b from-primary/[0.05] to-transparent">
               <CardContent className="p-4 sm:p-5">
@@ -328,6 +398,138 @@ const DemoExpediente = () => {
                 ))}
               </div>
             </div>
+              </TabsContent>
+
+              {/* ── Pagos ── */}
+              <TabsContent value="payments" className="mt-4">
+                <Card className="rounded-2xl">
+                  <CardContent className="p-4 sm:p-5">
+                    <div className="flex items-center justify-between gap-2 mb-3">
+                      <p className="text-base font-bold flex items-center gap-2">
+                        <CreditCard className="h-4 w-4 text-primary" /> Pagos y vencimientos
+                      </p>
+                      <Button size="sm" className="rounded-xl gap-1.5 h-8" onClick={demoToast}>
+                        <Plus className="h-3.5 w-3.5" /> Registrar
+                      </Button>
+                    </div>
+                    <div className="space-y-2">
+                      {SESSIONS.map((s) => (
+                        <div key={s.id} className="p-3 rounded-xl border bg-card">
+                          <div className="flex items-start justify-between gap-2 flex-wrap">
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <p className="font-bold">$ {s.amount.toLocaleString("es-UY")}</p>
+                                {payBadge(s.pay)}
+                              </div>
+                              <p className="text-xs text-muted-foreground mt-0.5 capitalize">
+                                {s.pay === "paid"
+                                  ? `Pagado el ${format(s.start, "d 'de' MMMM", { locale: es })}`
+                                  : `Vence: ${format(s.start, "d 'de' MMMM", { locale: es })}`}{" "}
+                                · {s.service}
+                              </p>
+                            </div>
+                            {s.pay !== "paid" && (
+                              <Button size="sm" variant="outline" className="rounded-lg h-8 gap-1.5" onClick={demoToast}>
+                                <Check className="h-3.5 w-3.5" /> Cobrar
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* ── Citas ── */}
+              <TabsContent value="appointments" className="mt-4">
+                <Card className="rounded-2xl">
+                  <CardContent className="p-4 sm:p-5">
+                    <div className="flex items-center justify-between gap-2 mb-3">
+                      <p className="text-base font-bold flex items-center gap-2">
+                        <CalendarDays className="h-4 w-4 text-primary" /> Historial de citas
+                      </p>
+                      <Button size="sm" variant="outline" className="rounded-xl gap-1.5 h-8" onClick={demoToast}>
+                        <Plus className="h-3.5 w-3.5" /> Agendar
+                      </Button>
+                    </div>
+                    <div className="space-y-2">
+                      {UPCOMING.map((d, i) => (
+                        <div key={`up-${i}`} className="p-3 rounded-xl border bg-card flex items-center justify-between gap-2 flex-wrap">
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold capitalize">
+                              {format(d, "EEEE d 'de' MMMM · HH:mm", { locale: es })} hs
+                            </p>
+                            <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                              <MapPin className="h-3 w-3" /> Sesión individual · Presencial
+                            </p>
+                          </div>
+                          <Badge variant="outline" className="text-[10px]">Próxima</Badge>
+                        </div>
+                      ))}
+                      {SESSIONS.map((s) => (
+                        <div key={`ap-${s.id}`} className="p-3 rounded-xl border bg-card flex items-center justify-between gap-2 flex-wrap">
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold capitalize">
+                              {format(s.start, "EEEE d 'de' MMMM · HH:mm", { locale: es })} hs
+                            </p>
+                            <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                              {s.modality === "online" ? <Video className="h-3 w-3" /> : <MapPin className="h-3 w-3" />}
+                              {s.service} · {s.modality === "online" ? "Online" : "Presencial"}
+                            </p>
+                          </div>
+                          <Badge className="text-[10px] bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/15">
+                            Realizada
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* ── Documentos ── */}
+              <TabsContent value="docs" className="mt-4">
+                <Card className="rounded-2xl">
+                  <CardContent className="p-4 sm:p-5">
+                    <div className="flex items-center justify-between gap-2 mb-3">
+                      <p className="text-base font-bold flex items-center gap-2">
+                        <FolderOpen className="h-4 w-4 text-primary" /> Documentos del paciente
+                      </p>
+                      <Button size="sm" variant="outline" className="rounded-xl gap-1.5 h-8" onClick={demoToast}>
+                        <Upload className="h-3.5 w-3.5" /> Subir
+                      </Button>
+                    </div>
+                    <div className="space-y-2">
+                      {SESSIONS.flatMap((s) => s.docs.map((doc) => ({ ...doc, start: s.start }))).map((doc) => (
+                        <div key={doc.name} className="flex items-center gap-3 rounded-xl border border-border/60 bg-muted/30 p-2.5">
+                          <div className="shrink-0 h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <FileText className="h-4 w-4 text-primary" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium break-all leading-snug">{doc.name}</p>
+                            <p className="text-[11px] text-muted-foreground flex items-center gap-1.5 flex-wrap">
+                              {doc.type} · {doc.size} · {format(doc.start, "d MMM yyyy", { locale: es })}
+                              {doc.shared && (
+                                <span className="inline-flex items-center gap-0.5 text-emerald-600 dark:text-emerald-400">
+                                  <Eye className="h-3 w-3" /> compartido
+                                </span>
+                              )}
+                            </p>
+                          </div>
+                          <div className="flex gap-1.5 shrink-0">
+                            <Button size="sm" variant="outline" className="rounded-lg h-8" onClick={demoToast}>Ver</Button>
+                            <Button size="sm" variant="outline" className="rounded-lg h-8 w-8 p-0" onClick={demoToast}>
+                              <Download className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
       </div>

@@ -140,7 +140,8 @@ export default function PatientPortalDemo() {
       isInstalled={isInstalled}
       onInstallApp={() => { install(); }}
       headerAction="back"
-      onBack={() => navigate("/")}
+      backLabel="Volver a las demos"
+      onBack={() => navigate("/demo")}
       onBookAppointment={() => noop("Reserva de citas deshabilitada en la demo.")}
       onSaveProfile={() => noop("Edición de perfil deshabilitada en la demo.")}
       onPaySession={() => noop("Pagos deshabilitados en la demo.")}
