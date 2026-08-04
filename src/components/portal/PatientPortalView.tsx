@@ -116,6 +116,8 @@ export interface PatientPortalViewProps {
   headerAction?: HeaderActionVariant;
   onLogout?: () => void;
   onBack?: () => void;
+  /** Texto del botón "volver" del header (por defecto "Volver"). */
+  backLabel?: string;
   // Booking
   onBookAppointment?: () => void;
   /** Patient cancels their own appointment. */
@@ -236,7 +238,7 @@ export function PatientPortalView(props: PatientPortalViewProps) {
     isDark, onToggleDark, isDemo = false,
     canInstall = false, isInstalled = false, onInstallApp,
     showPwaBannerTop = false,
-    headerAction = "none", onLogout, onBack,
+    headerAction = "none", onLogout, onBack, backLabel = "Volver",
     onBookAppointment, onCancelAppointment, onRescheduleAppointment,
     onSaveProfile, onPaySession,
     payingAppointmentId = null,
@@ -1591,7 +1593,7 @@ export function PatientPortalView(props: PatientPortalViewProps) {
               {headerAction === "back" && onBack && (
                 <Button variant="outline" size="sm" onClick={onBack} className="gap-2">
                   <ArrowLeft className="h-4 w-4" />
-                  <span className="hidden sm:inline">Volver</span>
+                  <span className="hidden sm:inline">{backLabel}</span>
                 </Button>
               )}
             </div>
