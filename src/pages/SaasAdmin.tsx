@@ -150,6 +150,7 @@ const AnimatedNumber = ({ value }: { value: number }) => {
 // ── Main Component ─────────────────────────────────────
 const SaasAdmin = () => {
   const navigate = useNavigate();
+  const { refetch: refetchBusinessId } = useBusinessIdContext();
   const isMobile = useIsMobile();
   const [loading, setLoading] = useState(true);
   const [businesses, setBusinesses] = useState<BusinessWithDetails[]>([]);
@@ -367,7 +368,13 @@ const SaasAdmin = () => {
     } catch (error: any) { toast({ title: "Error", description: error.message || "No se pudo cambiar el plan", variant: "destructive" }); }
   };
 
-  const enterBusiness = (id: string) => { sessionStorage.setItem("saas_selected_business", id); navigate("/dashboard"); };
+  const enterBusiness = async (id: string) => {
+    setActiveBusinessId(id);
+    // El contexto cachea el business resuelto por usuario: sin un refetch
+    // forzado el super admin entra con businessId null y lo rebotan al panel.
+    await refetchBusinessId();
+    navigate("/dashboard");
+  };
 
   const openDeleteModal = async (b: BusinessWithDetails) => {
     setBusinessToDelete(b);
