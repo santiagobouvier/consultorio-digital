@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useBusinessId } from "@/hooks/use-business-id";
+import { cachePanelBrand } from "@/lib/panel-brand-cache";
 
 interface DashboardBranding {
   primaryColor: string; // HSL string like "176 100% 32%"
@@ -37,6 +38,10 @@ export function DashboardBrandingProvider({ children }: { children: ReactNode })
       return;
     }
 
+    // Al cambiar de consultorio (super admin entrando a otro) no se puede
+    // seguir mostrando la marca del anterior mientras carga la nueva.
+    setLoading(true);
+
     try {
       const { data } = await supabase
         .from("businesses")
@@ -57,15 +62,11 @@ export function DashboardBrandingProvider({ children }: { children: ReactNode })
         setDisplayName(d.portal_clinic_display_name || d.dashboard_display_name || data.name || null);
         // La pantalla de carga del panel y la bienvenida post-login usan esta
         // marca en las próximas visitas (incluye el nombre para el splash).
-        try {
-          localStorage.setItem("panel_brand", JSON.stringify({
-            logoUrl: logo,
-            color,
-            name: d.portal_clinic_display_name || d.dashboard_display_name || data.name || null,
-          }));
-        } catch {
-          /* ignore */
-        }
+        cachePanelBrand(businessId, {
+          logoUrl: logo,
+          color,
+          name: d.portal_clinic_display_name || d.dashboard_display_name || data.name || null,
+        });
       }
     } catch (err) {
       console.error("Error loading dashboard branding:", err);
