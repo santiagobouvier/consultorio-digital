@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { getPanelBrand } from "@/lib/panel-brand-cache";
 
 const FLAG_KEY = "clinic_entrance_pending";
 const START_EVENT = "clinic-entrance-start";
@@ -41,20 +42,14 @@ export function ClinicEntranceSplash() {
     }
   });
 
-  // Marca cacheada por DashboardBrandingContext en visitas anteriores.
+  // Marca del consultorio ACTIVO, cacheada por DashboardBrandingContext.
   const readBrand = () => {
-    try {
-      const raw = localStorage.getItem("panel_brand");
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        return {
-          logoUrl: parsed?.logoUrl || null,
-          color: parsed?.color || "176 100% 32%",
-          name: parsed?.name || null,
-        };
-      }
-    } catch { /* ignore */ }
-    return { logoUrl: null, color: "176 100% 32%", name: null };
+    const parsed = getPanelBrand();
+    return {
+      logoUrl: parsed?.logoUrl || null,
+      color: parsed?.color || "176 100% 32%",
+      name: parsed?.name || null,
+    };
   };
   const [brandInfo, setBrandInfo] = useState(readBrand);
 
