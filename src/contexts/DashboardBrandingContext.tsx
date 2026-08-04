@@ -76,6 +76,11 @@ export function DashboardBrandingProvider({ children }: { children: ReactNode })
   };
 
   useEffect(() => {
+    // Reset inmediato al cambiar de consultorio: evita heredar logo/color
+    // del consultorio visitado anteriormente.
+    setPrimaryColor(DEFAULT_COLOR);
+    setLogoUrl(null);
+    setDisplayName(null);
     fetchBranding();
   }, [businessId]);
 
