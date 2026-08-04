@@ -398,6 +398,138 @@ const DemoExpediente = () => {
                 ))}
               </div>
             </div>
+              </TabsContent>
+
+              {/* ── Pagos ── */}
+              <TabsContent value="payments" className="mt-4">
+                <Card className="rounded-2xl">
+                  <CardContent className="p-4 sm:p-5">
+                    <div className="flex items-center justify-between gap-2 mb-3">
+                      <p className="text-base font-bold flex items-center gap-2">
+                        <CreditCard className="h-4 w-4 text-primary" /> Pagos y vencimientos
+                      </p>
+                      <Button size="sm" className="rounded-xl gap-1.5 h-8" onClick={demoToast}>
+                        <Plus className="h-3.5 w-3.5" /> Registrar
+                      </Button>
+                    </div>
+                    <div className="space-y-2">
+                      {SESSIONS.map((s) => (
+                        <div key={s.id} className="p-3 rounded-xl border bg-card">
+                          <div className="flex items-start justify-between gap-2 flex-wrap">
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <p className="font-bold">$ {s.amount.toLocaleString("es-UY")}</p>
+                                {payBadge(s.pay)}
+                              </div>
+                              <p className="text-xs text-muted-foreground mt-0.5 capitalize">
+                                {s.pay === "paid"
+                                  ? `Pagado el ${format(s.start, "d 'de' MMMM", { locale: es })}`
+                                  : `Vence: ${format(s.start, "d 'de' MMMM", { locale: es })}`}{" "}
+                                · {s.service}
+                              </p>
+                            </div>
+                            {s.pay !== "paid" && (
+                              <Button size="sm" variant="outline" className="rounded-lg h-8 gap-1.5" onClick={demoToast}>
+                                <Check className="h-3.5 w-3.5" /> Cobrar
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* ── Citas ── */}
+              <TabsContent value="appointments" className="mt-4">
+                <Card className="rounded-2xl">
+                  <CardContent className="p-4 sm:p-5">
+                    <div className="flex items-center justify-between gap-2 mb-3">
+                      <p className="text-base font-bold flex items-center gap-2">
+                        <CalendarDays className="h-4 w-4 text-primary" /> Historial de citas
+                      </p>
+                      <Button size="sm" variant="outline" className="rounded-xl gap-1.5 h-8" onClick={demoToast}>
+                        <Plus className="h-3.5 w-3.5" /> Agendar
+                      </Button>
+                    </div>
+                    <div className="space-y-2">
+                      {UPCOMING.map((d, i) => (
+                        <div key={`up-${i}`} className="p-3 rounded-xl border bg-card flex items-center justify-between gap-2 flex-wrap">
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold capitalize">
+                              {format(d, "EEEE d 'de' MMMM · HH:mm", { locale: es })} hs
+                            </p>
+                            <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                              <MapPin className="h-3 w-3" /> Sesión individual · Presencial
+                            </p>
+                          </div>
+                          <Badge variant="outline" className="text-[10px]">Próxima</Badge>
+                        </div>
+                      ))}
+                      {SESSIONS.map((s) => (
+                        <div key={`ap-${s.id}`} className="p-3 rounded-xl border bg-card flex items-center justify-between gap-2 flex-wrap">
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold capitalize">
+                              {format(s.start, "EEEE d 'de' MMMM · HH:mm", { locale: es })} hs
+                            </p>
+                            <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                              {s.modality === "online" ? <Video className="h-3 w-3" /> : <MapPin className="h-3 w-3" />}
+                              {s.service} · {s.modality === "online" ? "Online" : "Presencial"}
+                            </p>
+                          </div>
+                          <Badge className="text-[10px] bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/15">
+                            Realizada
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* ── Documentos ── */}
+              <TabsContent value="docs" className="mt-4">
+                <Card className="rounded-2xl">
+                  <CardContent className="p-4 sm:p-5">
+                    <div className="flex items-center justify-between gap-2 mb-3">
+                      <p className="text-base font-bold flex items-center gap-2">
+                        <FolderOpen className="h-4 w-4 text-primary" /> Documentos del paciente
+                      </p>
+                      <Button size="sm" variant="outline" className="rounded-xl gap-1.5 h-8" onClick={demoToast}>
+                        <Upload className="h-3.5 w-3.5" /> Subir
+                      </Button>
+                    </div>
+                    <div className="space-y-2">
+                      {SESSIONS.flatMap((s) => s.docs.map((doc) => ({ ...doc, start: s.start }))).map((doc) => (
+                        <div key={doc.name} className="flex items-center gap-3 rounded-xl border border-border/60 bg-muted/30 p-2.5">
+                          <div className="shrink-0 h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <FileText className="h-4 w-4 text-primary" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium break-all leading-snug">{doc.name}</p>
+                            <p className="text-[11px] text-muted-foreground flex items-center gap-1.5 flex-wrap">
+                              {doc.type} · {doc.size} · {format(doc.start, "d MMM yyyy", { locale: es })}
+                              {doc.shared && (
+                                <span className="inline-flex items-center gap-0.5 text-emerald-600 dark:text-emerald-400">
+                                  <Eye className="h-3 w-3" /> compartido
+                                </span>
+                              )}
+                            </p>
+                          </div>
+                          <div className="flex gap-1.5 shrink-0">
+                            <Button size="sm" variant="outline" className="rounded-lg h-8" onClick={demoToast}>Ver</Button>
+                            <Button size="sm" variant="outline" className="rounded-lg h-8 w-8 p-0" onClick={demoToast}>
+                              <Download className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
       </div>
