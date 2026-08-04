@@ -14,11 +14,12 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   FileText, StickyNote, Paperclip, ClipboardList, CalendarClock, CalendarPlus,
   MessageCircle, Pencil, UserPlus, MapPin, Video, Maximize2, Plus, Upload,
   Download, Eye, Trash2, CalendarDays, Check, CreditCard, Clock,
-  AlertTriangle, HeartPulse, Pill, Stethoscope,
+  AlertTriangle, HeartPulse, Pill, Stethoscope, Mail, Phone, FolderOpen, User as UserIcon,
 } from "lucide-react";
 
 const demoToast = () =>
