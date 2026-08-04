@@ -165,9 +165,10 @@ export function NotificationActivationCard({
             <>
               <MonitorSmartphone className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
               <p className="text-[11px] text-muted-foreground leading-relaxed">
-                Funciona en computadora (Chrome, Edge, Firefox) y en Android. Se activan{" "}
-                <strong>por dispositivo</strong>: si las querés también en el celular o en otra
-                compu, activalas desde ahí.
+                En computadora (Chrome, Edge, Firefox) y Android <strong>no hace falta instalar
+                la app</strong>: las notificaciones funcionan directo en el navegador. Se activan{" "}
+                <strong>por dispositivo</strong>: si las querés también en otro celular o compu,
+                activalas desde ahí.
               </p>
             </>
           )}
