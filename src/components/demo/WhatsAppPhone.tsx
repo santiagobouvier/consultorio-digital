@@ -41,10 +41,7 @@ export function WhatsAppPhone({ clinicName, clinicInitials, messages, animate = 
   }, [visibleCount]);
 
   return (
-    <div
-      className="mx-auto aspect-[390/760] max-w-full rounded-[36px] bg-black p-2 shadow-2xl ring-1 ring-white/20 select-none text-left"
-      style={{ height: "min(56dvh, 560px)" }}
-    >
+    <div className="mx-auto aspect-[390/760] max-w-full h-[min(52dvh,480px)] md:h-[min(74dvh,700px)] rounded-[36px] bg-black p-2 shadow-2xl ring-1 ring-white/20 select-none text-left">
       <div className="w-full h-full rounded-[28px] overflow-hidden flex flex-col" style={{ backgroundColor: "#0b141a" }}>
         {/* Header del chat */}
         <div className="shrink-0 flex items-center gap-3 px-3 pt-6 pb-2.5" style={{ backgroundColor: "#202c33" }}>
@@ -82,7 +79,7 @@ export function WhatsAppPhone({ clinicName, clinicInitials, messages, animate = 
                 className="max-w-[88%] rounded-lg rounded-tl-none px-2.5 py-1.5 shadow"
                 style={{ backgroundColor: "#202c33" }}
               >
-                <p className="text-[12.5px] leading-snug text-white whitespace-pre-line">{m.text}</p>
+                <p className="text-[13px] md:text-[13.5px] leading-relaxed text-white whitespace-pre-line">{m.text}</p>
                 <div className="flex items-center justify-end gap-1 mt-0.5">
                   <span className="text-[10px]" style={{ color: "#8696a0" }}>{m.time}</span>
                 </div>
