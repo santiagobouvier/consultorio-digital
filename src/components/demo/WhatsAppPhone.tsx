@@ -1,7 +1,7 @@
 // Celular con un chat estilo WhatsApp: muestra los avisos automáticos tal
 // como le llegan al paciente. Solo vidriera (nada clickeable): es la pieza
 // más vendedora de la demo — el diferencial se entiende en 3 segundos.
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CheckCheck } from "lucide-react";
 
 export interface WaMessage {
@@ -15,22 +15,30 @@ interface Props {
   messages: WaMessage[];
   /** Si es true, los mensajes "van llegando" uno a uno (para el recorrido). */
   animate?: boolean;
+  /** Cuántos mensajes ya están en el chat desde el arranque (no se animan). */
+  staticCount?: number;
 }
 
-export function WhatsAppPhone({ clinicName, clinicInitials, messages, animate = false }: Props) {
-  const [visibleCount, setVisibleCount] = useState(animate ? 0 : messages.length);
+export function WhatsAppPhone({ clinicName, clinicInitials, messages, animate = false, staticCount = 0 }: Props) {
+  const [visibleCount, setVisibleCount] = useState(animate ? staticCount : messages.length);
 
   useEffect(() => {
     if (!animate) {
       setVisibleCount(messages.length);
       return;
     }
-    setVisibleCount(0);
-    const timers = messages.map((_, i) =>
-      window.setTimeout(() => setVisibleCount(i + 1), 700 + i * 1400),
+    setVisibleCount(staticCount);
+    const timers = messages.slice(staticCount).map((_, i) =>
+      window.setTimeout(() => setVisibleCount(staticCount + i + 1), 700 + i * 1400),
     );
     return () => timers.forEach(clearTimeout);
-  }, [animate, messages]);
+  }, [animate, messages, staticCount]);
+
+  // Como en WhatsApp: el chat siempre muestra lo último que llegó
+  const chatRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    chatRef.current?.scrollTo({ top: chatRef.current.scrollHeight, behavior: "smooth" });
+  }, [visibleCount]);
 
   return (
     <div className="mx-auto w-full max-w-[340px] aspect-[390/760] rounded-[36px] bg-black p-2 shadow-2xl ring-1 ring-white/20 select-none">
@@ -51,7 +59,8 @@ export function WhatsAppPhone({ clinicName, clinicInitials, messages, animate = 
 
         {/* Mensajes (fondo con patrón sutil de WhatsApp oscuro) */}
         <div
-          className="flex-1 overflow-hidden px-3 py-3 space-y-2"
+          ref={chatRef}
+          className="flex-1 overflow-y-auto px-3 py-3 space-y-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
           style={{
             backgroundColor: "#0b141a",
             backgroundImage:
@@ -108,19 +117,25 @@ export function WhatsAppPhone({ clinicName, clinicInitials, messages, animate = 
   );
 }
 
-// Los textos REALES de las plantillas del producto, con datos ficticios.
-export const buildDemoWaMessages = (): WaMessage[] => {
+// Los textos de las plantillas del producto, con datos ficticios y párrafos
+// aireados para que en la demo se lean lindos.
+const demoDateEs = () => {
   const fecha = new Date();
   fecha.setDate(fecha.getDate() + 1);
-  const fechaEs = fecha.toLocaleDateString("es-UY", { weekday: "long", day: "numeric", month: "long" });
-  return [
-    {
-      text: `Hola Sofía 👋 ¡Tu sesión con Mente Clara quedó agendada! 📅 ${fechaEs} 🕐 16:00 hs. Si necesitás reprogramar o cancelar, escribile a tu profesional: +598 98 123 456 ¡Nos vemos!`,
-      time: "10:24",
-    },
-    {
-      text: `Hola Sofía 👋 Te recordamos tu próxima sesión con Mente Clara: 📅 ${fechaEs} 🕐 16:00 hs. Si necesitás reprogramar o cancelar, escribile a tu profesional: +598 98 123 456 ¡Te esperamos!`,
-      time: "10:25",
-    },
-  ];
+  return fecha.toLocaleDateString("es-UY", { weekday: "long", day: "numeric", month: "long" });
 };
+
+export const buildDemoWaConfirmation = (time = "16:00"): WaMessage => ({
+  text: `Hola Sofía 👋\n\n¡Tu sesión con Mente Clara quedó agendada!\n\n📅 ${demoDateEs()}\n🕐 ${time} hs\n\nSi necesitás reprogramar o cancelar, escribile a tu profesional: +598 98 123 456\n\n¡Nos vemos!`,
+  time: "10:24",
+});
+
+export const buildDemoWaReminder = (time = "16:00"): WaMessage => ({
+  text: `Hola Sofía 👋\n\nTe recordamos tu próxima sesión con Mente Clara:\n\n📅 mañana, ${demoDateEs()}\n🕐 ${time} hs\n\nSi necesitás reprogramar o cancelar, escribile a tu profesional: +598 98 123 456\n\n¡Te esperamos!`,
+  time: "19:00",
+});
+
+export const buildDemoWaMessages = (time = "16:00"): WaMessage[] => [
+  buildDemoWaConfirmation(time),
+  buildDemoWaReminder(time),
+];

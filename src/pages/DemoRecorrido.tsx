@@ -4,8 +4,8 @@
 // guarda. Es la pieza central de la demo pública.
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Check, CalendarDays, MessageCircle, LayoutDashboard, Video, Sparkles } from "lucide-react";
-import { WhatsAppPhone, buildDemoWaMessages } from "@/components/demo/WhatsAppPhone";
+import { ArrowLeft, ArrowRight, Check, CalendarDays, MessageCircle, BellRing, LayoutDashboard, Video, Sparkles } from "lucide-react";
+import { WhatsAppPhone, buildDemoWaConfirmation, buildDemoWaReminder } from "@/components/demo/WhatsAppPhone";
 
 const BRAND = "#00c78a";
 
@@ -17,7 +17,8 @@ const SLOTS = ["10:00", "11:30", "14:00", "16:00", "17:30"];
 
 const STEPS = [
   { icon: CalendarDays, label: "El paciente reserva" },
-  { icon: MessageCircle, label: "Le llega el WhatsApp" },
+  { icon: MessageCircle, label: "Le llega la confirmación" },
+  { icon: BellRing, label: "El recordatorio automático" },
   { icon: LayoutDashboard, label: "Vos lo ves en tu agenda" },
 ];
 
@@ -130,23 +131,51 @@ const DemoRecorrido = () => {
           </div>
         )}
 
-        {/* ── Paso 2: WhatsApp ── */}
+        {/* ── Paso 2: la confirmación llega al instante ── */}
         {step === 1 && (
           <div className="text-center">
-            <h1 className="text-2xl sm:text-3xl font-bold mb-2">El WhatsApp le llega solo, al instante</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold mb-2">La confirmación le llega sola, al instante</h1>
             <p className="text-white/50 mb-8 max-w-md mx-auto">
-              Confirmación al reservar y recordatorio antes de la sesión — automáticos, con tu nombre. Menos ausencias, cero trabajo.
+              Apenas confirma la reserva, Sofía recibe el WhatsApp con el nombre de tu consultorio. Sin que toques nada.
             </p>
 
             <WhatsAppPhone
               clinicName="Mente Clara"
               clinicInitials="MC"
-              messages={buildDemoWaMessages()}
+              messages={[buildDemoWaConfirmation(chosenTime)]}
               animate
             />
 
             <button
               onClick={() => setStep(2)}
+              className="group mt-8 inline-flex items-center gap-2 h-12 px-6 rounded-xl text-sm font-semibold"
+              style={{ backgroundColor: BRAND, color: "#000" }}
+            >
+              ¿Y antes de la sesión? El recordatorio
+              <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+            </button>
+          </div>
+        )}
+
+        {/* ── Paso 3: el recordatorio previo, cuando el profesional quiera ── */}
+        {step === 2 && (
+          <div className="text-center">
+            <h1 className="text-2xl sm:text-3xl font-bold mb-2">El recordatorio sale solo, cuando vos digas</h1>
+            <p className="text-white/50 mb-8 max-w-md mx-auto">
+              Vos elegís cuántas horas antes de la sesión se envía (24 hs antes, por ejemplo) y sale automático.
+              Es lo que más baja las ausencias.
+            </p>
+
+            <WhatsAppPhone
+              clinicName="Mente Clara"
+              clinicInitials="MC"
+              messages={[buildDemoWaConfirmation(chosenTime), buildDemoWaReminder(chosenTime)]}
+              animate
+              staticCount={1}
+            />
+
+            <button
+              onClick={() => setStep(3)}
               className="group mt-8 inline-flex items-center gap-2 h-12 px-6 rounded-xl text-sm font-semibold"
               style={{ backgroundColor: BRAND, color: "#000" }}
             >
@@ -156,8 +185,8 @@ const DemoRecorrido = () => {
           </div>
         )}
 
-        {/* ── Paso 3: la agenda del profesional ── */}
-        {step === 2 && (
+        {/* ── Paso 4: la agenda del profesional ── */}
+        {step === 3 && (
           <div className="text-center">
             <h1 className="text-2xl sm:text-3xl font-bold mb-2">Y en tu agenda ya está el turno</h1>
             <p className="text-white/50 mb-8 max-w-md mx-auto">
