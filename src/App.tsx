@@ -61,6 +61,8 @@ const Demo = lazy(() => import("./pages/Demo"));
 const DemoExpediente = lazy(() => import("./pages/DemoExpediente"));
 const DemoReservar = lazy(() => import("./pages/DemoReservar"));
 const DemoAgenda = lazy(() => import("./pages/DemoAgenda"));
+const DemoWhatsApp = lazy(() => import("./pages/DemoWhatsApp"));
+const DemoRecorrido = lazy(() => import("./pages/DemoRecorrido"));
 const AccessSelector = lazy(() => import("./pages/AccessSelector"));
 const PatientAccess = lazy(() => import("./pages/PatientAccess"));
 const Terms = lazy(() => import("./pages/Terms"));
@@ -255,6 +257,8 @@ const App = () => {
                 <Route path="/demo/reservar" element={<DemoReservar />} />
                 <Route path="/demo/agenda" element={<DemoAgenda />} />
                 <Route path="/demo/expediente" element={<DemoExpediente />} />
+                <Route path="/demo/whatsapp" element={<DemoWhatsApp />} />
+                <Route path="/demo/recorrido" element={<DemoRecorrido />} />
                 <Route path="/acceso" element={<AccessSelector />} />
                 <Route path="/acceso/paciente" element={<PatientAccess />} />
                 <Route path="/terminos" element={<Terms />} />
