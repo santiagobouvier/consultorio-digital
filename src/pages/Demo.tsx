@@ -26,8 +26,6 @@ const Demo = () => {
   const navigate = useNavigate();
   // La web personalizada se muestra embebida en un modal: la URL no se expone
   const [showCustomWeb, setShowCustomWeb] = useState(false);
-  // Vista del sitio embebido: pantalla completa o marco de celular
-  const [webView, setWebView] = useState<"desktop" | "mobile">("desktop");
 
   const blocks: DemoBlock[] = [
     {
@@ -185,25 +183,9 @@ const Demo = () => {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="shrink-0 flex items-center justify-between gap-3 px-4 py-2.5 bg-black/85 backdrop-blur-md border-b border-white/10">
-              <p className="hidden sm:block text-xs sm:text-sm text-white/80 font-medium truncate">
+              <p className="text-xs sm:text-sm text-white/80 font-medium truncate">
                 Web personalizada de ejemplo — reserva integrada
               </p>
-              <div className="flex items-center gap-1 rounded-lg bg-white/10 p-1">
-                {([
-                  { id: "desktop", label: "Compu" },
-                  { id: "mobile", label: "Celular" },
-                ] as const).map((v) => (
-                  <button
-                    key={v.id}
-                    onClick={() => setWebView(v.id)}
-                    className={`px-3 py-1 rounded-md text-xs font-semibold transition-colors ${
-                      webView === v.id ? "bg-white text-black" : "text-white/60 hover:text-white"
-                    }`}
-                  >
-                    {v.label}
-                  </button>
-                ))}
-              </div>
               <button
                 onClick={() => setShowCustomWeb(false)}
                 className="shrink-0 inline-flex items-center gap-1.5 text-xs font-semibold text-white bg-white/10 hover:bg-white/20 rounded-lg px-3 py-1.5 transition-colors"
@@ -211,28 +193,28 @@ const Demo = () => {
                 Cerrar ✕
               </button>
             </div>
-            {webView === "desktop" ? (
-              <iframe
-                src={CUSTOM_WEB_URL}
-                title="Web personalizada de ejemplo"
-                className="w-full flex-1 border-0 bg-white"
-              />
-            ) : (
-              <div className="flex-1 overflow-hidden flex items-center justify-center p-1.5 sm:p-3">
-                {/* Marco de celular moderno: bordes finos, esquinas bien
-                    redondeadas e isla dinámica — la web como la ve un paciente
-                    desde un teléfono actual, lo más grande posible. */}
-                <div className="relative h-full max-h-[880px] max-w-full aspect-[390/820] rounded-[34px] sm:rounded-[48px] bg-black p-[6px] sm:p-[8px] shadow-2xl ring-1 ring-white/25">
-                  <iframe
-                    src={CUSTOM_WEB_URL}
-                    title="Web personalizada de ejemplo (celular)"
-                    className="w-full h-full border-0 rounded-[28px] sm:rounded-[40px] bg-white"
-                  />
-                  {/* Isla dinámica (cámara frontal) */}
-                  <div className="absolute top-[13px] sm:top-[17px] left-1/2 -translate-x-1/2 w-20 sm:w-24 h-[18px] sm:h-[22px] rounded-full bg-black shadow-md" />
+            {/* Una sola vista para todos los dispositivos: la web dentro de
+                una laptop (pantalla + base), scrolleable adentro. */}
+            <div className="flex-1 min-h-0 flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+              <div className="w-full max-w-[1150px]">
+                {/* Pantalla */}
+                <div className="rounded-t-xl sm:rounded-t-2xl bg-black p-[6px] sm:p-2.5 ring-1 ring-white/20 shadow-2xl">
+                  <div className="relative rounded-md sm:rounded-lg overflow-hidden bg-white aspect-[16/10]">
+                    <iframe
+                      src={CUSTOM_WEB_URL}
+                      title="Web personalizada de ejemplo"
+                      className="w-full h-full border-0 bg-white"
+                    />
+                  </div>
+                </div>
+                {/* Base de la laptop con muesca */}
+                <div className="relative mx-auto w-[108%] max-w-none -ml-[4%] h-3 sm:h-4 rounded-b-lg sm:rounded-b-xl shadow-xl"
+                  style={{ background: "linear-gradient(180deg, #52525b 0%, #27272a 90%)" }}
+                >
+                  <div className="absolute left-1/2 -translate-x-1/2 top-0 h-[7px] sm:h-2 w-16 sm:w-24 rounded-b-md" style={{ backgroundColor: "#3f3f46" }} />
                 </div>
               </div>
-            )}
+            </div>
           </div>
         </div>
       )}
