@@ -125,6 +125,23 @@ const DemoAgenda = () => {
       <DemoBanner />
 
       <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-5">
+        {/* Resumen del día: para que se sienta el panel de un día normal de
+            trabajo, no una agenda suelta */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {[
+            { label: "Sesiones hoy", value: "5", sub: "2 realizadas · 3 por venir" },
+            { label: "Cobrado hoy", value: "$ 3.000", sub: "2 sesiones pagas" },
+            { label: "Pagos pendientes", value: "$ 4.500", sub: "3 pacientes" },
+            { label: "Pacientes activos", value: "23", sub: "+2 este mes" },
+          ].map((s) => (
+            <div key={s.label} className="rounded-xl border border-border bg-card px-4 py-3">
+              <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">{s.label}</p>
+              <p className="text-xl font-bold text-foreground tabular-nums mt-0.5">{s.value}</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">{s.sub}</p>
+            </div>
+          ))}
+        </div>
+
         {/* Header */}
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>

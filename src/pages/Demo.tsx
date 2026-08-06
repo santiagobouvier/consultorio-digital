@@ -3,7 +3,7 @@
 // profesional en su panel).
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Globe, Smartphone, LayoutDashboard, Palette, FileText, ArrowLeft, ArrowRight, Lock } from "lucide-react";
+import { Globe, Smartphone, LayoutDashboard, Palette, FileText, ArrowLeft, ArrowRight, Lock, MessageCircle, Play } from "lucide-react";
 
 const BRAND = "#00a5a0";
 
@@ -49,6 +49,16 @@ const Demo = () => {
       cta: "Ver una web real",
       enabled: !!CUSTOM_WEB_URL,
       onClick: () => setShowCustomWeb(true),
+    },
+    {
+      icon: MessageCircle,
+      accent: "#25d366",
+      title: "El WhatsApp automático",
+      subtitle: "Lo que le llega al paciente",
+      description: "Confirmaciones y recordatorios que salen solos, con tu nombre. El aviso tal como aparece en el celular del paciente.",
+      cta: "Ver el WhatsApp",
+      enabled: true,
+      onClick: () => navigate("/demo/whatsapp"),
     },
     {
       icon: Smartphone,
@@ -99,6 +109,32 @@ const Demo = () => {
             tu paciente fiel y vos.
           </p>
         </div>
+
+        {/* Recorrido guiado: la pieza protagonista — el viaje completo en 2 min */}
+        <button
+          onClick={() => navigate("/demo/recorrido")}
+          className="group w-full mb-8 rounded-2xl border p-6 sm:p-7 flex flex-col sm:flex-row items-center gap-5 text-left transition-transform hover:scale-[1.01]"
+          style={{
+            borderColor: "rgba(0,199,138,0.4)",
+            background: "linear-gradient(135deg, rgba(0,199,138,0.12) 0%, rgba(0,165,160,0.05) 100%)",
+            boxShadow: "0 8px 40px rgba(0,199,138,0.12)",
+          }}
+        >
+          <div className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0" style={{ backgroundColor: "#00c78a" }}>
+            <Play className="w-7 h-7 text-black ml-0.5" />
+          </div>
+          <div className="flex-1 min-w-0 text-center sm:text-left">
+            <p className="text-xs font-semibold mb-1" style={{ color: "#00c78a" }}>EMPEZÁ POR ACÁ · 2 MINUTOS</p>
+            <h2 className="text-xl sm:text-2xl font-bold text-white mb-1">El recorrido completo</h2>
+            <p className="text-sm text-white/60">
+              El paciente reserva → le llega el WhatsApp → el turno aparece en tu agenda. Vivilo en 3 pasos.
+            </p>
+          </div>
+          <span className="inline-flex items-center gap-2 h-11 px-5 rounded-xl text-sm font-semibold shrink-0" style={{ backgroundColor: "#00c78a", color: "#000" }}>
+            Empezar
+            <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+          </span>
+        </button>
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
           {blocks.map((b) => (
