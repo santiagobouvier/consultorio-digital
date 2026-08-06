@@ -187,6 +187,22 @@ const AuthSyncBridge = () => {
   return null;
 };
 
+/**
+ * Apaga el splash inicial (logo + puntitos del index.html) recién cuando la
+ * primera pantalla real está montada. Vive DENTRO del Suspense: mientras el
+ * chunk de la ruta se descarga, el splash sigue tapando todo — así nunca se
+ * ven dos pantallas de carga distintas una atrás de la otra.
+ */
+const AppSplashKiller = () => {
+  useEffect(() => {
+    const el = document.getElementById("app-splash");
+    if (!el) return;
+    el.classList.add("fade-out");
+    window.setTimeout(() => el.remove(), 450);
+  }, []);
+  return null;
+};
+
 const App = () => {
   useEffect(() => {
     // Único responsable de reaccionar a cambios de sesión a nivel app:
@@ -231,6 +247,7 @@ const App = () => {
             <BusinessIdProvider>
             <ChunkLoadRecoveryBoundary>
             <Suspense fallback={<LoadingPage />}>
+              <AppSplashKiller />
               <Routes>
                 {/* Public routes */}
                 <Route path="/" element={<Landing />} />

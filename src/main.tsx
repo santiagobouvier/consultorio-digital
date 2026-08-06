@@ -75,7 +75,10 @@ const bootstrap = async () => {
   }
 
   createRoot(document.getElementById("root")!).render(<App />);
-  hideAppSplash();
+  // El splash lo apaga la app cuando la primera pantalla real montó
+  // (AppSplashKiller). Esto queda como red de seguridad por si algo falla:
+  // nunca más de 10 segundos de splash.
+  window.setTimeout(hideAppSplash, 10_000);
 };
 
 void bootstrap();
