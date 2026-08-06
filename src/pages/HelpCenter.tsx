@@ -288,7 +288,7 @@ const SECTIONS: GuideSection[] = [
         steps: [
           "Sin pago previo: reservan gratis y cobrás en la sesión (o marcás el pago a mano).",
           "Pago opcional: el paciente puede pagar online desde su portal si quiere.",
-          "Pago requerido: la reserva de la web pública queda retenida hasta que paga; si no paga en 45 minutos, el horario se libera solo.",
+          "Pago requerido: la reserva de la web pública queda retenida hasta que paga; si no paga en 15 minutos, el horario se libera solo.",
           "Las opciones que cobran online solo se habilitan con Mercado Pago conectado.",
         ],
         visual: <VisualPolicy />,
