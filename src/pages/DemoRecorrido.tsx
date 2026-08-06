@@ -8,7 +8,7 @@
 // o tocando un paso ya recorrido.
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Check, CalendarDays, MessageCircle, BellRing, LayoutDashboard, Video, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, ArrowDown, Check, CalendarDays, MessageCircle, BellRing, LayoutDashboard, Video, Sparkles } from "lucide-react";
 import { WhatsAppPhone, buildDemoWaConfirmation, buildDemoWaReminder } from "@/components/demo/WhatsAppPhone";
 
 const BRAND = "#00c78a";
@@ -155,6 +155,13 @@ const DemoRecorrido = () => {
                   <>
                     <p className="text-sm font-semibold mb-0.5">Sesión individual · 60 min</p>
                     <p className="text-xs text-white/50 capitalize mb-3">{tomorrowEs}</p>
+                    {/* Guía: sin esto no se entiende que hay que tocar un horario */}
+                    {!slot && (
+                      <div className="flex items-center gap-1.5 mb-2 text-[13px] font-semibold" style={{ color: BRAND }}>
+                        <ArrowDown className="w-4 h-4 animate-bounce" />
+                        Tocá un horario para empezar
+                      </div>
+                    )}
                     <div className="grid grid-cols-3 gap-2 mb-4">
                       {SLOTS.map((t) => (
                         <button
