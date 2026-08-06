@@ -180,7 +180,7 @@ const Demo = () => {
           onClick={() => setShowCustomWeb(false)}
         >
           <div
-            className="relative w-full max-w-6xl h-[88dvh] rounded-2xl overflow-hidden border border-white/15 shadow-2xl flex flex-col"
+            className="relative w-full max-w-[1560px] h-[94dvh] rounded-2xl overflow-hidden border border-white/15 shadow-2xl flex flex-col"
             style={{ backgroundColor: "#0b0f0e" }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -218,16 +218,18 @@ const Demo = () => {
                 className="w-full flex-1 border-0 bg-white"
               />
             ) : (
-              <div className="flex-1 overflow-hidden flex items-center justify-center p-1.5 sm:p-4">
-                {/* Marco de celular: la misma web, como la ve un paciente desde
-                    el teléfono. En pantallas chicas el marco es finito y casi
-                    sin margen, para que el sitio se vea GRANDE. */}
-                <div className="h-full max-h-[780px] max-w-full aspect-[390/800] rounded-[26px] sm:rounded-[36px] bg-black p-1 sm:p-2 shadow-2xl ring-1 ring-white/20">
+              <div className="flex-1 overflow-hidden flex items-center justify-center p-1.5 sm:p-3">
+                {/* Marco de celular moderno: bordes finos, esquinas bien
+                    redondeadas e isla dinámica — la web como la ve un paciente
+                    desde un teléfono actual, lo más grande posible. */}
+                <div className="relative h-full max-h-[880px] max-w-full aspect-[390/820] rounded-[34px] sm:rounded-[48px] bg-black p-[6px] sm:p-[8px] shadow-2xl ring-1 ring-white/25">
                   <iframe
                     src={CUSTOM_WEB_URL}
                     title="Web personalizada de ejemplo (celular)"
-                    className="w-full h-full border-0 rounded-[22px] sm:rounded-[28px] bg-white"
+                    className="w-full h-full border-0 rounded-[28px] sm:rounded-[40px] bg-white"
                   />
+                  {/* Isla dinámica (cámara frontal) */}
+                  <div className="absolute top-[13px] sm:top-[17px] left-1/2 -translate-x-1/2 w-20 sm:w-24 h-[18px] sm:h-[22px] rounded-full bg-black shadow-md" />
                 </div>
               </div>
             )}
