@@ -159,7 +159,7 @@ const PublicBooking = ({ demo = false, embed = false }: { demo?: boolean; embed?
     } else if (payment === "pending") {
       toast.info("Tu pago está en proceso. Cuando se acredite, te llega la confirmación por email.");
     } else {
-      toast.error("El pago no se completó. Si no se paga, la reserva se libera a los 45 minutos.");
+      toast.error("El pago no se completó. Si no se paga, la reserva se libera a los 15 minutos.");
     }
     searchParams.delete("payment");
     setSearchParams(searchParams, { replace: true });
