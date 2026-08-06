@@ -29,6 +29,7 @@ export function DashboardBrandingProvider({ children }: { children: ReactNode })
   const [primaryColor, setPrimaryColor] = useState(DEFAULT_COLOR);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState<string | null>(null);
+  const [publicSlug, setPublicSlug] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchBranding = async () => {
@@ -40,7 +41,7 @@ export function DashboardBrandingProvider({ children }: { children: ReactNode })
     try {
       const { data } = await supabase
         .from("businesses")
-        .select("dashboard_primary_color, dashboard_logo_url, dashboard_display_name, name, portal_logo_url, portal_clinic_display_name, portal_primary_color")
+        .select("dashboard_primary_color, dashboard_logo_url, dashboard_display_name, name, portal_logo_url, portal_clinic_display_name, portal_primary_color, public_slug")
         .eq("id", businessId)
         .maybeSingle();
 
@@ -55,6 +56,7 @@ export function DashboardBrandingProvider({ children }: { children: ReactNode })
         setPrimaryColor(color);
         setLogoUrl(logo);
         setDisplayName(d.portal_clinic_display_name || d.dashboard_display_name || data.name || null);
+        setPublicSlug(d.public_slug || null);
         // La pantalla de carga del panel y la bienvenida post-login usan esta
         // marca en las próximas visitas (incluye el nombre para el splash).
         try {
@@ -112,6 +114,66 @@ export function DashboardBrandingProvider({ children }: { children: ReactNode })
       root.style.removeProperty("--brand-primary-glow");
     };
   }, [primaryColor]);
+
+  // App instalable del PANEL con la marca del consultorio: mientras el panel
+  // está montado, el manifest genérico se reemplaza por el del consultorio
+  // (logo, nombre y color del profesional; arranca en /dashboard). Instalar
+  // desde acá = la app del cliente, no "Consultorio Digital".
+  useEffect(() => {
+    if (!publicSlug) return;
+    const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+    if (!projectId) return;
+    const origin = window.location.origin;
+    const manifestUrl = `https://${projectId}.supabase.co/functions/v1/get-clinic-manifest?slug=${encodeURIComponent(publicSlug)}&area=dashboard&origin=${encodeURIComponent(origin)}`;
+
+    const previousManifestLinks = Array.from(
+      document.querySelectorAll<HTMLLinkElement>('link[rel="manifest"]'),
+    ).map(el => ({ href: el.href, crossOrigin: el.crossOrigin }));
+    document.querySelectorAll('link[rel="manifest"]').forEach(el => el.remove());
+
+    const link = document.createElement("link");
+    link.rel = "manifest";
+    link.href = manifestUrl;
+    link.crossOrigin = "anonymous";
+    document.head.appendChild(link);
+
+    // iOS toma nombre e ícono de estos tags, no del manifest
+    const prevAppleTitle = document.querySelector<HTMLMetaElement>('meta[name="apple-mobile-web-app-title"]')?.content;
+    if (displayName) {
+      let appleTitle = document.querySelector<HTMLMetaElement>('meta[name="apple-mobile-web-app-title"]');
+      if (!appleTitle) {
+        appleTitle = document.createElement("meta");
+        appleTitle.name = "apple-mobile-web-app-title";
+        document.head.appendChild(appleTitle);
+      }
+      appleTitle.content = displayName;
+    }
+    const prevAppleIcon = document.querySelector<HTMLLinkElement>('link[rel="apple-touch-icon"]')?.href;
+    if (logoUrl) {
+      let appleIcon = document.querySelector<HTMLLinkElement>('link[rel="apple-touch-icon"]');
+      if (!appleIcon) {
+        appleIcon = document.createElement("link");
+        appleIcon.rel = "apple-touch-icon";
+        document.head.appendChild(appleIcon);
+      }
+      appleIcon.href = logoUrl;
+    }
+
+    return () => {
+      link.remove();
+      previousManifestLinks.forEach(({ href, crossOrigin }) => {
+        const restored = document.createElement("link");
+        restored.rel = "manifest";
+        restored.href = href;
+        if (crossOrigin) restored.crossOrigin = crossOrigin;
+        document.head.appendChild(restored);
+      });
+      const appleTitle = document.querySelector<HTMLMetaElement>('meta[name="apple-mobile-web-app-title"]');
+      if (appleTitle && prevAppleTitle) appleTitle.content = prevAppleTitle;
+      const appleIcon = document.querySelector<HTMLLinkElement>('link[rel="apple-touch-icon"]');
+      if (appleIcon && prevAppleIcon) appleIcon.href = prevAppleIcon;
+    };
+  }, [publicSlug, displayName, logoUrl]);
 
   return (
     <DashboardBrandingContext.Provider

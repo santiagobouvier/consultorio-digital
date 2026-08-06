@@ -84,14 +84,19 @@ serve(async (req) => {
       );
     }
 
+    // area=dashboard → app del PROFESIONAL: misma marca del consultorio pero
+    // arranca en su panel. id propio por consultorio para que en un mismo
+    // celular convivan apps de consultorios distintos sin pisarse.
+    const isDashboard = url.searchParams.get("area") === "dashboard";
+
     const manifest = {
-      id: `${appOrigin}/portal/${slug}`,
+      id: isDashboard ? `${appOrigin}/app/${slug}` : `${appOrigin}/portal/${slug}`,
       name: displayName,
       short_name: displayName.length > 12 ? displayName.substring(0, 12) : displayName,
       description: business.specialty ? `${displayName} — ${business.specialty}` : displayName,
       lang: "es",
-      start_url: `${appOrigin}/portal/${slug}`,
-      scope: `${appOrigin}/portal/${slug}`,
+      start_url: isDashboard ? `${appOrigin}/dashboard` : `${appOrigin}/portal/${slug}`,
+      scope: isDashboard ? `${appOrigin}/` : `${appOrigin}/portal/${slug}`,
       display: "standalone",
       orientation: "any",
       // Fondo del splash de arranque: SIEMPRE oscuro (regla de la casa:
