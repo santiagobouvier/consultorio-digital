@@ -127,7 +127,7 @@ const Demo = () => {
             <p className="text-xs font-semibold mb-1" style={{ color: "#00c78a" }}>EMPEZÁ POR ACÁ · 2 MINUTOS</p>
             <h2 className="text-xl sm:text-2xl font-bold text-white mb-1">El recorrido completo</h2>
             <p className="text-sm text-white/60">
-              El paciente reserva → le llega el WhatsApp → el turno aparece en tu agenda. Vivilo en 3 pasos.
+              El paciente reserva → le llega el WhatsApp → el recordatorio → tu agenda. Vivilo en 4 pasos.
             </p>
           </div>
           <span className="inline-flex items-center gap-2 h-11 px-5 rounded-xl text-sm font-semibold shrink-0" style={{ backgroundColor: "#00c78a", color: "#000" }}>
