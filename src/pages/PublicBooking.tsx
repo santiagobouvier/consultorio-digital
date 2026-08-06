@@ -629,7 +629,8 @@ const PublicBooking = ({ demo = false, embed = false }: { demo?: boolean; embed?
                 {demo ? "Volver a la demo" : "Volver al consultorio"}
               </Button>
             )}
-            {!embed && (
+            {/* En demo el cierre es simple: solo "Volver a la demo" */}
+            {!embed && !demo && (
             <div className="pt-4 border-t border-border space-y-2">
               <p className="text-xs text-muted-foreground px-2">
                 Tu profesional te enviará acceso a tu portal personal donde podrás ver tus citas y más.
@@ -637,7 +638,7 @@ const PublicBooking = ({ demo = false, embed = false }: { demo?: boolean; embed?
               <Button
                 variant="outline"
                 className="w-full"
-                onClick={() => navigate(demo ? "/portal-paciente/demo" : `/portal/${targetSlug}`)}
+                onClick={() => navigate(`/portal/${targetSlug}`)}
               >
                 Conocé tu portal
               </Button>
