@@ -41,7 +41,7 @@ export function WhatsAppPhone({ clinicName, clinicInitials, messages, animate = 
   }, [visibleCount]);
 
   return (
-    <div className="mx-auto w-full max-w-[340px] aspect-[390/760] rounded-[36px] bg-black p-2 shadow-2xl ring-1 ring-white/20 select-none">
+    <div className="mx-auto w-full max-w-[340px] aspect-[390/760] rounded-[36px] bg-black p-2 shadow-2xl ring-1 ring-white/20 select-none text-left">
       <div className="w-full h-full rounded-[28px] overflow-hidden flex flex-col" style={{ backgroundColor: "#0b141a" }}>
         {/* Header del chat */}
         <div className="shrink-0 flex items-center gap-3 px-3 pt-6 pb-2.5" style={{ backgroundColor: "#202c33" }}>
