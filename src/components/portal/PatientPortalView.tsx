@@ -1585,13 +1585,13 @@ export function PatientPortalView(props: PatientPortalViewProps) {
               <InstallAppButton variant="icon-text" className="hidden md:inline-flex" clinicName={branding.name} />
               <NotificationBell patientId={patient.id} />
               {headerAction === "logout" && onLogout && (
-                <Button variant="outline" size="sm" onClick={onLogout} className="gap-2">
+                <Button variant="outline" size="sm" onClick={onLogout} aria-label="Salir" className="gap-2">
                   <LogOut className="h-4 w-4" />
                   <span className="hidden sm:inline">Salir</span>
                 </Button>
               )}
               {headerAction === "back" && onBack && (
-                <Button variant="outline" size="sm" onClick={onBack} className="gap-2">
+                <Button variant="outline" size="sm" onClick={onBack} aria-label={backLabel} className="gap-2">
                   <ArrowLeft className="h-4 w-4" />
                   <span className="hidden sm:inline">{backLabel}</span>
                 </Button>

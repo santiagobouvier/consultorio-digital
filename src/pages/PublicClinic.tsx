@@ -305,7 +305,7 @@ const PublicClinic = () => {
 
             <div className="space-y-2 sm:space-y-3 clinic-fade" style={{ animationDelay: "90ms" }}>
               <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-foreground">
-                {clinicName}
+                {clinicName}{specialty ? ` — ${specialty}` : " — Reservá tu turno online"}
               </h1>
               {specialty && (
                 <p
