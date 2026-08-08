@@ -9,7 +9,7 @@ import { ArrowRight, Check, ChevronDown } from "lucide-react";
 const BRAND = "#00a5a0";
 const GREEN = "#00c78a";
 
-const TRUST = ["Sin tarjeta", "15 días gratis", "Cancelás cuando quieras"];
+const TRUST = ["Sin tarjeta", "7 días gratis", "Cancelás cuando quieras"];
 
 export function HeroSection() {
   const navigate = useNavigate();
@@ -89,7 +89,7 @@ export function HeroSection() {
             className="w-full sm:w-auto h-14 px-8 text-base font-semibold rounded-full text-white transition-transform hover:scale-[1.03]"
             style={{ background: `linear-gradient(135deg, ${BRAND}, ${GREEN})`, boxShadow: `0 8px 30px rgba(0,165,160,0.35)` }}
           >
-            Empezar 15 días gratis
+            Empezar 7 días gratis
             <ArrowRight className="w-4 h-4 ml-2" />
           </Button>
           <Button

@@ -108,7 +108,7 @@ const Dashboard = () => {
     if (searchParams.get("subscription") === "success") {
       toast({
         title: "¡Bienvenido!",
-        description: "Tu prueba gratuita de 15 días está activa.",
+        description: "Tu prueba gratuita de 7 días está activa.",
       });
       // Clean up the URL
       searchParams.delete("subscription");

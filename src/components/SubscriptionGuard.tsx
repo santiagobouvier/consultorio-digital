@@ -231,7 +231,7 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
           return;
         }
 
-        // A propósito: en el modelo "prueba 15 días sin tarjeta", los usuarios
+        // A propósito: en el modelo "prueba 7 días sin tarjeta", los usuarios
         // en trial entran sin tener Mercado Pago configurado. NO bloquear acá.
         // (Los vencidos/cancelados/none ya se bloquean más abajo.)
         activationCache.set(businessId, true);
