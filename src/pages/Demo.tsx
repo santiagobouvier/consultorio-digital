@@ -1,3 +1,4 @@
+import { usePageMeta } from "@/hooks/use-page-meta";
 // Demo hub: bloques para elegir qué probar. Muestra la misma experiencia desde
 // distintas miradas (paciente nuevo en la web, paciente fiel en su portal, y el
 // profesional en su panel).
@@ -23,6 +24,12 @@ interface DemoBlock {
 }
 
 const Demo = () => {
+  usePageMeta({
+    title: "Demo interactiva | Consultorio Digital",
+    description:
+      "Probá el sistema sin registrarte: reserva online, portal del paciente, agenda del profesional y expediente clínico en una demo interactiva.",
+    canonicalPath: "/demo",
+  });
   const navigate = useNavigate();
   // La web personalizada se muestra embebida en un modal: la URL no se expone
   const [showCustomWeb, setShowCustomWeb] = useState(false);

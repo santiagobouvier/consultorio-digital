@@ -1,10 +1,19 @@
+import { usePageMeta } from "@/hooks/use-page-meta";
 import { LegalPage } from "@/components/LegalPage";
 
 // BORRADOR para revisión profesional. Ajustar los datos identificatorios del
 // titular antes de publicar definitivamente.
 const CONTACT_EMAIL = "contacto@consultoriodigital.app";
 
-const Terms = () => (
+const Terms = () => {
+  usePageMeta({
+    title: "Términos y Condiciones | Consultorio Digital",
+    description:
+      "Términos y condiciones de uso de Consultorio Digital: cuentas, planes, responsabilidades del profesional, pagos y cancelación del servicio.",
+    canonicalPath: "/terminos",
+  });
+
+  return (
   <LegalPage title="Términos y Condiciones" updated="17 de julio de 2026">
     <section>
       <h2>1. Quiénes somos y qué es este servicio</h2>
@@ -148,5 +157,6 @@ const Terms = () => (
     </section>
   </LegalPage>
 );
+};
 
 export default Terms;
