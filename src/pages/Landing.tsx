@@ -1,4 +1,5 @@
 import { usePageMeta } from "@/hooks/use-page-meta";
+import { useJsonLd } from "@/hooks/use-json-ld";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { 
@@ -123,6 +124,16 @@ const Landing = () => {
     description:
       "Tu link público de reservas y tu panel privado en un solo lugar: agenda, recordatorios, pacientes y cobros para profesionales de la salud en Uruguay.",
     canonicalPath: "/",
+  });
+
+  useJsonLd("landing-faq", {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: faqItems.map((item) => ({
+      "@type": "Question",
+      name: item.question,
+      acceptedAnswer: { "@type": "Answer", text: item.answer },
+    })),
   });
 
   const [isAnnual, setIsAnnual] = useState(true);
