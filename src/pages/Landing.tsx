@@ -126,15 +126,21 @@ const Landing = () => {
     canonicalPath: "/",
   });
 
-  useJsonLd("landing-faq", {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    mainEntity: faqItems.map((item) => ({
-      "@type": "Question",
-      name: item.question,
-      acceptedAnswer: { "@type": "Answer", text: item.answer },
-    })),
-  });
+  useJsonLd(
+    "landing-faq",
+    useMemo(
+      () => ({
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        mainEntity: faqItems.map((item) => ({
+          "@type": "Question",
+          name: item.question,
+          acceptedAnswer: { "@type": "Answer", text: item.answer },
+        })),
+      }),
+      []
+    )
+  );
 
   const [isAnnual, setIsAnnual] = useState(true);
   const whatsappPersonalizado = "https://wa.me/59898543623?text=Hola,%20quiero%20un%20plan%20personalizado%20para%20mi%20consultorio.";
