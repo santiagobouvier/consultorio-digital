@@ -67,6 +67,11 @@ export function usePageMeta({ title, description, canonicalPath }: PageMeta) {
       document.title = DEFAULTS.title;
       setMetaByName("description", DEFAULTS.description);
       setCanonical(SITE_URL + "/");
+      setMetaByProperty("og:title", DEFAULTS.title);
+      setMetaByProperty("og:description", DEFAULTS.description);
+      setMetaByProperty("og:url", SITE_URL + "/");
+      setMetaByName("twitter:title", DEFAULTS.title);
+      setMetaByName("twitter:description", DEFAULTS.description);
     };
   }, [title, description, canonicalPath]);
 }
