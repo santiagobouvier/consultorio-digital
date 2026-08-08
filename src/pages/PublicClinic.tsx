@@ -9,6 +9,7 @@ import { cacheClinicBrand } from "@/lib/clinic-brand-cache";
 import NotFound from "./NotFound";
 import { getPlanDefinition } from "@/lib/plan-definitions";
 import { PublicThemeControl } from "@/components/public/PublicThemeControl";
+import { useJsonLd } from "@/hooks/use-json-ld";
 
 type DayKey = "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday";
 
@@ -178,6 +179,38 @@ const PublicClinic = () => {
       }) as React.CSSProperties,
     [accent]
   );
+
+  // Datos estructurados del consultorio para buscadores
+  const clinicJsonLd = useMemo(() => {
+    if (!business) return null;
+    const name =
+      settings?.clinic_name ||
+      business.portal_clinic_display_name ||
+      business.name ||
+      "Consultorio";
+    const publicSlug = business.public_slug || slug;
+    const url = `https://consultoriodigital.app/consultorio/${publicSlug}`;
+    const logo = business.portal_logo_url || settings?.logo_url || undefined;
+    return {
+      "@context": "https://schema.org",
+      "@type": "LocalBusiness",
+      name,
+      url,
+      ...(logo ? { image: logo, logo } : {}),
+      ...(settings?.specialty || business.specialty
+        ? { description: `${name} — ${settings?.specialty || business.specialty}` }
+        : {}),
+      ...(schedule.length > 0
+        ? {
+            openingHours: schedule.flatMap(({ day, ranges }) =>
+              ranges.map((range) => `${day.slice(0, 2).replace(/^./, (c) => c.toUpperCase())} ${range.replace(" – ", "-")}`)
+            ),
+          }
+        : {}),
+    };
+  }, [business, settings, schedule, slug]);
+
+  useJsonLd("public-clinic", clinicJsonLd);
 
   if (loading) return <LoadingPage />;
 
