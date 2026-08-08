@@ -252,7 +252,7 @@ export default function ActivateBusinessAccount() {
               </Button>
 
               <p className="text-xs text-muted-foreground text-center">
-                Al activar, aceptás los términos de servicio. Vas a recibir 15 días de prueba gratis.
+                Al activar, aceptás los términos de servicio. Vas a recibir 7 días de prueba gratis.
               </p>
             </form>
           ) : null}

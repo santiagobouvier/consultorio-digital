@@ -166,7 +166,7 @@ serve(async (req) => {
 
     // Create Mercado Pago preapproval (subscription)
     const trialEndDate = new Date();
-    trialEndDate.setDate(trialEndDate.getDate() + 15);
+    trialEndDate.setDate(trialEndDate.getDate() + 7);
 
     // FIX: Para anual, MP cobra el precio mensual equivalente cada 12 meses.
     // Para mensual, cobra el precio mensual cada 1 mes.
@@ -176,7 +176,7 @@ serve(async (req) => {
     // Para anual: cobrar el monto mensual * 12 en un solo pago cada 12 meses
     const mpTransactionAmount = period === "annual" ? amount * 12 : amount;
 
-    // Los 15 días gratis de MP corresponden SOLO a cuentas nuevas o con la
+    // Los 7 días gratis de MP corresponden SOLO a cuentas nuevas o con la
     // prueba in-app todavía vigente. Un vencido/cancelado que reactiva paga
     // desde el día 1 (si no, la "reactivación" regala otra prueba entera).
     const trialStillAccessible = existingSubscription?.status === "trial"
@@ -194,7 +194,7 @@ serve(async (req) => {
         ...(includeFreeTrial
           ? {
               free_trial: {
-                frequency: 15,
+                frequency: 7,
                 frequency_type: "days",
               },
             }

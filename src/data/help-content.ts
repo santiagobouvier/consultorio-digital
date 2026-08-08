@@ -222,7 +222,7 @@ export const HELP_CONTENT: Record<string, HelpEntry> = {
   },
   billingTrial: {
     title: "Prueba gratuita",
-    body: "Tenés 15 días sin cobro. Cuando termine, se activa el plan elegido automáticamente.",
+    body: "Tenés 7 días sin cobro. Cuando termine, se activa el plan elegido automáticamente.",
   },
   billingPaymentMethod: {
     title: "Método de pago",

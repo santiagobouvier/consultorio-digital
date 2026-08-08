@@ -192,7 +192,7 @@ const Billing = () => {
       if (data?.checkout_url) {
         window.location.href = data.checkout_url;
       } else {
-        toast.success("Suscripción creada. Tu trial de 15 días está activo.");
+        toast.success("Suscripción creada. Tu trial de 7 días está activo.");
         setShowPlanModal(false);
         fetchBillingData();
       }
@@ -564,7 +564,7 @@ const Billing = () => {
             <DialogDescription className="text-white/50">
               {currentPlanCode
                 ? `Actualmente estás en el plan ${plan?.name}. Elegí un nuevo plan.`
-                : "Todos los planes incluyen 15 días de prueba gratuita."}
+                : "Todos los planes incluyen 7 días de prueba gratuita."}
             </DialogDescription>
           </DialogHeader>
 

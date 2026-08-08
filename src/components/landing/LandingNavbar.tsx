@@ -214,7 +214,7 @@ export function LandingNavbar() {
               className="w-full h-14 text-base font-semibold rounded-2xl text-white"
               style={{ background: `linear-gradient(135deg, ${BRAND}, ${GREEN})`, boxShadow: `0 8px 30px rgba(0,165,160,0.35)` }}
             >
-              Empezar 15 días gratis
+              Empezar 7 días gratis
               <ArrowRight className="w-5 h-5 ml-2" />
             </Button>
             <Link to="/acceso" onClick={() => setOpen(false)} className="block">
