@@ -1,3 +1,4 @@
+import { usePageMeta } from "@/hooks/use-page-meta";
 import { useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -21,6 +22,12 @@ import {
 } from "@/lib/plan-definitions";
 
 const Pricing = () => {
+  usePageMeta({
+    title: "Precios y planes | Consultorio Digital",
+    description:
+      "Planes desde Emprendedor hasta Consultorio: agenda online, recordatorios y cobros. Precios en pesos uruguayos y 15 días de prueba gratis.",
+    canonicalPath: "/pricing",
+  });
   const navigate = useNavigate();
   const { user } = useAuth();
   const [billingCycle, setBillingCycle] = useState<"monthly" | "annual">("annual");

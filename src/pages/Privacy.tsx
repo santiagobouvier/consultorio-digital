@@ -1,10 +1,19 @@
+import { usePageMeta } from "@/hooks/use-page-meta";
 import { LegalPage } from "@/components/LegalPage";
 
 // BORRADOR para revisión profesional. Ajustar datos identificatorios del
 // titular antes de publicar definitivamente.
 const CONTACT_EMAIL = "contacto@consultoriodigital.app";
 
-const Privacy = () => (
+const Privacy = () => {
+  usePageMeta({
+    title: "Política de Privacidad | Consultorio Digital",
+    description:
+      "Cómo tratamos los datos personales de profesionales y pacientes en Consultorio Digital, según la Ley 18.331 de Protección de Datos de Uruguay.",
+    canonicalPath: "/privacidad",
+  });
+
+  return (
   <LegalPage title="Política de Privacidad" updated="17 de julio de 2026">
     <section>
       <h2>1. Responsable y alcance</h2>
@@ -130,5 +139,6 @@ const Privacy = () => (
     </section>
   </LegalPage>
 );
+};
 
 export default Privacy;

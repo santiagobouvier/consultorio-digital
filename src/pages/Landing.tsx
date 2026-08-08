@@ -1,3 +1,4 @@
+import { usePageMeta } from "@/hooks/use-page-meta";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { 
@@ -117,6 +118,13 @@ const planFeatures: Record<string, string[]> = {
   consultorio: allFeatures,
 };
 const Landing = () => {
+  usePageMeta({
+    title: "Consultorio Digital | Agenda online para profesionales",
+    description:
+      "Tu link público de reservas y tu panel privado en un solo lugar: agenda, recordatorios, pacientes y cobros para profesionales de la salud en Uruguay.",
+    canonicalPath: "/",
+  });
+
   const [isAnnual, setIsAnnual] = useState(true);
   const whatsappPersonalizado = "https://wa.me/59898543623?text=Hola,%20quiero%20un%20plan%20personalizado%20para%20mi%20consultorio.";
 
