@@ -147,6 +147,23 @@
       <div class="splash-dots" role="status" aria-label="Cargando">
         <span></span><span></span><span></span>
       </div>
+      <!-- Vigilante del splash: si la app no arrancó en 12s (bundle viejo,
+           caché rota, red), ofrece recargar limpiando cachés. Vive en el HTML
+           para funcionar aunque el JavaScript de la app nunca ejecute. -->
+      <div id="splash-stuck" style="display:none;flex-direction:column;align-items:center;gap:12px;">
+        <p style="margin:0;font-family:system-ui,sans-serif;font-size:14px;color:rgba(255,255,255,0.55);">Está tardando más de lo normal.</p>
+        <button
+          onclick="(async function(){try{if('caches' in window){var ks=await caches.keys();await Promise.all(ks.map(function(k){return caches.delete(k)}))}if(navigator.serviceWorker){var rs=await navigator.serviceWorker.getRegistrations();await Promise.all(rs.map(function(r){return r.unregister()}))}}catch(e){}location.reload()})()"
+          style="height:44px;padding:0 24px;border:none;border-radius:12px;background:rgba(255,255,255,0.12);color:#fff;font-family:system-ui,sans-serif;font-size:14px;font-weight:600;cursor:pointer;"
+        >Recargar página</button>
+      </div>
+      <script>
+        setTimeout(function () {
+          var s = document.getElementById('app-splash');
+          var b = document.getElementById('splash-stuck');
+          if (s && b) b.style.display = 'flex';
+        }, 12000);
+      </script>
     </div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
