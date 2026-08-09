@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { getCachedClinicBrand } from "@/lib/clinic-brand-cache";
 import { getPanelBrand } from "@/lib/panel-brand-cache";
 
@@ -19,6 +20,15 @@ const PANEL_PREFIXES = [
 ];
 
 const LoadingPage = () => {
+  // Vigilante universal: NINGÚN cargador de la app puede girar infinito.
+  // A los 12s aparece el botón de recargar (colgadas de red, publicaciones
+  // a medias, chunks que no bajan).
+  const [stuck, setStuck] = useState(false);
+  useEffect(() => {
+    const t = window.setTimeout(() => setStuck(true), 12000);
+    return () => window.clearTimeout(t);
+  }, []);
+
   const path = typeof window !== "undefined" ? window.location.pathname : "";
   const clinicMode = CLINIC_PREFIXES.some((p) => path.startsWith(p));
   const panelMode = !clinicMode && PANEL_PREFIXES.some((p) => path.startsWith(p));
@@ -35,7 +45,7 @@ const LoadingPage = () => {
     // Fondo SIEMPRE oscuro (igual que el splash de arranque): la pantalla de
     // carga nunca es blanca, sin importar el tema elegido por el usuario.
     <div
-      className="min-h-screen flex items-center justify-center"
+      className="relative min-h-screen flex items-center justify-center"
       style={{ backgroundColor: "hsl(180 12% 16%)" }}
     >
       <style>{`
@@ -114,6 +124,21 @@ const LoadingPage = () => {
           </div>
         )}
       </div>
+
+      {stuck && (
+        <div className="absolute bottom-14 left-0 right-0 flex flex-col items-center gap-3 px-6 text-center loading-stage">
+          <p className="text-sm" style={{ color: "hsla(0, 0%, 100%, 0.55)" }}>
+            Está tardando más de lo normal.
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="h-11 px-6 rounded-xl text-sm font-semibold"
+            style={{ backgroundColor: "hsla(0, 0%, 100%, 0.12)", color: "#fff" }}
+          >
+            Recargar página
+          </button>
+        </div>
+      )}
     </div>
   );
 };

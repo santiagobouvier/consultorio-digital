@@ -788,11 +788,15 @@ const ClinicPortal = () => {
           <Card className="max-w-sm w-full">
             <CardContent className="pt-8 pb-6 text-center space-y-3">
               <AlertCircle className="h-12 w-12 text-destructive mx-auto" />
-              <h2 className="text-xl font-bold">Acceso no disponible</h2>
-              <p className="text-sm text-muted-foreground">No tenés una ficha de paciente en este consultorio. Contactá a {branding.displayName} para que te agreguen.</p>
-              <div className="flex gap-2 justify-center">
-                <Button variant="outline" onClick={handleLogout}><LogOut className="h-4 w-4 mr-2" /> Cerrar sesión</Button>
-              </div>
+              <h2 className="text-xl font-bold">Esta cuenta no tiene acceso acá</h2>
+              <p className="text-sm text-muted-foreground">
+                La sesión abierta en este navegador no tiene ficha de paciente en {branding.displayName}.
+                Si sos paciente y tenés otro acceso, ingresá con esa cuenta; si no, contactá a {branding.displayName} para que te agreguen.
+              </p>
+              {/* Nunca un callejón sin salida: siempre se puede ir al login */}
+              <Button className="w-full" onClick={handleLogout}>
+                Ingresar con otra cuenta
+              </Button>
             </CardContent>
           </Card>
         </div>
