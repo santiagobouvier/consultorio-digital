@@ -1109,6 +1109,10 @@ const Landing = () => {
             <a href="/privacidad" className="hover:text-gray-300 transition-colors">
               Política de Privacidad
             </a>
+            <span className="text-gray-700">·</span>
+            <a href="/seguridad" className="hover:text-gray-300 transition-colors">
+              Seguridad
+            </a>
           </div>
           <div className="flex items-center gap-2 text-gray-500 text-xs">
             <span>Sistema desarrollado por</span>
