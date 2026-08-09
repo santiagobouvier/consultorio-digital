@@ -66,6 +66,7 @@ const DemoRecorrido = lazy(() => import("./pages/DemoRecorrido"));
 const AccessSelector = lazy(() => import("./pages/AccessSelector"));
 const PatientAccess = lazy(() => import("./pages/PatientAccess"));
 const Terms = lazy(() => import("./pages/Terms"));
+const Seguridad = lazy(() => import("./pages/Seguridad"));
 const Privacy = lazy(() => import("./pages/Privacy"));
 const HelpCenter = lazy(() => import("./pages/HelpCenter"));
 const SubscriptionGuard = lazy(() => import("./components/SubscriptionGuard"));
@@ -279,6 +280,7 @@ const App = () => {
                 <Route path="/acceso" element={<AccessSelector />} />
                 <Route path="/acceso/paciente" element={<PatientAccess />} />
                 <Route path="/terminos" element={<Terms />} />
+                <Route path="/seguridad" element={<Seguridad />} />
                 <Route path="/privacidad" element={<Privacy />} />
 
                 {/* Protected routes - require active subscription + sidebar */}
