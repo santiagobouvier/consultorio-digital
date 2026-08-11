@@ -39,6 +39,7 @@ import {
 } from "lucide-react";
 import { RouteSkeleton } from "@/components/RouteSkeleton";
 import { useBusinessId } from "@/hooks/use-business-id";
+import { PENDING_REQUESTS_COUNT_KEY } from "@/hooks/use-pending-requests-count";
 import { ListPagination, usePagination, ITEMS_PER_PAGE } from "@/components/ListPagination";
 import { notifyPatient } from "@/lib/push-notifications";
 import { cn } from "@/lib/utils";
@@ -273,6 +274,8 @@ const AppointmentRequests = () => {
     queryClient.invalidateQueries({ queryKey: ["reschedule_pending_requests", businessId] });
     queryClient.invalidateQueries({ queryKey: ["recent_unack_cancellations", businessId] });
     queryClient.invalidateQueries({ queryKey: ["appointments", businessId] });
+    // Badge del sidebar: se actualiza al instante al resolver una solicitud.
+    queryClient.invalidateQueries({ queryKey: [PENDING_REQUESTS_COUNT_KEY, businessId] });
   };
 
   // Realtime: invalidar las listas cuando cambian las tablas relacionadas
