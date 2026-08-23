@@ -35,6 +35,7 @@ import { MonthViewV2 } from "@/components/calendar-v2/MonthViewV2";
 import { DesktopCalendarLayout } from "@/components/calendar-v2/DesktopCalendarLayout";
 import { MobileAgendaFab } from "@/components/calendar-v2/MobileAgendaFab";
 import { BirthdaysStrip } from "@/components/calendar-v2/BirthdaysStrip";
+import { ShareFreeSlotsDialog } from "@/components/calendar-v2/ShareFreeSlotsDialog";
 import { AppointmentDetailModal } from "@/components/calendar/AppointmentDetailModal";
 import { CreateAppointmentModal } from "@/components/CreateAppointmentModal";
 import { PersonalEventModal } from "@/components/PersonalEventModal";
@@ -152,6 +153,8 @@ const CalendarV2 = () => {
   // Eventos personales: modal (crear si target=null, editar si tiene evento)
   const [showPersonalModal, setShowPersonalModal] = useState(false);
   const [personalEventTarget, setPersonalEventTarget] = useState<PersonalEvent | null>(null);
+  // Compartir huecos libres
+  const [showShareSlots, setShowShareSlots] = useState(false);
 
   // Fetch business settings
   useEffect(() => {
@@ -644,6 +647,7 @@ const CalendarV2 = () => {
             setShowPaymentDrawer(true);
           }}
           onAddPersonal={() => openCreatePersonal()}
+          onShareSlots={() => setShowShareSlots(true)}
           onToggleFilters={() => setShowFilters(!showFilters)}
           hasActiveFilters={hasActiveFilters}
           activeFiltersCount={activeFiltersCount}
@@ -830,6 +834,14 @@ const CalendarV2 = () => {
           }}
           businessId={businessId}
           onPaymentRegistered={handleRefresh}
+        />
+
+        {/* Compartir huecos libres */}
+        <ShareFreeSlotsDialog
+          open={showShareSlots}
+          onOpenChange={setShowShareSlots}
+          businessId={businessId}
+          currentUserId={currentUserId}
         />
 
         {/* Personal event modal (crear/editar) */}
