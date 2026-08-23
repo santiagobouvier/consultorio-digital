@@ -29,7 +29,12 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Loader2, Trash2, Repeat, Lock } from "lucide-react";
-import type { PersonalEvent } from "@/components/calendar-v2/types";
+import { cn } from "@/lib/utils";
+import {
+  PERSONAL_CATEGORIES,
+  getPersonalCategory,
+  type PersonalEvent,
+} from "@/components/calendar-v2/types";
 
 interface PersonalEventModalProps {
   open: boolean;
@@ -53,6 +58,7 @@ export const PersonalEventModal = ({
   const isEdit = !!event;
 
   const [title, setTitle] = useState("");
+  const [category, setCategory] = useState("personal");
   const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("10:00");
@@ -70,6 +76,7 @@ export const PersonalEventModal = ({
       const s = new Date(event.start_at);
       const e = new Date(event.end_at);
       setTitle(event.title);
+      setCategory(getPersonalCategory(event.category).id);
       setDate(format(s, "yyyy-MM-dd"));
       setStartTime(format(s, "HH:mm"));
       setEndTime(format(e, "HH:mm"));
@@ -78,6 +85,7 @@ export const PersonalEventModal = ({
       setNotes(event.notes ?? "");
     } else {
       setTitle("");
+      setCategory("personal");
       setDate(format(defaultDate ?? new Date(), "yyyy-MM-dd"));
       setStartTime("09:00");
       setEndTime("10:00");
@@ -104,6 +112,7 @@ export const PersonalEventModal = ({
       const endAt = new Date(`${date}T${endTime}:00`).toISOString();
       const payload = {
         title: title.trim(),
+        category,
         notes: notes.trim() || null,
         start_at: startAt,
         end_at: endAt,
@@ -186,6 +195,35 @@ export const PersonalEventModal = ({
                 maxLength={80}
                 autoFocus
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Etiqueta</Label>
+              <div className="flex flex-wrap gap-1.5">
+                {PERSONAL_CATEGORIES.map((cat) => {
+                  const selected = category === cat.id;
+                  return (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => setCategory(cat.id)}
+                      className={cn(
+                        "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-xs font-medium transition-all",
+                        selected
+                          ? "text-white border-transparent shadow-sm"
+                          : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
+                      )}
+                      style={selected ? { backgroundColor: cat.color } : undefined}
+                    >
+                      <span
+                        className="w-2 h-2 rounded-full"
+                        style={{ backgroundColor: selected ? "rgba(255,255,255,0.9)" : cat.color }}
+                      />
+                      {cat.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             <div className="grid grid-cols-3 gap-3">

@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { format } from "date-fns";
-import { CalendarAppointment, APPOINTMENT_STATUS_MAP, getPaymentColorInfo, getStatusColor } from "./types";
+import { CalendarAppointment, APPOINTMENT_STATUS_MAP, getPaymentColorInfo, getStatusColor, getPersonalCategory } from "./types";
 import { Video, MapPin, Repeat, Coffee } from "lucide-react";
 
 const getInitials = (name?: string | null) => {
@@ -33,31 +33,41 @@ export const AppointmentCard = ({
 
   const isRecurrent = !!(appointment as any).recurrence_group_id;
 
-  // Evento personal: bloque gris con título, sin paciente/pago/modalidad.
+  // Evento personal: bloque con el color de su etiqueta fija.
   if (appointment.isPersonal) {
     const isWeekly = appointment.personalEvent?.recurrence === "weekly";
+    const cat = getPersonalCategory(appointment.personalEvent?.category);
     return (
       <button
         onClick={onClick}
         className={cn(
-          "w-full text-left rounded-xl border border-dashed border-slate-300 dark:border-slate-600",
-          "bg-slate-100/70 dark:bg-slate-500/10 transition-all duration-200",
+          "w-full text-left rounded-xl border border-dashed transition-all duration-200",
           "hover:shadow-md hover:-translate-y-0.5 active:scale-[0.97]",
           compact ? "p-2.5" : "p-4"
         )}
+        style={{
+          borderColor: `${cat.color}66`,
+          background: `${cat.color}14`,
+        }}
       >
         <div className="flex items-center gap-2">
-          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-200 dark:bg-slate-500/20">
-            <Coffee className="h-3.5 w-3.5 text-slate-500 dark:text-slate-300" />
+          <span
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full"
+            style={{ background: `${cat.color}26` }}
+          >
+            <Coffee className="h-3.5 w-3.5" style={{ color: cat.color }} />
           </span>
-          <span className={cn("font-bold text-slate-600 dark:text-slate-300", compact ? "text-sm" : "text-base")}>
+          <span className={cn("font-bold", compact ? "text-sm" : "text-base")} style={{ color: cat.color }}>
             {formatTime(appointment.start_at)} - {formatTime(appointment.end_at)}
           </span>
           <div className="flex items-center gap-1 ml-auto">
             {isWeekly && <Repeat className="h-3 w-3 text-muted-foreground shrink-0" />}
-            <Badge variant="secondary" className="rounded-full text-[10px] px-2 py-0">
-              Personal
-            </Badge>
+            <span
+              className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold text-white"
+              style={{ backgroundColor: cat.color }}
+            >
+              {cat.label}
+            </span>
           </div>
         </div>
         <p className={cn("font-medium truncate text-foreground/85", compact ? "text-sm mt-1" : "text-[15px] mt-1.5")}>
