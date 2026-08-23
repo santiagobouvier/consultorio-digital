@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "13.0.5"
+    PostgrestVersion: "14.17"
   }
   public: {
     Tables: {
@@ -800,6 +800,33 @@ export type Database = {
         }
         Relationships: []
       }
+      calendar_feed_tokens: {
+        Row: {
+          business_id: string
+          created_at: string
+          id: string
+          professional_user_id: string
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          id?: string
+          professional_user_id: string
+          token?: string
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          id?: string
+          professional_user_id?: string
+          token?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       clinic_settings: {
         Row: {
           auto_accept_bookings: boolean
@@ -1405,6 +1432,51 @@ export type Database = {
           token?: string
           updated_at?: string
           used_at?: string | null
+        }
+        Relationships: []
+      }
+      personal_events: {
+        Row: {
+          business_id: string
+          category: string
+          created_at: string
+          end_at: string
+          id: string
+          notes: string | null
+          professional_user_id: string
+          recurrence: string
+          recurrence_until: string | null
+          start_at: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          category?: string
+          created_at?: string
+          end_at: string
+          id?: string
+          notes?: string | null
+          professional_user_id: string
+          recurrence?: string
+          recurrence_until?: string | null
+          start_at: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          category?: string
+          created_at?: string
+          end_at?: string
+          id?: string
+          notes?: string | null
+          professional_user_id?: string
+          recurrence?: string
+          recurrence_until?: string | null
+          start_at?: string
+          title?: string
+          updated_at?: string
         }
         Relationships: []
       }
