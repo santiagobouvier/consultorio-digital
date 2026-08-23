@@ -39,7 +39,7 @@ export interface PersonalEvent {
   notes: string | null;
   start_at: string;
   end_at: string;
-  recurrence: "none" | "weekly";
+  recurrence: "none" | "daily" | "weekly";
   recurrence_until: string | null;
   category?: string | null;
   label_id?: string | null;
@@ -62,8 +62,8 @@ export const LABEL_PALETTE = [
   "#c0ca33", "#f09300", "#795548", "#616161",
 ];
 
-/** Etiquetas FIJAS de eventos personales, cada una con su color estable
- *  (mismo lenguaje que Google Calendar: el color identifica la etiqueta). */
+/** LEGADO: viejas etiquetas fijas. Solo se usan como fallback de color para
+ *  eventos creados antes de las etiquetas libres. La UI ya no las ofrece. */
 export type PersonalCategory =
   | "personal"
   | "salud"

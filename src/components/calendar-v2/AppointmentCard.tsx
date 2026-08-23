@@ -35,7 +35,7 @@ export const AppointmentCard = ({
 
   // Evento personal: bloque con el color de su etiqueta fija.
   if (appointment.isPersonal) {
-    const isWeekly = appointment.personalEvent?.recurrence === "weekly";
+    const isWeekly = !!appointment.personalEvent && appointment.personalEvent.recurrence !== "none";
     const cat = getPersonalLabel(appointment.personalEvent);
     return (
       <button

@@ -135,15 +135,16 @@ serve(async (req) => {
         );
       };
 
-      if (ev.recurrence === "weekly") {
+      if (ev.recurrence === "weekly" || ev.recurrence === "daily") {
+        const stepMs = ev.recurrence === "daily" ? 86400000 : WEEK_MS;
         const until = ev.recurrence_until
           ? new Date(`${ev.recurrence_until}T23:59:59-03:00`).getTime()
           : to.getTime();
         let occ = evStart;
         if (occ < from.getTime()) {
-          occ += Math.floor((from.getTime() - occ) / WEEK_MS) * WEEK_MS;
+          occ += Math.floor((from.getTime() - occ) / stepMs) * stepMs;
         }
-        for (let i = 0; occ <= Math.min(until, to.getTime()) && i < 60; occ += WEEK_MS, i++) {
+        for (let i = 0; occ <= Math.min(until, to.getTime()) && i < 400; occ += stepMs, i++) {
           pushEvent(occ);
         }
       } else {

@@ -211,7 +211,7 @@ export const DayTimeGrid = ({
                       ? apt.personalEvent?.title || "Personal"
                       : apt.patients?.full_name || "Sin paciente"}
                   </p>
-                  {apt.isPersonal && apt.personalEvent?.recurrence === "weekly" && (
+                  {apt.isPersonal && apt.personalEvent && apt.personalEvent.recurrence !== "none" && (
                     <Repeat className="h-2.5 w-2.5 shrink-0 opacity-80" />
                   )}
                   {payInfo && (

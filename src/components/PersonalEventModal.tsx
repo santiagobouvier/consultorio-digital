@@ -1,6 +1,7 @@
-// Modal de evento personal: "Gimnasio", "Pediatra", "Almuerzo con mamá".
-// Vive en la agenda como un bloque gris, bloquea la reserva online y es
-// privado del consultorio (los pacientes nunca lo ven).
+// Modal de evento personal: la agenda de TODA la vida del profesional.
+// Etiquetas 100% libres (el usuario crea nombre + color; no hay presets),
+// atajos de duración, repetición diaria/semanal y ejemplos que solo
+// sugieren (nunca imponen).
 import { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -28,12 +28,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Loader2, Trash2, Repeat, Lock, Plus, Check, X } from "lucide-react";
+import { Loader2, Trash2, Lock, Plus, Check, X, Pipette } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
-  PERSONAL_CATEGORIES,
   LABEL_PALETTE,
-  getPersonalCategory,
   type PersonalEvent,
   type PersonalEventLabel,
 } from "@/components/calendar-v2/types";
@@ -49,6 +47,30 @@ interface PersonalEventModalProps {
   onSaved: () => void;
 }
 
+// Ejemplos que RELLENAN el título (editable). No son etiquetas ni presets.
+const TITLE_EXAMPLES = ["Gimnasio", "Almuerzo", "Estudio", "Familia", "Trámite", "Descanso"];
+
+const DURATIONS = [
+  { label: "30 min", min: 30 },
+  { label: "1 h", min: 60 },
+  { label: "1½ h", min: 90 },
+  { label: "2 h", min: 120 },
+];
+
+const RECURRENCES: { id: "none" | "daily" | "weekly"; label: string }[] = [
+  { id: "none", label: "Una vez" },
+  { id: "daily", label: "Todos los días" },
+  { id: "weekly", label: "Cada semana" },
+];
+
+const NEUTRAL = "#64748b";
+
+const addMinutes = (time: string, min: number) => {
+  const [h, m] = time.split(":").map(Number);
+  const total = Math.min(h * 60 + m + min, 23 * 60 + 59);
+  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+};
+
 export const PersonalEventModal = ({
   open,
   onOpenChange,
@@ -60,9 +82,7 @@ export const PersonalEventModal = ({
   const isEdit = !!event;
 
   const [title, setTitle] = useState("");
-  const [category, setCategory] = useState("personal");
   const [labelId, setLabelId] = useState<string | null>(null);
-  // Etiquetas custom del profesional (estilo Google Calendar)
   const [customLabels, setCustomLabels] = useState<PersonalEventLabel[]>([]);
   const [creatingLabel, setCreatingLabel] = useState(false);
   const [newLabelName, setNewLabelName] = useState("");
@@ -72,36 +92,34 @@ export const PersonalEventModal = ({
   const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("10:00");
-  const [weekly, setWeekly] = useState(false);
+  const [recurrence, setRecurrence] = useState<"none" | "daily" | "weekly">("none");
   const [until, setUntil] = useState("");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  // Prefill al abrir: datos del evento (editar) o fecha sugerida (crear).
+  // Prefill al abrir
   useEffect(() => {
     if (!open) return;
     if (event) {
       const s = new Date(event.start_at);
       const e = new Date(event.end_at);
       setTitle(event.title);
-      setCategory(getPersonalCategory(event.category).id);
       setLabelId(event.label_id ?? null);
       setDate(format(s, "yyyy-MM-dd"));
       setStartTime(format(s, "HH:mm"));
       setEndTime(format(e, "HH:mm"));
-      setWeekly(event.recurrence === "weekly");
+      setRecurrence(event.recurrence === "daily" || event.recurrence === "weekly" ? event.recurrence : "none");
       setUntil(event.recurrence_until ?? "");
       setNotes(event.notes ?? "");
     } else {
       setTitle("");
-      setCategory("personal");
       setLabelId(null);
       setDate(format(defaultDate ?? new Date(), "yyyy-MM-dd"));
       setStartTime("09:00");
       setEndTime("10:00");
-      setWeekly(false);
+      setRecurrence("none");
       setUntil("");
       setNotes("");
     }
@@ -109,7 +127,7 @@ export const PersonalEventModal = ({
     setNewLabelName("");
   }, [open, event, defaultDate]);
 
-  // Etiquetas custom del profesional
+  // Etiquetas del profesional
   useEffect(() => {
     if (!open || !businessId) return;
     let cancelled = false;
@@ -132,7 +150,7 @@ export const PersonalEventModal = ({
   const handleCreateLabel = async () => {
     const name = newLabelName.trim();
     if (!name) {
-      toast({ title: "Poné un nombre", description: "Ej: Supervisión, Facultad, Terapia propia." });
+      toast({ title: "Poné un nombre", description: "Ej: Gimnasio, Facultad, Terapia propia." });
       return;
     }
     if (!businessId) return;
@@ -155,15 +173,24 @@ export const PersonalEventModal = ({
           toast({ title: "Ya existe", description: "Ya tenés una etiqueta con ese nombre.", variant: "destructive" });
           return;
         }
+        if (error.code === "42P01") {
+          toast({
+            title: "Falta un paso en la base",
+            description: "Corré la migración de etiquetas (SQL) y probá de nuevo.",
+            variant: "destructive",
+          });
+          return;
+        }
         throw error;
       }
       setCustomLabels((prev) => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
       setLabelId(data.id);
       setCreatingLabel(false);
       setNewLabelName("");
-    } catch (e) {
+      toast({ title: `Etiqueta "${name}" creada` });
+    } catch (e: any) {
       console.error(e);
-      toast({ title: "Error", description: "No se pudo crear la etiqueta", variant: "destructive" });
+      toast({ title: "Error", description: e?.message ?? "No se pudo crear la etiqueta", variant: "destructive" });
     } finally {
       setSavingLabel(false);
     }
@@ -179,10 +206,7 @@ export const PersonalEventModal = ({
       if (error) throw error;
       setCustomLabels((prev) => prev.filter((l) => l.id !== labelToDelete.id));
       if (labelId === labelToDelete.id) setLabelId(null);
-      toast({
-        title: "Etiqueta eliminada",
-        description: "Los eventos que la usaban vuelven a su etiqueta fija.",
-      });
+      toast({ title: "Etiqueta eliminada", description: "Los eventos que la usaban quedan sin etiqueta." });
       onSaved();
     } catch (e) {
       console.error(e);
@@ -205,17 +229,15 @@ export const PersonalEventModal = ({
 
     setSaving(true);
     try {
-      const startAt = new Date(`${date}T${startTime}:00`).toISOString();
-      const endAt = new Date(`${date}T${endTime}:00`).toISOString();
       const payload = {
         title: title.trim(),
-        category,
+        category: "personal", // columna legada; el color vive en la etiqueta
         label_id: labelId,
         notes: notes.trim() || null,
-        start_at: startAt,
-        end_at: endAt,
-        recurrence: weekly ? "weekly" : "none",
-        recurrence_until: weekly && until ? until : null,
+        start_at: new Date(`${date}T${startTime}:00`).toISOString(),
+        end_at: new Date(`${date}T${endTime}:00`).toISOString(),
+        recurrence,
+        recurrence_until: recurrence !== "none" && until ? until : null,
       };
 
       if (isEdit && event) {
@@ -234,10 +256,7 @@ export const PersonalEventModal = ({
           professional_user_id: user.id,
         });
         if (error) throw error;
-        toast({
-          title: "Evento agregado",
-          description: "Ese horario ya no se puede reservar online.",
-        });
+        toast({ title: "Agendado", description: "Ese horario ya no se puede reservar online." });
       }
       onOpenChange(false);
       onSaved();
@@ -262,7 +281,7 @@ export const PersonalEventModal = ({
       setConfirmDelete(false);
       onOpenChange(false);
       onSaved();
-    } catch (e: any) {
+    } catch (e) {
       console.error(e);
       toast({ title: "Error", description: "No se pudo eliminar el evento", variant: "destructive" });
     } finally {
@@ -270,63 +289,151 @@ export const PersonalEventModal = ({
     }
   };
 
+  const selectedColor = customLabels.find((l) => l.id === labelId)?.color ?? NEUTRAL;
+  const durationMin =
+    startTime && endTime && startTime < endTime
+      ? (Number(endTime.slice(0, 2)) * 60 + Number(endTime.slice(3))) -
+        (Number(startTime.slice(0, 2)) * 60 + Number(startTime.slice(3)))
+      : 0;
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[92dvh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{isEdit ? "Evento personal" : "Nuevo evento personal"}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <span
+                className="h-3 w-3 rounded-full shrink-0 transition-colors"
+                style={{ backgroundColor: selectedColor }}
+                aria-hidden
+              />
+              {isEdit ? "Evento personal" : "Nuevo evento personal"}
+            </DialogTitle>
             <DialogDescription className="flex items-center gap-1.5">
               <Lock className="h-3.5 w-3.5" />
               Solo lo ve tu equipo. Nadie puede reservar en ese horario.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
+          <div className="space-y-5">
+            {/* Título + ejemplos que solo sugieren */}
             <div className="space-y-2">
-              <Label htmlFor="pe-title">Título</Label>
               <Input
-                id="pe-title"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="Ej: Gimnasio, Pediatra, Almuerzo"
+                placeholder="¿Qué tenés? Ej: Gimnasio, Pediatra..."
                 maxLength={80}
                 autoFocus
+                className="h-11 text-[15px] font-medium"
               />
+              {!isEdit && !title && (
+                <div className="flex flex-wrap gap-1.5">
+                  {TITLE_EXAMPLES.map((ex) => (
+                    <button
+                      key={ex}
+                      type="button"
+                      onClick={() => setTitle(ex)}
+                      className="rounded-full border border-dashed border-border px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground hover:border-foreground/30"
+                    >
+                      {ex}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
-            <div className="space-y-2">
-              <Label>Etiqueta</Label>
-              <div className="flex flex-wrap gap-1.5">
-                {/* Fijas */}
-                {PERSONAL_CATEGORIES.map((cat) => {
-                  const selected = !labelId && category === cat.id;
-                  return (
-                    <button
-                      key={cat.id}
-                      type="button"
-                      onClick={() => {
-                        setCategory(cat.id);
-                        setLabelId(null);
-                      }}
-                      className={cn(
-                        "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-xs font-medium transition-all",
-                        selected
-                          ? "text-white border-transparent shadow-sm"
-                          : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
-                      )}
-                      style={selected ? { backgroundColor: cat.color } : undefined}
-                    >
-                      <span
-                        className="w-2 h-2 rounded-full"
-                        style={{ backgroundColor: selected ? "rgba(255,255,255,0.9)" : cat.color }}
-                      />
-                      {cat.label}
-                    </button>
-                  );
-                })}
+            {/* Cuándo */}
+            <div className="space-y-2.5">
+              <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Cuándo
+              </Label>
+              <div className="grid grid-cols-3 gap-2.5">
+                <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="col-span-3 sm:col-span-1" aria-label="Fecha" />
+                <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} className="col-span-3 sm:col-span-1" aria-label="Desde" />
+                <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} className="col-span-3 sm:col-span-1" aria-label="Hasta" />
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5">
+                {DURATIONS.map((d) => (
+                  <button
+                    key={d.min}
+                    type="button"
+                    onClick={() => setEndTime(addMinutes(startTime, d.min))}
+                    className={cn(
+                      "rounded-full px-2.5 py-1 text-xs font-medium transition-colors",
+                      durationMin === d.min
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted/60 text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    {d.label}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-                {/* Custom del profesional */}
+            {/* Repetición */}
+            <div className="space-y-2.5">
+              <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Repetición
+              </Label>
+              <div className="flex rounded-full bg-muted/50 p-0.5">
+                {RECURRENCES.map((r) => (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => setRecurrence(r.id)}
+                    className={cn(
+                      "flex-1 rounded-full py-1.5 text-[12.5px] font-semibold transition-all",
+                      recurrence === r.id
+                        ? "bg-background shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    {r.label}
+                  </button>
+                ))}
+              </div>
+              {recurrence !== "none" && (
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="pe-until" className="text-xs text-muted-foreground shrink-0">
+                    Hasta el (opcional)
+                  </Label>
+                  <Input
+                    id="pe-until"
+                    type="date"
+                    value={until}
+                    min={date}
+                    onChange={(e) => setUntil(e.target.value)}
+                    className="h-9"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Etiqueta: 100% del usuario */}
+            <div className="space-y-2.5">
+              <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Etiqueta y color
+              </Label>
+              <div className="flex flex-wrap gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setLabelId(null)}
+                  className={cn(
+                    "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-xs font-medium transition-all",
+                    labelId === null
+                      ? "text-white border-transparent shadow-sm"
+                      : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
+                  )}
+                  style={labelId === null ? { backgroundColor: NEUTRAL } : undefined}
+                >
+                  <span
+                    className="w-2 h-2 rounded-full"
+                    style={{ backgroundColor: labelId === null ? "rgba(255,255,255,0.9)" : NEUTRAL }}
+                  />
+                  Sin etiqueta
+                </button>
+
                 {customLabels.map((l) => {
                   const selected = labelId === l.id;
                   return (
@@ -352,7 +459,7 @@ export const PersonalEventModal = ({
                         <button
                           type="button"
                           onClick={() => setLabelToDelete(l)}
-                          className="h-full rounded-r-full border border-l-0 border-transparent px-1.5 py-1.5 text-white/80 hover:text-white"
+                          className="h-full rounded-r-full px-1.5 py-1.5 text-white/80 hover:text-white"
                           style={{ backgroundColor: l.color }}
                           aria-label={`Eliminar etiqueta ${l.name}`}
                           title="Eliminar esta etiqueta"
@@ -364,7 +471,6 @@ export const PersonalEventModal = ({
                   );
                 })}
 
-                {/* Crear nueva */}
                 <button
                   type="button"
                   onClick={() => setCreatingLabel((v) => !v)}
@@ -380,16 +486,23 @@ export const PersonalEventModal = ({
                 </button>
               </div>
 
+              {customLabels.length === 0 && !creatingLabel && (
+                <p className="text-[11.5px] text-muted-foreground">
+                  Creá tus propias etiquetas con el color que quieras — por ejemplo "Gimnasio" en
+                  verde o "Facultad" en violeta.
+                </p>
+              )}
+
               {creatingLabel && (
                 <div className="rounded-xl border border-border/70 p-3 space-y-3">
                   <Input
                     value={newLabelName}
                     onChange={(e) => setNewLabelName(e.target.value)}
-                    placeholder="Nombre de la etiqueta (ej: Supervisión)"
+                    placeholder="Nombre de la etiqueta"
                     maxLength={40}
                     autoFocus
                   />
-                  <div className="flex flex-wrap gap-1.5">
+                  <div className="flex flex-wrap items-center gap-1.5">
                     {LABEL_PALETTE.map((hex) => (
                       <button
                         key={hex}
@@ -399,14 +512,43 @@ export const PersonalEventModal = ({
                         style={{ backgroundColor: hex }}
                         aria-label={`Color ${hex}`}
                       >
-                        {newLabelColor === hex && <Check className="h-3.5 w-3.5 text-white" />}
+                        {newLabelColor.toLowerCase() === hex.toLowerCase() && (
+                          <Check className="h-3.5 w-3.5 text-white" />
+                        )}
                       </button>
                     ))}
+                    {/* Color totalmente libre */}
+                    <label
+                      className="relative flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-dashed border-border transition-transform hover:scale-110"
+                      style={
+                        !LABEL_PALETTE.some((h) => h.toLowerCase() === newLabelColor.toLowerCase())
+                          ? { backgroundColor: newLabelColor, borderStyle: "solid" }
+                          : undefined
+                      }
+                      title="Elegir otro color"
+                    >
+                      <Pipette
+                        className={cn(
+                          "h-3.5 w-3.5",
+                          LABEL_PALETTE.some((h) => h.toLowerCase() === newLabelColor.toLowerCase())
+                            ? "text-muted-foreground"
+                            : "text-white"
+                        )}
+                      />
+                      <input
+                        type="color"
+                        value={newLabelColor}
+                        onChange={(e) => setNewLabelColor(e.target.value)}
+                        className="absolute inset-0 opacity-0 cursor-pointer"
+                        aria-label="Color personalizado"
+                      />
+                    </label>
                   </div>
                   <Button
                     type="button"
                     size="sm"
-                    className="w-full"
+                    className="w-full text-white"
+                    style={{ backgroundColor: newLabelColor }}
                     onClick={handleCreateLabel}
                     disabled={savingLabel}
                   >
@@ -415,64 +557,19 @@ export const PersonalEventModal = ({
                     ) : (
                       <Plus className="h-3.5 w-3.5 mr-2" />
                     )}
-                    Crear y usar
+                    Crear "{newLabelName.trim() || "etiqueta"}" y usarla
                   </Button>
                 </div>
               )}
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
-              <div className="space-y-2 col-span-3 sm:col-span-1">
-                <Label htmlFor="pe-date">Fecha</Label>
-                <Input id="pe-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-              </div>
-              <div className="space-y-2 col-span-3 sm:col-span-1">
-                <Label htmlFor="pe-start">Desde</Label>
-                <Input id="pe-start" type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
-              </div>
-              <div className="space-y-2 col-span-3 sm:col-span-1">
-                <Label htmlFor="pe-end">Hasta</Label>
-                <Input id="pe-end" type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-border/70 p-3 space-y-3">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2 min-w-0">
-                  <Repeat className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium">Repetir todas las semanas</p>
-                    <p className="text-xs text-muted-foreground">
-                      Mismo día y horario, cada semana.
-                    </p>
-                  </div>
-                </div>
-                <Switch checked={weekly} onCheckedChange={setWeekly} />
-              </div>
-              {weekly && (
-                <div className="space-y-2">
-                  <Label htmlFor="pe-until">Hasta el (opcional)</Label>
-                  <Input
-                    id="pe-until"
-                    type="date"
-                    value={until}
-                    min={date}
-                    onChange={(e) => setUntil(e.target.value)}
-                  />
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="pe-notes">Notas (opcional)</Label>
-              <Textarea
-                id="pe-notes"
-                rows={2}
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Algo para acordarte"
-              />
-            </div>
+            {/* Notas */}
+            <Textarea
+              rows={2}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Notas (opcional)"
+            />
           </div>
 
           <DialogFooter className="gap-2 sm:gap-0">
@@ -488,7 +585,7 @@ export const PersonalEventModal = ({
                 Eliminar
               </Button>
             )}
-            <Button type="button" onClick={handleSave} disabled={saving || deleting}>
+            <Button type="button" onClick={handleSave} disabled={saving || deleting} className="min-w-[160px]">
               {saving ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Guardando...
@@ -496,20 +593,21 @@ export const PersonalEventModal = ({
               ) : isEdit ? (
                 "Guardar cambios"
               ) : (
-                "Agregar a mi agenda"
+                "Agendar en mi vida"
               )}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
+      {/* Confirmación de borrado del evento */}
       <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>¿Eliminar este evento?</AlertDialogTitle>
             <AlertDialogDescription>
-              {event?.recurrence === "weekly"
-                ? "Se elimina la serie completa (todas las semanas). El horario vuelve a quedar reservable."
+              {event?.recurrence !== "none"
+                ? "Se elimina la serie completa (todas sus repeticiones). El horario vuelve a quedar reservable."
                 : "El horario vuelve a quedar reservable online."}
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -529,13 +627,13 @@ export const PersonalEventModal = ({
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Confirmación de borrado de etiqueta custom */}
+      {/* Confirmación de borrado de etiqueta */}
       <AlertDialog open={!!labelToDelete} onOpenChange={(o) => !o && setLabelToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>¿Eliminar la etiqueta "{labelToDelete?.name}"?</AlertDialogTitle>
             <AlertDialogDescription>
-              Los eventos que la usaban no se borran: vuelven a su etiqueta fija.
+              Los eventos que la usaban no se borran: quedan sin etiqueta.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
