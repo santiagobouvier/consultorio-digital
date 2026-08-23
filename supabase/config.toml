@@ -36,3 +36,8 @@ verify_jwt = false
 # La seguridad es el token secreto por profesional (calendar_feed_tokens).
 [functions.calendar-feed]
 verify_jwt = false
+
+# daily-agenda-summary: lo dispara pg_cron con la anon key (mismo patrón
+# que process-scheduled-reminders).
+[functions.daily-agenda-summary]
+verify_jwt = false
