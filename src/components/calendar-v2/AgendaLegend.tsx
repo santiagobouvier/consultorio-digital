@@ -9,7 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
-import { PERSONAL_CATEGORIES, type Professional } from "./types";
+import type { Professional } from "./types";
 
 const SEEN_KEY = "agenda_legend_seen_v1";
 
@@ -146,22 +146,16 @@ export const AgendaLegend = ({ showProfessionalColors, professionals }: AgendaLe
               </div>
             </div>
 
-            {/* Etiquetas de eventos personales */}
+            {/* Eventos personales */}
             <div className="space-y-2">
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Tus eventos personales (etiqueta con color fijo)
+                Tus eventos personales
               </p>
-              <div className="grid grid-cols-2 gap-2">
-                {PERSONAL_CATEGORIES.map((c) => (
-                  <div key={c.id} className="flex items-center gap-2">
-                    <span
-                      className="w-3.5 h-3.5 rounded-full shrink-0"
-                      style={{ backgroundColor: c.color }}
-                    />
-                    <span className="text-sm">{c.label}</span>
-                  </div>
-                ))}
-              </div>
+              <p className="text-sm text-muted-foreground">
+                Se pintan con el color de la etiqueta que VOS creás (nombre y
+                color libres, desde el propio evento). Sin etiqueta, se ven en
+                gris neutro.
+              </p>
             </div>
 
             {/* Profesionales */}
