@@ -4,17 +4,11 @@ import {
   Users,
   CalendarDays,
   Receipt,
-  Clock,
-  AlarmClock,
   FileText,
   Settings,
-  Palette,
-  CreditCard,
   BarChart3,
-  LifeBuoy,
   Shield,
   LogOut,
-  ChevronRight,
   ArrowLeft,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -47,8 +41,9 @@ type NavItem = {
   highlight?: boolean;
 };
 
-// Misma organización y colores que el lanzador de módulos mobile
-// (MobileHeader): una sola identidad en todos los dispositivos.
+// Nav mínimo: solo lo que se usa todos los días. Todo lo secundario
+// (horarios, recordatorios, mi consultorio, portal, plan, ayuda) vive
+// dentro de la pantalla Configuración. Misma organización que mobile.
 const MODULE_GROUPS: { label: string | null; items: NavItem[] }[] = [
   {
     label: null,
@@ -64,25 +59,27 @@ const MODULE_GROUPS: { label: string | null; items: NavItem[] }[] = [
     ],
   },
   {
-    label: "Configuración",
-    items: [
-      { title: "Horarios y sesiones", url: "/horarios-disponibles", icon: AlarmClock, tint: "262 80% 66%" },
-      { title: "Recordatorios", url: "/recordatorios-pendientes", icon: Clock, tint: "22 90% 58%" },
-      { title: "Mi consultorio", url: "/mi-consultorio", icon: Settings, tint: "215 15% 65%" },
-      { title: "Portal", url: "/personalizar-portal", icon: Palette, tint: "320 75% 62%" },
-    ],
-  },
-  {
     label: "Tu negocio",
     items: [
       { title: "Estadísticas", url: "/estadisticas", icon: BarChart3, tint: "190 85% 50%" },
-      { title: "Mi plan", url: "/billing", icon: CreditCard, tint: "235 75% 66%" },
     ],
   },
 ];
 
-// Ayuda va suelta al final del nav: es soporte, no un módulo del negocio.
-const HELP_ITEM: NavItem = { title: "Ayuda", url: "/ayuda", icon: LifeBuoy, tint: "150 65% 45%" };
+// Configuración va suelta al final del nav: es la puerta a todo lo secundario.
+const CONFIG_ITEM: NavItem = { title: "Configuración", url: "/configuracion", icon: Settings, tint: "215 15% 65%" };
+
+// Rutas que viven "adentro" de Configuración: el item se marca activo
+// también cuando estás en cualquiera de sus subpáginas.
+export const CONFIG_ROUTES = [
+  "/configuracion",
+  "/horarios-disponibles",
+  "/recordatorios-pendientes",
+  "/mi-consultorio",
+  "/personalizar-portal",
+  "/billing",
+  "/ayuda",
+];
 
 const MINI_WIDTH = 64;
 const EXPANDED_WIDTH = 240;
@@ -162,7 +159,10 @@ export function PremiumSidebar() {
     navigate("/saas-admin");
   };
 
-  const isActive = (path: string) => location.pathname === path;
+  const isActive = (path: string) =>
+    path === "/configuracion"
+      ? CONFIG_ROUTES.includes(location.pathname)
+      : location.pathname === path;
 
   const initials = userName
     ? userName
@@ -369,11 +369,11 @@ export function PremiumSidebar() {
               </div>
             ))}
 
-            {/* Ayuda: suelta, separada de los módulos */}
+            {/* Configuración: suelta, separada de los módulos del día a día */}
             <div className="my-2 mx-3">
               <div className="h-px bg-gradient-to-r from-transparent via-white/[0.08] to-transparent" />
             </div>
-            {renderItem(HELP_ITEM)}
+            {renderItem(CONFIG_ITEM)}
 
             {isSuperAdmin && !isVisitMode &&
               renderItem({

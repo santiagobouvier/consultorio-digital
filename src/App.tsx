@@ -69,6 +69,7 @@ const Terms = lazy(() => import("./pages/Terms"));
 const Seguridad = lazy(() => import("./pages/Seguridad"));
 const Privacy = lazy(() => import("./pages/Privacy"));
 const HelpCenter = lazy(() => import("./pages/HelpCenter"));
+const Configuracion = lazy(() => import("./pages/Configuracion"));
 const SubscriptionGuard = lazy(() => import("./components/SubscriptionGuard"));
 const SuperAdminGuard = lazy(() => import("./components/SuperAdminGuard"));
 
@@ -173,6 +174,7 @@ const PROTECTED_ROUTE_PREFIXES = [
   "/billing",
   "/estadisticas",
   "/ayuda",
+  "/configuracion",
   "/saas-admin",
 ];
 
@@ -299,6 +301,7 @@ const App = () => {
                 <Route path="/billing" element={<Protected><Billing /></Protected>} />
                 <Route path="/estadisticas" element={<Protected><Statistics /></Protected>} />
                 <Route path="/ayuda" element={<Protected><HelpCenter /></Protected>} />
+                <Route path="/configuracion" element={<Protected><Configuracion /></Protected>} />
                 <Route path="/saas-admin" element={<AdminProtected><SaasAdmin /></AdminProtected>} />
 
                 {/* Catch-all */}

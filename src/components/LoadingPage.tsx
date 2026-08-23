@@ -16,7 +16,7 @@ const PANEL_PREFIXES = [
   "/dashboard", "/agenda", "/patients", "/pagos", "/solicitudes",
   "/recordatorios-pendientes", "/mi-consultorio", "/horarios-disponibles",
   "/personalizar-portal", "/billing", "/estadisticas", "/centro-control",
-  "/appointments", "/ayuda",
+  "/appointments", "/ayuda", "/configuracion",
 ];
 
 const LoadingPage = () => {
