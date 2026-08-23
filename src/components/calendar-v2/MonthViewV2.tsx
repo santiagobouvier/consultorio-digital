@@ -11,7 +11,7 @@ import {
   isToday,
 } from "date-fns";
 import { es } from "date-fns/locale";
-import { CalendarAppointment, DayPayment, getStatusColor, abbreviatePatientName } from "./types";
+import { CalendarAppointment, DayPayment, getStatusColor, abbreviatePatientName, getEventHexColor } from "./types";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MonthDayDrawer } from "./MonthDayDrawer";
@@ -132,7 +132,14 @@ export const MonthViewV2 = ({
 
   return (
     <>
-      <div className="bg-card rounded-2xl border overflow-hidden">
+      <div
+        className={cn(
+          "bg-card overflow-hidden",
+          isMobile && !isDesktop
+            ? "-mx-4 sm:-mx-6 border-y flex flex-col"
+            : "rounded-2xl border"
+        )}
+      >
         {/* Week day headers */}
         <div className="grid grid-cols-7 border-b bg-muted/30">
           {weekDays.map((day) => (
@@ -145,8 +152,12 @@ export const MonthViewV2 = ({
           ))}
         </div>
 
-        {/* Days grid */}
-        <div className="grid grid-cols-7">
+        {/* Days grid: en mobile las filas se reparten el alto de la pantalla
+            (como Google Calendar), en desktop mantienen su altura propia */}
+        <div
+          className={cn("grid grid-cols-7", isMobile && !isDesktop && "flex-1 auto-rows-fr")}
+          style={isMobile && !isDesktop ? { minHeight: "calc(100dvh - 300px)" } : undefined}
+        >
           {days.map((day, index) => {
             const dayAppointments = getAppointmentsForDay(day);
             const dayPayments = getPaymentsForDay(day);
@@ -157,13 +168,19 @@ export const MonthViewV2 = ({
             const hasAppointments = dayAppointments.length > 0;
             const hasPayments = dayPayments.length > 0;
             const totalEvents = dayAppointments.length + dayPayments.length;
+            // Mobile: barritas solo de eventos vigentes (las canceladas no ensucian)
+            const activeApts = dayAppointments.filter(
+              (a) => a.status !== "cancelled" && a.status !== "cancelled_by_patient"
+            );
+            const overduePay = dayPayments.some((p) => calculatePaymentStatus(p) === "overdue");
+            const dueSoonPay = dayPayments.some((p) => calculatePaymentStatus(p) === "due_soon");
 
             return (
               <button
                 key={index}
                 onClick={() => handleDayClick(day)}
                 className={cn(
-                  "min-h-[70px] md:min-h-[110px] p-1.5 md:p-2 border-b border-r transition-all duration-200 text-left relative group",
+                  "min-h-[86px] md:min-h-[110px] p-1 md:p-2 border-b border-r transition-all duration-200 text-left relative group",
                   "hover:bg-muted/50 active:bg-muted/70",
                   !isCurrentMonth && "bg-muted/20",
                   index % 7 === 6 && "border-r-0",
@@ -210,51 +227,40 @@ export const MonthViewV2 = ({
                   )}
                 </div>
 
-                {/* Mobile: appointment + payment dots */}
-                {isMobile && (hasAppointments || hasPayments) && (
-                  <div className="flex gap-0.5 flex-wrap justify-center">
-                    {dayAppointments.slice(0, 3).map((apt) => (
-                      <span
+                {/* Mobile: mini-chips de color con nombre, estilo Google
+                    Calendar (color real: etiqueta / profesional / estado) */}
+                {isMobile && (activeApts.length > 0 || hasPayments) && (
+                  <div className="space-y-[2px] overflow-hidden">
+                    {activeApts.slice(0, 3).map((apt) => (
+                      <div
                         key={apt.id}
-                        className={cn(
-                          "w-1.5 h-1.5 rounded-full",
-                          showProfessionalColors && apt.professional
-                            ? ""
-                            : apt.paymentColor === "red"
-                              ? "bg-rose-500"
-                              : apt.paymentColor === "orange"
-                                ? "bg-amber-500"
-                                : "bg-primary"
-                        )}
+                        className="h-[14px] rounded-[4px] px-[3px] flex items-center overflow-hidden"
                         style={{
-                          backgroundColor:
-                            showProfessionalColors && apt.professional
-                              ? apt.professional.color
-                              : undefined,
+                          backgroundColor: getEventHexColor(apt, showProfessionalColors),
+                          opacity: apt.status === "attended" ? 0.5 : 1,
                         }}
-                      />
+                      >
+                        <span className="text-[8.5px] font-semibold text-white truncate leading-none">
+                          {apt.isPersonal
+                            ? apt.personalEvent?.title || "Personal"
+                            : (apt.patients?.full_name || "Cita").split(" ")[0]}
+                        </span>
+                      </div>
                     ))}
-                    {dayPayments.slice(0, 2).map((p) => {
-                      const st = calculatePaymentStatus(p);
-                      return (
-                        <span
-                          key={`pay-${p.id}`}
-                          className={cn(
-                            "w-1.5 h-1.5 rounded-sm",
-                            st === "overdue"
-                              ? "bg-rose-500"
-                              : st === "due_soon"
-                                ? "bg-amber-500"
-                                : "bg-emerald-500"
-                          )}
-                        />
-                      );
-                    })}
-                    {totalEvents > 5 && (
-                      <span className="text-[8px] text-muted-foreground">
-                        +{totalEvents - 5}
+                    <div className="flex items-center justify-between px-0.5 min-h-[10px]">
+                      <span className="text-[8.5px] leading-none text-muted-foreground font-semibold tabular-nums">
+                        {activeApts.length > 3 ? `+${activeApts.length - 3}` : ""}
                       </span>
-                    )}
+                      {hasPayments && (
+                        <span
+                          className={cn(
+                            "w-1.5 h-1.5 rounded-full",
+                            overduePay ? "bg-rose-500" : dueSoonPay ? "bg-amber-500" : "bg-emerald-500"
+                          )}
+                          aria-label="Pagos del día"
+                        />
+                      )}
+                    </div>
                   </div>
                 )}
 
@@ -277,8 +283,9 @@ export const MonthViewV2 = ({
                             sc.border
                           )}
                           style={{
-                            borderLeftColor:
-                              showProfessionalColors && apt.professional
+                            borderLeftColor: apt.isPersonal
+                              ? getEventHexColor(apt, showProfessionalColors)
+                              : showProfessionalColors && apt.professional
                                 ? apt.professional.color
                                 : undefined,
                           }}

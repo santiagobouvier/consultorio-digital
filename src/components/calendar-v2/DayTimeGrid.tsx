@@ -10,19 +10,10 @@ import {
   CalendarAppointment,
   getPersonalCategory,
   getPaymentColorInfo,
+  getEventHexColor,
 } from "./types";
 
 const HOUR_H = 64;
-
-// Colores sólidos por estado (cuando no se colorea por profesional)
-const STATUS_HEX: Record<string, string> = {
-  pending: "#f59e0b",
-  reschedule_requested: "#eab308",
-  confirmed: "#00b5b5",
-  scheduled: "#00b5b5",
-  attended: "#94a3b8",
-  no_show: "#f87171",
-};
 
 const STATUS_CHIP: Record<string, string> = {
   pending: "Pendiente",
@@ -146,11 +137,7 @@ export const DayTimeGrid = ({
           const widthPct = 100 / placed.cols;
 
           const cat = apt.isPersonal ? getPersonalCategory(apt.personalEvent?.category) : null;
-          const color = cat
-            ? cat.color
-            : showProfessionalColors && apt.professional
-              ? apt.professional.color
-              : STATUS_HEX[apt.status] ?? "#00b5b5";
+          const color = getEventHexColor(apt, showProfessionalColors);
           const dimmed = apt.status === "attended";
           const statusChip = !apt.isPersonal ? STATUS_CHIP[apt.status] : null;
           const payInfo = !apt.isPersonal ? getPaymentColorInfo(apt.paymentColor) : null;

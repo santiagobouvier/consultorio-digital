@@ -68,6 +68,28 @@ export const PERSONAL_CATEGORIES: { id: PersonalCategory; label: string; color: 
 export const getPersonalCategory = (id?: string | null) =>
   PERSONAL_CATEGORIES.find((c) => c.id === id) ?? PERSONAL_CATEGORIES[0];
 
+/** Colores sólidos por estado (para bloques/barritas cuando no se colorea
+ *  por profesional). */
+const STATUS_HEX: Record<string, string> = {
+  pending: "#f59e0b",
+  reschedule_requested: "#eab308",
+  confirmed: "#00b5b5",
+  scheduled: "#00b5b5",
+  attended: "#94a3b8",
+  no_show: "#f87171",
+};
+
+/** Color hex del evento, con una sola regla en toda la agenda:
+ *  etiqueta personal → profesional (agenda compartida) → estado. */
+export const getEventHexColor = (
+  apt: CalendarAppointment,
+  showProfessionalColors: boolean
+): string => {
+  if (apt.isPersonal) return getPersonalCategory(apt.personalEvent?.category).color;
+  if (showProfessionalColors && apt.professional) return apt.professional.color;
+  return STATUS_HEX[apt.status] ?? "#00b5b5";
+};
+
 export type AppointmentStatus =
   | "pending"
   | "confirmed"
