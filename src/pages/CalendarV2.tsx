@@ -155,6 +155,10 @@ const CalendarV2 = () => {
   const [personalEventTarget, setPersonalEventTarget] = useState<PersonalEvent | null>(null);
   // Compartir huecos libres
   const [showShareSlots, setShowShareSlots] = useState(false);
+  // Hora tocada en un hueco de la grilla (se resalta en el modal de cita)
+  const [prefilledTimeForAction, setPrefilledTimeForAction] = useState<string | null>(null);
+  // Swipe horizontal para cambiar de día/semana/mes (gesto tipo Google)
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
   // Fetch business settings
   useEffect(() => {
@@ -586,6 +590,14 @@ const CalendarV2 = () => {
     setShowPersonalModal(true);
   }, [currentDate]);
 
+  // Tocar un hueco libre en la grilla del día: crear cita a esa hora
+  const handleSlotTap = useCallback((time: string) => {
+    setSelectedDateForAction(currentDate);
+    setLockDateForAction(true);
+    setPrefilledTimeForAction(time);
+    setShowCreateModal(true);
+  }, [currentDate]);
+
   const loading = businessLoading || professionalsLoading;
 
   if (loading && !businessId) {
@@ -714,7 +726,8 @@ const CalendarV2 = () => {
         {/* Professional color legend */}
         {showProfessionalColors && <ProfessionalColorLegend professionals={professionals} />}
 
-        {/* Calendar views with transition */}
+        {/* Calendar views with transition. Swipe horizontal (mobile) para
+            navegar entre día/semana/mes, como en Google Calendar. */}
         <div
           className={cn(
             "transition-all duration-200 ease-out",
@@ -723,6 +736,20 @@ const CalendarV2 = () => {
             isTransitioning && transitionDirection === "none" && "opacity-0 scale-95",
             !isTransitioning && "opacity-100 translate-x-0 scale-100"
           )}
+          onTouchStart={(e) => {
+            const t = e.touches[0];
+            touchStartRef.current = { x: t.clientX, y: t.clientY };
+          }}
+          onTouchEnd={(e) => {
+            const start = touchStartRef.current;
+            touchStartRef.current = null;
+            if (!start) return;
+            const t = e.changedTouches[0];
+            const dx = t.clientX - start.x;
+            const dy = t.clientY - start.y;
+            if (Math.abs(dx) < 64 || Math.abs(dx) < Math.abs(dy) * 1.6) return;
+            navigateDate(dx < 0 ? "next" : "prev");
+          }}
         >
           {dataLoading ? (
             <div className="flex flex-col items-center justify-center py-20 gap-3">
@@ -777,6 +804,7 @@ const CalendarV2 = () => {
                       professionals={professionals}
                       dayPayments={dayPayments}
                       onPaymentClick={handlePaymentClick}
+                      onSlotTap={handleSlotTap}
                     />
                   )}
                   {viewType === "week" && (
@@ -855,11 +883,15 @@ const CalendarV2 = () => {
         {/* Create appointment modal */}
         <CreateAppointmentModal
           open={showCreateModal}
-          onOpenChange={setShowCreateModal}
+          onOpenChange={(o) => {
+            setShowCreateModal(o);
+            if (!o) setPrefilledTimeForAction(null);
+          }}
           patientId={null}
           onSuccess={handleRefresh}
           prefilledDate={selectedDateForAction}
           lockDate={lockDateForAction}
+          prefilledTime={prefilledTimeForAction}
         />
 
         {/* Quick payment drawer (create new) */}

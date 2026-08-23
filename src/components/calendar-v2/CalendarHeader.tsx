@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChevronLeft, ChevronRight, Plus, Filter, Download, Share2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { ViewType } from "./types";
 import { HelpTooltip } from "@/components/HelpTooltip";
 import { NewActionDialog } from "./NewActionDialog";
@@ -62,97 +63,98 @@ export const CalendarHeader = ({
 
   return (
     <div className="space-y-4">
-      {/* Mobile Header */}
-      <div className="md:hidden space-y-4">
-        {/* Top row: Navigation + Add */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => onNavigate("prev")}
-              className="h-10 w-10 rounded-xl"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => onNavigate("next")}
-              className="h-10 w-10 rounded-xl"
-            >
-              <ChevronRight className="h-5 w-5" />
-            </Button>
+      {/* Mobile Header: título grande + cluster de acciones glass +
+          píldora de navegación ‹ Hoy › + tabs redondeados. Compacto y
+          premium: dos filas en vez de tres. */}
+      <div className="md:hidden space-y-3">
+        {/* Fila 1: título del período + acciones */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 pt-0.5 flex items-center gap-2">
+            <h1 className="text-[26px] leading-[1.1] font-extrabold tracking-tight capitalize bg-gradient-to-br from-foreground via-foreground to-foreground/55 bg-clip-text text-transparent truncate">
+              {dateLabel}
+            </h1>
+            <HelpTooltip id="agenda" />
           </div>
-
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-0.5 rounded-2xl border border-border/60 bg-card/70 backdrop-blur-md p-1 shadow-sm shrink-0">
             {onShareSlots && (
-              <Button
-                variant="outline"
-                size="icon"
+              <button
                 onClick={onShareSlots}
-                className="h-10 w-10 rounded-xl"
+                className="h-9 w-9 rounded-xl flex items-center justify-center text-muted-foreground transition-colors active:bg-muted hover:text-foreground"
                 aria-label="Compartir huecos libres"
               >
-                <Share2 className="h-5 w-5" />
-              </Button>
+                <Share2 className="h-[18px] w-[18px]" />
+              </button>
             )}
-            <Button
-              variant={hasActiveFilters ? "default" : "outline"}
-              size="icon"
+            <button
               onClick={onToggleFilters}
-              className="h-10 w-10 rounded-xl relative"
+              className={cn(
+                "relative h-9 w-9 rounded-xl flex items-center justify-center transition-colors active:bg-muted",
+                hasActiveFilters ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground"
+              )}
+              aria-label="Filtros"
             >
-              <Filter className="h-5 w-5" />
+              <Filter className="h-[18px] w-[18px]" />
               {hasActiveFilters && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-destructive text-destructive-foreground rounded-full text-xs flex items-center justify-center">
+                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-destructive text-destructive-foreground rounded-full text-[9px] font-bold flex items-center justify-center">
                   {activeFiltersCount}
                 </span>
               )}
-            </Button>
-            {/* Mobile: '+' moved to floating FAB at the bottom of the page */}
-          </div>
-        </div>
-
-        {/* Date Display */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold capitalize inline-flex items-center gap-2">
-              {dateLabel}
-              <HelpTooltip id="agenda" />
-            </h1>
-            <button
-              onClick={onToday}
-              className="text-sm text-primary font-medium hover:underline"
-            >
-              Ir a hoy
             </button>
           </div>
         </div>
 
-        {/* View Tabs */}
-        <Tabs value={viewType} onValueChange={(v) => onViewChange(v as ViewType)} className="w-full">
-          <TabsList className="w-full h-12 rounded-xl bg-muted/50 p-1">
-            <TabsTrigger 
-              value="day" 
-              className="flex-1 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm h-10 text-sm font-medium"
+        {/* Fila 2: píldora ‹ Hoy › + tabs */}
+        <div className="flex items-center gap-2">
+          <div className="flex items-center rounded-full border border-border/60 bg-card shadow-sm overflow-hidden shrink-0">
+            <button
+              onClick={() => onNavigate("prev")}
+              className="h-10 w-10 flex items-center justify-center text-muted-foreground transition-colors active:bg-muted hover:text-foreground"
+              aria-label="Anterior"
             >
-              Día
-            </TabsTrigger>
-            <TabsTrigger 
-              value="week" 
-              className="flex-1 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm h-10 text-sm font-medium"
+              <ChevronLeft className="h-[18px] w-[18px]" />
+            </button>
+            <button
+              onClick={onToday}
+              className="h-10 px-3 text-[11px] font-bold uppercase tracking-[0.12em] text-primary border-x border-border/60 transition-colors active:bg-primary/10"
             >
-              Semana
-            </TabsTrigger>
-            <TabsTrigger 
-              value="month" 
-              className="flex-1 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm h-10 text-sm font-medium"
+              Hoy
+            </button>
+            <button
+              onClick={() => onNavigate("next")}
+              className="h-10 w-10 flex items-center justify-center text-muted-foreground transition-colors active:bg-muted hover:text-foreground"
+              aria-label="Siguiente"
             >
-              Mes
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+              <ChevronRight className="h-[18px] w-[18px]" />
+            </button>
+          </div>
+
+          <Tabs
+            value={viewType}
+            onValueChange={(v) => onViewChange(v as ViewType)}
+            className="flex-1 min-w-0"
+          >
+            <TabsList className="w-full h-10 rounded-full bg-muted/50 border border-border/50 p-1">
+              <TabsTrigger
+                value="day"
+                className="flex-1 rounded-full data-[state=active]:bg-background data-[state=active]:shadow-sm h-8 text-[13px] font-semibold"
+              >
+                Día
+              </TabsTrigger>
+              <TabsTrigger
+                value="week"
+                className="flex-1 rounded-full data-[state=active]:bg-background data-[state=active]:shadow-sm h-8 text-[13px] font-semibold"
+              >
+                Semana
+              </TabsTrigger>
+              <TabsTrigger
+                value="month"
+                className="flex-1 rounded-full data-[state=active]:bg-background data-[state=active]:shadow-sm h-8 text-[13px] font-semibold"
+              >
+                Mes
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
       </div>
 
       {/* Desktop/tablet Header: en tablet los controles bajan a una segunda
