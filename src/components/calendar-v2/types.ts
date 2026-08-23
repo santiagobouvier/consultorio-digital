@@ -39,7 +39,7 @@ export interface PersonalEvent {
   notes: string | null;
   start_at: string;
   end_at: string;
-  recurrence: "none" | "daily" | "weekly";
+  recurrence: "none" | "daily" | "weekly" | "monthly";
   recurrence_until: string | null;
   category?: string | null;
   label_id?: string | null;

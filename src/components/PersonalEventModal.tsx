@@ -2,8 +2,9 @@
 // Etiquetas 100% libres (el usuario crea nombre + color; no hay presets),
 // atajos de duración, repetición diaria/semanal y ejemplos que solo
 // sugieren (nunca imponen).
-import { useEffect, useState } from "react";
-import { format } from "date-fns";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { addDays, format } from "date-fns";
+import { es } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -28,7 +29,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Loader2, Trash2, Lock, Plus, Check, X, Pipette } from "lucide-react";
+import { Loader2, Trash2, Lock, Plus, Check, X, Pipette, Minus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   LABEL_PALETTE,
@@ -52,24 +53,109 @@ const TITLE_EXAMPLES = ["Gimnasio", "Almuerzo", "Estudio", "Familia", "Trámite"
 
 const DURATIONS = [
   { label: "30 min", min: 30 },
+  { label: "45 min", min: 45 },
   { label: "1 h", min: 60 },
   { label: "1½ h", min: 90 },
   { label: "2 h", min: 120 },
+  { label: "3 h", min: 180 },
 ];
 
-const RECURRENCES: { id: "none" | "daily" | "weekly"; label: string }[] = [
+type Recurrence = "none" | "daily" | "weekly" | "monthly";
+
+const RECURRENCES: { id: Recurrence; label: string }[] = [
   { id: "none", label: "Una vez" },
   { id: "daily", label: "Todos los días" },
   { id: "weekly", label: "Cada semana" },
+  { id: "monthly", label: "Cada mes" },
 ];
 
 const NEUTRAL = "#64748b";
 
-const addMinutes = (time: string, min: number) => {
-  const [h, m] = time.split(":").map(Number);
-  const total = Math.min(h * 60 + m + min, 23 * 60 + 59);
-  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+const toMin = (time: string) => Number(time.slice(0, 2)) * 60 + Number(time.slice(3, 5));
+const toTime = (min: number) => {
+  const clamped = Math.min(Math.max(min, 0), 23 * 60 + 59);
+  return `${String(Math.floor(clamped / 60)).padStart(2, "0")}:${String(clamped % 60).padStart(2, "0")}`;
 };
+const addMinutes = (time: string, min: number) => toTime(toMin(time) + min);
+
+/**
+ * Riel de horarios: chips deslizables cada 30 min (06:00-23:30) que se
+ * centran solos en la hora elegida. Cero relojito nativo: tocar y listo.
+ */
+const TimeRail = ({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (t: string) => void;
+}) => {
+  const railRef = useRef<HTMLDivElement>(null);
+
+  const times = useMemo(() => {
+    const out: string[] = [];
+    for (let m = 6 * 60; m <= 23 * 60 + 30; m += 30) out.push(toTime(m));
+    // Si el valor actual no cae en la grilla de 30 (ajuste fino), se inserta
+    if (value && !out.includes(value)) {
+      out.push(value);
+      out.sort();
+    }
+    return out;
+  }, [value]);
+
+  useEffect(() => {
+    const el = railRef.current?.querySelector<HTMLElement>('[data-selected="true"]');
+    el?.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
+  }, [value]);
+
+  return (
+    <div
+      ref={railRef}
+      className="flex gap-1.5 overflow-x-auto py-1 -mx-1 px-1 snap-x [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+    >
+      {times.map((t) => {
+        const selected = t === value;
+        return (
+          <button
+            key={t}
+            type="button"
+            data-selected={selected || undefined}
+            onClick={() => onChange(t)}
+            className={cn(
+              "shrink-0 snap-center rounded-full px-3.5 py-2 text-[13.5px] font-semibold tabular-nums transition-all",
+              selected
+                ? "bg-primary text-primary-foreground shadow-md scale-105"
+                : "bg-muted/60 text-muted-foreground hover:text-foreground"
+            )}
+          >
+            {t}
+          </button>
+        );
+      })}
+    </div>
+  );
+};
+
+/** Botoncitos de ajuste fino ±15 min. */
+const FineTune = ({ onDelta }: { onDelta: (d: number) => void }) => (
+  <span className="inline-flex items-center gap-1">
+    <button
+      type="button"
+      onClick={() => onDelta(-15)}
+      className="h-6 w-6 rounded-full bg-muted/60 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+      aria-label="15 minutos antes"
+    >
+      <Minus className="h-3 w-3" />
+    </button>
+    <button
+      type="button"
+      onClick={() => onDelta(15)}
+      className="h-6 w-6 rounded-full bg-muted/60 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+      aria-label="15 minutos después"
+    >
+      <Plus className="h-3 w-3" />
+    </button>
+  </span>
+);
 
 export const PersonalEventModal = ({
   open,
@@ -92,7 +178,7 @@ export const PersonalEventModal = ({
   const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("10:00");
-  const [recurrence, setRecurrence] = useState<"none" | "daily" | "weekly">("none");
+  const [recurrence, setRecurrence] = useState<Recurrence>("none");
   const [until, setUntil] = useState("");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
@@ -110,7 +196,11 @@ export const PersonalEventModal = ({
       setDate(format(s, "yyyy-MM-dd"));
       setStartTime(format(s, "HH:mm"));
       setEndTime(format(e, "HH:mm"));
-      setRecurrence(event.recurrence === "daily" || event.recurrence === "weekly" ? event.recurrence : "none");
+      setRecurrence(
+        (["daily", "weekly", "monthly"] as const).includes(event.recurrence as any)
+          ? (event.recurrence as Recurrence)
+          : "none"
+      );
       setUntil(event.recurrence_until ?? "");
       setNotes(event.notes ?? "");
     } else {
@@ -343,32 +433,112 @@ export const PersonalEventModal = ({
             </div>
 
             {/* Cuándo */}
-            <div className="space-y-2.5">
+            <div className="space-y-3">
               <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Cuándo
               </Label>
-              <div className="grid grid-cols-3 gap-2.5">
-                <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="col-span-3 sm:col-span-1" aria-label="Fecha" />
-                <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} className="col-span-3 sm:col-span-1" aria-label="Desde" />
-                <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} className="col-span-3 sm:col-span-1" aria-label="Hasta" />
+
+              {/* Fecha: atajos + selector */}
+              <div className="flex items-center gap-1.5">
+                {[
+                  { label: "Hoy", d: new Date() },
+                  { label: "Mañana", d: addDays(new Date(), 1) },
+                ].map(({ label, d }) => {
+                  const v = format(d, "yyyy-MM-dd");
+                  return (
+                    <button
+                      key={label}
+                      type="button"
+                      onClick={() => setDate(v)}
+                      className={cn(
+                        "rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
+                        date === v
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted/60 text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+                <Input
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  className="h-8 flex-1 min-w-0 rounded-full text-xs px-3"
+                  aria-label="Fecha"
+                />
               </div>
-              <div className="flex flex-wrap items-center gap-1.5">
-                {DURATIONS.map((d) => (
-                  <button
-                    key={d.min}
-                    type="button"
-                    onClick={() => setEndTime(addMinutes(startTime, d.min))}
-                    className={cn(
-                      "rounded-full px-2.5 py-1 text-xs font-medium transition-colors",
-                      durationMin === d.min
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted/60 text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    {d.label}
-                  </button>
-                ))}
+
+              {/* Hora de inicio: riel deslizable + ajuste fino */}
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">
+                    Empieza{" "}
+                    <span className="font-bold text-foreground tabular-nums">{startTime}</span>
+                  </span>
+                  <FineTune
+                    onDelta={(d) => {
+                      // Mover el inicio conserva la duración (como Google)
+                      const dur = Math.max(toMin(endTime) - toMin(startTime), 15);
+                      const ns = addMinutes(startTime, d);
+                      setStartTime(ns);
+                      setEndTime(addMinutes(ns, dur));
+                    }}
+                  />
+                </div>
+                <TimeRail
+                  value={startTime}
+                  onChange={(t) => {
+                    const dur = Math.max(toMin(endTime) - toMin(startTime), 15);
+                    setStartTime(t);
+                    setEndTime(addMinutes(t, dur));
+                  }}
+                />
               </div>
+
+              {/* Duración de un toque + ajuste fino del fin */}
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">
+                    Termina{" "}
+                    <span className="font-bold text-foreground tabular-nums">{endTime}</span>
+                  </span>
+                  <FineTune
+                    onDelta={(d) => {
+                      const ne = addMinutes(endTime, d);
+                      if (toMin(ne) > toMin(startTime)) setEndTime(ne);
+                    }}
+                  />
+                </div>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {DURATIONS.map((d) => (
+                    <button
+                      key={d.min}
+                      type="button"
+                      onClick={() => setEndTime(addMinutes(startTime, d.min))}
+                      className={cn(
+                        "rounded-full px-2.5 py-1.5 text-xs font-semibold transition-colors",
+                        durationMin === d.min
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "bg-muted/60 text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      {d.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Resumen vivo */}
+              <p className="text-[12px] text-muted-foreground capitalize">
+                {format(new Date(`${date}T12:00:00`), "EEEE d 'de' MMMM", { locale: es })}
+                <span className="normal-case">
+                  {" "}· {startTime} → {endTime}
+                  {durationMin > 0 &&
+                    ` (${durationMin >= 60 ? `${Math.floor(durationMin / 60)} h${durationMin % 60 ? ` ${durationMin % 60}` : ""}` : `${durationMin} min`})`}
+                </span>
+              </p>
             </div>
 
             {/* Repetición */}
@@ -376,17 +546,17 @@ export const PersonalEventModal = ({
               <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Repetición
               </Label>
-              <div className="flex rounded-full bg-muted/50 p-0.5">
+              <div className="grid grid-cols-2 gap-1.5">
                 {RECURRENCES.map((r) => (
                   <button
                     key={r.id}
                     type="button"
                     onClick={() => setRecurrence(r.id)}
                     className={cn(
-                      "flex-1 rounded-full py-1.5 text-[12.5px] font-semibold transition-all",
+                      "rounded-xl py-2 text-[12.5px] font-semibold transition-all",
                       recurrence === r.id
-                        ? "bg-background shadow-sm"
-                        : "text-muted-foreground hover:text-foreground"
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "bg-muted/50 text-muted-foreground hover:text-foreground"
                     )}
                   >
                     {r.label}
@@ -394,19 +564,28 @@ export const PersonalEventModal = ({
                 ))}
               </div>
               {recurrence !== "none" && (
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="pe-until" className="text-xs text-muted-foreground shrink-0">
-                    Hasta el (opcional)
-                  </Label>
-                  <Input
-                    id="pe-until"
-                    type="date"
-                    value={until}
-                    min={date}
-                    onChange={(e) => setUntil(e.target.value)}
-                    className="h-9"
-                  />
-                </div>
+                <>
+                  <p className="text-[11.5px] text-muted-foreground">
+                    {recurrence === "daily" && "Se repite todos los días a esta hora."}
+                    {recurrence === "weekly" &&
+                      `Se repite cada ${format(new Date(`${date}T12:00:00`), "EEEE", { locale: es })}.`}
+                    {recurrence === "monthly" &&
+                      `Se repite el ${format(new Date(`${date}T12:00:00`), "d")} de cada mes.`}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="pe-until" className="text-xs text-muted-foreground shrink-0">
+                      Hasta el (opcional)
+                    </Label>
+                    <Input
+                      id="pe-until"
+                      type="date"
+                      value={until}
+                      min={date}
+                      onChange={(e) => setUntil(e.target.value)}
+                      className="h-9"
+                    />
+                  </div>
+                </>
               )}
             </div>
 
