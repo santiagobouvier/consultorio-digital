@@ -9,7 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
-import type { Professional } from "./types";
+import { PERSONAL_CATEGORIES, type Professional } from "./types";
 
 const SEEN_KEY = "agenda_legend_seen_v1";
 
@@ -144,6 +144,24 @@ export const AgendaLegend = ({ showProfessionalColors, professionals }: AgendaLe
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <CreditCard className="h-4 w-4 shrink-0" />
                 Las tarjetitas con este ícono son vencimientos de pago de ese día.
+              </div>
+            </div>
+
+            {/* Etiquetas de eventos personales */}
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Tus eventos personales (etiqueta con color fijo)
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {PERSONAL_CATEGORIES.map((c) => (
+                  <div key={c.id} className="flex items-center gap-2">
+                    <span
+                      className="w-3.5 h-3.5 rounded-full shrink-0"
+                      style={{ backgroundColor: c.color }}
+                    />
+                    <span className="text-sm">{c.label}</span>
+                  </div>
+                ))}
               </div>
             </div>
 

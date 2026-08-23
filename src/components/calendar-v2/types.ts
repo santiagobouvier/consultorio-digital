@@ -41,7 +41,32 @@ export interface PersonalEvent {
   end_at: string;
   recurrence: "none" | "weekly";
   recurrence_until: string | null;
+  category?: string | null;
 }
+
+/** Etiquetas FIJAS de eventos personales, cada una con su color estable
+ *  (mismo lenguaje que Google Calendar: el color identifica la etiqueta). */
+export type PersonalCategory =
+  | "personal"
+  | "salud"
+  | "familia"
+  | "tramite"
+  | "ejercicio"
+  | "estudio"
+  | "descanso";
+
+export const PERSONAL_CATEGORIES: { id: PersonalCategory; label: string; color: string }[] = [
+  { id: "personal", label: "Personal", color: "#64748b" },
+  { id: "salud", label: "Salud", color: "#f43f5e" },
+  { id: "familia", label: "Familia", color: "#f59e0b" },
+  { id: "tramite", label: "Trámite", color: "#8b5cf6" },
+  { id: "ejercicio", label: "Ejercicio", color: "#22c55e" },
+  { id: "estudio", label: "Estudio", color: "#3b82f6" },
+  { id: "descanso", label: "Descanso", color: "#06b6d4" },
+];
+
+export const getPersonalCategory = (id?: string | null) =>
+  PERSONAL_CATEGORIES.find((c) => c.id === id) ?? PERSONAL_CATEGORIES[0];
 
 export type AppointmentStatus =
   | "pending"

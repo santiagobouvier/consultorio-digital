@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { format, isSameDay } from "date-fns";
 import { es } from "date-fns/locale";
-import { CalendarAppointment, Professional, DayPayment, getStatusColor } from "./types";
-import { AppointmentCard } from "./AppointmentCard";
-import { CalendarDays, Plus, Clock, AlertTriangle, CreditCard, Check, X, Coffee } from "lucide-react";
+import { CalendarAppointment, Professional, DayPayment } from "./types";
+import { DayTimeGrid } from "./DayTimeGrid";
+import { CalendarDays, Plus, Clock, AlertTriangle, CreditCard, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -25,32 +25,9 @@ interface DayViewV2Props {
 
 const CANCELLED_STATUSES = ["cancelled", "cancelled_by_patient"];
 
-// "90" -> "1 h 30" / "60" -> "1 h" / "45" -> "45 min"
-const formatDurationMin = (min: number): string => {
-  if (min < 60) return `${min} min`;
-  const h = Math.floor(min / 60);
-  const m = min % 60;
-  return m === 0 ? `${h} h` : `${h} h ${m}`;
-};
-
 const HOUR_HEIGHT = 60;
 const START_HOUR = 7;
 const END_HOUR = 21;
-
-const TimeColumn = () => {
-  const hours = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => START_HOUR + i);
-  return (
-    <div className="w-12 shrink-0">
-      {hours.map((hour) => (
-        <div key={hour} className="h-[60px] relative">
-          <span className="absolute -top-2.5 left-0 text-[10px] text-muted-foreground font-medium">
-            {`${hour.toString().padStart(2, "0")}:00`}
-          </span>
-        </div>
-      ))}
-    </div>
-  );
-};
 
 const AppointmentBlock = ({
   apt,
@@ -136,6 +113,14 @@ export const DayViewV2 = ({
 
   const isCurrentDay = isSameDay(currentDate, new Date());
   const useMultiColumn = showProfessionalColors && professionals.length > 1;
+  const activeAppointments = useMemo(
+    () => dayAppointments.filter((a) => !CANCELLED_STATUSES.includes(a.status)),
+    [dayAppointments]
+  );
+  const cancelledAppointments = useMemo(
+    () => dayAppointments.filter((a) => CANCELLED_STATUSES.includes(a.status)),
+    [dayAppointments]
+  );
   const hours = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => START_HOUR + i);
 
   // Reloj para la línea de "ahora" y el estado EN CURSO (se mueve solo)
@@ -281,8 +266,9 @@ export const DayViewV2 = ({
         </div>
       ) : null}
 
-      {/* Single-column / mobile: LÍNEA DE TIEMPO del día
-          (riel de horas + huecos libres + línea de "ahora" + sesión en curso) */}
+      {/* Grilla horaria del día, estilo Google Calendar. En mobile ocupa
+          TODO el ancho de la pantalla; con varios profesionales en desktop
+          se usa la grilla multi-columna de arriba. */}
       <div className={cn(useMultiColumn && "md:hidden")}>
         {dayAppointments.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 px-4">
@@ -297,114 +283,36 @@ export const DayViewV2 = ({
             </Button>
           </div>
         ) : (
-          <div className="relative">
-            {/* Riel vertical continuo */}
-            <div className="absolute left-[4.25rem] sm:left-[4.75rem] top-3 bottom-3 w-px bg-border" aria-hidden="true" />
-
-            <div className="space-y-2.5">
-              {(() => {
-                const rows: JSX.Element[] = [];
-                let nowMarkPending = isCurrentDay;
-                let prevActiveEnd: Date | null = null;
-
-                dayAppointments.forEach((apt, index) => {
-                  const start = new Date(apt.start_at);
-                  const end = new Date(apt.end_at);
-                  const isCancelled = CANCELLED_STATUSES.includes(apt.status);
-                  const isDone = ["attended", "no_show"].includes(apt.status);
-                  const durationMin = Math.max(5, Math.round((end.getTime() - start.getTime()) / 60000));
-                  const inProgress =
-                    isCurrentDay && !isCancelled && !isDone &&
-                    start.getTime() <= nowTick && nowTick < end.getTime();
-
-                  // Hueco libre entre sesiones activas
-                  if (!isCancelled && prevActiveEnd) {
-                    const gapMin = Math.round((start.getTime() - prevActiveEnd.getTime()) / 60000);
-                    if (gapMin >= 45) {
-                      rows.push(
-                        <div key={`gap-${index}`} className="grid grid-cols-[3.5rem_1fr] sm:grid-cols-[4rem_1fr] gap-x-6 sm:gap-x-7">
-                          <div />
-                          <div className="py-0.5">
-                            <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground/80 bg-muted/40 border border-border/60 rounded-full px-2.5 py-1">
-                              <Coffee className="h-3 w-3" />
-                              {formatDurationMin(gapMin)} libre
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    }
-                  }
-
-                  // Línea de AHORA antes de la primera sesión futura
-                  if (nowMarkPending && nowTick < start.getTime()) {
-                    rows.push(
-                      <div key="now" className="flex items-center py-0.5">
-                        <span className="w-[3.5rem] sm:w-16 text-right text-[10px] font-bold text-rose-500 tabular-nums shrink-0">
-                          {format(new Date(nowTick), "HH:mm")}
-                        </span>
-                        <div className="flex-1 flex items-center pl-3 sm:pl-4">
-                          <span className="w-2 h-2 rounded-full bg-rose-500 ring-4 ring-rose-500/15 shrink-0" />
-                          <div className="flex-1 h-px bg-rose-500/60" />
-                          <span className="text-[9px] font-bold uppercase tracking-widest text-rose-500 pl-1.5">Ahora</span>
-                        </div>
-                      </div>
-                    );
-                    nowMarkPending = false;
-                  }
-                  if (inProgress) nowMarkPending = false;
-
-                  const swatch = getStatusColor(apt.status).swatch;
-
-                  rows.push(
-                    <div
-                      key={apt.id}
-                      className={cn(
-                        "relative grid grid-cols-[3.5rem_1fr] sm:grid-cols-[4rem_1fr] gap-x-6 sm:gap-x-7 animate-fade-in",
-                        (isDone || isCancelled) && "opacity-60"
-                      )}
-                      style={{ animationDelay: `${index * 40}ms`, animationFillMode: "both" }}
-                    >
-                      {/* Nodo sobre el riel */}
-                      <span
-                        className={cn(
-                          "absolute left-[4.25rem] sm:left-[4.75rem] top-6 -translate-x-1/2 w-2.5 h-2.5 rounded-full ring-4 ring-background z-10",
-                          inProgress ? "bg-primary animate-pulse scale-125" : swatch
-                        )}
-                        aria-hidden="true"
-                      />
-
-                      {/* Hora + duración */}
-                      <div className="text-right pt-4">
-                        <p className={cn("text-sm font-bold tabular-nums leading-tight", isCancelled && "line-through text-muted-foreground")}>
-                          {format(start, "HH:mm")}
-                        </p>
-                        <p className="text-[10px] text-muted-foreground tabular-nums">{formatDurationMin(durationMin)}</p>
-                      </div>
-
-                      {/* Tarjeta */}
-                      <div className={cn("relative min-w-0", inProgress && "rounded-2xl ring-2 ring-primary shadow-lg shadow-primary/10")}>
-                        {inProgress && (
-                          <span className="absolute -top-2 left-3 z-10 inline-flex items-center gap-1 rounded-full bg-primary text-primary-foreground text-[9px] font-bold uppercase tracking-widest px-2 py-0.5">
-                            <span className="w-1 h-1 rounded-full bg-primary-foreground animate-pulse" />
-                            En curso
-                          </span>
-                        )}
-                        <AppointmentCard
-                          appointment={apt}
-                          onClick={() => onAppointmentClick(apt)}
-                          showProfessionalColor={showProfessionalColors}
-                        />
-                      </div>
-                    </div>
-                  );
-
-                  if (!isCancelled) prevActiveEnd = end;
-                });
-
-                return rows;
-              })()}
+          <>
+            <div className="-mx-4 sm:-mx-6 md:mx-0 border-y md:border md:rounded-2xl overflow-hidden">
+              <DayTimeGrid
+                appointments={activeAppointments}
+                onAppointmentClick={onAppointmentClick}
+                showProfessionalColors={showProfessionalColors}
+                isCurrentDay={isCurrentDay}
+                nowTick={nowTick}
+              />
             </div>
-          </div>
+
+            {/* Canceladas del día: fuera de la grilla para no ensuciar */}
+            {cancelledAppointments.length > 0 && (
+              <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                {cancelledAppointments.map((apt) => (
+                  <button
+                    key={apt.id}
+                    onClick={() => onAppointmentClick(apt)}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-muted/40 px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    <X className="h-3 w-3 text-rose-400" />
+                    <span className="tabular-nums">{format(new Date(apt.start_at), "HH:mm")}</span>
+                    <span className="line-through truncate max-w-[10rem]">
+                      {apt.patients?.full_name || "Sin paciente"}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </>
         )}
       </div>
 
