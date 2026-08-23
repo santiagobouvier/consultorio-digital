@@ -98,10 +98,10 @@ export const AgendaLegend = ({ showProfessionalColors, professionals }: AgendaLe
   return (
     <>
       <Button
-        variant="outline"
+        variant="ghost"
         size="sm"
         onClick={() => setOpen(true)}
-        className="rounded-xl gap-2 h-8 text-xs"
+        className="rounded-full gap-1.5 h-7 px-2.5 text-[11px] font-medium text-muted-foreground hover:text-foreground"
       >
         <Palette className="h-3.5 w-3.5" />
         Referencias

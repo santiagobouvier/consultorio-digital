@@ -113,6 +113,9 @@ interface CreateAppointmentModalProps {
   onSuccess: () => void;
   prefilledDate?: Date | null;
   lockDate?: boolean;
+  /** Hora tocada en la grilla de la agenda ("15:30"): se resalta ese
+   *  horario entre los libres y se precarga en el modo manual. */
+  prefilledTime?: string | null;
 }
 
 export function CreateAppointmentModal({
@@ -122,6 +125,7 @@ export function CreateAppointmentModal({
   onSuccess,
   prefilledDate,
   lockDate = false,
+  prefilledTime = null,
 }: CreateAppointmentModalProps) {
   const navigate = useNavigate();
   const { businessId } = useBusinessId();
@@ -214,7 +218,7 @@ export function CreateAppointmentModal({
     setScheduleMode("slots");
     setStarts([]);
     setSelectedDay(null);
-    setTime("");
+    setTime(prefilledTime ?? "");
     setModality("presencial");
     setLocation("");
     setNotes("");
@@ -236,7 +240,7 @@ export function CreateAppointmentModal({
     } else {
       setDate("");
     }
-  }, [open, patientId, prefilledDate]);
+  }, [open, patientId, prefilledDate, prefilledTime]);
 
   const filteredPatients = useMemo(() => {
     if (!patientSearch.trim()) return patients;
@@ -849,16 +853,25 @@ export function CreateAppointmentModal({
                       <div className="space-y-2">
                         <p className="text-sm font-semibold">{formatDayLong(selectedDay)}</p>
                         <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2">
-                          {timesForSelectedDay.map((s) => (
-                            <button
-                              key={`${s.day}-${s.start_time}`}
-                              type="button"
-                              onClick={() => pickStart(s)}
-                              className="px-2 py-2.5 rounded-xl border-2 border-primary/30 bg-primary/5 text-primary text-sm font-semibold tabular-nums transition-all hover:bg-primary hover:text-primary-foreground"
-                            >
-                              {s.start_time.slice(0, 5)}
-                            </button>
-                          ))}
+                          {timesForSelectedDay.map((s) => {
+                            const isTapped =
+                              !!prefilledTime && s.start_time.slice(0, 5) === prefilledTime;
+                            return (
+                              <button
+                                key={`${s.day}-${s.start_time}`}
+                                type="button"
+                                onClick={() => pickStart(s)}
+                                className={cn(
+                                  "px-2 py-2.5 rounded-xl border-2 text-sm font-semibold tabular-nums transition-all hover:bg-primary hover:text-primary-foreground",
+                                  isTapped
+                                    ? "border-primary bg-primary text-primary-foreground shadow-md ring-2 ring-primary/30"
+                                    : "border-primary/30 bg-primary/5 text-primary"
+                                )}
+                              >
+                                {s.start_time.slice(0, 5)}
+                              </button>
+                            );
+                          })}
                         </div>
                       </div>
                     )}

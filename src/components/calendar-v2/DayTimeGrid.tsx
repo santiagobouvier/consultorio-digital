@@ -27,6 +27,9 @@ interface DayTimeGridProps {
   showProfessionalColors: boolean;
   isCurrentDay: boolean;
   nowTick: number;
+  /** Tocar un hueco libre de la grilla: crea una cita a esa hora (redondeada
+   *  a la media hora, como Google Calendar). */
+  onSlotTap?: (time: string) => void;
 }
 
 export const DayTimeGrid = ({
@@ -35,6 +38,7 @@ export const DayTimeGrid = ({
   showProfessionalColors,
   isCurrentDay,
   nowTick,
+  onSlotTap,
 }: DayTimeGridProps) => {
   const nowRef = useRef<HTMLDivElement>(null);
 
@@ -110,7 +114,20 @@ export const DayTimeGrid = ({
       </div>
 
       {/* Lienzo del día */}
-      <div className="relative flex-1 min-w-0" style={{ height: bodyHeight }}>
+      <div
+        className="relative flex-1 min-w-0"
+        style={{ height: bodyHeight }}
+        onClick={(e) => {
+          if (!onSlotTap) return;
+          const rect = e.currentTarget.getBoundingClientRect();
+          const minutes = startHour * 60 + ((e.clientY - rect.top) / HOUR_H) * 60;
+          const snapped = Math.floor(minutes / 30) * 30;
+          const h = Math.floor(snapped / 60);
+          const m = snapped % 60;
+          if (h < 0 || h > 23) return;
+          onSlotTap(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
+        }}
+      >
         {/* Líneas de hora y media hora */}
         {hours.map((h, i) => (
           <div key={h}>
@@ -128,7 +145,7 @@ export const DayTimeGrid = ({
         ))}
 
         {/* Bloques */}
-        {placed.items.map(({ apt, col }) => {
+        {placed.items.map(({ apt, col }, idx) => {
           const sD = new Date(apt.start_at);
           const eD = new Date(apt.end_at);
           const top = ((sD.getHours() * 60 + sD.getMinutes()) / 60 - startHour) * HOUR_H;
@@ -148,19 +165,28 @@ export const DayTimeGrid = ({
           return (
             <button
               key={apt.id}
-              onClick={() => onAppointmentClick(apt)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onAppointmentClick(apt);
+              }}
               className={cn(
-                "absolute rounded-lg text-left text-white shadow-sm overflow-hidden transition-all",
-                "hover:shadow-lg hover:z-20 active:scale-[0.99]",
+                "absolute rounded-[10px] text-left text-white overflow-hidden transition-all",
+                "hover:z-20 hover:-translate-y-px active:scale-[0.99]",
+                "animate-in fade-in slide-in-from-bottom-1",
                 dimmed && "opacity-55",
-                inProgress && "ring-2 ring-white/70 z-10 shadow-lg"
+                inProgress && "ring-2 ring-white/70 z-10"
               )}
               style={{
                 top,
                 height,
                 left: `calc(${col * widthPct}% + 3px)`,
                 width: `calc(${widthPct}% - 6px)`,
+                backgroundImage: `linear-gradient(160deg, ${color} 0%, ${color} 60%, rgba(0,0,0,0.22) 165%)`,
                 backgroundColor: color,
+                boxShadow: `0 6px 18px -8px ${color}cc, 0 1px 2px rgba(0,0,0,0.18)`,
+                animationDelay: `${Math.min(idx * 30, 300)}ms`,
+                animationDuration: "350ms",
+                animationFillMode: "both",
               }}
             >
               {/* Franja sutil para eventos personales (se distinguen de citas) */}

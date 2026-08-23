@@ -21,6 +21,7 @@ interface DayViewV2Props {
   professionals?: Professional[];
   dayPayments?: DayPayment[];
   onPaymentClick?: (payment: DayPayment) => void;
+  onSlotTap?: (time: string) => void;
 }
 
 const CANCELLED_STATUSES = ["cancelled", "cancelled_by_patient"];
@@ -102,6 +103,7 @@ export const DayViewV2 = ({
   professionals = [],
   dayPayments = [],
   onPaymentClick,
+  onSlotTap,
 }: DayViewV2Props) => {
   const dayAppointments = useMemo(
     () =>
@@ -291,6 +293,7 @@ export const DayViewV2 = ({
                 showProfessionalColors={showProfessionalColors}
                 isCurrentDay={isCurrentDay}
                 nowTick={nowTick}
+                onSlotTap={onSlotTap}
               />
             </div>
 
