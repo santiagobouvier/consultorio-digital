@@ -1,12 +1,14 @@
 // Modal de evento personal: la agenda de TODA la vida del profesional.
-// Etiquetas 100% libres (el usuario crea nombre + color; no hay presets),
-// atajos de duración, repetición diaria/semanal y ejemplos que solo
-// sugieren (nunca imponen).
+// Etiquetas 100% libres (nombre + color a elección), riel de horarios
+// deslizable, repetición diaria/semanal/mensual.
+// Responsive de verdad: en el celular es un bottom sheet que sube desde
+// abajo con el botón de guardar fijo; en escritorio, un diálogo centrado.
 import { useEffect, useMemo, useRef, useState } from "react";
 import { addDays, format } from "date-fns";
 import { es } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,6 +21,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -141,18 +150,18 @@ const FineTune = ({ onDelta }: { onDelta: (d: number) => void }) => (
     <button
       type="button"
       onClick={() => onDelta(-15)}
-      className="h-6 w-6 rounded-full bg-muted/60 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+      className="h-7 w-7 rounded-full bg-muted/60 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
       aria-label="15 minutos antes"
     >
-      <Minus className="h-3 w-3" />
+      <Minus className="h-3.5 w-3.5" />
     </button>
     <button
       type="button"
       onClick={() => onDelta(15)}
-      className="h-6 w-6 rounded-full bg-muted/60 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+      className="h-7 w-7 rounded-full bg-muted/60 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
       aria-label="15 minutos después"
     >
-      <Plus className="h-3 w-3" />
+      <Plus className="h-3.5 w-3.5" />
     </button>
   </span>
 );
@@ -166,6 +175,7 @@ export const PersonalEventModal = ({
   onSaved,
 }: PersonalEventModalProps) => {
   const isEdit = !!event;
+  const isMobile = useIsMobile();
 
   const [title, setTitle] = useState("");
   const [labelId, setLabelId] = useState<string | null>(null);
@@ -382,402 +392,456 @@ export const PersonalEventModal = ({
   const selectedColor = customLabels.find((l) => l.id === labelId)?.color ?? NEUTRAL;
   const durationMin =
     startTime && endTime && startTime < endTime
-      ? (Number(endTime.slice(0, 2)) * 60 + Number(endTime.slice(3))) -
-        (Number(startTime.slice(0, 2)) * 60 + Number(startTime.slice(3)))
+      ? toMin(endTime) - toMin(startTime)
       : 0;
 
-  return (
-    <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-md max-h-[92dvh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <span
-                className="h-3 w-3 rounded-full shrink-0 transition-colors"
-                style={{ backgroundColor: selectedColor }}
-                aria-hidden
-              />
-              {isEdit ? "Evento personal" : "Nuevo evento personal"}
-            </DialogTitle>
-            <DialogDescription className="flex items-center gap-1.5">
-              <Lock className="h-3.5 w-3.5" />
-              Solo lo ve tu equipo. Nadie puede reservar en ese horario.
-            </DialogDescription>
-          </DialogHeader>
+  const titleText = isEdit ? "Evento personal" : "Nuevo evento personal";
 
-          <div className="space-y-5">
-            {/* Título + ejemplos que solo sugieren */}
-            <div className="space-y-2">
+  // ── Cuerpo del formulario (compartido entre drawer y diálogo) ──
+  const formBody = (
+    <div className="space-y-5">
+      {/* Título + ejemplos que solo sugieren */}
+      <div className="space-y-2">
+        <Input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="¿Qué tenés? Ej: Gimnasio, Pediatra..."
+          maxLength={80}
+          className="h-11 text-[15px] font-medium"
+        />
+        {!isEdit && !title && (
+          <div className="flex flex-wrap gap-1.5">
+            {TITLE_EXAMPLES.map((ex) => (
+              <button
+                key={ex}
+                type="button"
+                onClick={() => setTitle(ex)}
+                className="rounded-full border border-dashed border-border px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground hover:border-foreground/30"
+              >
+                {ex}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Cuándo */}
+      <div className="space-y-3">
+        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Cuándo
+        </Label>
+
+        {/* Fecha: atajos + selector */}
+        <div className="flex items-center gap-1.5">
+          {[
+            { label: "Hoy", d: new Date() },
+            { label: "Mañana", d: addDays(new Date(), 1) },
+          ].map(({ label, d }) => {
+            const v = format(d, "yyyy-MM-dd");
+            return (
+              <button
+                key={label}
+                type="button"
+                onClick={() => setDate(v)}
+                className={cn(
+                  "rounded-full px-3 py-1.5 text-xs font-semibold transition-colors shrink-0",
+                  date === v
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted/60 text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {label}
+              </button>
+            );
+          })}
+          <Input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className="h-8 flex-1 min-w-0 rounded-full text-xs px-3"
+            aria-label="Fecha"
+          />
+        </div>
+
+        {/* Hora de inicio: riel deslizable + ajuste fino */}
+        <div className="space-y-1">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">
+              Empieza{" "}
+              <span className="font-bold text-foreground tabular-nums text-sm">{startTime}</span>
+            </span>
+            <FineTune
+              onDelta={(d) => {
+                // Mover el inicio conserva la duración (como Google)
+                const dur = Math.max(toMin(endTime) - toMin(startTime), 15);
+                const ns = addMinutes(startTime, d);
+                setStartTime(ns);
+                setEndTime(addMinutes(ns, dur));
+              }}
+            />
+          </div>
+          <TimeRail
+            value={startTime}
+            onChange={(t) => {
+              const dur = Math.max(toMin(endTime) - toMin(startTime), 15);
+              setStartTime(t);
+              setEndTime(addMinutes(t, dur));
+            }}
+          />
+        </div>
+
+        {/* Duración de un toque + ajuste fino del fin */}
+        <div className="space-y-1">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">
+              Termina{" "}
+              <span className="font-bold text-foreground tabular-nums text-sm">{endTime}</span>
+            </span>
+            <FineTune
+              onDelta={(d) => {
+                const ne = addMinutes(endTime, d);
+                if (toMin(ne) > toMin(startTime)) setEndTime(ne);
+              }}
+            />
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {DURATIONS.map((d) => (
+              <button
+                key={d.min}
+                type="button"
+                onClick={() => setEndTime(addMinutes(startTime, d.min))}
+                className={cn(
+                  "rounded-full px-2.5 py-1.5 text-xs font-semibold transition-colors",
+                  durationMin === d.min
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "bg-muted/60 text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {d.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Resumen vivo */}
+        <p className="text-[12px] text-muted-foreground capitalize">
+          {format(new Date(`${date}T12:00:00`), "EEEE d 'de' MMMM", { locale: es })}
+          <span className="normal-case">
+            {" "}· {startTime} → {endTime}
+            {durationMin > 0 &&
+              ` (${durationMin >= 60 ? `${Math.floor(durationMin / 60)} h${durationMin % 60 ? ` ${durationMin % 60}` : ""}` : `${durationMin} min`})`}
+          </span>
+        </p>
+      </div>
+
+      {/* Repetición */}
+      <div className="space-y-2.5">
+        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Repetición
+        </Label>
+        <div className="grid grid-cols-2 gap-1.5">
+          {RECURRENCES.map((r) => (
+            <button
+              key={r.id}
+              type="button"
+              onClick={() => setRecurrence(r.id)}
+              className={cn(
+                "rounded-xl py-2 text-[12.5px] font-semibold transition-all",
+                recurrence === r.id
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "bg-muted/50 text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {r.label}
+            </button>
+          ))}
+        </div>
+        {recurrence !== "none" && (
+          <>
+            <p className="text-[11.5px] text-muted-foreground">
+              {recurrence === "daily" && "Se repite todos los días a esta hora."}
+              {recurrence === "weekly" &&
+                `Se repite cada ${format(new Date(`${date}T12:00:00`), "EEEE", { locale: es })}.`}
+              {recurrence === "monthly" &&
+                `Se repite el ${format(new Date(`${date}T12:00:00`), "d")} de cada mes.`}
+            </p>
+            <div className="flex items-center gap-2">
+              <Label htmlFor="pe-until" className="text-xs text-muted-foreground shrink-0">
+                Hasta el (opcional)
+              </Label>
               <Input
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="¿Qué tenés? Ej: Gimnasio, Pediatra..."
-                maxLength={80}
-                autoFocus
-                className="h-11 text-[15px] font-medium"
+                id="pe-until"
+                type="date"
+                value={until}
+                min={date}
+                onChange={(e) => setUntil(e.target.value)}
+                className="h-9"
               />
-              {!isEdit && !title && (
-                <div className="flex flex-wrap gap-1.5">
-                  {TITLE_EXAMPLES.map((ex) => (
-                    <button
-                      key={ex}
-                      type="button"
-                      onClick={() => setTitle(ex)}
-                      className="rounded-full border border-dashed border-border px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground hover:border-foreground/30"
-                    >
-                      {ex}
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
+          </>
+        )}
+      </div>
 
-            {/* Cuándo */}
-            <div className="space-y-3">
-              <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Cuándo
-              </Label>
+      {/* Etiqueta: 100% del usuario */}
+      <div className="space-y-2.5">
+        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Etiqueta y color
+        </Label>
+        <div className="flex flex-wrap gap-1.5">
+          <button
+            type="button"
+            onClick={() => setLabelId(null)}
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-xs font-medium transition-all",
+              labelId === null
+                ? "text-white border-transparent shadow-sm"
+                : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
+            )}
+            style={labelId === null ? { backgroundColor: NEUTRAL } : undefined}
+          >
+            <span
+              className="w-2 h-2 rounded-full"
+              style={{ backgroundColor: labelId === null ? "rgba(255,255,255,0.9)" : NEUTRAL }}
+            />
+            Sin etiqueta
+          </button>
 
-              {/* Fecha: atajos + selector */}
-              <div className="flex items-center gap-1.5">
-                {[
-                  { label: "Hoy", d: new Date() },
-                  { label: "Mañana", d: addDays(new Date(), 1) },
-                ].map(({ label, d }) => {
-                  const v = format(d, "yyyy-MM-dd");
-                  return (
-                    <button
-                      key={label}
-                      type="button"
-                      onClick={() => setDate(v)}
-                      className={cn(
-                        "rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
-                        date === v
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted/60 text-muted-foreground hover:text-foreground"
-                      )}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
-                <Input
-                  type="date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  className="h-8 flex-1 min-w-0 rounded-full text-xs px-3"
-                  aria-label="Fecha"
-                />
-              </div>
-
-              {/* Hora de inicio: riel deslizable + ajuste fino */}
-              <div className="space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">
-                    Empieza{" "}
-                    <span className="font-bold text-foreground tabular-nums">{startTime}</span>
-                  </span>
-                  <FineTune
-                    onDelta={(d) => {
-                      // Mover el inicio conserva la duración (como Google)
-                      const dur = Math.max(toMin(endTime) - toMin(startTime), 15);
-                      const ns = addMinutes(startTime, d);
-                      setStartTime(ns);
-                      setEndTime(addMinutes(ns, dur));
-                    }}
-                  />
-                </div>
-                <TimeRail
-                  value={startTime}
-                  onChange={(t) => {
-                    const dur = Math.max(toMin(endTime) - toMin(startTime), 15);
-                    setStartTime(t);
-                    setEndTime(addMinutes(t, dur));
-                  }}
-                />
-              </div>
-
-              {/* Duración de un toque + ajuste fino del fin */}
-              <div className="space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">
-                    Termina{" "}
-                    <span className="font-bold text-foreground tabular-nums">{endTime}</span>
-                  </span>
-                  <FineTune
-                    onDelta={(d) => {
-                      const ne = addMinutes(endTime, d);
-                      if (toMin(ne) > toMin(startTime)) setEndTime(ne);
-                    }}
-                  />
-                </div>
-                <div className="flex flex-wrap items-center gap-1.5">
-                  {DURATIONS.map((d) => (
-                    <button
-                      key={d.min}
-                      type="button"
-                      onClick={() => setEndTime(addMinutes(startTime, d.min))}
-                      className={cn(
-                        "rounded-full px-2.5 py-1.5 text-xs font-semibold transition-colors",
-                        durationMin === d.min
-                          ? "bg-primary text-primary-foreground shadow-sm"
-                          : "bg-muted/60 text-muted-foreground hover:text-foreground"
-                      )}
-                    >
-                      {d.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Resumen vivo */}
-              <p className="text-[12px] text-muted-foreground capitalize">
-                {format(new Date(`${date}T12:00:00`), "EEEE d 'de' MMMM", { locale: es })}
-                <span className="normal-case">
-                  {" "}· {startTime} → {endTime}
-                  {durationMin > 0 &&
-                    ` (${durationMin >= 60 ? `${Math.floor(durationMin / 60)} h${durationMin % 60 ? ` ${durationMin % 60}` : ""}` : `${durationMin} min`})`}
-                </span>
-              </p>
-            </div>
-
-            {/* Repetición */}
-            <div className="space-y-2.5">
-              <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Repetición
-              </Label>
-              <div className="grid grid-cols-2 gap-1.5">
-                {RECURRENCES.map((r) => (
-                  <button
-                    key={r.id}
-                    type="button"
-                    onClick={() => setRecurrence(r.id)}
-                    className={cn(
-                      "rounded-xl py-2 text-[12.5px] font-semibold transition-all",
-                      recurrence === r.id
-                        ? "bg-primary text-primary-foreground shadow-sm"
-                        : "bg-muted/50 text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    {r.label}
-                  </button>
-                ))}
-              </div>
-              {recurrence !== "none" && (
-                <>
-                  <p className="text-[11.5px] text-muted-foreground">
-                    {recurrence === "daily" && "Se repite todos los días a esta hora."}
-                    {recurrence === "weekly" &&
-                      `Se repite cada ${format(new Date(`${date}T12:00:00`), "EEEE", { locale: es })}.`}
-                    {recurrence === "monthly" &&
-                      `Se repite el ${format(new Date(`${date}T12:00:00`), "d")} de cada mes.`}
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <Label htmlFor="pe-until" className="text-xs text-muted-foreground shrink-0">
-                      Hasta el (opcional)
-                    </Label>
-                    <Input
-                      id="pe-until"
-                      type="date"
-                      value={until}
-                      min={date}
-                      onChange={(e) => setUntil(e.target.value)}
-                      className="h-9"
-                    />
-                  </div>
-                </>
-              )}
-            </div>
-
-            {/* Etiqueta: 100% del usuario */}
-            <div className="space-y-2.5">
-              <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Etiqueta y color
-              </Label>
-              <div className="flex flex-wrap gap-1.5">
+          {customLabels.map((l) => {
+            const selected = labelId === l.id;
+            return (
+              <span key={l.id} className="inline-flex items-center">
                 <button
                   type="button"
-                  onClick={() => setLabelId(null)}
+                  onClick={() => setLabelId(l.id)}
                   className={cn(
                     "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-xs font-medium transition-all",
-                    labelId === null
-                      ? "text-white border-transparent shadow-sm"
+                    selected
+                      ? "text-white border-transparent shadow-sm rounded-r-none pr-1.5"
                       : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
                   )}
-                  style={labelId === null ? { backgroundColor: NEUTRAL } : undefined}
+                  style={selected ? { backgroundColor: l.color } : undefined}
                 >
                   <span
                     className="w-2 h-2 rounded-full"
-                    style={{ backgroundColor: labelId === null ? "rgba(255,255,255,0.9)" : NEUTRAL }}
+                    style={{ backgroundColor: selected ? "rgba(255,255,255,0.9)" : l.color }}
                   />
-                  Sin etiqueta
+                  {l.name}
                 </button>
-
-                {customLabels.map((l) => {
-                  const selected = labelId === l.id;
-                  return (
-                    <span key={l.id} className="inline-flex items-center">
-                      <button
-                        type="button"
-                        onClick={() => setLabelId(l.id)}
-                        className={cn(
-                          "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-xs font-medium transition-all",
-                          selected
-                            ? "text-white border-transparent shadow-sm rounded-r-none pr-1.5"
-                            : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
-                        )}
-                        style={selected ? { backgroundColor: l.color } : undefined}
-                      >
-                        <span
-                          className="w-2 h-2 rounded-full"
-                          style={{ backgroundColor: selected ? "rgba(255,255,255,0.9)" : l.color }}
-                        />
-                        {l.name}
-                      </button>
-                      {selected && (
-                        <button
-                          type="button"
-                          onClick={() => setLabelToDelete(l)}
-                          className="h-full rounded-r-full px-1.5 py-1.5 text-white/80 hover:text-white"
-                          style={{ backgroundColor: l.color }}
-                          aria-label={`Eliminar etiqueta ${l.name}`}
-                          title="Eliminar esta etiqueta"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      )}
-                    </span>
-                  );
-                })}
-
-                <button
-                  type="button"
-                  onClick={() => setCreatingLabel((v) => !v)}
-                  className={cn(
-                    "inline-flex items-center gap-1 rounded-full border border-dashed px-2.5 py-1.5 text-xs font-medium transition-colors",
-                    creatingLabel
-                      ? "border-foreground/40 text-foreground"
-                      : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
-                  )}
-                >
-                  <Plus className="h-3 w-3" />
-                  Nueva etiqueta
-                </button>
-              </div>
-
-              {customLabels.length === 0 && !creatingLabel && (
-                <p className="text-[11.5px] text-muted-foreground">
-                  Creá tus propias etiquetas con el color que quieras — por ejemplo "Gimnasio" en
-                  verde o "Facultad" en violeta.
-                </p>
-              )}
-
-              {creatingLabel && (
-                <div className="rounded-xl border border-border/70 p-3 space-y-3">
-                  <Input
-                    value={newLabelName}
-                    onChange={(e) => setNewLabelName(e.target.value)}
-                    placeholder="Nombre de la etiqueta"
-                    maxLength={40}
-                    autoFocus
-                  />
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    {LABEL_PALETTE.map((hex) => (
-                      <button
-                        key={hex}
-                        type="button"
-                        onClick={() => setNewLabelColor(hex)}
-                        className="flex h-7 w-7 items-center justify-center rounded-full transition-transform hover:scale-110"
-                        style={{ backgroundColor: hex }}
-                        aria-label={`Color ${hex}`}
-                      >
-                        {newLabelColor.toLowerCase() === hex.toLowerCase() && (
-                          <Check className="h-3.5 w-3.5 text-white" />
-                        )}
-                      </button>
-                    ))}
-                    {/* Color totalmente libre */}
-                    <label
-                      className="relative flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-dashed border-border transition-transform hover:scale-110"
-                      style={
-                        !LABEL_PALETTE.some((h) => h.toLowerCase() === newLabelColor.toLowerCase())
-                          ? { backgroundColor: newLabelColor, borderStyle: "solid" }
-                          : undefined
-                      }
-                      title="Elegir otro color"
-                    >
-                      <Pipette
-                        className={cn(
-                          "h-3.5 w-3.5",
-                          LABEL_PALETTE.some((h) => h.toLowerCase() === newLabelColor.toLowerCase())
-                            ? "text-muted-foreground"
-                            : "text-white"
-                        )}
-                      />
-                      <input
-                        type="color"
-                        value={newLabelColor}
-                        onChange={(e) => setNewLabelColor(e.target.value)}
-                        className="absolute inset-0 opacity-0 cursor-pointer"
-                        aria-label="Color personalizado"
-                      />
-                    </label>
-                  </div>
-                  <Button
+                {selected && (
+                  <button
                     type="button"
-                    size="sm"
-                    className="w-full text-white"
-                    style={{ backgroundColor: newLabelColor }}
-                    onClick={handleCreateLabel}
-                    disabled={savingLabel}
+                    onClick={() => setLabelToDelete(l)}
+                    className="h-full rounded-r-full px-1.5 py-1.5 text-white/80 hover:text-white"
+                    style={{ backgroundColor: l.color }}
+                    aria-label={`Eliminar etiqueta ${l.name}`}
+                    title="Eliminar esta etiqueta"
                   >
-                    {savingLabel ? (
-                      <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
-                    ) : (
-                      <Plus className="h-3.5 w-3.5 mr-2" />
-                    )}
-                    Crear "{newLabelName.trim() || "etiqueta"}" y usarla
-                  </Button>
-                </div>
+                    <X className="h-3 w-3" />
+                  </button>
+                )}
+              </span>
+            );
+          })}
+
+          <button
+            type="button"
+            onClick={() => setCreatingLabel((v) => !v)}
+            className={cn(
+              "inline-flex items-center gap-1 rounded-full border border-dashed px-2.5 py-1.5 text-xs font-medium transition-colors",
+              creatingLabel
+                ? "border-foreground/40 text-foreground"
+                : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
+            )}
+          >
+            <Plus className="h-3 w-3" />
+            Nueva etiqueta
+          </button>
+        </div>
+
+        {customLabels.length === 0 && !creatingLabel && (
+          <p className="text-[11.5px] text-muted-foreground">
+            Creá tus propias etiquetas con el color que quieras — por ejemplo "Gimnasio" en verde o
+            "Facultad" en violeta.
+          </p>
+        )}
+
+        {creatingLabel && (
+          <div className="rounded-xl border border-border/70 p-3 space-y-3">
+            <Input
+              value={newLabelName}
+              onChange={(e) => setNewLabelName(e.target.value)}
+              placeholder="Nombre de la etiqueta"
+              maxLength={40}
+            />
+            <div className="flex flex-wrap items-center gap-1.5">
+              {LABEL_PALETTE.map((hex) => (
+                <button
+                  key={hex}
+                  type="button"
+                  onClick={() => setNewLabelColor(hex)}
+                  className="flex h-8 w-8 items-center justify-center rounded-full transition-transform hover:scale-110"
+                  style={{ backgroundColor: hex }}
+                  aria-label={`Color ${hex}`}
+                >
+                  {newLabelColor.toLowerCase() === hex.toLowerCase() && (
+                    <Check className="h-3.5 w-3.5 text-white" />
+                  )}
+                </button>
+              ))}
+              {/* Color totalmente libre */}
+              <label
+                className="relative flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-dashed border-border transition-transform hover:scale-110"
+                style={
+                  !LABEL_PALETTE.some((h) => h.toLowerCase() === newLabelColor.toLowerCase())
+                    ? { backgroundColor: newLabelColor, borderStyle: "solid" }
+                    : undefined
+                }
+                title="Elegir otro color"
+              >
+                <Pipette
+                  className={cn(
+                    "h-3.5 w-3.5",
+                    LABEL_PALETTE.some((h) => h.toLowerCase() === newLabelColor.toLowerCase())
+                      ? "text-muted-foreground"
+                      : "text-white"
+                  )}
+                />
+                <input
+                  type="color"
+                  value={newLabelColor}
+                  onChange={(e) => setNewLabelColor(e.target.value)}
+                  className="absolute inset-0 opacity-0 cursor-pointer"
+                  aria-label="Color personalizado"
+                />
+              </label>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              className="w-full text-white"
+              style={{ backgroundColor: newLabelColor }}
+              onClick={handleCreateLabel}
+              disabled={savingLabel}
+            >
+              {savingLabel ? (
+                <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
+              ) : (
+                <Plus className="h-3.5 w-3.5 mr-2" />
               )}
+              Crear "{newLabelName.trim() || "etiqueta"}" y usarla
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* Notas */}
+      <Textarea
+        rows={2}
+        value={notes}
+        onChange={(e) => setNotes(e.target.value)}
+        placeholder="Notas (opcional)"
+      />
+    </div>
+  );
+
+  const saveButton = (
+    <Button
+      type="button"
+      onClick={handleSave}
+      disabled={saving || deleting}
+      className={cn(isMobile ? "flex-1 h-12 text-[15px] rounded-xl" : "min-w-[160px]")}
+    >
+      {saving ? (
+        <>
+          <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Guardando...
+        </>
+      ) : isEdit ? (
+        "Guardar cambios"
+      ) : (
+        "Agendar en mi vida"
+      )}
+    </Button>
+  );
+
+  const deleteButton = isEdit ? (
+    <Button
+      type="button"
+      variant="ghost"
+      className={cn(
+        "text-destructive hover:text-destructive",
+        isMobile ? "h-12 w-12 rounded-xl shrink-0 px-0" : "sm:mr-auto"
+      )}
+      onClick={() => setConfirmDelete(true)}
+      disabled={saving || deleting}
+      aria-label="Eliminar evento"
+    >
+      <Trash2 className="h-4 w-4" />
+      {!isMobile && <span className="ml-2">Eliminar</span>}
+    </Button>
+  ) : null;
+
+  return (
+    <>
+      {isMobile ? (
+        // ── Mobile: bottom sheet con scroll interno y guardar fijo abajo ──
+        <Drawer open={open} onOpenChange={onOpenChange}>
+          <DrawerContent className="max-h-[94dvh]">
+            <DrawerHeader className="text-left pb-2">
+              <DrawerTitle className="flex items-center gap-2">
+                <span
+                  className="h-3 w-3 rounded-full shrink-0 transition-colors"
+                  style={{ backgroundColor: selectedColor }}
+                  aria-hidden
+                />
+                {titleText}
+              </DrawerTitle>
+              <DrawerDescription className="flex items-center gap-1.5">
+                <Lock className="h-3.5 w-3.5 shrink-0" />
+                Solo lo ve tu equipo. Nadie puede reservar en ese horario.
+              </DrawerDescription>
+            </DrawerHeader>
+
+            <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-4">
+              {formBody}
             </div>
 
-            {/* Notas */}
-            <Textarea
-              rows={2}
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Notas (opcional)"
-            />
-          </div>
+            <div
+              className="shrink-0 border-t bg-background px-4 pt-3 flex items-center gap-2"
+              style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 0.75rem)" }}
+            >
+              {deleteButton}
+              {saveButton}
+            </div>
+          </DrawerContent>
+        </Drawer>
+      ) : (
+        // ── Desktop: diálogo centrado ──
+        <Dialog open={open} onOpenChange={onOpenChange}>
+          <DialogContent className="sm:max-w-md max-h-[92dvh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <span
+                  className="h-3 w-3 rounded-full shrink-0 transition-colors"
+                  style={{ backgroundColor: selectedColor }}
+                  aria-hidden
+                />
+                {titleText}
+              </DialogTitle>
+              <DialogDescription className="flex items-center gap-1.5">
+                <Lock className="h-3.5 w-3.5" />
+                Solo lo ve tu equipo. Nadie puede reservar en ese horario.
+              </DialogDescription>
+            </DialogHeader>
 
-          <DialogFooter className="gap-2 sm:gap-0">
-            {isEdit && (
-              <Button
-                type="button"
-                variant="ghost"
-                className="text-destructive hover:text-destructive sm:mr-auto"
-                onClick={() => setConfirmDelete(true)}
-                disabled={saving || deleting}
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Eliminar
-              </Button>
-            )}
-            <Button type="button" onClick={handleSave} disabled={saving || deleting} className="min-w-[160px]">
-              {saving ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Guardando...
-                </>
-              ) : isEdit ? (
-                "Guardar cambios"
-              ) : (
-                "Agendar en mi vida"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            {formBody}
+
+            <DialogFooter className="gap-2 sm:gap-0">
+              {deleteButton}
+              {saveButton}
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Confirmación de borrado del evento */}
       <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
