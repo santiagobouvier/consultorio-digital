@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { format } from "date-fns";
 import { CalendarAppointment, APPOINTMENT_STATUS_MAP, getPaymentColorInfo, getStatusColor } from "./types";
-import { Video, MapPin, Repeat } from "lucide-react";
+import { Video, MapPin, Repeat, Coffee } from "lucide-react";
 
 const getInitials = (name?: string | null) => {
   if (!name) return "?";
@@ -32,6 +32,45 @@ export const AppointmentCard = ({
   const formatTime = (datetime: string) => format(new Date(datetime), "HH:mm");
 
   const isRecurrent = !!(appointment as any).recurrence_group_id;
+
+  // Evento personal: bloque gris con título, sin paciente/pago/modalidad.
+  if (appointment.isPersonal) {
+    const isWeekly = appointment.personalEvent?.recurrence === "weekly";
+    return (
+      <button
+        onClick={onClick}
+        className={cn(
+          "w-full text-left rounded-xl border border-dashed border-slate-300 dark:border-slate-600",
+          "bg-slate-100/70 dark:bg-slate-500/10 transition-all duration-200",
+          "hover:shadow-md hover:-translate-y-0.5 active:scale-[0.97]",
+          compact ? "p-2.5" : "p-4"
+        )}
+      >
+        <div className="flex items-center gap-2">
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-200 dark:bg-slate-500/20">
+            <Coffee className="h-3.5 w-3.5 text-slate-500 dark:text-slate-300" />
+          </span>
+          <span className={cn("font-bold text-slate-600 dark:text-slate-300", compact ? "text-sm" : "text-base")}>
+            {formatTime(appointment.start_at)} - {formatTime(appointment.end_at)}
+          </span>
+          <div className="flex items-center gap-1 ml-auto">
+            {isWeekly && <Repeat className="h-3 w-3 text-muted-foreground shrink-0" />}
+            <Badge variant="secondary" className="rounded-full text-[10px] px-2 py-0">
+              Personal
+            </Badge>
+          </div>
+        </div>
+        <p className={cn("font-medium truncate text-foreground/85", compact ? "text-sm mt-1" : "text-[15px] mt-1.5")}>
+          {appointment.personalEvent?.title || "Evento personal"}
+        </p>
+        {!compact && (
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Nadie puede reservar en este horario.
+          </p>
+        )}
+      </button>
+    );
+  }
 
   if (compact) {
     return (

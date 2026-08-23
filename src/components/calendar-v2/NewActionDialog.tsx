@@ -1,4 +1,4 @@
-import { CalendarPlus, CreditCard } from "lucide-react";
+import { CalendarPlus, CreditCard, Coffee } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -12,6 +12,7 @@ interface NewActionDialogProps {
   onOpenChange: (open: boolean) => void;
   onAddAppointment: () => void;
   onAddPayment: () => void;
+  onAddPersonal?: () => void;
 }
 
 /**
@@ -23,6 +24,7 @@ export const NewActionDialog = ({
   onOpenChange,
   onAddAppointment,
   onAddPayment,
+  onAddPersonal,
 }: NewActionDialogProps) => {
   const pick = (fn: () => void) => {
     onOpenChange(false);
@@ -68,6 +70,24 @@ export const NewActionDialog = ({
               </p>
             </div>
           </button>
+
+          {onAddPersonal && (
+            <button
+              type="button"
+              onClick={() => pick(onAddPersonal)}
+              className="sm:col-span-2 flex items-center gap-4 rounded-2xl border-2 border-border bg-card p-4 text-left transition-all hover:border-primary hover:bg-primary/5 active:scale-[0.98]"
+            >
+              <div className="w-12 h-12 shrink-0 rounded-2xl bg-slate-500/10 flex items-center justify-center">
+                <Coffee className="h-6 w-6 text-slate-500" />
+              </div>
+              <div>
+                <p className="font-semibold">Evento personal</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Gimnasio, trámite, almuerzo... bloquea el horario para que nadie reserve
+                </p>
+              </div>
+            </button>
+          )}
         </div>
       </DialogContent>
     </Dialog>

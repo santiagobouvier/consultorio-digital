@@ -15,6 +15,7 @@ interface CalendarHeaderProps {
   onToday: () => void;
   onAddAppointment: () => void;
   onAddPayment?: () => void;
+  onAddPersonal?: () => void;
   onToggleFilters: () => void;
   hasActiveFilters: boolean;
   activeFiltersCount: number;
@@ -30,6 +31,7 @@ export const CalendarHeader = ({
   onToday,
   onAddAppointment,
   onAddPayment,
+  onAddPersonal,
   onToggleFilters,
   hasActiveFilters,
   activeFiltersCount,
@@ -228,6 +230,7 @@ export const CalendarHeader = ({
           onOpenChange={setPickerOpen}
           onAddAppointment={onAddAppointment}
           onAddPayment={onAddPayment}
+          onAddPersonal={onAddPersonal}
         />
       )}
     </div>
