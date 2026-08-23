@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 import { useBusinessId } from "@/hooks/use-business-id";
 import { useProfessionals } from "@/hooks/use-professionals";
+import { useDashboardBranding } from "@/contexts/DashboardBrandingContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { calculatePaymentStatus, type PaymentStatus } from "@/lib/payments";
 import {
@@ -33,6 +34,7 @@ import { WeekViewV2 } from "@/components/calendar-v2/WeekViewV2";
 import { MonthViewV2 } from "@/components/calendar-v2/MonthViewV2";
 import { DesktopCalendarLayout } from "@/components/calendar-v2/DesktopCalendarLayout";
 import { MobileAgendaFab } from "@/components/calendar-v2/MobileAgendaFab";
+import { BirthdaysStrip } from "@/components/calendar-v2/BirthdaysStrip";
 import { AppointmentDetailModal } from "@/components/calendar/AppointmentDetailModal";
 import { CreateAppointmentModal } from "@/components/CreateAppointmentModal";
 import { PersonalEventModal } from "@/components/PersonalEventModal";
@@ -59,6 +61,7 @@ interface Patient {
   full_name: string;
   whatsapp_phone: string | null;
   avatar_url: string | null;
+  birth_date?: string | null;
 }
 
 const toDayPayment = (p: Payment, patient?: Patient): DayPayment => ({
@@ -93,6 +96,7 @@ const CalendarV2 = () => {
   const isMobile = useIsMobile();
   const { businessId, loading: businessLoading } = useBusinessId();
   const { professionals, loading: professionalsLoading, currentUserId, isOwner } = useProfessionals(businessId);
+  const { displayName } = useDashboardBranding();
 
   // Animation state for view transitions
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -302,7 +306,7 @@ const CalendarV2 = () => {
     queryFn: async () => {
       const { data } = await supabase
         .from("patients")
-        .select("id, full_name, whatsapp_phone, avatar_url")
+        .select("id, full_name, whatsapp_phone, avatar_url, birth_date")
         .eq("business_id", businessId!)
         .eq("is_active", true)
         .order("full_name");
@@ -674,6 +678,14 @@ const CalendarV2 = () => {
             professionals={professionals}
           />
         </div>
+
+        {/* Cumpleaños del rango visible, con saludo por WhatsApp a un toque */}
+        <BirthdaysStrip
+          patients={patients}
+          rangeStart={getDateRange().startDate}
+          rangeEnd={getDateRange().endDate}
+          clinicName={displayName || "tu consultorio"}
+        />
 
         {/* Professional filter chips (for shared calendar) */}
         <ProfessionalFilter
