@@ -135,17 +135,28 @@ serve(async (req) => {
         );
       };
 
+      const until = ev.recurrence_until
+        ? new Date(`${ev.recurrence_until}T23:59:59-03:00`).getTime()
+        : to.getTime();
+
       if (ev.recurrence === "weekly" || ev.recurrence === "daily") {
         const stepMs = ev.recurrence === "daily" ? 86400000 : WEEK_MS;
-        const until = ev.recurrence_until
-          ? new Date(`${ev.recurrence_until}T23:59:59-03:00`).getTime()
-          : to.getTime();
         let occ = evStart;
         if (occ < from.getTime()) {
           occ += Math.floor((from.getTime() - occ) / stepMs) * stepMs;
         }
         for (let i = 0; occ <= Math.min(until, to.getTime()) && i < 400; occ += stepMs, i++) {
           pushEvent(occ);
+        }
+      } else if (ev.recurrence === "monthly") {
+        const base = new Date(ev.start_at);
+        const wantedDay = base.getUTCDate();
+        for (let i = 0; i < 8; i++) {
+          const s = new Date(base);
+          s.setUTCMonth(s.getUTCMonth() + i);
+          if (s.getUTCDate() !== wantedDay) continue; // mes sin ese día
+          if (s.getTime() > Math.min(until, to.getTime())) break;
+          pushEvent(s.getTime());
         }
       } else {
         pushEvent(evStart);

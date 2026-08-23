@@ -251,7 +251,7 @@ const CalendarV2 = () => {
         .lte("start_at", endDate.toISOString())
         .or(
           `and(recurrence.eq.none,end_at.gte.${startDate.toISOString()}),` +
-          `and(recurrence.in.(daily,weekly),or(recurrence_until.is.null,recurrence_until.gte.${startDay}))`
+          `and(recurrence.in.(daily,weekly,monthly),or(recurrence_until.is.null,recurrence_until.gte.${startDay}))`
         );
       if (error) throw error;
       return (data as PersonalEvent[]) || [];
@@ -294,11 +294,12 @@ const CalendarV2 = () => {
         });
       };
 
+      const until = ev.recurrence_until
+        ? new Date(`${ev.recurrence_until}T23:59:59`)
+        : null;
+
       if (ev.recurrence === "weekly" || ev.recurrence === "daily") {
         const stepMs = ev.recurrence === "daily" ? 86400000 : WEEK_MS;
-        const until = ev.recurrence_until
-          ? new Date(`${ev.recurrence_until}T23:59:59`)
-          : null;
         // Saltar de a pasos enteros hasta acercarse al rango visible
         let occMs = evStart.getTime();
         if (occMs + durMs < startDate.getTime()) {
@@ -309,6 +310,19 @@ const CalendarV2 = () => {
           const s = new Date(occMs);
           if (until && s > until) break;
           pushOccurrence(s, new Date(occMs + durMs));
+        }
+      } else if (ev.recurrence === "monthly") {
+        // Mismo día del mes; si el mes no tiene ese día (ej: 31), se saltea
+        const wantedDay = evStart.getDate();
+        for (let i = 0; i < 30; i++) {
+          const s = new Date(evStart);
+          s.setMonth(s.getMonth() + i);
+          if (s.getDate() !== wantedDay) continue; // el mes clampeó el día
+          if (s > endDate || (until && s > until)) {
+            if (s > endDate) break;
+            continue;
+          }
+          pushOccurrence(s, new Date(s.getTime() + durMs));
         }
       } else {
         pushOccurrence(evStart, evEnd);
