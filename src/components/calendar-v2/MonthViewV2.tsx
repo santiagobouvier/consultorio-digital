@@ -186,6 +186,17 @@ export const MonthViewV2 = ({
                   index % 7 === 6 && "border-r-0",
                   isSelected && "bg-primary/5 ring-2 ring-primary ring-inset"
                 )}
+                style={
+                  // Mapa de calor: los días más cargados se tiñen más
+                  !isSelected && isCurrentMonth && activeApts.length > 0
+                    ? {
+                        background: `hsl(var(--primary) / ${Math.min(
+                          0.045 + activeApts.length * 0.028,
+                          0.2
+                        )})`,
+                      }
+                    : undefined
+                }
               >
                 {/* Day number */}
                 <div className="flex items-center justify-between mb-1">
