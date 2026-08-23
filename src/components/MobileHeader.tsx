@@ -8,14 +8,9 @@ import {
   Users,
   CalendarDays,
   Receipt,
-  Clock,
-  AlarmClock,
   FileText,
   Settings,
-  Palette,
-  CreditCard,
   BarChart3,
-  LifeBuoy,
   LogOut,
   ChevronRight,
   X,
@@ -42,8 +37,9 @@ type ModuleGroup = {
   items: ModuleItem[];
 };
 
-// Lanzador de módulos: bloques agrupados por frecuencia de uso
-// (estilo "pantalla de apps", no lista interminable).
+// Lanzador de módulos mínimo: solo lo del día a día. Todo lo secundario
+// (horarios, recordatorios, consultorio, portal, plan, ayuda) vive dentro
+// de la pantalla Configuración.
 const MODULE_GROUPS: ModuleGroup[] = [
   {
     label: "Tu día a día",
@@ -55,27 +51,24 @@ const MODULE_GROUPS: ModuleGroup[] = [
     ],
   },
   {
-    label: "Configuración",
-    items: [
-      { title: "Horarios", url: "/horarios-disponibles", icon: AlarmClock, tint: "262 80% 66%" },
-      { title: "Recordatorios", url: "/recordatorios-pendientes", icon: Clock, tint: "22 90% 58%" },
-      { title: "Consultorio", url: "/mi-consultorio", icon: Settings, tint: "215 15% 65%" },
-      { title: "Portal", url: "/personalizar-portal", icon: Palette, tint: "320 75% 62%" },
-    ],
-  },
-  {
     label: "Tu negocio",
     items: [
       { title: "Estadísticas", url: "/estadisticas", icon: BarChart3, tint: "190 85% 50%" },
-      { title: "Mi plan", url: "/billing", icon: CreditCard, tint: "235 75% 66%" },
+      { title: "Configuración", url: "/configuracion", icon: Settings, tint: "215 15% 65%" },
     ],
   },
-  {
-    label: "Soporte",
-    items: [
-      { title: "Ayuda", url: "/ayuda", icon: LifeBuoy, tint: "150 65% 45%" },
-    ],
-  },
+];
+
+// Rutas que viven "adentro" de Configuración: el bloque se marca activo
+// también cuando estás en cualquiera de sus subpáginas.
+const CONFIG_ROUTES = [
+  "/configuracion",
+  "/horarios-disponibles",
+  "/recordatorios-pendientes",
+  "/mi-consultorio",
+  "/personalizar-portal",
+  "/billing",
+  "/ayuda",
 ];
 
 /**
@@ -96,7 +89,10 @@ export function MobileHeader() {
   const brandHsl = `hsl(${primaryColor})`;
   const brandHsla = (alpha: number) => `hsla(${primaryColor}, ${alpha})`;
 
-  const isActive = (path: string) => location.pathname === path;
+  const isActive = (path: string) =>
+    path === "/configuracion"
+      ? CONFIG_ROUTES.includes(location.pathname)
+      : location.pathname === path;
   const visibleGroups = MODULE_GROUPS.map((group) => ({
     ...group,
     items: isSuperAdmin ? group.items.filter((item) => item.url !== "/billing") : group.items,
