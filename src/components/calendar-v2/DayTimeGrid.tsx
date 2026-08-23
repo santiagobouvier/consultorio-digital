@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { Coffee, Repeat, Video } from "lucide-react";
 import {
   CalendarAppointment,
-  getPersonalCategory,
+  getPersonalLabel,
   getPaymentColorInfo,
   getEventHexColor,
 } from "./types";
@@ -136,7 +136,7 @@ export const DayTimeGrid = ({
           const compact = height < 48;
           const widthPct = 100 / placed.cols;
 
-          const cat = apt.isPersonal ? getPersonalCategory(apt.personalEvent?.category) : null;
+          const cat = apt.isPersonal ? getPersonalLabel(apt.personalEvent) : null;
           const color = getEventHexColor(apt, showProfessionalColors);
           const dimmed = apt.status === "attended";
           const statusChip = !apt.isPersonal ? STATUS_CHIP[apt.status] : null;

@@ -233,7 +233,7 @@ const CalendarV2 = () => {
       const startDay = format(startDate, "yyyy-MM-dd");
       const { data, error } = await (supabase as any)
         .from("personal_events")
-        .select("*")
+        .select("*, personal_event_labels(name, color)")
         .eq("business_id", businessId!)
         .lte("start_at", endDate.toISOString())
         .or(
