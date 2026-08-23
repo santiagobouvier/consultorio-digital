@@ -3,6 +3,8 @@ import { format, isSameDay } from "date-fns";
 import { es } from "date-fns/locale";
 import { CalendarAppointment, Professional, DayPayment } from "./types";
 import { DayTimeGrid } from "./DayTimeGrid";
+import { DayMiniTimeline } from "./DayMiniTimeline";
+import { useDashboardBranding } from "@/contexts/DashboardBrandingContext";
 import { CalendarDays, Plus, Clock, AlertTriangle, CreditCard, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -142,8 +144,20 @@ export const DayViewV2 = ({
     const last = active.length
       ? format(new Date(active[active.length - 1].end_at), "HH:mm")
       : null;
-    return { activeCount: active.length, done, cancelled, first, last };
+    const occupiedMin = active.reduce(
+      (acc, a) => acc + Math.max(0, (new Date(a.end_at).getTime() - new Date(a.start_at).getTime()) / 60000),
+      0
+    );
+    return { activeCount: active.length, done, cancelled, first, last, occupiedMin };
   }, [dayAppointments]);
+
+  const { primaryColor } = useDashboardBranding();
+  const formatOccupied = (min: number) => {
+    const h = Math.floor(min / 60);
+    const m = Math.round(min % 60);
+    if (h === 0) return `${m} min`;
+    return m === 0 ? `${h} h` : `${h} h ${m}`;
+  };
 
   // Group appointments by professional for multi-column view
   const columnData = useMemo(() => {
@@ -156,36 +170,82 @@ export const DayViewV2 = ({
 
   return (
     <div className="space-y-4">
-      {/* Day header: resumen ejecutivo del día */}
-      <div className="p-4 sm:p-5 bg-card rounded-2xl border">
+      {/* Cabecera del día: bloque de fecha con color de marca, contador,
+          el día en miniatura y chips de métricas. */}
+      <div
+        className="relative overflow-hidden rounded-2xl border border-border/60 p-4 sm:p-5"
+        style={{
+          background: `linear-gradient(135deg, hsla(${primaryColor}, 0.13) 0%, hsla(${primaryColor}, 0.04) 55%, transparent 85%)`,
+        }}
+      >
         <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h2 className="text-xl font-bold capitalize">
-              {format(currentDate, "EEEE", { locale: es })}
-              {isCurrentDay && (
-                <span className="ml-2 align-middle inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-primary bg-primary/10 border border-primary/20 rounded-full px-2 py-0.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-                  Hoy
-                </span>
+          <div className="flex items-center gap-3 min-w-0">
+            <div
+              className={cn(
+                "w-14 h-14 rounded-2xl flex flex-col items-center justify-center shrink-0",
+                !isCurrentDay && "bg-card border border-border/70"
               )}
-            </h2>
-            <p className="text-muted-foreground text-sm">
-              {format(currentDate, "d 'de' MMMM, yyyy", { locale: es })}
-            </p>
+              style={
+                isCurrentDay
+                  ? {
+                      background: `hsl(${primaryColor})`,
+                      color: "#fff",
+                      boxShadow: `0 10px 24px -10px hsla(${primaryColor}, 0.65)`,
+                    }
+                  : undefined
+              }
+            >
+              <span className="text-[10px] font-bold uppercase tracking-wide leading-none opacity-80">
+                {format(currentDate, "EEE", { locale: es })}
+              </span>
+              <span className="text-[22px] font-extrabold leading-none mt-1">
+                {format(currentDate, "d")}
+              </span>
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-lg sm:text-xl font-bold capitalize leading-tight truncate">
+                {format(currentDate, "EEEE", { locale: es })}
+                {isCurrentDay && (
+                  <span className="ml-2 align-middle inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-primary bg-primary/10 border border-primary/20 rounded-full px-2 py-0.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                    Hoy
+                  </span>
+                )}
+              </h2>
+              <p className="text-muted-foreground text-sm">
+                {format(currentDate, "d 'de' MMMM, yyyy", { locale: es })}
+              </p>
+            </div>
           </div>
-          <div className="flex items-baseline gap-2 shrink-0">
-            <span className="text-3xl font-bold text-primary tabular-nums">{dayStats.activeCount}</span>
-            <span className="text-sm text-muted-foreground">
+          <div className="text-right shrink-0">
+            <span className="text-3xl font-extrabold text-primary tabular-nums leading-none">
+              {dayStats.activeCount}
+            </span>
+            <span className="block text-[11px] text-muted-foreground mt-0.5">
               sesion{dayStats.activeCount !== 1 ? "es" : ""}
             </span>
           </div>
         </div>
+
+        {/* El día en miniatura */}
+        <DayMiniTimeline
+          appointments={dayAppointments}
+          showProfessionalColors={showProfessionalColors}
+          isCurrentDay={isCurrentDay}
+          className="mt-4"
+        />
+
         {(dayStats.first || dayStats.done > 0 || dayStats.cancelled > 0) && (
           <div className="mt-3 flex flex-wrap items-center gap-1.5">
             {dayStats.first && dayStats.last && (
-              <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/60 rounded-full px-2.5 py-1 tabular-nums">
+              <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground bg-background/60 border border-border/50 rounded-full px-2.5 py-1 tabular-nums">
                 <Clock className="h-3 w-3" />
                 {dayStats.first} → {dayStats.last}
+              </span>
+            )}
+            {dayStats.occupiedMin > 0 && (
+              <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground bg-background/60 border border-border/50 rounded-full px-2.5 py-1 tabular-nums">
+                {formatOccupied(dayStats.occupiedMin)} de atención
               </span>
             )}
             {dayStats.done > 0 && (
@@ -195,7 +255,7 @@ export const DayViewV2 = ({
               </span>
             )}
             {dayStats.cancelled > 0 && (
-              <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/60 rounded-full px-2.5 py-1">
+              <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground bg-background/60 border border-border/50 rounded-full px-2.5 py-1">
                 <X className="h-3 w-3" />
                 {dayStats.cancelled} cancelada{dayStats.cancelled !== 1 ? "s" : ""}
               </span>

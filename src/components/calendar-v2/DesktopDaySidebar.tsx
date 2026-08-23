@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { CalendarAppointment, DayPayment } from "./types";
 import { AppointmentCard } from "./AppointmentCard";
+import { DayMiniTimeline } from "./DayMiniTimeline";
+import { useDashboardBranding } from "@/contexts/DashboardBrandingContext";
 import {
   Calendar,
   Plus,
@@ -48,6 +50,8 @@ export const DesktopDaySidebar = ({
       .sort((a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime());
   }, [appointments, selectedDate]);
 
+  const { primaryColor } = useDashboardBranding();
+
   // Get payment summary for the day
   const paymentSummary = useMemo(() => {
     const paid = dayAppointments.filter(apt => apt.paymentColor === "green").length;
@@ -81,17 +85,33 @@ export const DesktopDaySidebar = ({
   return (
     <div className="h-full flex flex-col bg-card animate-slide-in-right">
       {/* Header */}
-      <div className="p-5 border-b shrink-0">
+      <div
+        className="p-5 border-b shrink-0"
+        style={{
+          background: `linear-gradient(160deg, hsla(${primaryColor}, 0.12) 0%, hsla(${primaryColor}, 0.03) 60%, transparent)`,
+        }}
+      >
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className={cn(
-              "w-14 h-14 rounded-2xl flex flex-col items-center justify-center",
-              isSelectedToday ? "bg-primary text-primary-foreground" : "bg-muted"
-            )}>
-              <span className="text-xs font-medium uppercase leading-none">
+            <div
+              className={cn(
+                "w-14 h-14 rounded-2xl flex flex-col items-center justify-center",
+                !isSelectedToday && "bg-card border border-border/70"
+              )}
+              style={
+                isSelectedToday
+                  ? {
+                      background: `hsl(${primaryColor})`,
+                      color: "#fff",
+                      boxShadow: `0 10px 24px -10px hsla(${primaryColor}, 0.65)`,
+                    }
+                  : undefined
+              }
+            >
+              <span className="text-xs font-medium uppercase leading-none opacity-80">
                 {format(selectedDate, "EEE", { locale: es })}
               </span>
-              <span className="text-xl font-bold leading-none mt-0.5">
+              <span className="text-xl font-extrabold leading-none mt-0.5">
                 {format(selectedDate, "d")}
               </span>
             </div>
@@ -102,9 +122,9 @@ export const DesktopDaySidebar = ({
               </p>
             </div>
           </div>
-          <Button 
-            variant="ghost" 
-            size="icon" 
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={onClose}
             className="rounded-full -mt-1 -mr-1"
           >
@@ -112,9 +132,17 @@ export const DesktopDaySidebar = ({
           </Button>
         </div>
 
+        {/* El día en miniatura */}
+        <DayMiniTimeline
+          appointments={dayAppointments}
+          showProfessionalColors={showProfessionalColors}
+          isCurrentDay={isSelectedToday}
+          className="mb-4"
+        />
+
         {/* Quick stats */}
         <div className="flex gap-2">
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/50 flex-1">
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-background/60 border border-border/50 flex-1">
             <Clock className="w-4 h-4 text-muted-foreground" />
             <span className="text-sm font-medium">{dayAppointments.length}</span>
             <span className="text-xs text-muted-foreground">citas</span>

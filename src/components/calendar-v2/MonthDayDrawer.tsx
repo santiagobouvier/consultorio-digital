@@ -7,9 +7,12 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { CalendarAppointment, DayPayment } from "./types";
 import { AppointmentCard } from "./AppointmentCard";
-import { Calendar, X, CreditCard } from "lucide-react";
+import { DayMiniTimeline } from "./DayMiniTimeline";
+import { useDashboardBranding } from "@/contexts/DashboardBrandingContext";
+import { X, CreditCard, CalendarDays } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { calculatePaymentStatus, formatCurrency } from "@/lib/payments";
+import { isToday } from "date-fns";
 
 interface MonthDayDrawerProps {
   open: boolean;
@@ -39,37 +42,78 @@ export const MonthDayDrawer = ({
   }, [appointments, selectedDate]);
 
   const totalCount = dayAppointments.length + dayPayments.length;
+  const { primaryColor } = useDashboardBranding();
+  const isCurrentDay = isToday(selectedDate);
+  const activeCount = dayAppointments.filter(
+    (a) => a.status !== "cancelled" && a.status !== "cancelled_by_patient"
+  ).length;
 
   return (
     <Drawer open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
       <DrawerContent className="max-h-[85vh]">
-        <DrawerHeader className="border-b pb-4">
+        <DrawerHeader
+          className="border-b pb-4"
+          style={{
+            background: `linear-gradient(160deg, hsla(${primaryColor}, 0.12) 0%, hsla(${primaryColor}, 0.03) 60%, transparent)`,
+          }}
+        >
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                <Calendar className="w-6 h-6 text-primary" />
+            <div className="flex items-center gap-3 min-w-0">
+              <div
+                className={cn(
+                  "w-[52px] h-[52px] rounded-2xl flex flex-col items-center justify-center shrink-0",
+                  !isCurrentDay && "bg-card border border-border/70"
+                )}
+                style={
+                  isCurrentDay
+                    ? {
+                        background: `hsl(${primaryColor})`,
+                        color: "#fff",
+                        boxShadow: `0 10px 24px -10px hsla(${primaryColor}, 0.65)`,
+                      }
+                    : undefined
+                }
+              >
+                <span className="text-[9px] font-bold uppercase tracking-wide leading-none opacity-80">
+                  {format(selectedDate, "EEE", { locale: es })}
+                </span>
+                <span className="text-xl font-extrabold leading-none mt-1">
+                  {format(selectedDate, "d")}
+                </span>
               </div>
-              <div>
-                <DrawerTitle className="capitalize text-left text-lg">
-                  {format(selectedDate, "EEEE d", { locale: es })}
+              <div className="min-w-0 text-left">
+                <DrawerTitle className="capitalize text-left text-lg leading-tight truncate">
+                  {isCurrentDay ? "Hoy" : format(selectedDate, "EEEE d", { locale: es })}
                 </DrawerTitle>
                 <p className="text-sm text-muted-foreground">
-                  {format(selectedDate, "MMMM yyyy", { locale: es })}
-                  {totalCount > 0 && ` · ${dayAppointments.length} cita${dayAppointments.length !== 1 ? "s" : ""}`}
+                  {format(selectedDate, "d 'de' MMMM", { locale: es })}
+                  {activeCount > 0 && ` · ${activeCount} sesion${activeCount !== 1 ? "es" : ""}`}
                   {dayPayments.length > 0 && ` · ${dayPayments.length} pago${dayPayments.length !== 1 ? "s" : ""}`}
                 </p>
               </div>
             </div>
-            <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full">
+            <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full shrink-0">
               <X className="w-5 h-5" />
             </Button>
           </div>
+
+          {/* El día en miniatura */}
+          <DayMiniTimeline
+            appointments={dayAppointments}
+            showProfessionalColors={showProfessionalColors}
+            isCurrentDay={isCurrentDay}
+            className="mt-3"
+          />
         </DrawerHeader>
 
         <div className="overflow-y-auto p-4 pb-8 space-y-4">
           {dayAppointments.length === 0 && dayPayments.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">Sin actividad este día</p>
+            <div className="flex flex-col items-center py-12 gap-1.5 text-center">
+              <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-1.5">
+                <CalendarDays className="h-8 w-8 text-muted-foreground/50" />
+              </div>
+              <p className="font-semibold text-foreground/80">Día libre 🙌</p>
+              <p className="text-sm text-muted-foreground">Sin citas ni pagos este día.</p>
             </div>
           ) : (
             <>
@@ -79,13 +123,22 @@ export const MonthDayDrawer = ({
                     Citas
                   </h4>
                   <div className="space-y-3">
-                    {dayAppointments.map((apt) => (
-                      <AppointmentCard
+                    {dayAppointments.map((apt, i) => (
+                      <div
                         key={apt.id}
-                        appointment={apt}
-                        onClick={() => onAppointmentClick(apt)}
-                        showProfessionalColor={showProfessionalColors}
-                      />
+                        className="animate-in fade-in slide-in-from-bottom-2"
+                        style={{
+                          animationDelay: `${Math.min(i * 45, 350)}ms`,
+                          animationDuration: "350ms",
+                          animationFillMode: "both",
+                        }}
+                      >
+                        <AppointmentCard
+                          appointment={apt}
+                          onClick={() => onAppointmentClick(apt)}
+                          showProfessionalColor={showProfessionalColors}
+                        />
+                      </div>
                     ))}
                   </div>
                 </div>
