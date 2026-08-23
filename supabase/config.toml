@@ -31,3 +31,8 @@ verify_jwt = false
 # robot de recordatorios); el JWT de gateway no aplica.
 [functions.send-whatsapp]
 verify_jwt = false
+
+# calendar-feed: Google Calendar / iPhone piden la URL sin headers.
+# La seguridad es el token secreto por profesional (calendar_feed_tokens).
+[functions.calendar-feed]
+verify_jwt = false

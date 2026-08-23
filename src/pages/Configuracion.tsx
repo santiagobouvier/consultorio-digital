@@ -1,8 +1,13 @@
 // Hub de Configuración: acá viven todos los módulos secundarios que antes
 // llenaban el nav. El menú principal queda solo con lo del día a día; todo
 // lo demás se encuentra en esta pantalla, ordenado y explicado.
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useBusinessId } from "@/hooks/use-business-id";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
 import {
   ArrowLeft,
   AlarmClock,
@@ -12,6 +17,11 @@ import {
   CreditCard,
   LifeBuoy,
   ChevronRight,
+  CalendarHeart,
+  Copy,
+  Check,
+  RefreshCw,
+  Loader2,
 } from "lucide-react";
 
 type ConfigTile = {
@@ -67,6 +77,167 @@ const TILES: ConfigTile[] = [
     tint: "150 65% 45%",
   },
 ];
+
+/**
+ * Tu agenda en el calendario del celular: genera un link privado de
+ * suscripción iCal (Google Calendar / iPhone). El token es secreto y por
+ * profesional; regenerarlo invalida el anterior.
+ */
+const CalendarFeedCard = () => {
+  const { businessId } = useBusinessId(false);
+  const [token, setToken] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [working, setWorking] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (!businessId) return;
+    let cancelled = false;
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || cancelled) return;
+      const { data } = await (supabase as any)
+        .from("calendar_feed_tokens")
+        .select("token")
+        .eq("business_id", businessId)
+        .eq("professional_user_id", user.id)
+        .maybeSingle();
+      if (!cancelled) {
+        setToken(data?.token ?? null);
+        setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [businessId]);
+
+  const feedUrl = token
+    ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/calendar-feed?token=${token}`
+    : null;
+
+  const handleActivate = async () => {
+    if (!businessId) return;
+    setWorking(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Sesión no válida");
+      const { data, error } = await (supabase as any)
+        .from("calendar_feed_tokens")
+        .insert({ business_id: businessId, professional_user_id: user.id })
+        .select("token")
+        .single();
+      if (error) throw error;
+      setToken(data.token);
+      toast({ title: "Link creado", description: "Agregalo a tu calendario y listo." });
+    } catch (e) {
+      console.error(e);
+      toast({ title: "Error", description: "No se pudo crear el link", variant: "destructive" });
+    } finally {
+      setWorking(false);
+    }
+  };
+
+  const handleRegenerate = async () => {
+    if (!businessId) return;
+    setWorking(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Sesión no válida");
+      const { data, error } = await (supabase as any)
+        .from("calendar_feed_tokens")
+        .update({ token: crypto.randomUUID() })
+        .eq("business_id", businessId)
+        .eq("professional_user_id", user.id)
+        .select("token")
+        .single();
+      if (error) throw error;
+      setToken(data.token);
+      toast({
+        title: "Link regenerado",
+        description: "El link anterior dejó de funcionar. Volvé a agregarlo en tu calendario.",
+      });
+    } catch (e) {
+      console.error(e);
+      toast({ title: "Error", description: "No se pudo regenerar el link", variant: "destructive" });
+    } finally {
+      setWorking(false);
+    }
+  };
+
+  const handleCopy = async () => {
+    if (!feedUrl) return;
+    try {
+      await navigator.clipboard.writeText(feedUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast({ title: "No se pudo copiar", description: feedUrl });
+    }
+  };
+
+  return (
+    <div className="rounded-2xl border border-border/70 bg-card p-5 sm:p-6 space-y-4">
+      <div className="flex items-start gap-4">
+        <span
+          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl"
+          style={{ background: "hsla(190, 85%, 50%, 0.14)", boxShadow: "inset 0 0 0 1px hsla(190, 85%, 50%, 0.25)" }}
+        >
+          <CalendarHeart className="h-[22px] w-[22px]" style={{ color: "hsl(190 85% 50%)" }} strokeWidth={2} />
+        </span>
+        <div className="min-w-0">
+          <h2 className="text-[15px] font-semibold leading-tight">
+            Tu agenda, en el calendario de tu celular
+          </h2>
+          <p className="mt-1 text-[13px] leading-snug text-muted-foreground">
+            Suscribí Google Calendar o el calendario del iPhone a tus turnos: aparecen solos y se
+            actualizan solos. El link es privado, solo tuyo.
+          </p>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" /> Cargando...
+        </div>
+      ) : !token ? (
+        <Button onClick={handleActivate} disabled={working}>
+          {working ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CalendarHeart className="h-4 w-4 mr-2" />}
+          Crear mi link privado
+        </Button>
+      ) : (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <code className="flex-1 min-w-0 truncate rounded-xl border border-border/70 bg-muted/40 px-3 py-2.5 text-xs">
+              {feedUrl}
+            </code>
+            <Button variant="outline" size="icon" className="shrink-0 h-10 w-10 rounded-xl" onClick={handleCopy}>
+              {copied ? <Check className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
+            </Button>
+          </div>
+          <div className="rounded-xl bg-muted/40 p-3 text-[12.5px] leading-relaxed text-muted-foreground space-y-1.5">
+            <p>
+              <span className="font-medium text-foreground">Google Calendar (compu):</span>{" "}
+              Otros calendarios → + → Desde URL → pegá el link.
+            </p>
+            <p>
+              <span className="font-medium text-foreground">iPhone:</span>{" "}
+              Ajustes → Apps → Calendario → Cuentas → Añadir cuenta → Otra → Añadir calendario suscrito.
+            </p>
+            <p className="text-[11.5px]">
+              Los calendarios tardan un rato en refrescar (Google puede demorar unas horas). Nadie ve
+              notas clínicas por acá: solo paciente, tipo de sesión y horario.
+            </p>
+          </div>
+          <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={handleRegenerate} disabled={working}>
+            {working ? <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-2" />}
+            Regenerar link (invalida el anterior)
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const Configuracion = () => {
   const navigate = useNavigate();
@@ -135,6 +306,9 @@ const Configuracion = () => {
             );
           })}
         </div>
+
+        {/* Extra: agenda en el calendario del celular */}
+        <CalendarFeedCard />
       </div>
     </div>
   );
