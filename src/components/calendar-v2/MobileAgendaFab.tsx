@@ -6,6 +6,7 @@ import { NewActionDialog } from "./NewActionDialog";
 interface MobileAgendaFabProps {
   onAddAppointment: () => void;
   onAddPayment: () => void;
+  onAddPersonal?: () => void;
 }
 
 /**
@@ -13,7 +14,7 @@ interface MobileAgendaFabProps {
  * dos tarjetas grandes (cita / pago) — reemplaza los botoncitos satélite
  * que eran difíciles de acertar.
  */
-export const MobileAgendaFab = ({ onAddAppointment, onAddPayment }: MobileAgendaFabProps) => {
+export const MobileAgendaFab = ({ onAddAppointment, onAddPayment, onAddPersonal }: MobileAgendaFabProps) => {
   const [open, setOpen] = useState(false);
   const { primaryColor } = useDashboardBranding();
   const brandHsl = `hsl(${primaryColor})`;
@@ -42,6 +43,7 @@ export const MobileAgendaFab = ({ onAddAppointment, onAddPayment }: MobileAgenda
         onOpenChange={setOpen}
         onAddAppointment={onAddAppointment}
         onAddPayment={onAddPayment}
+        onAddPersonal={onAddPersonal}
       />
     </>
   );

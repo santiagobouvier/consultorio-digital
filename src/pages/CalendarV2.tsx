@@ -35,6 +35,7 @@ import { DesktopCalendarLayout } from "@/components/calendar-v2/DesktopCalendarL
 import { MobileAgendaFab } from "@/components/calendar-v2/MobileAgendaFab";
 import { AppointmentDetailModal } from "@/components/calendar/AppointmentDetailModal";
 import { CreateAppointmentModal } from "@/components/CreateAppointmentModal";
+import { PersonalEventModal } from "@/components/PersonalEventModal";
 import { QuickPaymentDrawer } from "@/components/calendar/QuickPaymentDrawer";
 import { PaymentDayDrawer } from "@/components/calendar-v2/PaymentDayDrawer";
 import type { DayPayment } from "@/components/calendar-v2/types";
@@ -50,6 +51,7 @@ import {
   Professional,
   PaymentColor,
   AppointmentStatus,
+  PersonalEvent,
 } from "@/components/calendar-v2/types";
 
 interface Patient {
@@ -143,6 +145,9 @@ const CalendarV2 = () => {
   const [lockDateForAction, setLockDateForAction] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<DayPayment | null>(null);
   const [showPaymentDetailDrawer, setShowPaymentDetailDrawer] = useState(false);
+  // Eventos personales: modal (crear si target=null, editar si tiene evento)
+  const [showPersonalModal, setShowPersonalModal] = useState(false);
+  const [personalEventTarget, setPersonalEventTarget] = useState<PersonalEvent | null>(null);
 
   // Fetch business settings
   useEffect(() => {
@@ -212,6 +217,84 @@ const CalendarV2 = () => {
     staleTime: 30_000,
     gcTime: 300_000,
   });
+
+  // Eventos personales del rango visible (incluye series semanales vigentes)
+  const { data: personalEventsRaw = [] } = useQuery({
+    queryKey: ["personal_events", ...appointmentQueryKey.slice(1)],
+    queryFn: async (): Promise<PersonalEvent[]> => {
+      const { startDate, endDate } = getDateRange();
+      const startDay = format(startDate, "yyyy-MM-dd");
+      const { data, error } = await (supabase as any)
+        .from("personal_events")
+        .select("*")
+        .eq("business_id", businessId!)
+        .lte("start_at", endDate.toISOString())
+        .or(
+          `and(recurrence.eq.none,end_at.gte.${startDate.toISOString()}),` +
+          `and(recurrence.eq.weekly,or(recurrence_until.is.null,recurrence_until.gte.${startDay}))`
+        );
+      if (error) throw error;
+      return (data as PersonalEvent[]) || [];
+    },
+    enabled: !!businessId,
+    staleTime: 30_000,
+    gcTime: 300_000,
+  });
+
+  // Expandir a ocurrencias visibles con forma de CalendarAppointment:
+  // entran al mismo pipeline de las vistas (día/semana/mes) sin tocarlas.
+  const personalOccurrences = useMemo<CalendarAppointment[]>(() => {
+    const { startDate, endDate } = getDateRange();
+    const WEEK_MS = 7 * 86400000;
+    const out: CalendarAppointment[] = [];
+
+    for (const ev of personalEventsRaw) {
+      const evStart = new Date(ev.start_at);
+      const evEnd = new Date(ev.end_at);
+      const durMs = evEnd.getTime() - evStart.getTime();
+      if (durMs <= 0) continue;
+
+      const pushOccurrence = (s: Date, e: Date) => {
+        if (s > endDate || e < startDate) return;
+        out.push({
+          id: `personal-${ev.id}-${format(s, "yyyyMMdd")}`,
+          start_at: s.toISOString(),
+          end_at: e.toISOString(),
+          status: "personal",
+          modality: null,
+          location: null,
+          payment_status: null,
+          patient_id: null,
+          service_id: null,
+          professional_id: ev.professional_user_id,
+          patients: { full_name: ev.title },
+          services: null,
+          isPersonal: true,
+          personalEvent: ev,
+        });
+      };
+
+      if (ev.recurrence === "weekly") {
+        const until = ev.recurrence_until
+          ? new Date(`${ev.recurrence_until}T23:59:59`)
+          : null;
+        // Saltar de a semanas enteras hasta acercarse al rango visible
+        let occMs = evStart.getTime();
+        if (occMs + durMs < startDate.getTime()) {
+          const weeksBehind = Math.floor((startDate.getTime() - occMs) / WEEK_MS);
+          occMs += weeksBehind * WEEK_MS;
+        }
+        for (let i = 0; occMs <= endDate.getTime() && i < 60; occMs += WEEK_MS, i++) {
+          const s = new Date(occMs);
+          if (until && s > until) break;
+          pushOccurrence(s, new Date(occMs + durMs));
+        }
+      } else {
+        pushOccurrence(evStart, evEnd);
+      }
+    }
+    return out;
+  }, [personalEventsRaw, getDateRange]);
 
   // Patients for calendar
   const { data: patients = [] } = useQuery({
@@ -310,7 +393,15 @@ const CalendarV2 = () => {
 
   // Filter appointments
   const filteredAppointments = useMemo(() => {
-    let result = processedAppointments;
+    // Eventos personales entran al mismo pipeline (con su profesional para
+    // el filtro por profesional), ordenados junto a las citas.
+    const personalWithProfessional = personalOccurrences.map((occ) => ({
+      ...occ,
+      professional: professionals.find((p) => p.userId === occ.professional_id),
+    }));
+    let result = [...processedAppointments, ...personalWithProfessional].sort(
+      (a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime()
+    );
 
     // Filter by professional (if not shared calendar, only show own appointments)
     if (!sharedCalendar && !isOwner) {
@@ -354,6 +445,7 @@ const CalendarV2 = () => {
     return result;
   }, [
     processedAppointments,
+    personalOccurrences,
     filters,
     sharedCalendar,
     isOwner,
@@ -470,6 +562,23 @@ const CalendarV2 = () => {
     setShowPaymentDetailDrawer(true);
   }, []);
 
+  // Un solo click handler: cita → detalle de cita; evento personal → su modal.
+  const handleAppointmentClick = useCallback((apt: CalendarAppointment) => {
+    if (apt.isPersonal && apt.personalEvent) {
+      setPersonalEventTarget(apt.personalEvent);
+      setShowPersonalModal(true);
+      return;
+    }
+    setSelectedAppointment(apt);
+    setShowAppointmentModal(true);
+  }, []);
+
+  const openCreatePersonal = useCallback((date?: Date) => {
+    setPersonalEventTarget(null);
+    setSelectedDateForAction(date ?? currentDate);
+    setShowPersonalModal(true);
+  }, [currentDate]);
+
   const loading = businessLoading || professionalsLoading;
 
   if (loading && !businessId) {
@@ -530,6 +639,7 @@ const CalendarV2 = () => {
             setLockDateForAction(false);
             setShowPaymentDrawer(true);
           }}
+          onAddPersonal={() => openCreatePersonal()}
           onToggleFilters={() => setShowFilters(!showFilters)}
           hasActiveFilters={hasActiveFilters}
           activeFiltersCount={activeFiltersCount}
@@ -537,7 +647,7 @@ const CalendarV2 = () => {
           onExportCSV={() => {
             const headers = ["Fecha", "Hora inicio", "Hora fin", "Paciente", "Profesional", "Servicio", "Modalidad", "Estado", "Estado de pago", "Notas"];
             const statusMap: Record<string, string> = { pending: "Pendiente", confirmed: "Confirmada", attended: "Atendida", cancelled: "Cancelada", no_show: "No asistió" };
-            const rows = filteredAppointments.map((a) => {
+            const rows = filteredAppointments.filter((a) => !a.isPersonal).map((a) => {
               const start = new Date(a.start_at);
               const end = new Date(a.end_at);
               return [
@@ -619,10 +729,7 @@ const CalendarV2 = () => {
                 <DesktopCalendarLayout
                   currentDate={currentDate}
                   appointments={filteredAppointments}
-                  onAppointmentClick={(apt) => {
-                    setSelectedAppointment(apt);
-                    setShowAppointmentModal(true);
-                  }}
+                  onAppointmentClick={handleAppointmentClick}
                   onCreateAppointment={(date) => {
                     if (date) {
                       setSelectedDateForAction(date);
@@ -651,10 +758,7 @@ const CalendarV2 = () => {
                     <DayViewV2
                       currentDate={currentDate}
                       appointments={filteredAppointments}
-                      onAppointmentClick={(apt) => {
-                        setSelectedAppointment(apt);
-                        setShowAppointmentModal(true);
-                      }}
+                      onAppointmentClick={handleAppointmentClick}
                       onAddAppointment={() => {
                         setSelectedDateForAction(currentDate);
                         setLockDateForAction(true);
@@ -670,10 +774,7 @@ const CalendarV2 = () => {
                     <WeekViewV2
                       currentDate={currentDate}
                       appointments={filteredAppointments}
-                      onAppointmentClick={(apt) => {
-                        setSelectedAppointment(apt);
-                        setShowAppointmentModal(true);
-                      }}
+                      onAppointmentClick={handleAppointmentClick}
                       onDayClick={handleDayClick}
                       onAddAppointment={() => {
                         setSelectedDateForAction(currentDate);
@@ -689,10 +790,7 @@ const CalendarV2 = () => {
                     <MonthViewV2
                       currentDate={currentDate}
                       appointments={filteredAppointments}
-                      onAppointmentClick={(apt) => {
-                        setSelectedAppointment(apt);
-                        setShowAppointmentModal(true);
-                      }}
+                      onAppointmentClick={handleAppointmentClick}
                       onDayClick={handleDayClick}
                       onAddAppointment={() => {
                         setSelectedDateForAction(currentDate);
@@ -720,6 +818,21 @@ const CalendarV2 = () => {
           }}
           businessId={businessId}
           onPaymentRegistered={handleRefresh}
+        />
+
+        {/* Personal event modal (crear/editar) */}
+        <PersonalEventModal
+          open={showPersonalModal}
+          onOpenChange={(o) => {
+            setShowPersonalModal(o);
+            if (!o) setPersonalEventTarget(null);
+          }}
+          businessId={businessId}
+          event={personalEventTarget}
+          defaultDate={selectedDateForAction}
+          onSaved={() => {
+            queryClient.invalidateQueries({ queryKey: ["personal_events"] });
+          }}
         />
 
         {/* Create appointment modal */}
@@ -771,6 +884,7 @@ const CalendarV2 = () => {
           setLockDateForAction(false);
           setShowPaymentDrawer(true);
         }}
+        onAddPersonal={() => openCreatePersonal()}
       />
     </div>
   );

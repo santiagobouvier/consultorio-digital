@@ -24,6 +24,23 @@ export interface CalendarAppointment {
   paymentColor?: PaymentColor;
   patientPaymentStatus?: PaymentStatus;
   recurrence_group_id?: string | null;
+  /** Evento personal del profesional (no es una cita): se dibuja distinto
+   *  y al tocarlo abre su propio modal. */
+  isPersonal?: boolean;
+  personalEvent?: PersonalEvent;
+}
+
+/** Fila cruda de personal_events (bloquea la reserva online). */
+export interface PersonalEvent {
+  id: string;
+  business_id: string;
+  professional_user_id: string;
+  title: string;
+  notes: string | null;
+  start_at: string;
+  end_at: string;
+  recurrence: "none" | "weekly";
+  recurrence_until: string | null;
 }
 
 export type AppointmentStatus =
@@ -34,7 +51,8 @@ export type AppointmentStatus =
   | "cancelled_by_patient"
   | "reschedule_requested"
   | "scheduled"
-  | "no_show";
+  | "no_show"
+  | "personal";
 export type PaymentColor = "green" | "orange" | "red" | "gray";
 export type ViewType = "day" | "week" | "month";
 
@@ -69,6 +87,7 @@ export const APPOINTMENT_STATUS_MAP: Record<AppointmentStatus, { label: string; 
   reschedule_requested: { label: "Reprogramación pedida", variant: "outline" },
   scheduled: { label: "Confirmada", variant: "default" },
   no_show: { label: "Ausente", variant: "destructive" },
+  personal: { label: "Personal", variant: "secondary" },
 };
 
 export const PROFESSIONAL_COLORS = [
@@ -109,6 +128,8 @@ export const getStatusColor = (status: AppointmentStatus): {
   swatch: string;        // solid bg color for dots/badges
 } => {
   switch (status) {
+    case "personal":
+      return { border: "border-l-slate-400", bgTint: "bg-slate-100/70 dark:bg-slate-500/10", swatch: "bg-slate-400" };
     case "pending":
       return { border: "border-l-amber-500", bgTint: "bg-amber-50 dark:bg-amber-500/10", swatch: "bg-amber-500" };
     case "reschedule_requested":
