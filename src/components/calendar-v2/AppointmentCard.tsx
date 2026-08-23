@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { format } from "date-fns";
-import { CalendarAppointment, APPOINTMENT_STATUS_MAP, getPaymentColorInfo, getStatusColor, getPersonalCategory } from "./types";
+import { CalendarAppointment, APPOINTMENT_STATUS_MAP, getPaymentColorInfo, getStatusColor, getPersonalLabel } from "./types";
 import { Video, MapPin, Repeat, Coffee } from "lucide-react";
 
 const getInitials = (name?: string | null) => {
@@ -36,7 +36,7 @@ export const AppointmentCard = ({
   // Evento personal: bloque con el color de su etiqueta fija.
   if (appointment.isPersonal) {
     const isWeekly = appointment.personalEvent?.recurrence === "weekly";
-    const cat = getPersonalCategory(appointment.personalEvent?.category);
+    const cat = getPersonalLabel(appointment.personalEvent);
     return (
       <button
         onClick={onClick}

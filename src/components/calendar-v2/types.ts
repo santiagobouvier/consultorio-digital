@@ -42,7 +42,25 @@ export interface PersonalEvent {
   recurrence: "none" | "weekly";
   recurrence_until: string | null;
   category?: string | null;
+  label_id?: string | null;
+  /** Etiqueta custom (join de personal_event_labels); pisa a category. */
+  personal_event_labels?: { name: string; color: string } | null;
 }
+
+/** Etiqueta personalizada creada por el profesional. */
+export interface PersonalEventLabel {
+  id: string;
+  name: string;
+  color: string;
+}
+
+/** Paleta fija para etiquetas custom (los colores de Google Calendar). */
+export const LABEL_PALETTE = [
+  "#d50000", "#e67c73", "#f4511e", "#f6bf26",
+  "#33b679", "#0b8043", "#009688", "#039be5",
+  "#3f51b5", "#7986cb", "#8e24aa", "#ad1457",
+  "#c0ca33", "#f09300", "#795548", "#616161",
+];
 
 /** Etiquetas FIJAS de eventos personales, cada una con su color estable
  *  (mismo lenguaje que Google Calendar: el color identifica la etiqueta). */
@@ -68,6 +86,17 @@ export const PERSONAL_CATEGORIES: { id: PersonalCategory; label: string; color: 
 export const getPersonalCategory = (id?: string | null) =>
   PERSONAL_CATEGORIES.find((c) => c.id === id) ?? PERSONAL_CATEGORIES[0];
 
+/** Etiqueta efectiva de un evento personal: la custom si tiene, si no la fija. */
+export const getPersonalLabel = (
+  ev?: PersonalEvent | null
+): { label: string; color: string } => {
+  if (ev?.personal_event_labels) {
+    return { label: ev.personal_event_labels.name, color: ev.personal_event_labels.color };
+  }
+  const cat = getPersonalCategory(ev?.category);
+  return { label: cat.label, color: cat.color };
+};
+
 /** Colores sólidos por estado (para bloques/barritas cuando no se colorea
  *  por profesional). */
 const STATUS_HEX: Record<string, string> = {
@@ -85,7 +114,7 @@ export const getEventHexColor = (
   apt: CalendarAppointment,
   showProfessionalColors: boolean
 ): string => {
-  if (apt.isPersonal) return getPersonalCategory(apt.personalEvent?.category).color;
+  if (apt.isPersonal) return getPersonalLabel(apt.personalEvent).color;
   if (showProfessionalColors && apt.professional) return apt.professional.color;
   return STATUS_HEX[apt.status] ?? "#00b5b5";
 };

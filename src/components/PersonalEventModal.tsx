@@ -28,12 +28,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Loader2, Trash2, Repeat, Lock } from "lucide-react";
+import { Loader2, Trash2, Repeat, Lock, Plus, Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   PERSONAL_CATEGORIES,
+  LABEL_PALETTE,
   getPersonalCategory,
   type PersonalEvent,
+  type PersonalEventLabel,
 } from "@/components/calendar-v2/types";
 
 interface PersonalEventModalProps {
@@ -59,6 +61,14 @@ export const PersonalEventModal = ({
 
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("personal");
+  const [labelId, setLabelId] = useState<string | null>(null);
+  // Etiquetas custom del profesional (estilo Google Calendar)
+  const [customLabels, setCustomLabels] = useState<PersonalEventLabel[]>([]);
+  const [creatingLabel, setCreatingLabel] = useState(false);
+  const [newLabelName, setNewLabelName] = useState("");
+  const [newLabelColor, setNewLabelColor] = useState(LABEL_PALETTE[4]);
+  const [savingLabel, setSavingLabel] = useState(false);
+  const [labelToDelete, setLabelToDelete] = useState<PersonalEventLabel | null>(null);
   const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("10:00");
@@ -77,6 +87,7 @@ export const PersonalEventModal = ({
       const e = new Date(event.end_at);
       setTitle(event.title);
       setCategory(getPersonalCategory(event.category).id);
+      setLabelId(event.label_id ?? null);
       setDate(format(s, "yyyy-MM-dd"));
       setStartTime(format(s, "HH:mm"));
       setEndTime(format(e, "HH:mm"));
@@ -86,6 +97,7 @@ export const PersonalEventModal = ({
     } else {
       setTitle("");
       setCategory("personal");
+      setLabelId(null);
       setDate(format(defaultDate ?? new Date(), "yyyy-MM-dd"));
       setStartTime("09:00");
       setEndTime("10:00");
@@ -93,7 +105,92 @@ export const PersonalEventModal = ({
       setUntil("");
       setNotes("");
     }
+    setCreatingLabel(false);
+    setNewLabelName("");
   }, [open, event, defaultDate]);
+
+  // Etiquetas custom del profesional
+  useEffect(() => {
+    if (!open || !businessId) return;
+    let cancelled = false;
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || cancelled) return;
+      const { data } = await (supabase as any)
+        .from("personal_event_labels")
+        .select("id, name, color")
+        .eq("business_id", businessId)
+        .eq("professional_user_id", user.id)
+        .order("name");
+      if (!cancelled) setCustomLabels((data as PersonalEventLabel[]) || []);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, businessId]);
+
+  const handleCreateLabel = async () => {
+    const name = newLabelName.trim();
+    if (!name) {
+      toast({ title: "Poné un nombre", description: "Ej: Supervisión, Facultad, Terapia propia." });
+      return;
+    }
+    if (!businessId) return;
+    setSavingLabel(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Sesión no válida");
+      const { data, error } = await (supabase as any)
+        .from("personal_event_labels")
+        .insert({
+          business_id: businessId,
+          professional_user_id: user.id,
+          name,
+          color: newLabelColor,
+        })
+        .select("id, name, color")
+        .single();
+      if (error) {
+        if (error.code === "23505") {
+          toast({ title: "Ya existe", description: "Ya tenés una etiqueta con ese nombre.", variant: "destructive" });
+          return;
+        }
+        throw error;
+      }
+      setCustomLabels((prev) => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
+      setLabelId(data.id);
+      setCreatingLabel(false);
+      setNewLabelName("");
+    } catch (e) {
+      console.error(e);
+      toast({ title: "Error", description: "No se pudo crear la etiqueta", variant: "destructive" });
+    } finally {
+      setSavingLabel(false);
+    }
+  };
+
+  const handleDeleteLabel = async () => {
+    if (!labelToDelete) return;
+    try {
+      const { error } = await (supabase as any)
+        .from("personal_event_labels")
+        .delete()
+        .eq("id", labelToDelete.id);
+      if (error) throw error;
+      setCustomLabels((prev) => prev.filter((l) => l.id !== labelToDelete.id));
+      if (labelId === labelToDelete.id) setLabelId(null);
+      toast({
+        title: "Etiqueta eliminada",
+        description: "Los eventos que la usaban vuelven a su etiqueta fija.",
+      });
+      onSaved();
+    } catch (e) {
+      console.error(e);
+      toast({ title: "Error", description: "No se pudo eliminar la etiqueta", variant: "destructive" });
+    } finally {
+      setLabelToDelete(null);
+    }
+  };
 
   const handleSave = async () => {
     if (!businessId) return;
@@ -113,6 +210,7 @@ export const PersonalEventModal = ({
       const payload = {
         title: title.trim(),
         category,
+        label_id: labelId,
         notes: notes.trim() || null,
         start_at: startAt,
         end_at: endAt,
@@ -200,13 +298,17 @@ export const PersonalEventModal = ({
             <div className="space-y-2">
               <Label>Etiqueta</Label>
               <div className="flex flex-wrap gap-1.5">
+                {/* Fijas */}
                 {PERSONAL_CATEGORIES.map((cat) => {
-                  const selected = category === cat.id;
+                  const selected = !labelId && category === cat.id;
                   return (
                     <button
                       key={cat.id}
                       type="button"
-                      onClick={() => setCategory(cat.id)}
+                      onClick={() => {
+                        setCategory(cat.id);
+                        setLabelId(null);
+                      }}
                       className={cn(
                         "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-xs font-medium transition-all",
                         selected
@@ -223,7 +325,100 @@ export const PersonalEventModal = ({
                     </button>
                   );
                 })}
+
+                {/* Custom del profesional */}
+                {customLabels.map((l) => {
+                  const selected = labelId === l.id;
+                  return (
+                    <span key={l.id} className="inline-flex items-center">
+                      <button
+                        type="button"
+                        onClick={() => setLabelId(l.id)}
+                        className={cn(
+                          "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-xs font-medium transition-all",
+                          selected
+                            ? "text-white border-transparent shadow-sm rounded-r-none pr-1.5"
+                            : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
+                        )}
+                        style={selected ? { backgroundColor: l.color } : undefined}
+                      >
+                        <span
+                          className="w-2 h-2 rounded-full"
+                          style={{ backgroundColor: selected ? "rgba(255,255,255,0.9)" : l.color }}
+                        />
+                        {l.name}
+                      </button>
+                      {selected && (
+                        <button
+                          type="button"
+                          onClick={() => setLabelToDelete(l)}
+                          className="h-full rounded-r-full border border-l-0 border-transparent px-1.5 py-1.5 text-white/80 hover:text-white"
+                          style={{ backgroundColor: l.color }}
+                          aria-label={`Eliminar etiqueta ${l.name}`}
+                          title="Eliminar esta etiqueta"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      )}
+                    </span>
+                  );
+                })}
+
+                {/* Crear nueva */}
+                <button
+                  type="button"
+                  onClick={() => setCreatingLabel((v) => !v)}
+                  className={cn(
+                    "inline-flex items-center gap-1 rounded-full border border-dashed px-2.5 py-1.5 text-xs font-medium transition-colors",
+                    creatingLabel
+                      ? "border-foreground/40 text-foreground"
+                      : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
+                  )}
+                >
+                  <Plus className="h-3 w-3" />
+                  Nueva etiqueta
+                </button>
               </div>
+
+              {creatingLabel && (
+                <div className="rounded-xl border border-border/70 p-3 space-y-3">
+                  <Input
+                    value={newLabelName}
+                    onChange={(e) => setNewLabelName(e.target.value)}
+                    placeholder="Nombre de la etiqueta (ej: Supervisión)"
+                    maxLength={40}
+                    autoFocus
+                  />
+                  <div className="flex flex-wrap gap-1.5">
+                    {LABEL_PALETTE.map((hex) => (
+                      <button
+                        key={hex}
+                        type="button"
+                        onClick={() => setNewLabelColor(hex)}
+                        className="flex h-7 w-7 items-center justify-center rounded-full transition-transform hover:scale-110"
+                        style={{ backgroundColor: hex }}
+                        aria-label={`Color ${hex}`}
+                      >
+                        {newLabelColor === hex && <Check className="h-3.5 w-3.5 text-white" />}
+                      </button>
+                    ))}
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="w-full"
+                    onClick={handleCreateLabel}
+                    disabled={savingLabel}
+                  >
+                    {savingLabel ? (
+                      <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
+                    ) : (
+                      <Plus className="h-3.5 w-3.5 mr-2" />
+                    )}
+                    Crear y usar
+                  </Button>
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-3 gap-3">
@@ -329,6 +524,30 @@ export const PersonalEventModal = ({
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Eliminar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Confirmación de borrado de etiqueta custom */}
+      <AlertDialog open={!!labelToDelete} onOpenChange={(o) => !o && setLabelToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar la etiqueta "{labelToDelete?.name}"?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Los eventos que la usaban no se borran: vuelven a su etiqueta fija.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleDeleteLabel();
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Eliminar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
