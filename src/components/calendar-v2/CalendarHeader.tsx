@@ -2,8 +2,11 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ChevronLeft, ChevronRight, Plus, Filter, Download, Share2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, Plus, Filter, Download, Share2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as MiniCalendar } from "@/components/ui/calendar";
+import { es } from "date-fns/locale";
 import { ViewType } from "./types";
 import { HelpTooltip } from "@/components/HelpTooltip";
 import { NewActionDialog } from "./NewActionDialog";
@@ -18,12 +21,62 @@ interface CalendarHeaderProps {
   onAddPayment?: () => void;
   onAddPersonal?: () => void;
   onShareSlots?: () => void;
+  /** Tocar el título abre un mini-mes para saltar a cualquier fecha. */
+  onPickDate?: (date: Date) => void;
   onToggleFilters: () => void;
   hasActiveFilters: boolean;
   activeFiltersCount: number;
   dateLabel: string;
   onExportCSV?: () => void;
 }
+
+const TitleWithMiniMonth = ({
+  dateLabel,
+  currentDate,
+  onPickDate,
+  className,
+}: {
+  dateLabel: string;
+  currentDate: Date;
+  onPickDate?: (d: Date) => void;
+  className?: string;
+}) => {
+  const [open, setOpen] = useState(false);
+  const title = (
+    <h1 className={className}>
+      {dateLabel}
+    </h1>
+  );
+  if (!onPickDate) return title;
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button className="flex items-center gap-1.5 min-w-0 text-left" aria-label="Elegir fecha">
+          {title}
+          <ChevronDown
+            className={cn(
+              "h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200",
+              open && "rotate-180"
+            )}
+          />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-auto p-1 rounded-2xl shadow-xl">
+        <MiniCalendar
+          mode="single"
+          locale={es}
+          selected={currentDate}
+          defaultMonth={currentDate}
+          onSelect={(d) => {
+            if (!d) return;
+            onPickDate(d);
+            setOpen(false);
+          }}
+        />
+      </PopoverContent>
+    </Popover>
+  );
+};
 
 export const CalendarHeader = ({
   currentDate,
@@ -35,6 +88,7 @@ export const CalendarHeader = ({
   onAddPayment,
   onAddPersonal,
   onShareSlots,
+  onPickDate,
   onToggleFilters,
   hasActiveFilters,
   activeFiltersCount,
@@ -70,9 +124,12 @@ export const CalendarHeader = ({
         {/* Fila 1: título del período + acciones */}
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 pt-0.5 flex items-center gap-2">
-            <h1 className="text-[26px] leading-[1.1] font-extrabold tracking-tight capitalize bg-gradient-to-br from-foreground via-foreground to-foreground/55 bg-clip-text text-transparent truncate">
-              {dateLabel}
-            </h1>
+            <TitleWithMiniMonth
+              dateLabel={dateLabel}
+              currentDate={currentDate}
+              onPickDate={onPickDate}
+              className="text-[26px] leading-[1.1] font-extrabold tracking-tight capitalize bg-gradient-to-br from-foreground via-foreground to-foreground/55 bg-clip-text text-transparent truncate"
+            />
             <HelpTooltip id="agenda" />
           </div>
           <div className="flex items-center gap-0.5 rounded-2xl border border-border/60 bg-card/70 backdrop-blur-md p-1 shadow-sm shrink-0">
@@ -182,11 +239,14 @@ export const CalendarHeader = ({
           </div>
 
           {/* Date Display */}
-          <div className="min-w-0">
-            <h1 className="text-xl font-bold capitalize inline-flex items-center gap-2 whitespace-nowrap">
-              {dateLabel}
-              <HelpTooltip id="agenda" />
-            </h1>
+          <div className="min-w-0 flex items-center gap-2">
+            <TitleWithMiniMonth
+              dateLabel={dateLabel}
+              currentDate={currentDate}
+              onPickDate={onPickDate}
+              className="text-xl font-bold capitalize whitespace-nowrap"
+            />
+            <HelpTooltip id="agenda" />
           </div>
 
           <Button

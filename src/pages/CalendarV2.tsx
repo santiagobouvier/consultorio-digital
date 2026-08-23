@@ -36,6 +36,12 @@ import { DesktopCalendarLayout } from "@/components/calendar-v2/DesktopCalendarL
 import { MobileAgendaFab } from "@/components/calendar-v2/MobileAgendaFab";
 import { BirthdaysStrip } from "@/components/calendar-v2/BirthdaysStrip";
 import { ShareFreeSlotsDialog } from "@/components/calendar-v2/ShareFreeSlotsDialog";
+import {
+  useTodayPulse,
+  AgendaHero,
+  InProgressCard,
+  DayCompleteCelebration,
+} from "@/components/calendar-v2/AgendaPulse";
 import { AppointmentDetailModal } from "@/components/calendar/AppointmentDetailModal";
 import { CreateAppointmentModal } from "@/components/CreateAppointmentModal";
 import { PersonalEventModal } from "@/components/PersonalEventModal";
@@ -159,6 +165,9 @@ const CalendarV2 = () => {
   const [prefilledTimeForAction, setPrefilledTimeForAction] = useState<string | null>(null);
   // Swipe horizontal para cambiar de día/semana/mes (gesto tipo Google)
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const viewsRef = useRef<HTMLDivElement>(null);
+  // Pulso del día: alimenta el hero, la tarjeta "en sesión" y el festejo
+  const todayPulse = useTodayPulse(businessId);
 
   // Fetch business settings
   useEffect(() => {
@@ -641,6 +650,9 @@ const CalendarV2 = () => {
       {/* La agenda usa TODO el ancho disponible (con tope solo en ultra-wide):
           los calendarios necesitan espacio, no márgenes decorativos. */}
       <div className="w-full max-w-[1900px] mx-auto p-4 sm:p-6 space-y-4 animate-fade-in">
+        {/* Hero vivo: saludo + resumen de HOY */}
+        <AgendaHero appointments={todayPulse} />
+
         {/* Header */}
         <CalendarHeader
           currentDate={currentDate}
@@ -660,6 +672,7 @@ const CalendarV2 = () => {
           }}
           onAddPersonal={() => openCreatePersonal()}
           onShareSlots={() => setShowShareSlots(true)}
+          onPickDate={(d) => setCurrentDate(d)}
           onToggleFilters={() => setShowFilters(!showFilters)}
           hasActiveFilters={hasActiveFilters}
           activeFiltersCount={activeFiltersCount}
@@ -726,9 +739,10 @@ const CalendarV2 = () => {
         {/* Professional color legend */}
         {showProfessionalColors && <ProfessionalColorLegend professionals={professionals} />}
 
-        {/* Calendar views with transition. Swipe horizontal (mobile) para
-            navegar entre día/semana/mes, como en Google Calendar. */}
+        {/* Calendar views with transition. Swipe horizontal (mobile) que
+            ARRASTRA el calendario con el dedo, como una app nativa. */}
         <div
+          ref={viewsRef}
           className={cn(
             "transition-all duration-200 ease-out",
             isTransitioning && transitionDirection === "left" && "opacity-0 -translate-x-4",
@@ -740,9 +754,28 @@ const CalendarV2 = () => {
             const t = e.touches[0];
             touchStartRef.current = { x: t.clientX, y: t.clientY };
           }}
+          onTouchMove={(e) => {
+            const start = touchStartRef.current;
+            const el = viewsRef.current;
+            if (!start || !el) return;
+            const t = e.touches[0];
+            const dx = t.clientX - start.x;
+            const dy = t.clientY - start.y;
+            // Solo con intención horizontal clara (no pelear con el scroll)
+            if (Math.abs(dx) < 14 || Math.abs(dx) < Math.abs(dy) * 1.4) return;
+            el.style.transition = "none";
+            el.style.transform = `translateX(${dx * 0.38}px)`;
+            el.style.opacity = String(1 - Math.min(Math.abs(dx) / 700, 0.3));
+          }}
           onTouchEnd={(e) => {
             const start = touchStartRef.current;
             touchStartRef.current = null;
+            const el = viewsRef.current;
+            if (el) {
+              el.style.transition = "";
+              el.style.transform = "";
+              el.style.opacity = "";
+            }
             if (!start) return;
             const t = e.changedTouches[0];
             const dx = t.clientX - start.x;
@@ -920,6 +953,18 @@ const CalendarV2 = () => {
           />
         )}
       </div>
+
+      {/* Sesión en curso: tarjeta flotante viva */}
+      <InProgressCard
+        appointments={todayPulse}
+        onOpen={() => {
+          setCurrentDate(new Date());
+          setViewType("day");
+        }}
+      />
+
+      {/* Festejo de día completo (una vez por día) */}
+      <DayCompleteCelebration businessId={businessId} appointments={todayPulse} />
 
       {/* Mobile FAB — bottom-right, never overlaps the calendar */}
       <MobileAgendaFab
