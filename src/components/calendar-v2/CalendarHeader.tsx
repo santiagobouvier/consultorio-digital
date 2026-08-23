@@ -23,6 +23,8 @@ interface CalendarHeaderProps {
   onShareSlots?: () => void;
   /** Tocar el título abre un mini-mes para saltar a cualquier fecha. */
   onPickDate?: (date: Date) => void;
+  /** Acciones extra (ej: Referencias) integradas al cluster de íconos. */
+  extraActions?: React.ReactNode;
   onToggleFilters: () => void;
   hasActiveFilters: boolean;
   activeFiltersCount: number;
@@ -89,6 +91,7 @@ export const CalendarHeader = ({
   onAddPersonal,
   onShareSlots,
   onPickDate,
+  extraActions,
   onToggleFilters,
   hasActiveFilters,
   activeFiltersCount,
@@ -128,31 +131,32 @@ export const CalendarHeader = ({
               dateLabel={dateLabel}
               currentDate={currentDate}
               onPickDate={onPickDate}
-              className="text-[26px] leading-[1.1] font-extrabold tracking-tight capitalize bg-gradient-to-br from-foreground via-foreground to-foreground/55 bg-clip-text text-transparent truncate"
+              className="text-[22px] leading-[1.1] font-bold tracking-tight capitalize truncate"
             />
             <HelpTooltip id="agenda" />
           </div>
-          <div className="flex items-center gap-0.5 rounded-2xl border border-border/60 bg-card/70 backdrop-blur-md p-1 shadow-sm shrink-0">
+          <div className="flex items-center gap-0.5 shrink-0">
+            {extraActions}
             {onShareSlots && (
               <button
                 onClick={onShareSlots}
-                className="h-9 w-9 rounded-xl flex items-center justify-center text-muted-foreground transition-colors active:bg-muted hover:text-foreground"
+                className="h-9 w-9 rounded-full flex items-center justify-center text-muted-foreground/70 transition-colors active:bg-muted hover:text-foreground"
                 aria-label="Compartir huecos libres"
               >
-                <Share2 className="h-[18px] w-[18px]" />
+                <Share2 className="h-[17px] w-[17px]" strokeWidth={1.8} />
               </button>
             )}
             <button
               onClick={onToggleFilters}
               className={cn(
-                "relative h-9 w-9 rounded-xl flex items-center justify-center transition-colors active:bg-muted",
-                hasActiveFilters ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground"
+                "relative h-9 w-9 rounded-full flex items-center justify-center transition-colors active:bg-muted",
+                hasActiveFilters ? "text-primary" : "text-muted-foreground/70 hover:text-foreground"
               )}
               aria-label="Filtros"
             >
-              <Filter className="h-[18px] w-[18px]" />
+              <Filter className="h-[17px] w-[17px]" strokeWidth={1.8} />
               {hasActiveFilters && (
-                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-destructive text-destructive-foreground rounded-full text-[9px] font-bold flex items-center justify-center">
+                <span className="absolute top-0.5 right-0.5 w-3.5 h-3.5 bg-destructive text-destructive-foreground rounded-full text-[8px] font-bold flex items-center justify-center">
                   {activeFiltersCount}
                 </span>
               )}
@@ -160,28 +164,28 @@ export const CalendarHeader = ({
           </div>
         </div>
 
-        {/* Fila 2: píldora ‹ Hoy › + tabs */}
+        {/* Fila 2: píldora ‹ Hoy › + tabs, sin bordes: solo superficies */}
         <div className="flex items-center gap-2">
-          <div className="flex items-center rounded-full border border-border/60 bg-card shadow-sm overflow-hidden shrink-0">
+          <div className="flex items-center rounded-full bg-muted/50 overflow-hidden shrink-0">
             <button
               onClick={() => onNavigate("prev")}
-              className="h-10 w-10 flex items-center justify-center text-muted-foreground transition-colors active:bg-muted hover:text-foreground"
+              className="h-9 w-9 flex items-center justify-center text-muted-foreground/80 transition-colors active:bg-muted hover:text-foreground"
               aria-label="Anterior"
             >
-              <ChevronLeft className="h-[18px] w-[18px]" />
+              <ChevronLeft className="h-4 w-4" strokeWidth={2} />
             </button>
             <button
               onClick={onToday}
-              className="h-10 px-3 text-[11px] font-bold uppercase tracking-[0.12em] text-primary border-x border-border/60 transition-colors active:bg-primary/10"
+              className="h-9 px-2.5 text-[10.5px] font-bold uppercase tracking-[0.1em] text-primary transition-colors active:bg-primary/10"
             >
               Hoy
             </button>
             <button
               onClick={() => onNavigate("next")}
-              className="h-10 w-10 flex items-center justify-center text-muted-foreground transition-colors active:bg-muted hover:text-foreground"
+              className="h-9 w-9 flex items-center justify-center text-muted-foreground/80 transition-colors active:bg-muted hover:text-foreground"
               aria-label="Siguiente"
             >
-              <ChevronRight className="h-[18px] w-[18px]" />
+              <ChevronRight className="h-4 w-4" strokeWidth={2} />
             </button>
           </div>
 
@@ -190,22 +194,22 @@ export const CalendarHeader = ({
             onValueChange={(v) => onViewChange(v as ViewType)}
             className="flex-1 min-w-0"
           >
-            <TabsList className="w-full h-10 rounded-full bg-muted/50 border border-border/50 p-1">
+            <TabsList className="w-full h-9 rounded-full bg-muted/50 p-0.5">
               <TabsTrigger
                 value="day"
-                className="flex-1 rounded-full data-[state=active]:bg-background data-[state=active]:shadow-sm h-8 text-[13px] font-semibold"
+                className="flex-1 rounded-full data-[state=active]:bg-background data-[state=active]:shadow-sm h-8 text-[12.5px] font-semibold"
               >
                 Día
               </TabsTrigger>
               <TabsTrigger
                 value="week"
-                className="flex-1 rounded-full data-[state=active]:bg-background data-[state=active]:shadow-sm h-8 text-[13px] font-semibold"
+                className="flex-1 rounded-full data-[state=active]:bg-background data-[state=active]:shadow-sm h-8 text-[12.5px] font-semibold"
               >
                 Semana
               </TabsTrigger>
               <TabsTrigger
                 value="month"
-                className="flex-1 rounded-full data-[state=active]:bg-background data-[state=active]:shadow-sm h-8 text-[13px] font-semibold"
+                className="flex-1 rounded-full data-[state=active]:bg-background data-[state=active]:shadow-sm h-8 text-[12.5px] font-semibold"
               >
                 Mes
               </TabsTrigger>

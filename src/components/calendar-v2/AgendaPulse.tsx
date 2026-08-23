@@ -104,47 +104,34 @@ export const AgendaHero = ({ appointments }: { appointments: PulseAppointment[] 
 
   const progress = active.length > 0 ? attended / active.length : 0;
 
+  // Minimalista: una sola línea fina, sin caja. El dato respira, no grita.
   return (
-    <div
-      className="relative overflow-hidden rounded-2xl border border-border/60 px-4 py-3.5 sm:px-5"
-      style={{
-        background: `linear-gradient(130deg, hsla(${primaryColor}, 0.16) 0%, hsla(${primaryColor}, 0.05) 45%, transparent 75%)`,
-      }}
-    >
-      {/* Brillo animado sutil, marca de producto caro */}
-      <style>{`
-        @keyframes heroSheen {
-          0%   { transform: translateX(-70%) skewX(-18deg); }
-          100% { transform: translateX(240%) skewX(-18deg); }
-        }
-      `}</style>
-      <div
-        className="pointer-events-none absolute top-0 bottom-0 w-1/3 opacity-[0.07]"
-        style={{
-          background: "linear-gradient(90deg, transparent, #ffffff, transparent)",
-          animation: "heroSheen 7s ease-in-out infinite",
-        }}
+    <div className="flex items-center gap-2.5 min-w-0">
+      <span
+        className="h-1.5 w-1.5 rounded-full shrink-0"
+        style={{ background: `hsl(${primaryColor})` }}
         aria-hidden
       />
-
-      <p className="text-[17px] sm:text-lg font-bold leading-tight">
-        {greeting}
-        {firstName ? `, ${firstName}` : ""} {emoji}
+      <p className="text-[13px] text-muted-foreground truncate">
+        <span className="font-semibold text-foreground">
+          {greeting}
+          {firstName ? `, ${firstName}` : ""} {emoji}
+        </span>
+        <span className="mx-1.5 opacity-50">·</span>
+        {summary}
       </p>
-      <p className="mt-0.5 text-[13px] text-muted-foreground">{summary}</p>
-
       {active.length > 0 && attended > 0 && !allDone && (
-        <div className="mt-2 flex items-center gap-2">
-          <div className="h-1.5 flex-1 max-w-[180px] rounded-full bg-foreground/10 overflow-hidden">
-            <div
-              className="h-full rounded-full transition-all duration-700"
+        <span className="ml-auto shrink-0 flex items-center gap-1.5">
+          <span className="h-1 w-12 rounded-full bg-foreground/10 overflow-hidden">
+            <span
+              className="block h-full rounded-full transition-all duration-700"
               style={{ width: `${progress * 100}%`, background: `hsl(${primaryColor})` }}
             />
-          </div>
-          <span className="text-[11px] font-semibold text-muted-foreground tabular-nums">
+          </span>
+          <span className="text-[10px] font-semibold text-muted-foreground tabular-nums">
             {attended}/{active.length}
           </span>
-        </div>
+        </span>
       )}
     </div>
   );

@@ -141,11 +141,11 @@ export const MonthViewV2 = ({
         )}
       >
         {/* Week day headers */}
-        <div className="grid grid-cols-7 border-b bg-muted/30">
+        <div className="grid grid-cols-7 border-b border-border/50">
           {weekDays.map((day) => (
             <div
               key={day}
-              className="p-2 md:p-3 text-center text-xs md:text-sm font-semibold text-muted-foreground"
+              className="py-2 md:py-3 text-center text-[10px] md:text-xs font-semibold uppercase tracking-wider text-muted-foreground/60"
             >
               {day}
             </div>
@@ -172,31 +172,18 @@ export const MonthViewV2 = ({
             const activeApts = dayAppointments.filter(
               (a) => a.status !== "cancelled" && a.status !== "cancelled_by_patient"
             );
-            const overduePay = dayPayments.some((p) => calculatePaymentStatus(p) === "overdue");
-            const dueSoonPay = dayPayments.some((p) => calculatePaymentStatus(p) === "due_soon");
 
             return (
               <button
                 key={index}
                 onClick={() => handleDayClick(day)}
                 className={cn(
-                  "min-h-[86px] md:min-h-[110px] p-1 md:p-2 border-b border-r transition-all duration-200 text-left relative group",
-                  "hover:bg-muted/50 active:bg-muted/70",
-                  !isCurrentMonth && "bg-muted/20",
+                  "min-h-[86px] md:min-h-[110px] p-1 md:p-2 border-b border-r border-border/40 transition-all duration-200 text-left relative group",
+                  "hover:bg-muted/40 active:bg-muted/60",
+                  !isCurrentMonth && "opacity-45",
                   index % 7 === 6 && "border-r-0",
                   isSelected && "bg-primary/5 ring-2 ring-primary ring-inset"
                 )}
-                style={
-                  // Mapa de calor: los días más cargados se tiñen más
-                  !isSelected && isCurrentMonth && activeApts.length > 0
-                    ? {
-                        background: `hsl(var(--primary) / ${Math.min(
-                          0.045 + activeApts.length * 0.028,
-                          0.2
-                        )})`,
-                      }
-                    : undefined
-                }
               >
                 {/* Day number */}
                 <div className="flex items-center justify-between mb-1">
@@ -238,40 +225,38 @@ export const MonthViewV2 = ({
                   )}
                 </div>
 
-                {/* Mobile: mini-chips de color con nombre, estilo Google
-                    Calendar (color real: etiqueta / profesional / estado) */}
-                {isMobile && (activeApts.length > 0 || hasPayments) && (
-                  <div className="space-y-[2px] overflow-hidden">
-                    {activeApts.slice(0, 3).map((apt) => (
-                      <div
-                        key={apt.id}
-                        className="h-[14px] rounded-[4px] px-[3px] flex items-center overflow-hidden"
-                        style={{
-                          backgroundColor: getEventHexColor(apt, showProfessionalColors),
-                          opacity: apt.status === "attended" ? 0.5 : 1,
-                        }}
-                      >
-                        <span className="text-[8.5px] font-semibold text-white truncate leading-none">
-                          {apt.isPersonal
-                            ? apt.personalEvent?.title || "Personal"
-                            : (apt.patients?.full_name || "Cita").split(" ")[0]}
-                        </span>
-                      </div>
-                    ))}
-                    <div className="flex items-center justify-between px-0.5 min-h-[10px]">
-                      <span className="text-[8.5px] leading-none text-muted-foreground font-semibold tabular-nums">
-                        {activeApts.length > 3 ? `+${activeApts.length - 3}` : ""}
+                {/* Mobile: mini-chips minimalistas — fondo translúcido del
+                    color del evento y texto en ese color. Sin ruido extra:
+                    los pagos viven en el panel del día. */}
+                {isMobile && activeApts.length > 0 && (
+                  <div className="space-y-[2.5px] overflow-hidden">
+                    {activeApts.slice(0, 3).map((apt) => {
+                      const c = getEventHexColor(apt, showProfessionalColors);
+                      return (
+                        <div
+                          key={apt.id}
+                          className="h-[15px] rounded-[5px] px-[4px] flex items-center overflow-hidden"
+                          style={{
+                            backgroundColor: `${c}2b`,
+                            opacity: apt.status === "attended" ? 0.5 : 1,
+                          }}
+                        >
+                          <span
+                            className="text-[9px] font-semibold truncate leading-none"
+                            style={{ color: c }}
+                          >
+                            {apt.isPersonal
+                              ? apt.personalEvent?.title || "Personal"
+                              : (apt.patients?.full_name || "Cita").split(" ")[0]}
+                          </span>
+                        </div>
+                      );
+                    })}
+                    {activeApts.length > 3 && (
+                      <span className="block px-0.5 text-[8.5px] leading-none text-muted-foreground/70 font-semibold tabular-nums">
+                        +{activeApts.length - 3}
                       </span>
-                      {hasPayments && (
-                        <span
-                          className={cn(
-                            "w-1.5 h-1.5 rounded-full",
-                            overduePay ? "bg-rose-500" : dueSoonPay ? "bg-amber-500" : "bg-emerald-500"
-                          )}
-                          aria-label="Pagos del día"
-                        />
-                      )}
-                    </div>
+                    )}
                   </div>
                 )}
 

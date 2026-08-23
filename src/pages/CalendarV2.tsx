@@ -673,6 +673,12 @@ const CalendarV2 = () => {
           onAddPersonal={() => openCreatePersonal()}
           onShareSlots={() => setShowShareSlots(true)}
           onPickDate={(d) => setCurrentDate(d)}
+          extraActions={
+            <AgendaLegend
+              showProfessionalColors={showProfessionalColors}
+              professionals={professionals}
+            />
+          }
           onToggleFilters={() => setShowFilters(!showFilters)}
           hasActiveFilters={hasActiveFilters}
           activeFiltersCount={activeFiltersCount}
@@ -699,14 +705,6 @@ const CalendarV2 = () => {
             exportCSV(headers, rows, `citas_${todayDateString()}.csv`);
           }}
         />
-
-        {/* Referencias de colores (se abre sola la primera vez) */}
-        <div className="flex justify-end">
-          <AgendaLegend
-            showProfessionalColors={showProfessionalColors}
-            professionals={professionals}
-          />
-        </div>
 
         {/* Cumpleaños del rango visible, con saludo por WhatsApp a un toque */}
         <BirthdaysStrip
