@@ -1435,6 +1435,36 @@ export type Database = {
         }
         Relationships: []
       }
+      personal_event_labels: {
+        Row: {
+          business_id: string
+          color: string
+          created_at: string
+          id: string
+          name: string
+          professional_user_id: string
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          color: string
+          created_at?: string
+          id?: string
+          name: string
+          professional_user_id: string
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          color?: string
+          created_at?: string
+          id?: string
+          name?: string
+          professional_user_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       personal_events: {
         Row: {
           business_id: string
@@ -1442,6 +1472,7 @@ export type Database = {
           created_at: string
           end_at: string
           id: string
+          label_id: string | null
           notes: string | null
           professional_user_id: string
           recurrence: string
@@ -1456,6 +1487,7 @@ export type Database = {
           created_at?: string
           end_at: string
           id?: string
+          label_id?: string | null
           notes?: string | null
           professional_user_id: string
           recurrence?: string
@@ -1470,6 +1502,7 @@ export type Database = {
           created_at?: string
           end_at?: string
           id?: string
+          label_id?: string | null
           notes?: string | null
           professional_user_id?: string
           recurrence?: string
@@ -1478,7 +1511,15 @@ export type Database = {
           title?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "personal_events_label_id_fkey"
+            columns: ["label_id"]
+            isOneToOne: false
+            referencedRelation: "personal_event_labels"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       platform_settings: {
         Row: {
