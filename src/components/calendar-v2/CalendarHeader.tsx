@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ChevronLeft, ChevronRight, Plus, Filter, Download } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Filter, Download, Share2 } from "lucide-react";
 import { ViewType } from "./types";
 import { HelpTooltip } from "@/components/HelpTooltip";
 import { NewActionDialog } from "./NewActionDialog";
@@ -16,6 +16,7 @@ interface CalendarHeaderProps {
   onAddAppointment: () => void;
   onAddPayment?: () => void;
   onAddPersonal?: () => void;
+  onShareSlots?: () => void;
   onToggleFilters: () => void;
   hasActiveFilters: boolean;
   activeFiltersCount: number;
@@ -32,6 +33,7 @@ export const CalendarHeader = ({
   onAddAppointment,
   onAddPayment,
   onAddPersonal,
+  onShareSlots,
   onToggleFilters,
   hasActiveFilters,
   activeFiltersCount,
@@ -84,6 +86,17 @@ export const CalendarHeader = ({
           </div>
 
           <div className="flex items-center gap-2">
+            {onShareSlots && (
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={onShareSlots}
+                className="h-10 w-10 rounded-xl"
+                aria-label="Compartir huecos libres"
+              >
+                <Share2 className="h-5 w-5" />
+              </Button>
+            )}
             <Button
               variant={hasActiveFilters ? "default" : "outline"}
               size="icon"
@@ -209,6 +222,14 @@ export const CalendarHeader = ({
               </Badge>
             )}
           </Button>
+
+          {/* Compartir huecos libres */}
+          {onShareSlots && (
+            <Button variant="outline" size="sm" onClick={onShareSlots} className="rounded-xl gap-2">
+              <Share2 className="h-4 w-4" />
+              Compartir huecos
+            </Button>
+          )}
 
           {/* Export */}
           {onExportCSV && (
