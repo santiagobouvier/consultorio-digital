@@ -97,15 +97,14 @@ export const AgendaLegend = ({ showProfessionalColors, professionals }: AgendaLe
 
   return (
     <>
-      <Button
-        variant="ghost"
-        size="sm"
+      <button
         onClick={() => setOpen(true)}
-        className="rounded-full gap-1.5 h-7 px-2.5 text-[11px] font-medium text-muted-foreground hover:text-foreground"
+        className="h-9 w-9 rounded-full flex items-center justify-center text-muted-foreground/70 transition-colors hover:text-foreground active:bg-muted"
+        aria-label="Referencias de colores"
+        title="Referencias de colores"
       >
-        <Palette className="h-3.5 w-3.5" />
-        Referencias
-      </Button>
+        <Palette className="h-[17px] w-[17px]" strokeWidth={1.8} />
+      </button>
 
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent className="sm:max-w-md">
