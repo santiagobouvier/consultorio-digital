@@ -27,7 +27,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { HelpTooltip } from "@/components/HelpTooltip";
 import { openWhatsApp } from "@/lib/whatsapp";
 import { calculatePaymentStatus, formatCurrency } from "@/lib/payments";
-import { computeAge } from "@/lib/patient-profile";
+import { computeAge, AGREED_FREQUENCY_LABELS, type AgreedFrequency } from "@/lib/patient-profile";
 import { format, differenceInDays } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -40,6 +40,7 @@ interface Patient {
   auth_user_id: string | null;
   avatar_url: string | null;
   birth_date?: string | null;
+  agreed_frequency?: string | null;
   created_at?: string;
   last_appointment?: string | null;
   next_appointment?: string | null;
@@ -330,6 +331,11 @@ const Patients = () => {
       {p.debt && p.debt.total > 0 && (
         <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/12 text-rose-600 dark:text-rose-400 px-2 py-0.5 text-[11px] font-semibold">
           Debe {formatCurrency(p.debt.total, p.debt.currency)}
+        </span>
+      )}
+      {p.agreed_frequency && AGREED_FREQUENCY_LABELS[p.agreed_frequency as AgreedFrequency] && (
+        <span className="inline-flex items-center rounded-full bg-muted/70 text-muted-foreground px-2 py-0.5 text-[11px] font-medium">
+          {AGREED_FREQUENCY_LABELS[p.agreed_frequency as AgreedFrequency]}
         </span>
       )}
       {!p.is_active && (
