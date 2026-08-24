@@ -12,7 +12,7 @@ import {
   ArrowLeft, Mail, Phone, Calendar, FileText, CreditCard, Plus, Check,
   RefreshCw, Pencil, Trash2, UserPlus, User as UserIcon, MessageCircle,
   CalendarPlus, MoreHorizontal, Clock, AlertTriangle, Video, MapPin, Lock,
-  Paperclip,
+  Paperclip, Eye, EyeOff,
 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
@@ -22,7 +22,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { format, isAfter, isBefore } from "date-fns";
+import { format, isAfter, isBefore, differenceInDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { PaymentForm } from "@/components/PaymentForm";
 import { PatientForm } from "@/components/PatientForm";
@@ -195,6 +195,8 @@ const PatientDetail = () => {
 
   const [patient, setPatient] = useState<Patient | null>(null);
   const [treatmentStatus, setTreatmentStatus] = useState<TreatmentStatus | null>(null);
+  // Modo privado: enmascara los montos como "$ ••••" (para compartir pantalla)
+  const [modoPrivado, setModoPrivado] = useState(false);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -527,277 +529,412 @@ const PatientDetail = () => {
     );
   };
 
-  return (
-    <div className="min-h-screen bg-background">
-      {/* Desktop: carnet + números fijos a la izquierda (como una ficha
-          clínica de verdad) y el contenido de las pestañas a lo ancho.
-          Mobile/tablet: mismo orden apilado de siempre. */}
-      <div className="mx-auto w-full max-w-[1500px] p-4 sm:p-6 lg:px-8 lg:py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-[minmax(340px,390px)_1fr] gap-5 lg:gap-6 items-start">
-        <div className="space-y-5 lg:sticky lg:top-6">
+  // Chip de estado del hero: verde en tratamiento, ámbar pausa, azul alta
+  const heroStatus = (() => {
+    if (treatmentStatus === "en_pausa")
+      return { label: "En pausa", bg: "rgba(251,191,36,0.13)", border: "rgba(251,191,36,0.3)", color: "#fcd34d" };
+    if (treatmentStatus === "alta")
+      return { label: "Alta", bg: "rgba(148,197,255,0.1)", border: "rgba(148,197,255,0.3)", color: "#a9ccf5" };
+    if (treatmentStatus === "abandono")
+      return { label: "Abandono", bg: "rgba(251,113,133,0.1)", border: "rgba(251,113,133,0.25)", color: "#fda4af" };
+    if (treatmentStatus === "activo" || patient.is_active)
+      return { label: treatmentStatus === "activo" ? "En tratamiento" : "Activo", bg: "rgba(52,211,153,0.13)", border: "rgba(52,211,153,0.3)", color: "#6ee7b7" };
+    return { label: "Inactivo", bg: "rgba(140,200,170,0.08)", border: "rgba(140,200,170,0.14)", color: "#a9c4b7" };
+  })();
 
-        {/* ── Carnet: banda oscura premium (mismo lenguaje que el Dashboard).
-            Mobile/tablet: full-bleed arriba, redondeada abajo. Desktop: la
-            credencial del riel, sticky, con todo a mano. ── */}
+  const money = (n: number) => (modoPrivado ? "$ ••••" : formatCurrency(n, "UYU"));
+  const sessionsPct = Math.min(
+    Math.round((pastSessions.length / Math.max(pastSessions.length + upcomingAppointments.length, 1)) * 100),
+    100
+  );
+  const ghostBtn =
+    "inline-flex items-center justify-center gap-2 rounded-[14px] border text-[14px] font-semibold transition-colors hover:bg-[rgba(140,200,170,0.15)] active:scale-[0.98] disabled:opacity-40 disabled:pointer-events-none";
+  const ghostBtnStyle = {
+    background: "rgba(140,200,170,0.08)",
+    borderColor: "rgba(140,200,170,0.16)",
+    color: "#c8dbd1",
+  } as const;
+
+  return (
+    <div className="dark min-h-screen" style={{ background: "#070d0a", fontFamily: "'Instrument Sans', 'Plus Jakarta Sans', sans-serif" }}>
+      <style>{`
+        @keyframes fichaDrift {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          50% { transform: translate(40px, -30px) scale(1.15); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .ficha-glow { animation: none !important; }
+        }
+      `}</style>
+
+      <div className="mx-auto w-full max-w-[1200px] flex flex-col gap-[18px]" style={{ padding: "clamp(14px, 3vw, 36px)" }}>
+
+        {/* ── Top bar: volver + breadcrumb + acciones ── */}
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={() => navigate("/patients")}
+            className="flex h-[38px] w-[38px] items-center justify-center rounded-xl border transition-colors hover:bg-[rgba(140,200,170,0.14)]"
+            style={{ background: "rgba(140,200,170,0.07)", borderColor: "rgba(140,200,170,0.12)", color: "#a9c4b7" }}
+            aria-label="Volver a pacientes"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </button>
+          <p className="text-[13px] min-w-0 truncate" style={{ color: "#5f7a6d" }}>
+            Pacientes <span className="mx-1 opacity-60">/</span>
+            <span style={{ color: "#a9c4b7" }}>{patient.full_name}</span>
+          </p>
+          <div className="ml-auto flex items-center gap-2">
+            <button
+              onClick={() => setModoPrivado((v) => !v)}
+              className="flex h-[38px] w-[38px] items-center justify-center rounded-xl border transition-colors hover:bg-[rgba(140,200,170,0.14)]"
+              style={{
+                background: modoPrivado ? "rgba(52,211,153,0.13)" : "rgba(140,200,170,0.07)",
+                borderColor: modoPrivado ? "rgba(52,211,153,0.3)" : "rgba(140,200,170,0.12)",
+                color: modoPrivado ? "#6ee7b7" : "#a9c4b7",
+              }}
+              aria-label={modoPrivado ? "Mostrar montos" : "Ocultar montos (modo privado)"}
+              title={modoPrivado ? "Mostrar montos" : "Modo privado: oculta los montos"}
+            >
+              {modoPrivado ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+            <button
+              onClick={() => setShowEditPatient(true)}
+              className="flex h-[38px] items-center gap-2 rounded-xl border px-3.5 text-[13px] font-semibold transition-colors hover:bg-[rgba(140,200,170,0.14)]"
+              style={{ background: "rgba(140,200,170,0.07)", borderColor: "rgba(140,200,170,0.12)", color: "#c8dbd1" }}
+            >
+              <Pencil className="h-3.5 w-3.5" />
+              Editar
+            </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className="flex h-[38px] w-[38px] items-center justify-center rounded-xl border transition-colors hover:bg-[rgba(140,200,170,0.14)]"
+                  style={{ background: "rgba(140,200,170,0.07)", borderColor: "rgba(140,200,170,0.12)", color: "#a9c4b7" }}
+                  aria-label="Más acciones"
+                >
+                  <MoreHorizontal className="h-4 w-4" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="rounded-xl">
+                <DropdownMenuItem onClick={() => setShowInviteModal(true)} className="gap-2 cursor-pointer">
+                  <UserPlus className="h-4 w-4" />
+                  Invitar al portal
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => setShowDeletePatient(true)}
+                  className="gap-2 cursor-pointer text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Eliminar paciente
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+
+        {/* ── Hero card ── */}
         <div
-          className="relative overflow-hidden text-white -mx-4 -mt-4 rounded-b-3xl px-4 pt-3 pb-5 sm:-mx-6 sm:-mt-6 sm:px-6 sm:pt-4 sm:pb-6 lg:mx-0 lg:mt-0 lg:rounded-2xl lg:border lg:border-white/10 lg:px-5 lg:pt-4 lg:pb-5"
+          className="relative overflow-hidden"
           style={{
-            background:
-              "linear-gradient(135deg, hsl(182 22% 6%) 0%, hsl(178 45% 9%) 55%, hsl(176 60% 12%) 100%)",
+            borderRadius: 26,
+            border: "1px solid rgba(140,200,170,0.14)",
+            background: "linear-gradient(160deg, #0e1d15, #0a1410 55%, #081009)",
           }}
         >
-          {/* Glows decorativos */}
           <div
+            className="ficha-glow pointer-events-none absolute -top-24 -left-12 h-72 w-72 rounded-full"
+            style={{
+              background: "radial-gradient(circle, rgba(52,211,153,0.22), transparent 70%)",
+              filter: "blur(10px)",
+              animation: "fichaDrift 14s ease-in-out infinite",
+            }}
             aria-hidden
-            className="pointer-events-none absolute -top-24 -right-16 h-56 w-56 rounded-full opacity-25 blur-3xl"
-            style={{ background: "hsl(176 85% 42%)" }}
           />
           <div
+            className="ficha-glow pointer-events-none absolute -bottom-28 -right-16 h-80 w-80 rounded-full"
+            style={{
+              background: "radial-gradient(circle, rgba(20,184,166,0.14), transparent 70%)",
+              filter: "blur(10px)",
+              animation: "fichaDrift 18s ease-in-out infinite reverse",
+            }}
             aria-hidden
-            className="pointer-events-none absolute -bottom-28 -left-20 h-64 w-64 rounded-full opacity-[0.12] blur-3xl"
-            style={{ background: "hsl(190 80% 50%)" }}
           />
 
-          <div className="relative">
-            {/* Barra superior: volver + menú ⋯ */}
-            <div className="flex items-center justify-between">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => navigate("/patients")}
-                className="rounded-xl -ml-2 text-white/70 hover:text-white hover:bg-white/10"
+          <div className="relative flex flex-wrap items-center" style={{ gap: "clamp(20px, 3vw, 36px)", padding: "clamp(22px, 4vw, 40px)" }}>
+            {/* Avatar con anillo gradiente + dot de presencia */}
+            <div className="relative shrink-0">
+              <div
+                className="rounded-full"
+                style={{ padding: 3, background: "linear-gradient(135deg, #34d399, #14b8a6 60%, transparent)" }}
               >
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="rounded-xl -mr-2 text-white/70 hover:text-white hover:bg-white/10"
+                <Avatar className="h-[106px] w-[106px] rounded-full" style={{ border: "3px solid #0a1410" }}>
+                  {patient.avatar_url && (
+                    <AvatarImage src={patient.avatar_url} alt={patient.full_name} className="object-cover" />
+                  )}
+                  <AvatarFallback
+                    className="rounded-full text-3xl font-bold"
+                    style={{ background: "rgba(52,211,153,0.13)", color: "#6ee7b7", fontFamily: "'Space Grotesk', sans-serif" }}
                   >
-                    <MoreHorizontal className="h-5 w-5" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="rounded-xl">
-                  <DropdownMenuItem onClick={() => setShowInviteModal(true)} className="gap-2 cursor-pointer">
-                    <UserPlus className="h-4 w-4" />
-                    Invitar al portal
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={() => setShowDeletePatient(true)}
-                    className="gap-2 cursor-pointer text-destructive focus:text-destructive"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    Eliminar paciente
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                    {initials || <UserIcon className="h-8 w-8" />}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
+              <span
+                className="absolute bottom-1 right-1 h-[18px] w-[18px] rounded-full"
+                style={{ background: patient.is_active ? "#34d399" : "#5f7a6d", border: "3px solid #0a1410" }}
+                aria-hidden
+              />
             </div>
 
             {/* Identidad */}
-            <div className="flex items-center gap-4 mt-1 lg:flex-col lg:gap-3 lg:text-center">
-              <Avatar className="h-16 w-16 sm:h-20 sm:w-20 lg:h-24 lg:w-24 rounded-2xl shrink-0 ring-2 ring-white/25 shadow-xl">
-                {patient.avatar_url && (
-                  <AvatarImage src={patient.avatar_url} alt={patient.full_name} className="object-cover" />
-                )}
-                <AvatarFallback className="rounded-2xl bg-white/10 text-white font-bold text-xl lg:text-2xl">
-                  {initials || <UserIcon className="h-7 w-7" />}
-                </AvatarFallback>
-              </Avatar>
+            <div className="min-w-0" style={{ flex: "1 1 260px" }}>
+              <p
+                className="uppercase"
+                style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 600, fontSize: 11, letterSpacing: "0.22em", color: "#34d399" }}
+              >
+                Paciente · Ficha clínica
+              </p>
+              <h1
+                className="mt-1.5 break-words"
+                style={{
+                  fontFamily: "'Space Grotesk', sans-serif",
+                  fontWeight: 700,
+                  fontSize: "clamp(30px, 5vw, 46px)",
+                  lineHeight: 1.05,
+                  letterSpacing: "-0.02em",
+                  color: "#eaf3ee",
+                }}
+              >
+                {patient.full_name}
+              </h1>
 
-              <div className="min-w-0 flex-1 lg:flex-none lg:w-full">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40">
-                  Paciente
-                </p>
-                <h1 className="text-2xl sm:text-3xl lg:text-2xl font-bold break-words leading-tight mt-0.5">
-                  {patient.full_name}
-                </h1>
-                {/* Chips de vidrio: la historia del paciente en 2 segundos */}
-                <div className="flex items-center gap-1.5 mt-2.5 flex-wrap lg:justify-center">
-                  <span className={cn(
-                    "inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold border",
-                    patient.is_active
-                      ? "bg-emerald-400/15 text-emerald-300 border-emerald-400/25"
-                      : "bg-white/10 text-white/60 border-white/10"
-                  )}>
-                    {patient.is_active ? "Activo" : "Inactivo"}
+              {/* Chips */}
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <span
+                  className="inline-flex items-center gap-1.5 rounded-full px-3 py-[5px] text-[12px] font-semibold border"
+                  style={{ background: heroStatus.bg, borderColor: heroStatus.border, color: heroStatus.color }}
+                >
+                  <span className="h-1.5 w-1.5 rounded-full" style={{ background: "currentColor" }} />
+                  {heroStatus.label}
+                </span>
+                {!paymentsError && debt > 0 && (
+                  <span
+                    className="inline-flex items-center gap-1.5 rounded-full px-3 py-[5px] text-[12px] font-semibold border"
+                    style={{ background: "rgba(251,113,133,0.1)", borderColor: "rgba(251,113,133,0.25)", color: "#fda4af" }}
+                  >
+                    <AlertTriangle className="h-3 w-3" />
+                    Debe {money(debt)}
                   </span>
-                  {!paymentsError && (
-                    hasOverdue ? (
-                      <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-rose-500/20 text-rose-200 border border-rose-400/30">
-                        <AlertTriangle className="h-3 w-3" />
-                        Debe {formatCurrency(debt, "UYU")}
-                      </span>
-                    ) : unpaid.length > 0 ? (
-                      <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-amber-400/15 text-amber-200 border border-amber-400/25">
-                        Pagos pendientes
-                      </span>
-                    ) : payments.length > 0 ? (
-                      <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-emerald-400/15 text-emerald-300 border border-emerald-400/25">
-                        Al día
-                      </span>
-                    ) : null
-                  )}
-                  {hasPortal && (
-                    <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-white/10 text-white/85 border border-white/15">
-                      <Check className="h-3 w-3" />
-                      Portal activo
-                    </span>
-                  )}
-                  {computeAge(patient.birth_date) !== null && (
-                    <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium bg-white/10 text-white/70 border border-white/10">
-                      {computeAge(patient.birth_date)} años
-                    </span>
-                  )}
-                  {isMinor(patient.birth_date) && (
-                    <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-amber-400/15 text-amber-200 border border-amber-400/25">
-                      Menor de edad
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Números clave: tiles de vidrio adentro del carnet */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 gap-2.5 mt-5">
-              <div className="rounded-xl bg-white/[0.07] border border-white/10 px-3 py-2.5">
-                <p className="text-[10px] font-medium uppercase tracking-wider text-white/45 flex items-center gap-1">
-                  <Calendar className="h-3 w-3" /> Próxima cita
-                </p>
-                {nextAppointment ? (
-                  <p className="text-sm font-bold mt-1 capitalize">
-                    {format(new Date(nextAppointment.start_at), "EEE d MMM · HH:mm", { locale: es })}
-                  </p>
-                ) : (
-                  <p className="text-sm font-bold mt-1 text-amber-300">Sin agendar</p>
+                )}
+                {computeAge(patient.birth_date) !== null && (
+                  <span
+                    className="inline-flex items-center rounded-full px-3 py-[5px] text-[12px] font-semibold border"
+                    style={{ background: "rgba(140,200,170,0.08)", borderColor: "rgba(140,200,170,0.14)", color: "#a9c4b7" }}
+                  >
+                    {computeAge(patient.birth_date)} años
+                  </span>
+                )}
+                {isMinor(patient.birth_date) && (
+                  <span
+                    className="inline-flex items-center rounded-full px-3 py-[5px] text-[12px] font-semibold border"
+                    style={{ background: "rgba(251,191,36,0.13)", borderColor: "rgba(251,191,36,0.3)", color: "#fcd34d" }}
+                  >
+                    Menor de edad
+                  </span>
+                )}
+                {hasPortal && (
+                  <span
+                    className="inline-flex items-center gap-1 rounded-full px-3 py-[5px] text-[12px] font-semibold border"
+                    style={{ background: "rgba(140,200,170,0.08)", borderColor: "rgba(140,200,170,0.14)", color: "#a9c4b7" }}
+                  >
+                    <Check className="h-3 w-3" />
+                    Portal activo
+                  </span>
                 )}
               </div>
-              <div className="rounded-xl bg-white/[0.07] border border-white/10 px-3 py-2.5">
-                <p className="text-[10px] font-medium uppercase tracking-wider text-white/45 flex items-center gap-1">
-                  <Check className="h-3 w-3" /> Sesiones
-                </p>
-                <p className="text-sm font-bold mt-1">{pastSessions.length}</p>
-              </div>
-              <div className="rounded-xl bg-white/[0.07] border border-white/10 px-3 py-2.5">
-                <p className="text-[10px] font-medium uppercase tracking-wider text-white/45 flex items-center gap-1">
-                  <CreditCard className="h-3 w-3" /> Pendiente
-                </p>
-                <p className={cn("text-sm font-bold mt-1", hasOverdue ? "text-rose-300" : debt > 0 ? "text-amber-300" : "text-emerald-300")}>
-                  {paymentsError ? "—" : debt > 0 ? formatCurrency(debt, "UYU") : "$ 0"}
-                </p>
-              </div>
-              <div className="rounded-xl bg-white/[0.07] border border-white/10 px-3 py-2.5">
-                <p className="text-[10px] font-medium uppercase tracking-wider text-white/45 flex items-center gap-1">
-                  <Clock className="h-3 w-3" /> Última sesión
-                </p>
-                <p className="text-sm font-bold mt-1">
-                  {lastSession ? formatDate(lastSession.start_at) : "—"}
-                </p>
+
+              {/* Meta */}
+              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[13px]" style={{ color: "#7e988b" }}>
+                {patient.email && (
+                  <span className="inline-flex items-center gap-1.5 min-w-0">
+                    <Mail className="h-[13px] w-[13px] shrink-0" />
+                    <span className="truncate">{patient.email}</span>
+                  </span>
+                )}
+                {patient.whatsapp_phone && (
+                  <button onClick={openWhatsApp} className="inline-flex items-center gap-1.5 hover:underline" style={{ color: "#7e988b" }}>
+                    <Phone className="h-[13px] w-[13px]" />
+                    {patient.whatsapp_phone}
+                  </button>
+                )}
+                <span className="inline-flex items-center gap-1.5">
+                  <Calendar className="h-[13px] w-[13px]" />
+                  Paciente desde {format(new Date(patient.created_at), "MMMM yyyy", { locale: es })}
+                </span>
               </div>
             </div>
 
-            {/* Acciones: la principal brillante, el resto en vidrio */}
-            <div className="grid grid-cols-2 sm:flex lg:grid lg:grid-cols-2 gap-2 mt-4">
-              <Button
+            {/* Acciones */}
+            <div className="grid w-full grid-cols-2 gap-[9px] sm:max-w-[340px]" style={{ flex: "1 1 220px" }}>
+              <button
                 onClick={() => setShowCreateAppointment(true)}
-                className="rounded-xl gap-2 h-10 col-span-2 lg:col-span-1 shadow-lg shadow-primary/25 sm:flex-1"
+                className="col-span-2 inline-flex items-center justify-center gap-2 transition hover:brightness-110 active:scale-[0.98]"
+                style={{
+                  background: "linear-gradient(135deg, #34d399, #14b8a6)",
+                  color: "#04150d",
+                  borderRadius: 14,
+                  padding: "13px 18px",
+                  fontWeight: 600,
+                  fontSize: 14,
+                  boxShadow: "0 8px 24px rgba(52,211,153,0.25)",
+                }}
               >
                 <CalendarPlus className="h-4 w-4" />
-                <span className="text-xs sm:text-sm">Agendar cita</span>
-              </Button>
-              {/* Sin portal: invitar es la acción que más valor agrega — bien visible */}
-              {!hasPortal && (
-                <Button
-                  variant="outline"
-                  onClick={() => setShowInviteModal(true)}
-                  className="rounded-xl gap-2 h-10 col-span-2 lg:col-span-1 sm:flex-1 bg-white/[0.07] border-white/20 text-white hover:bg-white/15 hover:text-white"
-                >
-                  <UserPlus className="h-4 w-4" />
-                  <span className="text-xs sm:text-sm">Invitar al portal</span>
-                </Button>
-              )}
-              <Button
-                variant="outline"
+                Agendar cita
+              </button>
+              <button
                 onClick={openWhatsApp}
                 disabled={!patient.whatsapp_phone}
-                className="rounded-xl gap-2 h-10 sm:flex-1 bg-white/[0.07] border-white/20 text-white hover:bg-white/15 hover:text-white disabled:opacity-40"
+                className={ghostBtn}
+                style={{ ...ghostBtnStyle, padding: "12px 14px" }}
               >
                 <MessageCircle className="h-4 w-4" />
-                <span className="text-xs sm:text-sm">WhatsApp</span>
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setShowEditPatient(true)}
-                className="rounded-xl gap-2 h-10 sm:flex-1 bg-white/[0.07] border-white/20 text-white hover:bg-white/15 hover:text-white"
-              >
-                <Pencil className="h-4 w-4" />
-                <span className="text-xs sm:text-sm">Editar</span>
-              </Button>
+                WhatsApp
+              </button>
+              {!hasPortal ? (
+                <button
+                  onClick={() => setShowInviteModal(true)}
+                  className={ghostBtn}
+                  style={{ ...ghostBtnStyle, padding: "12px 14px" }}
+                >
+                  <UserPlus className="h-4 w-4" />
+                  Invitar al portal
+                </button>
+              ) : (
+                <button
+                  onClick={() => setShowEditPatient(true)}
+                  className={ghostBtn}
+                  style={{ ...ghostBtnStyle, padding: "12px 14px" }}
+                >
+                  <Pencil className="h-4 w-4" />
+                  Editar
+                </button>
+              )}
             </div>
           </div>
         </div>
 
-        {/* (Los 4 números clave viven ahora adentro del carnet, en tiles de vidrio) */}
+        {/* ── Stats strip ── */}
+        <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(165px, 1fr))" }}>
+          {/* Próxima cita */}
+          <div
+            style={{ borderRadius: 18, padding: "18px 20px", background: "linear-gradient(180deg, #101a14, #0b130e)", border: "1px solid rgba(140,200,170,0.1)" }}
+          >
+            <p className="uppercase" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 600, fontSize: 10.5, letterSpacing: "0.14em", color: "#5f7a6d" }}>
+              Próxima cita
+            </p>
+            {nextAppointment ? (
+              <p className="mt-2 capitalize" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 600, fontSize: 19, color: "#eaf3ee" }}>
+                {format(new Date(nextAppointment.start_at), "EEE d MMM · HH:mm", { locale: es })}
+              </p>
+            ) : (
+              <>
+                <p className="mt-2" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 600, fontSize: 19, color: "#eaf3ee" }}>
+                  Sin agendar
+                </p>
+                <p className="mt-1 text-[12px]" style={{ color: "#f0a9b2" }}>Requiere acción</p>
+              </>
+            )}
+          </div>
 
-        {/* ── Datos de contacto: solo en el riel de desktop. En mobile es
-            redundante — el Resumen muestra lo mismo justo abajo. ── */}
-        <Card className="rounded-2xl border-border/50 hidden lg:block">
-          <CardContent className="p-4 space-y-2.5">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Contacto</p>
-            <div className="flex items-center gap-2.5 text-sm min-w-0">
-              <MessageCircle className="h-4 w-4 text-primary shrink-0" />
-              {patient.whatsapp_phone ? (
-                <span className="tabular-nums">{patient.whatsapp_phone}</span>
-              ) : (
-                <span className="text-muted-foreground">Sin WhatsApp cargado</span>
-              )}
+          {/* Sesiones */}
+          <div
+            style={{ borderRadius: 18, padding: "18px 20px", background: "linear-gradient(180deg, #101a14, #0b130e)", border: "1px solid rgba(140,200,170,0.1)" }}
+          >
+            <p className="uppercase" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 600, fontSize: 10.5, letterSpacing: "0.14em", color: "#5f7a6d" }}>
+              Sesiones
+            </p>
+            <p className="mt-2" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 600, fontSize: 19, color: "#eaf3ee" }}>
+              {pastSessions.length} realizada{pastSessions.length !== 1 ? "s" : ""}
+            </p>
+            <div className="mt-2.5 h-1 w-full rounded-full overflow-hidden" style={{ background: "rgba(140,200,170,0.12)" }}>
+              <div
+                className="h-full rounded-full transition-all duration-700"
+                style={{ width: `${sessionsPct}%`, background: "linear-gradient(90deg, #34d399, #14b8a6)" }}
+              />
             </div>
-            <div className="flex items-center gap-2.5 text-sm min-w-0">
-              <Mail className="h-4 w-4 text-primary shrink-0" />
-              {patient.email ? (
-                <span className="truncate">{patient.email}</span>
-              ) : (
-                <span className="text-muted-foreground">Sin email cargado</span>
-              )}
-            </div>
-            <div className="flex items-center gap-2.5 text-sm">
-              <Calendar className="h-4 w-4 text-primary shrink-0" />
-              <span className="text-muted-foreground">
-                Paciente desde {format(new Date(patient.created_at), "MMMM yyyy", { locale: es })}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
+          </div>
+
+          {/* Pendiente de pago (variante warning) */}
+          <div
+            style={{
+              borderRadius: 18,
+              padding: "18px 20px",
+              background: debt > 0 ? "linear-gradient(180deg, #1a1410, #130e0b)" : "linear-gradient(180deg, #101a14, #0b130e)",
+              border: debt > 0 ? "1px solid rgba(251,191,36,0.18)" : "1px solid rgba(140,200,170,0.1)",
+            }}
+          >
+            <p className="uppercase" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 600, fontSize: 10.5, letterSpacing: "0.14em", color: debt > 0 ? "#a08657" : "#5f7a6d" }}>
+              Pendiente de pago
+            </p>
+            <p className="mt-2" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 26, color: paymentsError ? "#7e988b" : debt > 0 ? "#fcd34d" : "#6ee7b7" }}>
+              {paymentsError ? "—" : debt > 0 ? money(debt) : "$ 0"}
+            </p>
+            {!paymentsError && (
+              <p className="mt-0.5 text-[12px]" style={{ color: hasOverdue ? "#f0a9b2" : "#7e988b" }}>
+                {hasOverdue ? "Tiene vencidos" : debt > 0 ? "Por cobrar" : "Al día"}
+              </p>
+            )}
+          </div>
+
+          {/* Última sesión */}
+          <div
+            style={{ borderRadius: 18, padding: "18px 20px", background: "linear-gradient(180deg, #101a14, #0b130e)", border: "1px solid rgba(140,200,170,0.1)" }}
+          >
+            <p className="uppercase" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 600, fontSize: 10.5, letterSpacing: "0.14em", color: "#5f7a6d" }}>
+              Última sesión
+            </p>
+            <p className="mt-2" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 600, fontSize: 19, color: "#eaf3ee" }}>
+              {lastSession ? formatDate(lastSession.start_at) : "—"}
+            </p>
+            {lastSession && (
+              <p className="mt-1 text-[12px]" style={{ color: "#7e988b" }}>
+                hace {differenceInDays(new Date(), new Date(lastSession.start_at))} días
+                {patient.agreed_frequency && AGREED_FREQUENCY_LABELS[patient.agreed_frequency as AgreedFrequency]
+                  ? ` · ${AGREED_FREQUENCY_LABELS[patient.agreed_frequency as AgreedFrequency].toLowerCase()}`
+                  : ""}
+              </p>
+            )}
+          </div>
         </div>
-
-        {/* ── Pestañas (columna principal en desktop) ── */}
-        <div className="min-w-0">
         <Tabs defaultValue="resumen" className="w-full">
-          {/* Pestañas píldora con ícono: grandes y claras también en mobile */}
-          <TabsList className="flex w-full h-12 rounded-full bg-muted/50 p-1 gap-0.5">
-            <TabsTrigger value="resumen" className="flex-1 rounded-full h-10 px-1 sm:px-3 text-[12px] sm:text-sm font-semibold gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-              <UserIcon className="h-4 w-4 shrink-0 hidden min-[440px]:block" />
+          {/* Pestañas píldora (handoff): scrollables en móvil, activa clara */}
+          <TabsList
+            className="flex w-full h-auto justify-start gap-1.5 rounded-2xl p-[5px] overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            style={{ background: "rgba(140,200,170,0.05)", border: "1px solid rgba(140,200,170,0.1)" }}
+          >
+            <TabsTrigger value="resumen" className="shrink-0 rounded-xl px-5 py-2.5 text-[13.5px] font-medium text-[#7e988b] gap-1.5 data-[state=active]:bg-[#eaf3ee] data-[state=active]:text-[#0a120e] data-[state=active]:font-semibold data-[state=active]:shadow-none">
+              <UserIcon className="h-4 w-4 shrink-0 hidden sm:block" />
               Resumen
             </TabsTrigger>
-            <TabsTrigger value="notes" className="flex-1 rounded-full h-10 px-1 sm:px-3 text-[12px] sm:text-sm font-semibold gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-              <FileText className="h-4 w-4 shrink-0 hidden min-[440px]:block" />
+            <TabsTrigger value="notes" className="shrink-0 rounded-xl px-5 py-2.5 text-[13.5px] font-medium text-[#7e988b] gap-1.5 data-[state=active]:bg-[#eaf3ee] data-[state=active]:text-[#0a120e] data-[state=active]:font-semibold data-[state=active]:shadow-none">
+              <FileText className="h-4 w-4 shrink-0 hidden sm:block" />
               Expediente
             </TabsTrigger>
-            <TabsTrigger value="payments" className="flex-1 rounded-full h-10 px-1 sm:px-3 text-[12px] sm:text-sm font-semibold gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-              <CreditCard className="h-4 w-4 shrink-0 hidden min-[440px]:block" />
+            <TabsTrigger value="payments" className="shrink-0 rounded-xl px-5 py-2.5 text-[13.5px] font-medium text-[#7e988b] gap-1.5 data-[state=active]:bg-[#eaf3ee] data-[state=active]:text-[#0a120e] data-[state=active]:font-semibold data-[state=active]:shadow-none">
+              <CreditCard className="h-4 w-4 shrink-0 hidden sm:block" />
               Pagos
               {unpaid.length > 0 && (
-                <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", hasOverdue ? "bg-destructive" : "bg-amber-500")} />
+                <span className="h-1.5 w-1.5 rounded-full shrink-0 animate-pulse" style={{ background: "#fb7185" }} />
               )}
             </TabsTrigger>
-            <TabsTrigger value="appointments" className="flex-1 rounded-full h-10 px-1 sm:px-3 text-[12px] sm:text-sm font-semibold gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-              <Calendar className="h-4 w-4 shrink-0 hidden min-[440px]:block" />
+            <TabsTrigger value="appointments" className="shrink-0 rounded-xl px-5 py-2.5 text-[13.5px] font-medium text-[#7e988b] gap-1.5 data-[state=active]:bg-[#eaf3ee] data-[state=active]:text-[#0a120e] data-[state=active]:font-semibold data-[state=active]:shadow-none">
+              <Calendar className="h-4 w-4 shrink-0 hidden sm:block" />
               Citas
             </TabsTrigger>
-            <TabsTrigger value="docs" className="flex-1 rounded-full h-10 px-1 sm:px-3 text-[12px] sm:text-sm font-semibold gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-              <Paperclip className="h-4 w-4 shrink-0 hidden min-[440px]:block" />
+            <TabsTrigger value="docs" className="shrink-0 rounded-xl px-5 py-2.5 text-[13.5px] font-medium text-[#7e988b] gap-1.5 data-[state=active]:bg-[#eaf3ee] data-[state=active]:text-[#0a120e] data-[state=active]:font-semibold data-[state=active]:shadow-none">
+              <Paperclip className="h-4 w-4 shrink-0 hidden sm:block" />
               Docs
             </TabsTrigger>
           </TabsList>
@@ -1247,8 +1384,6 @@ const PatientDetail = () => {
             <PatientDocuments patientId={patient.id} businessId={patient.business_id} />
           </TabsContent>
         </Tabs>
-        </div>
-        </div>
       </div>
 
       {/* Agendar cita (asistente con este paciente preseleccionado) */}
