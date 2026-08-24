@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,6 +12,7 @@ import {
   ArrowLeft, Mail, Phone, Calendar, FileText, CreditCard, Plus, Check,
   RefreshCw, Pencil, Trash2, UserPlus, User as UserIcon, MessageCircle,
   CalendarPlus, MoreHorizontal, Clock, AlertTriangle, Video, MapPin, Lock,
+  Paperclip,
 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
@@ -116,6 +117,55 @@ interface Payment {
   recurrence_type: RecurrenceType;
   anchor_day: number | null;
 }
+
+// ── Piezas visuales del Resumen (bento premium) ──
+// Tarjeta de sección con acento de color arriba e ícono tintado.
+const SectionCard = ({
+  accent,
+  icon: Icon,
+  title,
+  badge,
+  className,
+  children,
+}: {
+  accent: string; // "H S% L%" o "var(--primary)"
+  icon: typeof UserIcon;
+  title: string;
+  badge?: ReactNode;
+  className?: string;
+  children: ReactNode;
+}) => (
+  <Card className={cn("rounded-2xl border-border/50 overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-300", className)}>
+    <div
+      className="h-[3px] w-full"
+      style={{ background: `linear-gradient(90deg, hsl(${accent}) 0%, hsl(${accent} / 0.25) 55%, transparent 90%)` }}
+      aria-hidden
+    />
+    <CardContent className="p-4 sm:p-5">
+      <div className="flex items-center justify-between gap-2 mb-4 flex-wrap">
+        <p className="text-[14px] font-bold flex items-center gap-2.5">
+          <span
+            className="h-9 w-9 rounded-xl flex items-center justify-center shrink-0"
+            style={{ background: `hsl(${accent} / 0.13)` }}
+          >
+            <Icon className="h-4 w-4" style={{ color: `hsl(${accent})` }} />
+          </span>
+          {title}
+        </p>
+        {badge}
+      </div>
+      {children}
+    </CardContent>
+  </Card>
+);
+
+// Dato con etiqueta chica y valor GRANDE (legible para cualquier vista).
+const InfoRow = ({ label, value }: { label: string; value: ReactNode }) => (
+  <div className="min-w-0">
+    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
+    <div className="text-[15px] font-semibold text-foreground break-words leading-snug mt-1">{value}</div>
+  </div>
+);
 
 const statusLabels: Record<string, string> = {
   pending: "Pendiente",
@@ -725,302 +775,246 @@ const PatientDetail = () => {
         {/* ── Pestañas (columna principal en desktop) ── */}
         <div className="min-w-0">
         <Tabs defaultValue="resumen" className="w-full">
-          {/* En mobile las 5 pestañas comparten 360px: padding mínimo y tipografía
-              apenas menor para que "Expediente" nunca se corte ni desborde. */}
-          <TabsList className="grid grid-cols-5 w-full h-11 rounded-xl">
-            <TabsTrigger value="resumen" className="rounded-lg px-1 sm:px-3 text-[11px] sm:text-sm">Resumen</TabsTrigger>
-            <TabsTrigger value="notes" className="rounded-lg px-1 sm:px-3 text-[11px] sm:text-sm">Expediente</TabsTrigger>
-            <TabsTrigger value="payments" className="rounded-lg px-1 sm:px-3 text-[11px] sm:text-sm gap-1">
+          {/* Pestañas píldora con ícono: grandes y claras también en mobile */}
+          <TabsList className="flex w-full h-12 rounded-full bg-muted/50 p-1 gap-0.5">
+            <TabsTrigger value="resumen" className="flex-1 rounded-full h-10 px-1 sm:px-3 text-[12px] sm:text-sm font-semibold gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              <UserIcon className="h-4 w-4 shrink-0 hidden min-[440px]:block" />
+              Resumen
+            </TabsTrigger>
+            <TabsTrigger value="notes" className="flex-1 rounded-full h-10 px-1 sm:px-3 text-[12px] sm:text-sm font-semibold gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              <FileText className="h-4 w-4 shrink-0 hidden min-[440px]:block" />
+              Expediente
+            </TabsTrigger>
+            <TabsTrigger value="payments" className="flex-1 rounded-full h-10 px-1 sm:px-3 text-[12px] sm:text-sm font-semibold gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              <CreditCard className="h-4 w-4 shrink-0 hidden min-[440px]:block" />
               Pagos
               {unpaid.length > 0 && (
                 <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", hasOverdue ? "bg-destructive" : "bg-amber-500")} />
               )}
             </TabsTrigger>
-            <TabsTrigger value="appointments" className="rounded-lg px-1 sm:px-3 text-[11px] sm:text-sm">Citas</TabsTrigger>
-            <TabsTrigger value="docs" className="rounded-lg px-1 sm:px-3 text-[11px] sm:text-sm">Docs</TabsTrigger>
+            <TabsTrigger value="appointments" className="flex-1 rounded-full h-10 px-1 sm:px-3 text-[12px] sm:text-sm font-semibold gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              <Calendar className="h-4 w-4 shrink-0 hidden min-[440px]:block" />
+              Citas
+            </TabsTrigger>
+            <TabsTrigger value="docs" className="flex-1 rounded-full h-10 px-1 sm:px-3 text-[12px] sm:text-sm font-semibold gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              <Paperclip className="h-4 w-4 shrink-0 hidden min-[440px]:block" />
+              Docs
+            </TabsTrigger>
           </TabsList>
 
-          {/* Resumen: secciones del perfil. Campo vacío no se renderiza. */}
-          <TabsContent value="resumen" className="mt-4 space-y-4">
-            {/* ── Datos personales ── */}
-            <Card className="rounded-2xl border-border/50">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base font-bold flex items-center gap-2.5">
-                  <span className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                    <UserIcon className="h-4 w-4 text-primary" />
-                  </span>
-                  Datos personales
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
+          {/* Resumen: bento premium — la historia del paciente de un vistazo,
+              con acento de color por sección y valores grandes y legibles. */}
+          <TabsContent value="resumen" className="mt-4">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">
+
+              {/* ── Tratamiento: la tarjeta protagonista, a lo ancho ── */}
+              {(treatmentStatus || patient.reason_for_consultation || patient.first_consultation_date || patient.referred_by || patient.agreed_frequency) && (
+                <SectionCard
+                  accent="var(--primary)"
+                  icon={FileText}
+                  title="Tratamiento"
+                  className="xl:col-span-2"
+                  badge={treatmentStatus ? (
+                    <Badge className={cn("rounded-full text-xs", TREATMENT_BADGE_CLASS[treatmentStatus])}>
+                      {TREATMENT_STATUS_LABELS[treatmentStatus]}
+                    </Badge>
+                  ) : undefined}
+                >
+                  <div className="space-y-4">
+                    {patient.reason_for_consultation && (
+                      <div className="rounded-xl bg-primary/[0.05] border border-primary/15 p-3.5">
+                        <p className="text-[11px] font-semibold uppercase tracking-wider text-primary mb-1">
+                          Motivo de consulta inicial
+                        </p>
+                        <p className="text-[15px] text-foreground whitespace-pre-line leading-relaxed">
+                          {patient.reason_for_consultation}
+                        </p>
+                      </div>
+                    )}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      {patient.first_consultation_date && (
+                        <InfoRow
+                          label="Primera consulta"
+                          value={format(new Date(`${patient.first_consultation_date}T00:00:00`), "d MMM yyyy", { locale: es })}
+                        />
+                      )}
+                      {patient.agreed_frequency && (
+                        <InfoRow
+                          label="Frecuencia acordada"
+                          value={AGREED_FREQUENCY_LABELS[patient.agreed_frequency as AgreedFrequency] ?? patient.agreed_frequency}
+                        />
+                      )}
+                      {patient.referred_by && <InfoRow label="Derivado por" value={patient.referred_by} />}
+                    </div>
+                  </div>
+                </SectionCard>
+              )}
+
+              {/* ── Datos personales ── */}
+              <SectionCard accent="210 90% 60%" icon={UserIcon} title="Datos personales">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="flex items-start gap-3">
-                    <Mail className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-                    <div className="min-w-0">
-                      <p className="text-xs text-muted-foreground uppercase tracking-wide">Email</p>
-                      <p className="text-sm font-medium text-foreground break-all">
-                        {patient.email || "No registrado"}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <Phone className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-                    <div className="min-w-0">
-                      <p className="text-xs text-muted-foreground uppercase tracking-wide">WhatsApp</p>
-                      <p className="text-sm font-medium text-foreground break-all">
-                        {patient.whatsapp_phone || "No registrado"}
-                      </p>
-                    </div>
-                  </div>
+                  <InfoRow
+                    label="Email"
+                    value={patient.email || <span className="text-muted-foreground font-normal">No registrado</span>}
+                  />
+                  <InfoRow
+                    label="WhatsApp"
+                    value={patient.whatsapp_phone || <span className="text-muted-foreground font-normal">No registrado</span>}
+                  />
                   {patient.birth_date && (
-                    <div className="flex items-start gap-3">
-                      <Calendar className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-                      <div className="min-w-0">
-                        <p className="text-xs text-muted-foreground uppercase tracking-wide">Nacimiento</p>
-                        <p className="text-sm font-medium text-foreground">
+                    <InfoRow
+                      label="Nacimiento"
+                      value={
+                        <>
                           {format(new Date(`${patient.birth_date}T00:00:00`), "d MMM yyyy", { locale: es })}
                           {computeAge(patient.birth_date) !== null && (
-                            <span className="text-muted-foreground font-normal">
-                              {" "}· {computeAge(patient.birth_date)} años
-                            </span>
+                            <span className="text-muted-foreground font-normal"> · {computeAge(patient.birth_date)} años</span>
                           )}
-                        </p>
-                      </div>
-                    </div>
+                        </>
+                      }
+                    />
                   )}
-                  {patient.document_id && (
-                    <div className="flex items-start gap-3">
-                      <FileText className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-                      <div className="min-w-0">
-                        <p className="text-xs text-muted-foreground uppercase tracking-wide">Documento</p>
-                        <p className="text-sm font-medium text-foreground break-all">{patient.document_id}</p>
-                      </div>
-                    </div>
-                  )}
+                  {patient.document_id && <InfoRow label="Documento" value={patient.document_id} />}
                 </div>
-
                 {patient.private_notes && (
-                  <div className="rounded-xl bg-muted/40 border border-border/50 p-3">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1 inline-flex items-center gap-1">
+                  <div className="rounded-xl bg-muted/40 border border-border/50 p-3.5 mt-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-1 inline-flex items-center gap-1">
                       <Lock className="h-3 w-3" /> Notas privadas
                     </p>
-                    <p className="text-sm text-foreground whitespace-pre-line">{patient.private_notes}</p>
+                    <p className="text-[14px] text-foreground whitespace-pre-line leading-relaxed">{patient.private_notes}</p>
                   </div>
                 )}
-
-                <p className="text-xs text-muted-foreground pt-2 border-t border-border">
+                <p className="text-xs text-muted-foreground pt-3 mt-4 border-t border-border/60">
                   Paciente desde el {formatDate(patient.created_at)}
                 </p>
-              </CardContent>
-            </Card>
+              </SectionCard>
 
-            {/* ── Adulto responsable: solo si es menor de 18 ── */}
-            {isMinor(patient.birth_date) && (
-              <Card className="rounded-2xl border-amber-500/30 bg-amber-500/[0.04]">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base font-bold flex items-center gap-2.5">
-                    <span className="h-8 w-8 rounded-lg bg-amber-500/15 flex items-center justify-center shrink-0">
-                      <AlertTriangle className="h-4 w-4 text-amber-500" />
-                    </span>
-                    Adulto responsable
-                  </CardTitle>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Paciente menor de edad — los recordatorios se envían al adulto responsable.
-                  </p>
-                </CardHeader>
-                <CardContent>
-                  {patient.guardian_name || patient.guardian_phone || patient.guardian_email ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {patient.guardian_name && (
-                        <div className="min-w-0">
-                          <p className="text-xs text-muted-foreground uppercase tracking-wide">Nombre</p>
-                          <p className="text-sm font-medium text-foreground">
-                            {patient.guardian_name}
-                            {patient.guardian_relationship && (
-                              <span className="text-muted-foreground font-normal"> · {patient.guardian_relationship}</span>
-                            )}
-                          </p>
-                        </div>
-                      )}
-                      {patient.guardian_phone && (
-                        <div className="min-w-0">
-                          <p className="text-xs text-muted-foreground uppercase tracking-wide">Teléfono</p>
-                          <button
-                            onClick={() => openWhatsAppNumber(patient.guardian_phone)}
-                            className="text-sm font-medium text-primary inline-flex items-center gap-1.5 hover:underline"
-                          >
-                            <MessageCircle className="h-3.5 w-3.5" />
-                            {patient.guardian_phone}
-                          </button>
-                        </div>
-                      )}
-                      {patient.guardian_email && (
-                        <div className="min-w-0">
-                          <p className="text-xs text-muted-foreground uppercase tracking-wide">Email</p>
-                          <p className="text-sm font-medium text-foreground break-all">{patient.guardian_email}</p>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">
-                      Sin datos del adulto responsable — completalos desde "Editar".
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-
-            {/* ── Contacto de emergencia: solo si hay algo cargado ── */}
-            {(patient.emergency_contact_name || patient.emergency_contact_phone) && (
-              <Card className="rounded-2xl border-border/50">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base font-bold flex items-center gap-2.5">
-                    <span className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                      <Phone className="h-4 w-4 text-primary" />
-                    </span>
-                    Contacto de emergencia
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {patient.emergency_contact_name && (
-                      <div className="min-w-0">
-                        <p className="text-xs text-muted-foreground uppercase tracking-wide">Nombre</p>
-                        <p className="text-sm font-medium text-foreground">
-                          {patient.emergency_contact_name}
-                          {patient.emergency_contact_relationship && (
-                            <span className="text-muted-foreground font-normal"> · {patient.emergency_contact_relationship}</span>
-                          )}
-                        </p>
-                      </div>
-                    )}
-                    {patient.emergency_contact_phone && (
-                      <div className="min-w-0">
-                        <p className="text-xs text-muted-foreground uppercase tracking-wide">Teléfono</p>
-                        <button
-                          onClick={() => openWhatsAppNumber(patient.emergency_contact_phone)}
-                          className="text-sm font-medium text-primary inline-flex items-center gap-1.5 hover:underline"
-                        >
-                          <MessageCircle className="h-3.5 w-3.5" />
-                          {patient.emergency_contact_phone}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* ── Tratamiento ── */}
-            {(treatmentStatus || patient.reason_for_consultation || patient.first_consultation_date || patient.referred_by || patient.agreed_frequency) && (
-              <Card className="rounded-2xl border-border/50">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between gap-2 flex-wrap">
-                    <CardTitle className="text-base font-bold flex items-center gap-2.5">
-                      <span className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                        <FileText className="h-4 w-4 text-primary" />
-                      </span>
-                      Tratamiento
-                    </CardTitle>
-                    {treatmentStatus && (
-                      <Badge className={cn("rounded-full text-xs", TREATMENT_BADGE_CLASS[treatmentStatus])}>
-                        {TREATMENT_STATUS_LABELS[treatmentStatus]}
+              {/* ── Columna: responsable / emergencia / administrativo ── */}
+              <div className="space-y-4">
+                {isMinor(patient.birth_date) && (
+                  <SectionCard
+                    accent="38 92% 55%"
+                    icon={AlertTriangle}
+                    title="Adulto responsable"
+                    badge={
+                      <Badge variant="outline" className="rounded-full text-[11px] text-amber-600 dark:text-amber-400 border-amber-500/40">
+                        Menor de edad
                       </Badge>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {patient.reason_for_consultation && (
-                    <div>
-                      <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
-                        Motivo de consulta inicial
+                    }
+                  >
+                    {patient.guardian_name || patient.guardian_phone || patient.guardian_email ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {patient.guardian_name && (
+                          <InfoRow
+                            label="Nombre"
+                            value={
+                              <>
+                                {patient.guardian_name}
+                                {patient.guardian_relationship && (
+                                  <span className="text-muted-foreground font-normal"> · {patient.guardian_relationship}</span>
+                                )}
+                              </>
+                            }
+                          />
+                        )}
+                        {patient.guardian_phone && (
+                          <InfoRow
+                            label="Teléfono"
+                            value={
+                              <button
+                                onClick={() => openWhatsAppNumber(patient.guardian_phone)}
+                                className="text-primary inline-flex items-center gap-1.5 hover:underline"
+                              >
+                                <MessageCircle className="h-4 w-4" />
+                                {patient.guardian_phone}
+                              </button>
+                            }
+                          />
+                        )}
+                        {patient.guardian_email && <InfoRow label="Email" value={patient.guardian_email} />}
+                      </div>
+                    ) : (
+                      <p className="text-[14px] text-muted-foreground">
+                        Sin datos del adulto responsable — completalos desde "Editar".
                       </p>
-                      <p className="text-sm text-foreground whitespace-pre-line">{patient.reason_for_consultation}</p>
+                    )}
+                    <p className="text-xs text-muted-foreground mt-3">
+                      Los recordatorios se envían al adulto responsable.
+                    </p>
+                  </SectionCard>
+                )}
+
+                {(patient.emergency_contact_name || patient.emergency_contact_phone) && (
+                  <SectionCard accent="0 72% 60%" icon={Phone} title="Contacto de emergencia">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {patient.emergency_contact_name && (
+                        <InfoRow
+                          label="Nombre"
+                          value={
+                            <>
+                              {patient.emergency_contact_name}
+                              {patient.emergency_contact_relationship && (
+                                <span className="text-muted-foreground font-normal"> · {patient.emergency_contact_relationship}</span>
+                              )}
+                            </>
+                          }
+                        />
+                      )}
+                      {patient.emergency_contact_phone && (
+                        <InfoRow
+                          label="Teléfono"
+                          value={
+                            <button
+                              onClick={() => openWhatsAppNumber(patient.emergency_contact_phone)}
+                              className="text-primary inline-flex items-center gap-1.5 hover:underline"
+                            >
+                              <MessageCircle className="h-4 w-4" />
+                              {patient.emergency_contact_phone}
+                            </button>
+                          }
+                        />
+                      )}
                     </div>
-                  )}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {patient.first_consultation_date && (
-                      <div className="min-w-0">
-                        <p className="text-xs text-muted-foreground uppercase tracking-wide">Primera consulta</p>
-                        <p className="text-sm font-medium text-foreground">
-                          {format(new Date(`${patient.first_consultation_date}T00:00:00`), "d MMM yyyy", { locale: es })}
-                        </p>
-                      </div>
-                    )}
-                    {patient.agreed_frequency && (
-                      <div className="min-w-0">
-                        <p className="text-xs text-muted-foreground uppercase tracking-wide">Frecuencia acordada</p>
-                        <p className="text-sm font-medium text-foreground">
-                          {AGREED_FREQUENCY_LABELS[patient.agreed_frequency as AgreedFrequency] ?? patient.agreed_frequency}
-                        </p>
-                      </div>
-                    )}
-                    {patient.referred_by && (
-                      <div className="min-w-0">
-                        <p className="text-xs text-muted-foreground uppercase tracking-wide">Derivado por</p>
-                        <p className="text-sm font-medium text-foreground">{patient.referred_by}</p>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+                  </SectionCard>
+                )}
 
-            {/* ── Administrativo: solo si hay algo cargado ── */}
-            {(patient.health_insurance || patient.payment_type) && (
-              <Card className="rounded-2xl border-border/50">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base font-bold flex items-center gap-2.5">
-                    <span className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                      <CreditCard className="h-4 w-4 text-primary" />
-                    </span>
-                    Administrativo
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {patient.health_insurance && (
-                      <div className="min-w-0">
-                        <p className="text-xs text-muted-foreground uppercase tracking-wide">Mutualista u obra social</p>
-                        <p className="text-sm font-medium text-foreground">{patient.health_insurance}</p>
-                      </div>
-                    )}
-                    {patient.payment_type && (
-                      <div className="min-w-0">
-                        <p className="text-xs text-muted-foreground uppercase tracking-wide">Tipo de atención</p>
-                        <p className="text-sm font-medium text-foreground">
-                          {PAYMENT_TYPE_LABELS[patient.payment_type as PaymentType] ?? patient.payment_type}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+                {(patient.health_insurance || patient.payment_type) && (
+                  <SectionCard accent="262 80% 66%" icon={CreditCard} title="Administrativo">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {patient.health_insurance && (
+                        <InfoRow label="Mutualista u obra social" value={patient.health_insurance} />
+                      )}
+                      {patient.payment_type && (
+                        <InfoRow
+                          label="Tipo de atención"
+                          value={PAYMENT_TYPE_LABELS[patient.payment_type as PaymentType] ?? patient.payment_type}
+                        />
+                      )}
+                    </div>
+                  </SectionCard>
+                )}
+              </div>
 
-            <Card className="rounded-2xl border-border/50">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between gap-2">
-                  <CardTitle className="text-base font-bold flex items-center gap-2.5">
-                    <span className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                      <Calendar className="h-4 w-4 text-primary" />
-                    </span>
-                    Próximas citas
-                  </CardTitle>
+              {/* ── Próximas citas: a lo ancho ── */}
+              <SectionCard
+                accent="190 85% 50%"
+                icon={Calendar}
+                title="Próximas citas"
+                className="xl:col-span-2"
+                badge={
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setShowCreateAppointment(true)}
-                    className="rounded-xl gap-1.5 h-8"
+                    className="rounded-xl gap-1.5 h-9"
                   >
-                    <Plus className="h-3.5 w-3.5" />
+                    <Plus className="h-4 w-4" />
                     Agendar
                   </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
+                }
+              >
                 {upcomingAppointments.length === 0 ? (
-                  <p className="text-muted-foreground text-sm text-center py-4">
+                  <p className="text-muted-foreground text-[14px] text-center py-4">
                     Sin citas agendadas. Usá "Agendar" para crear la próxima.
                   </p>
                 ) : (
@@ -1030,8 +1024,8 @@ const PatientDetail = () => {
                     ))}
                   </div>
                 )}
-              </CardContent>
-            </Card>
+              </SectionCard>
+            </div>
           </TabsContent>
 
           {/* Expediente: historia clínica organizada por sesión */}
