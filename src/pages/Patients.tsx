@@ -2,7 +2,7 @@
 // pacientes y quién necesita mi atención?" — no es una lista de contactos.
 // Segmentos que responden preguntas reales (sin próxima cita, con deuda),
 // tarjetas con la historia de cada uno y WhatsApp de reenganche a un toque.
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -15,7 +15,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { PatientForm } from "@/components/PatientForm";
 import {
-  Search, Plus, ChevronRight, Smartphone, Users, Download,
+  Search, Plus, ChevronRight, ChevronLeft, Smartphone, Users, Download,
   User as UserIcon, MessageCircle, CalendarClock, AlertTriangle,
 } from "lucide-react";
 import { exportCSV, todayDateString } from "@/lib/csv-export";
@@ -68,6 +68,31 @@ const Patients = () => {
   const [showForm, setShowForm] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const { businessId, loading: businessLoading } = useBusinessId();
+
+  // Riel de segmentos: pistas visibles de que hay más para el costado
+  // (degradado en los bordes + flechitas que scrollean y desaparecen).
+  const segmentRailRef = useRef<HTMLDivElement>(null);
+  const [railCanLeft, setRailCanLeft] = useState(false);
+  const [railCanRight, setRailCanRight] = useState(false);
+  const updateRailHints = useCallback(() => {
+    const el = segmentRailRef.current;
+    if (!el) return;
+    setRailCanLeft(el.scrollLeft > 6);
+    setRailCanRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 6);
+  }, []);
+  useEffect(() => {
+    updateRailHints();
+    window.addEventListener("resize", updateRailHints);
+    return () => window.removeEventListener("resize", updateRailHints);
+  }, [updateRailHints]);
+  // Centrar el chip elegido cuando cambia el segmento
+  useEffect(() => {
+    const el = segmentRailRef.current?.querySelector<HTMLElement>('[data-selected="true"]');
+    el?.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
+  }, [segment]);
+  const scrollRail = (dir: 1 | -1) => {
+    segmentRailRef.current?.scrollBy({ left: dir * 200, behavior: "smooth" });
+  };
 
   // Main patients query — key matches query-prefetch.ts so prefetched data is used instantly
   const { data: patients = [], isLoading: dataLoading } = useQuery({
@@ -214,6 +239,12 @@ const Patients = () => {
     inactive: withInsights.filter((p) => !p.is_active).length,
   }), [withInsights]);
 
+  // Recalcular las pistas del riel cuando los contadores cambian el ancho
+  useEffect(() => {
+    const t = window.setTimeout(updateRailHints, 60);
+    return () => window.clearTimeout(t);
+  }, [counts, updateRailHints]);
+
   const SEGMENTS: { id: Segment; label: string; count: number; alert?: boolean }[] = [
     { id: "all", label: "Todos", count: counts.all },
     { id: "active", label: "En tratamiento", count: counts.active },
@@ -349,39 +380,75 @@ const Patients = () => {
           />
         </div>
 
-        {/* Segmentos que responden preguntas reales */}
-        <div className="flex gap-1.5 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 pb-0.5 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-          {SEGMENTS.map((s) => {
-            const selected = segment === s.id;
-            return (
-              <button
-                key={s.id}
-                onClick={() => pickSegment(s.id)}
-                className={cn(
-                  "shrink-0 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12.5px] font-semibold transition-all",
-                  selected
-                    ? "bg-foreground text-background shadow-sm"
-                    : "bg-muted/60 text-muted-foreground hover:text-foreground"
-                )}
-              >
-                {s.label}
-                <span
+        {/* Segmentos que responden preguntas reales. El riel deja CLARO que
+            sigue: degradado en los bordes + flechitas que scrollean. */}
+        <div className="relative -mx-4 sm:mx-0">
+          <div
+            ref={segmentRailRef}
+            onScroll={updateRailHints}
+            className="flex gap-1.5 overflow-x-auto px-4 sm:px-0 pb-0.5 snap-x [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+          >
+            {SEGMENTS.map((s) => {
+              const selected = segment === s.id;
+              return (
+                <button
+                  key={s.id}
+                  data-selected={selected || undefined}
+                  onClick={() => pickSegment(s.id)}
                   className={cn(
-                    "rounded-full px-1.5 py-px text-[10.5px] tabular-nums",
+                    "shrink-0 snap-center inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12.5px] font-semibold transition-all",
                     selected
-                      ? "bg-background/20"
-                      : s.alert
-                        ? s.id === "debt"
-                          ? "bg-rose-500/15 text-rose-500"
-                          : "bg-amber-500/15 text-amber-500"
-                        : "bg-foreground/[0.06]"
+                      ? "bg-foreground text-background shadow-sm"
+                      : "bg-muted/60 text-muted-foreground hover:text-foreground"
                   )}
                 >
-                  {s.count}
-                </span>
+                  {s.label}
+                  <span
+                    className={cn(
+                      "rounded-full px-1.5 py-px text-[10.5px] tabular-nums",
+                      selected
+                        ? "bg-background/20"
+                        : s.alert
+                          ? s.id === "debt"
+                            ? "bg-rose-500/15 text-rose-500"
+                            : "bg-amber-500/15 text-amber-500"
+                          : "bg-foreground/[0.06]"
+                    )}
+                  >
+                    {s.count}
+                  </span>
+                </button>
+              );
+            })}
+            {/* Colita para que el último chip no quede pegado a la flecha */}
+            <span className="shrink-0 w-6" aria-hidden />
+          </div>
+
+          {/* Borde izquierdo: fade + flechita (solo si hay más atrás) */}
+          {railCanLeft && (
+            <div className="absolute inset-y-0 left-0 flex items-center pl-1 pr-6 bg-gradient-to-r from-background via-background/80 to-transparent">
+              <button
+                onClick={() => scrollRail(-1)}
+                className="h-7 w-7 rounded-full bg-card border border-border/60 shadow-md flex items-center justify-center text-muted-foreground hover:text-foreground active:scale-90 transition-all"
+                aria-label="Ver filtros anteriores"
+              >
+                <ChevronLeft className="h-4 w-4" />
               </button>
-            );
-          })}
+            </div>
+          )}
+
+          {/* Borde derecho: fade + flechita (desaparece al llegar al final) */}
+          {railCanRight && (
+            <div className="absolute inset-y-0 right-0 flex items-center pr-1 pl-6 bg-gradient-to-l from-background via-background/80 to-transparent">
+              <button
+                onClick={() => scrollRail(1)}
+                className="h-7 w-7 rounded-full bg-card border border-border/60 shadow-md flex items-center justify-center text-muted-foreground hover:text-foreground active:scale-90 transition-all animate-pulse [animation-duration:2.5s]"
+                aria-label="Ver más filtros"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Contenido */}
