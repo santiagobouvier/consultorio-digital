@@ -25,6 +25,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { ClinicalStatusBlock } from "@/components/ClinicalStatusBlock";
+import { SessionNoteSheet, type ExistingNote } from "@/components/expediente/SessionNoteSheet";
 import { BUILT_IN_DOC_TYPES, resolveDocType } from "@/lib/document-types";
 import { useDocumentTypes } from "@/hooks/use-document-types";
 import { CreateDocTypeDialog } from "@/components/documents/CreateDocTypeDialog";
@@ -125,17 +126,14 @@ export const PatientRecord = ({ patientId, businessId, reasonForConsultation }: 
   const [payments, setPayments] = useState<RecordPayment[]>([]);
   const [filter, setFilter] = useState<NoteFilter>("all");
 
-  // ── Editor de nota (por sesión o general) ──
-  const [noteEditor, setNoteEditor] = useState<{
+  // ── Editor de nota (por sesión o general): SessionNoteSheet compartido ──
+  const [noteSheet, setNoteSheet] = useState<{
     open: boolean;
-    noteId: string | null;
     appointmentId: string | null;
     sessionLabel: string | null;
+    note: ExistingNote | null;
     noteDate: string; // yyyy-MM-dd
-  }>({ open: false, noteId: null, appointmentId: null, sessionLabel: null, noteDate: format(new Date(), "yyyy-MM-dd") });
-  const [noteContent, setNoteContent] = useState("");
-  const [noteStatus, setNoteStatus] = useState<"draft" | "finalized">("draft");
-  const [savingNote, setSavingNote] = useState(false);
+  }>({ open: false, appointmentId: null, sessionLabel: null, note: null, noteDate: format(new Date(), "yyyy-MM-dd") });
   const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null);
 
   // ── Modal de adjuntos de una sesión (agrupados por tipo) ──
@@ -249,56 +247,31 @@ export const PatientRecord = ({ patientId, businessId, reasonForConsultation }: 
     [pastSessions, notesByAppointment]
   );
 
+  // Número de sesión (cronológico, sin contar canceladas): "Sesión 14" es
+  // el idioma con el que los profesionales cuentan un tratamiento.
+  const sessionNumberByApt = useMemo(() => {
+    const asc = pastSessions
+      .filter((a) => !CANCELLED.includes(a.status))
+      .sort((a, b) => a.start_at.localeCompare(b.start_at));
+    const map = new Map<string, number>();
+    asc.forEach((a, i) => map.set(a.id, i + 1));
+    return map;
+  }, [pastSessions]);
+
   // ── Notas ──
   const openNoteEditor = (apt: RecordAppointment | null, existing?: RecordNote) => {
     const sessionLabel = apt
       ? `${format(parseISO(apt.start_at), "EEEE d 'de' MMMM", { locale: es })} · ${format(parseISO(apt.start_at), "HH:mm")}`
       : null;
-    setNoteEditor({
+    setNoteSheet({
       open: true,
-      noteId: existing?.id ?? null,
       appointmentId: apt?.id ?? existing?.appointment_id ?? null,
       sessionLabel,
+      note: existing
+        ? { id: existing.id, content: existing.content, status: existing.status, note_date: existing.note_date }
+        : null,
       noteDate: existing?.note_date ?? (apt ? format(parseISO(apt.start_at), "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd")),
     });
-    setNoteContent(existing?.content ?? "");
-    setNoteStatus(existing?.status ?? "draft");
-  };
-
-  const saveNote = async () => {
-    if (!user || !noteContent.trim()) {
-      toast({ title: "Contenido vacío", description: "Escribí algo antes de guardar", variant: "destructive" });
-      return;
-    }
-    setSavingNote(true);
-    try {
-      if (noteEditor.noteId) {
-        const { error } = await supabase
-          .from("session_notes")
-          .update({ content: noteContent.trim(), status: noteStatus })
-          .eq("id", noteEditor.noteId);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from("session_notes").insert({
-          business_id: businessId,
-          patient_id: patientId,
-          appointment_id: noteEditor.appointmentId,
-          author_user_id: user.id,
-          note_date: noteEditor.noteDate,
-          content: noteContent.trim(),
-          status: noteStatus,
-        });
-        if (error) throw error;
-      }
-      toast({ title: noteStatus === "finalized" ? "Nota finalizada ✓" : "Nota guardada" });
-      setNoteEditor((e) => ({ ...e, open: false }));
-      await fetchAll();
-    } catch (err) {
-      console.error("Save note error:", err);
-      toast({ title: "Error", description: "No se pudo guardar la nota", variant: "destructive" });
-    } finally {
-      setSavingNote(false);
-    }
   };
 
   const deleteNote = async () => {
@@ -479,14 +452,18 @@ export const PatientRecord = ({ patientId, businessId, reasonForConsultation }: 
 
       {/* ── Encabezado + filtros ── */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <h3 className="text-base font-bold flex items-center gap-2">
             <FileText className="h-4 w-4 text-primary" /> Historia por sesión
           </h3>
           {sinNotaCount > 0 && (
-            <Badge variant="outline" className="text-[10px] text-amber-600 dark:text-amber-400 border-amber-500/40">
-              {sinNotaCount} sin nota
-            </Badge>
+            <button
+              onClick={() => setFilter("without_note")}
+              className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/12 border border-amber-500/30 text-amber-700 dark:text-amber-300 px-3 py-1.5 text-[12.5px] font-semibold transition-colors hover:bg-amber-500/20 active:scale-[0.97]"
+            >
+              <StickyNote className="h-3.5 w-3.5" />
+              {sinNotaCount} sesion{sinNotaCount !== 1 ? "es" : ""} sin nota — completar
+            </button>
           )}
         </div>
         <div className="flex items-center gap-1 rounded-xl bg-muted/60 p-1">
@@ -568,9 +545,16 @@ export const PatientRecord = ({ patientId, businessId, reasonForConsultation }: 
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">
-                          <p className="font-semibold text-sm capitalize">
-                            {format(parseISO(apt.start_at), "EEEE d 'de' MMMM yyyy", { locale: es })}
-                          </p>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {sessionNumberByApt.has(apt.id) && (
+                              <span className="inline-flex items-center rounded-md bg-primary/10 text-primary px-1.5 py-0.5 text-[11px] font-bold tabular-nums">
+                                Sesión {sessionNumberByApt.get(apt.id)}
+                              </span>
+                            )}
+                            <p className="font-semibold text-sm capitalize">
+                              {format(parseISO(apt.start_at), "EEEE d 'de' MMMM yyyy", { locale: es })}
+                            </p>
+                          </div>
                           <p className="text-xs text-muted-foreground flex items-center gap-1.5 flex-wrap mt-0.5">
                             {format(parseISO(apt.start_at), "HH:mm")} – {format(parseISO(apt.end_at), "HH:mm")} hs
                             {apt.services?.name && <>· {apt.services.name}</>}
@@ -680,48 +664,18 @@ export const PatientRecord = ({ patientId, businessId, reasonForConsultation }: 
         )}
       </div>
 
-      {/* ── Editor de nota ── */}
-      <Dialog open={noteEditor.open} onOpenChange={(o) => !savingNote && setNoteEditor((e) => ({ ...e, open: o }))}>
-        <DialogContent className="max-w-lg max-h-[90dvh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{noteEditor.noteId ? "Editar nota" : "Nueva nota"}</DialogTitle>
-            <DialogDescription className="capitalize">
-              {noteEditor.sessionLabel ? `Sesión del ${noteEditor.sessionLabel}` : "Nota general del paciente"}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <Textarea
-              value={noteContent}
-              onChange={(e) => setNoteContent(e.target.value)}
-              rows={8}
-              placeholder="Escribí la nota clínica..."
-              className="rounded-xl resize-y min-h-[160px] text-sm leading-relaxed"
-              autoFocus
-            />
-            <div className="space-y-1.5">
-              <Label>Estado</Label>
-              <Select value={noteStatus} onValueChange={(v) => setNoteStatus(v as "draft" | "finalized")}>
-                <SelectTrigger className="rounded-xl">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="draft">Borrador (la sigo editando)</SelectItem>
-                  <SelectItem value="finalized">Finalizada</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter className="flex-col-reverse sm:flex-row gap-2">
-            <Button variant="outline" className="rounded-xl w-full sm:w-auto" onClick={() => setNoteEditor((e) => ({ ...e, open: false }))} disabled={savingNote}>
-              Cancelar
-            </Button>
-            <Button className="rounded-xl w-full sm:w-auto" onClick={saveNote} disabled={savingNote || !noteContent.trim()}>
-              {savingNote ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : null}
-              Guardar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* ── Editor de nota: grande, con plantillas y autosave ── */}
+      <SessionNoteSheet
+        open={noteSheet.open}
+        onOpenChange={(o) => setNoteSheet((e) => ({ ...e, open: o }))}
+        businessId={businessId}
+        patientId={patientId}
+        appointmentId={noteSheet.appointmentId}
+        sessionLabel={noteSheet.sessionLabel}
+        note={noteSheet.note}
+        defaultDate={noteSheet.noteDate}
+        onSaved={fetchAll}
+      />
 
       {/* ── Detalle completo de la sesión: info + nota + adjuntos agrupados ── */}
       <Dialog open={!!detailApt} onOpenChange={(o) => !o && setDetailApt(null)}>

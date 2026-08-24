@@ -33,6 +33,7 @@ import { createPaymentLink } from "@/lib/payment-links";
 import { calculatePaymentStatus, type PaymentStatus } from "@/lib/payments";
 import { notifyPatient } from "@/lib/push-notifications";
 import { useDashboardBranding } from "@/contexts/DashboardBrandingContext";
+import { SessionNoteSheet } from "@/components/expediente/SessionNoteSheet";
 
 interface Appointment {
   id: string;
@@ -89,6 +90,8 @@ export const AppointmentDetailModal = ({
   const [rejectMode, setRejectMode] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
   const [cancellationDetails, setCancellationDetails] = useState<{ reason: string | null; cancelled_at: string | null } | null>(null);
+  // Nota de la sesión al marcar "Realizada": el flujo real del día a día
+  const [showNoteSheet, setShowNoteSheet] = useState(false);
 
   // Cargar el cobro ligado a la cita (si existe)
   useEffect(() => {
@@ -300,11 +303,18 @@ export const AppointmentDetailModal = ({
         .update({ status })
         .eq("id", appointment.id);
       if (error) throw error;
-      toast({
-        title: status === "attended" ? "Cita marcada como realizada ✓" : "Paciente marcado como ausente",
-      });
       onPaymentRegistered?.();
-      onClose();
+      // Realizada + paciente con ficha: ofrecer la nota de la sesión AHÍ
+      // MISMO (la nota en 30 segundos, sin viajar hasta el expediente).
+      if (status === "attended" && appointment.patient_id && businessId) {
+        toast({ title: "Cita marcada como realizada ✓" });
+        setShowNoteSheet(true);
+      } else {
+        toast({
+          title: status === "attended" ? "Cita marcada como realizada ✓" : "Paciente marcado como ausente",
+        });
+        onClose();
+      }
     } catch {
       toast({ title: "Error", description: "No se pudo actualizar la cita", variant: "destructive" });
     } finally {
@@ -819,6 +829,24 @@ export const AppointmentDetailModal = ({
           appointmentStartAt={appointment.start_at}
           modality={appointment.modality || "presencial"}
           location={appointment.location || null}
+        />
+      )}
+
+      {/* Nota de la sesión recién realizada (se abre sola al marcar Realizada) */}
+      {appointment.patient_id && businessId && (
+        <SessionNoteSheet
+          open={showNoteSheet}
+          onOpenChange={(o) => {
+            setShowNoteSheet(o);
+            if (!o) onClose();
+          }}
+          businessId={businessId}
+          patientId={appointment.patient_id}
+          appointmentId={appointment.id}
+          sessionLabel={`${format(new Date(appointment.start_at), "EEEE d 'de' MMMM", { locale: es })} · ${format(new Date(appointment.start_at), "HH:mm")}`}
+          note={null}
+          defaultDate={format(new Date(appointment.start_at), "yyyy-MM-dd")}
+          onSaved={() => onPaymentRegistered?.()}
         />
       )}
     </>
