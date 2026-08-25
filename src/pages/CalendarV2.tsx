@@ -176,6 +176,7 @@ const CalendarV2 = () => {
   const [slotChooserTime, setSlotChooserTime] = useState<string | null>(null);
   // Hora sugerida para el evento personal (viene del lapso tocado)
   const [personalDefaultTime, setPersonalDefaultTime] = useState<string | null>(null);
+  const [personalLockDate, setPersonalLockDate] = useState(false);
   // Hora tocada en un hueco de la grilla (se resalta en el modal de cita)
   const [prefilledTimeForAction, setPrefilledTimeForAction] = useState<string | null>(null);
   // Swipe horizontal para cambiar de día/semana/mes (gesto tipo Google)
@@ -646,10 +647,12 @@ const CalendarV2 = () => {
     setShowAppointmentModal(true);
   }, []);
 
-  const openCreatePersonal = useCallback((date?: Date, startTime?: string) => {
+  const openCreatePersonal = useCallback((date?: Date, startTime?: string, lock = false) => {
     setPersonalEventTarget(null);
     setSelectedDateForAction(date ?? currentDate);
     setPersonalDefaultTime(startTime ?? null);
+    // Día fijado si vino de un contexto concreto (hora tocada o panel del día)
+    setPersonalLockDate(lock || !!startTime);
     setShowPersonalModal(true);
   }, [currentDate]);
 
@@ -879,7 +882,7 @@ const CalendarV2 = () => {
                   onPaymentClick={handlePaymentClick}
                   birthdaysByDate={birthdaysByDate}
                   clinicName={displayName || "tu consultorio"}
-                  onCreatePersonal={(d) => openCreatePersonal(d)}
+                  onCreatePersonal={(d) => openCreatePersonal(d, undefined, true)}
                   onQuickBlock={(d) => openQuickBlock(d)}
                 />
               ) : (
@@ -1028,6 +1031,7 @@ const CalendarV2 = () => {
           event={personalEventTarget}
           defaultDate={selectedDateForAction}
           defaultStartTime={personalDefaultTime}
+          lockDate={personalLockDate}
           onSaved={() => {
             queryClient.invalidateQueries({ queryKey: ["personal_events"] });
             // Los cupos libres dependen de los eventos personales
@@ -1102,7 +1106,13 @@ const CalendarV2 = () => {
           setLockDateForAction(viewType === "day");
           setShowPaymentDrawer(true);
         }}
-        onAddPersonal={() => openCreatePersonal()}
+        onAddPersonal={() =>
+          openCreatePersonal(
+            viewType === "day" ? currentDate : undefined,
+            undefined,
+            viewType === "day"
+          )
+        }
         onQuickBlock={() => openQuickBlock(viewType === "day" ? currentDate : undefined)}
         fixedDateLabel={
           viewType === "day" ? format(currentDate, "EEEE d 'de' MMMM", { locale: es }) : null
