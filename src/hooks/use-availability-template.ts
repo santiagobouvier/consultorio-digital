@@ -88,7 +88,7 @@ const clean = (t: string | null): string | null => {
 };
 
 const dayFromRow = (row: any, key: DayKey): DayConfig => {
-  // Camino nuevo: day_blocks jsonb con N bloques por día
+  // Camino nuevo: day_blocks jsonb — cada bloque ES una sesión (no se unen)
   const jb = row.day_blocks?.[key];
   if (Array.isArray(jb)) {
     const blocks: TimeBlock[] = [];
@@ -97,18 +97,30 @@ const dayFromRow = (row: any, key: DayKey): DayConfig => {
       const end = clean(Array.isArray(b) ? b[1] : null);
       if (start && end && toMinutes(end) > toMinutes(start)) blocks.push({ start, end });
     }
-    return { blocks: mergeBlocks(blocks) };
+    return { blocks: blocks.sort((a, b) => toMinutes(a.start) - toMinutes(b.start)) };
   }
-  // Camino clásico: enabled + 2 rangos en columnas
+  // Camino clásico: enabled + 2 rangos → se cortan en sesiones de la
+  // duración configurada (migración visual, una sola vez)
   if (!row[`${key}_enabled`]) return emptyDay();
-  const blocks: TimeBlock[] = [];
+  const dur = Number(row.slot_duration_minutes) || 60;
+  const ranges: TimeBlock[] = [];
   const s1 = clean(row[`${key}_start_1`]);
   const e1 = clean(row[`${key}_end_1`]);
   const s2 = clean(row[`${key}_start_2`]);
   const e2 = clean(row[`${key}_end_2`]);
-  if (s1 && e1 && toMinutes(e1) > toMinutes(s1)) blocks.push({ start: s1, end: e1 });
-  if (s2 && e2 && toMinutes(e2) > toMinutes(s2)) blocks.push({ start: s2, end: e2 });
-  return { blocks: mergeBlocks(blocks) };
+  if (s1 && e1 && toMinutes(e1) > toMinutes(s1)) ranges.push({ start: s1, end: e1 });
+  if (s2 && e2 && toMinutes(e2) > toMinutes(s2)) ranges.push({ start: s2, end: e2 });
+  const blocks: TimeBlock[] = [];
+  for (const r of mergeBlocks(ranges)) {
+    let t = toMinutes(r.start);
+    const end = toMinutes(r.end);
+    while (t + dur <= end) {
+      blocks.push({ start: toHHMM(t), end: toHHMM(t + dur) });
+      t += dur;
+    }
+    if (t < end) blocks.push({ start: toHHMM(t), end: toHHMM(end) });
+  }
+  return { blocks };
 };
 
 const rowToTemplate = (row: any): AvailabilityTemplate => ({
@@ -138,10 +150,15 @@ const templateToRow = (t: AvailabilityTemplate, includeDayBlocks: boolean): any 
   };
   const dayBlocks: Record<string, [string, string][]> = {};
   for (const key of DAY_KEYS) {
-    const merged = mergeBlocks(t.days[key].blocks);
-    dayBlocks[key] = merged.map((b) => [b.start, b.end]);
-    // Columnas clásicas: los primeros 2 bloques (compatibilidad con bases
-    // donde la migración de day_blocks todavía no corrió).
+    // Se guarda cada sesión tal cual (sin unir): la identidad de cada cupo
+    // se conserva. El motor une ventanas pegadas solo al calcular.
+    const sessions = t.days[key].blocks
+      .slice()
+      .sort((a, b) => toMinutes(a.start) - toMinutes(b.start));
+    dayBlocks[key] = sessions.map((b) => [b.start, b.end]);
+    // Columnas clásicas: los primeros 2 rangos unidos (compatibilidad con
+    // bases donde la migración de day_blocks todavía no corrió).
+    const merged = mergeBlocks(sessions);
     row[`${key}_enabled`] = merged.length > 0;
     row[`${key}_start_1`] = merged[0]?.start ?? null;
     row[`${key}_end_1`] = merged[0]?.end ?? null;

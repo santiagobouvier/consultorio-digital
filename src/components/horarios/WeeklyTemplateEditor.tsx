@@ -18,57 +18,25 @@ import {
 const GRID_START = 6 * 60;
 const GRID_END = 22 * 60;
 
-const STEP_OPTIONS = [30, 45, 60, 90];
+const DUR_OPTIONS = [30, 45, 60, 90];
 
 const GROTESK = { fontFamily: "'Space Grotesk', sans-serif" } as const;
 
-// ── Operaciones de cobertura (en minutos) ──────────────────────────────
+const sortSessions = (blocks: TimeBlock[]): TimeBlock[] =>
+  blocks.slice().sort((a, b) => toMinutes(a.start) - toMinutes(b.start));
 
-/** Suma el intervalo [s, e) a la cobertura del día. */
-const addInterval = (blocks: TimeBlock[], s: number, e: number): TimeBlock[] =>
-  mergeBlocks([...blocks, { start: toHHMM(s), end: toHHMM(e) }]);
+const overlaps = (blocks: TimeBlock[], s: number, e: number): boolean =>
+  blocks.some((b) => toMinutes(b.start) < e && toMinutes(b.end) > s);
 
-/** Resta el intervalo [s, e) de la cobertura del día. */
-const subtractInterval = (blocks: TimeBlock[], s: number, e: number): TimeBlock[] => {
-  const out: TimeBlock[] = [];
-  for (const b of blocks) {
-    const bs = toMinutes(b.start);
-    const be = toMinutes(b.end);
-    if (be <= s || bs >= e) {
-      out.push(b);
-      continue;
-    }
-    if (bs < s) out.push({ start: toHHMM(bs), end: toHHMM(s) });
-    if (be > e) out.push({ start: toHHMM(e), end: toHHMM(be) });
-  }
-  return out;
+const summaryText = (blocks: TimeBlock[]): string => {
+  if (blocks.length === 0) return "Día libre";
+  const ranges = mergeBlocks(blocks)
+    .map((b) => `${b.start}–${b.end}`)
+    .join(" · ");
+  return `${blocks.length} sesi${blocks.length === 1 ? "ón" : "ones"} · ${ranges}`;
 };
 
-/** Los cupos del día: los bloques cortados en sesiones de `step` minutos. */
-const sessionsOf = (blocks: TimeBlock[], step: number): { start: number; end: number }[] => {
-  const out: { start: number; end: number }[] = [];
-  for (const b of mergeBlocks(blocks)) {
-    let t = toMinutes(b.start);
-    const end = toMinutes(b.end);
-    while (t + step <= end) {
-      out.push({ start: t, end: t + step });
-      t += step;
-    }
-    // Resto más corto que una sesión (config vieja): se muestra igual
-    if (t < end) out.push({ start: t, end });
-  }
-  return out;
-};
-
-const summaryText = (blocks: TimeBlock[], step: number): string => {
-  const merged = mergeBlocks(blocks);
-  if (merged.length === 0) return "Día libre";
-  const n = sessionsOf(merged, step).length;
-  const ranges = merged.map((b) => `${b.start}–${b.end}`).join(" · ");
-  return `${n} sesi${n === 1 ? "ón" : "ones"} · ${ranges}`;
-};
-
-/** Mini línea del día: barra 06–22 con los bloques pintados. */
+/** Mini línea del día: barra 06–22 con las sesiones pintadas. */
 const DayBar = ({ blocks }: { blocks: TimeBlock[] }) => (
   <div className="relative h-2 w-20 sm:w-32 rounded-full bg-muted overflow-hidden shrink-0">
     {mergeBlocks(blocks).map((b, i) => {
@@ -144,15 +112,16 @@ interface Props {
 export const WeeklyTemplateEditor = ({ template, onChange, onSave, saving }: Props) => {
   // Un día expandido a la vez: menos ruido, foco total en lo que se edita.
   const [openDay, setOpenDay] = useState<DayKey | null>(null);
-  // Hora elegida en el riel para "agregar sesión" del día abierto
+  // Hora y duración elegidas para "agregar sesión" del día abierto
   const [pickTime, setPickTime] = useState<number>(9 * 60);
-
-  const step = template.slot_duration_minutes || 60;
+  const [pickDur, setPickDur] = useState<number>(template.slot_duration_minutes || 60);
 
   const setDayBlocks = (key: DayKey, blocks: TimeBlock[]) => {
     onChange({
       ...template,
-      days: { ...template.days, [key]: { blocks: mergeBlocks(blocks) } },
+      // Se recuerda la última duración usada (y los cupos de la agenda la usan)
+      slot_duration_minutes: pickDur,
+      days: { ...template.days, [key]: { blocks: sortSessions(blocks) } },
     });
   };
 
@@ -161,25 +130,44 @@ export const WeeklyTemplateEditor = ({ template, onChange, onSave, saving }: Pro
     setOpenDay(next);
     if (next) {
       // Sugerencia: después de la última sesión del día, o 09:00
-      const sessions = sessionsOf(template.days[key].blocks, step);
+      const sessions = sortSessions(template.days[key].blocks);
       const last = sessions[sessions.length - 1];
-      setPickTime(last ? Math.min(last.end, GRID_END - step) : 9 * 60);
+      setPickTime(last ? Math.min(toMinutes(last.end), GRID_END - pickDur) : 9 * 60);
     }
   };
 
   const addSession = (key: DayKey) => {
-    const end = Math.min(pickTime + step, GRID_END);
-    setDayBlocks(key, addInterval(template.days[key].blocks, pickTime, end));
+    const blocks = template.days[key].blocks;
+    const end = Math.min(pickTime + pickDur, GRID_END);
+    if (overlaps(blocks, pickTime, end)) {
+      toast({
+        title: "Ese horario ya está ocupado",
+        description: "Se pisa con otra sesión del día. Elegí otra hora o sacá la que está.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setDayBlocks(key, [...blocks, { start: toHHMM(pickTime), end: toHHMM(end) }]);
     // Deja el riel listo para la próxima: encadena sesiones sin pensar
-    setPickTime(Math.min(end, GRID_END - step));
+    setPickTime(Math.min(end, GRID_END - pickDur));
   };
 
-  const removeSession = (key: DayKey, s: number, e: number) => {
-    setDayBlocks(key, subtractInterval(template.days[key].blocks, s, e));
+  const removeSession = (key: DayKey, session: TimeBlock) => {
+    setDayBlocks(
+      key,
+      template.days[key].blocks.filter((b) => !(b.start === session.start && b.end === session.end))
+    );
   };
 
+  /** Preset: agrega sesiones encadenadas de `pickDur` entre from y to, salteando ocupadas. */
   const addPreset = (key: DayKey, from: number, to: number) => {
-    setDayBlocks(key, addInterval(template.days[key].blocks, from, to));
+    let blocks = template.days[key].blocks;
+    for (let t = from; t + pickDur <= to; t += pickDur) {
+      if (!overlaps(blocks, t, t + pickDur)) {
+        blocks = [...blocks, { start: toHHMM(t), end: toHHMM(t + pickDur) }];
+      }
+    }
+    setDayBlocks(key, blocks);
   };
 
   const copyToWeekdays = (from: DayKey) => {
@@ -201,10 +189,7 @@ export const WeeklyTemplateEditor = ({ template, onChange, onSave, saving }: Pro
     });
   };
 
-  const totalWeek = DAY_KEYS.reduce(
-    (sum, k) => sum + sessionsOf(template.days[k].blocks, step).length,
-    0
-  );
+  const totalWeek = DAY_KEYS.reduce((sum, k) => sum + template.days[k].blocks.length, 0);
 
   return (
     <div className="space-y-6">
@@ -228,34 +213,11 @@ export const WeeklyTemplateEditor = ({ template, onChange, onSave, saving }: Pro
               </div>
             )}
           </div>
-
-          {/* Ritmo: cuánto dura cada cupo */}
-          <div className="mt-3">
-            <p className="text-xs font-medium text-muted-foreground mb-2">Cada sesión dura</p>
-            <div className="grid grid-cols-4 gap-2">
-              {STEP_OPTIONS.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => onChange({ ...template, slot_duration_minutes: s })}
-                  className={`h-11 rounded-xl text-sm font-semibold tabular-nums transition-colors border ${
-                    step === s
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-muted/40 text-muted-foreground border-border hover:bg-muted"
-                  }`}
-                  style={GROTESK}
-                >
-                  {s} min
-                </button>
-              ))}
-            </div>
-          </div>
         </CardHeader>
 
         <CardContent className="space-y-2.5">
           {DAY_KEYS.map((key) => {
-            const blocks = template.days[key].blocks;
-            const sessions = sessionsOf(blocks, step);
+            const sessions = sortSessions(template.days[key].blocks);
             const isOpen = openDay === key;
             const hasSessions = sessions.length > 0;
             return (
@@ -276,10 +238,10 @@ export const WeeklyTemplateEditor = ({ template, onChange, onSave, saving }: Pro
                       {DAY_LABELS[key]}
                     </p>
                     <p className="text-xs text-muted-foreground mt-0.5 truncate tabular-nums">
-                      {summaryText(blocks, step)}
+                      {summaryText(sessions)}
                     </p>
                   </div>
-                  <DayBar blocks={blocks} />
+                  <DayBar blocks={sessions} />
                   <ChevronDown
                     className={`h-4 w-4 text-muted-foreground shrink-0 transition-transform ${isOpen ? "rotate-180" : ""}`}
                   />
@@ -287,20 +249,20 @@ export const WeeklyTemplateEditor = ({ template, onChange, onSave, saving }: Pro
 
                 {isOpen && (
                   <div className="px-4 pb-4 space-y-3.5">
-                    {/* Los cupos del día, tal cual los da */}
+                    {/* Las sesiones del día, con su horario completo */}
                     {hasSessions ? (
                       <div className="flex flex-wrap gap-2">
                         {sessions.map((s) => (
                           <span
-                            key={s.start}
-                            className="inline-flex items-center gap-1 h-12 pl-4 pr-2 rounded-xl bg-primary/10 border border-primary/30 text-[15px] font-semibold tabular-nums text-foreground"
+                            key={`${s.start}-${s.end}`}
+                            className="inline-flex items-center gap-1 h-12 pl-3.5 pr-1.5 rounded-xl bg-primary/10 border border-primary/30 text-sm font-semibold tabular-nums text-foreground"
                             style={GROTESK}
                           >
-                            {toHHMM(s.start)}
+                            {s.start}–{s.end}
                             <button
                               type="button"
-                              onClick={() => removeSession(key, s.start, s.end)}
-                              aria-label={`Sacar la sesión de ${toHHMM(s.start)}`}
+                              onClick={() => removeSession(key, s)}
+                              aria-label={`Sacar la sesión de ${s.start}`}
                               className="h-8 w-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
                             >
                               <X className="h-4 w-4" />
@@ -314,9 +276,29 @@ export const WeeklyTemplateEditor = ({ template, onChange, onSave, saving }: Pro
                       </p>
                     )}
 
-                    {/* Agregar sesión: riel de horas + ajuste fino ±15 */}
+                    {/* Agregar sesión: hora + duración de ESTA sesión */}
                     <div className="rounded-xl border border-border/70 bg-muted/20 p-3 space-y-2.5">
                       <TimeRail value={pickTime} onChange={setPickTime} />
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs text-muted-foreground shrink-0">Dura</span>
+                        <div className="flex gap-1.5 flex-1">
+                          {DUR_OPTIONS.map((d) => (
+                            <button
+                              key={d}
+                              type="button"
+                              onClick={() => setPickDur(d)}
+                              className={`h-10 flex-1 rounded-xl text-[13px] font-semibold tabular-nums transition-colors border ${
+                                pickDur === d
+                                  ? "bg-primary/15 text-primary border-primary/50"
+                                  : "bg-background text-muted-foreground border-border"
+                              }`}
+                              style={GROTESK}
+                            >
+                              {d}’
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                       <div className="flex items-center gap-2">
                         <button
                           type="button"
@@ -332,12 +314,12 @@ export const WeeklyTemplateEditor = ({ template, onChange, onSave, saving }: Pro
                           onClick={() => addSession(key)}
                         >
                           <Plus className="h-4 w-4" />
-                          Agregar sesión {toHHMM(pickTime)}
+                          Agregar {toHHMM(pickTime)}–{toHHMM(Math.min(pickTime + pickDur, GRID_END))}
                         </Button>
                         <button
                           type="button"
                           aria-label="15 minutos después"
-                          onClick={() => setPickTime(Math.min(GRID_END - step, pickTime + 15))}
+                          onClick={() => setPickTime(Math.min(GRID_END - pickDur, pickTime + 15))}
                           className="h-11 w-11 rounded-xl border border-border bg-background flex items-center justify-center text-muted-foreground active:scale-95 transition-transform shrink-0"
                         >
                           <Plus className="h-4 w-4" />
