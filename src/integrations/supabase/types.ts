@@ -887,6 +887,36 @@ export type Database = {
         }
         Relationships: []
       }
+      note_templates: {
+        Row: {
+          business_id: string
+          content: string
+          created_at: string
+          id: string
+          name: string
+          professional_user_id: string
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          content: string
+          created_at?: string
+          id?: string
+          name: string
+          professional_user_id: string
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          name?: string
+          professional_user_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       patient_clinical_status: {
         Row: {
           business_id: string
