@@ -37,7 +37,7 @@ export const NewActionDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[88dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>¿Qué querés crear?</DialogTitle>
           <DialogDescription>Elegí una opción</DialogDescription>
