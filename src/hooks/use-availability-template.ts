@@ -15,12 +15,15 @@ export const DAY_LABELS: Record<DayKey, string> = {
 
 export const DAY_KEYS: DayKey[] = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
 
+/** Un bloque horario del día: "HH:MM" – "HH:MM". */
+export interface TimeBlock {
+  start: string;
+  end: string;
+}
+
 export interface DayConfig {
-  enabled: boolean;
-  start1: string | null;
-  end1: string | null;
-  start2: string | null;
-  end2: string | null;
+  /** Bloques en los que se atiende (pueden ser varios, con huecos libres). */
+  blocks: TimeBlock[];
 }
 
 export interface AvailabilityTemplate {
@@ -35,13 +38,33 @@ export interface AvailabilityTemplate {
   days: Record<DayKey, DayConfig>;
 }
 
-const emptyDay = (): DayConfig => ({
-  enabled: false,
-  start1: null,
-  end1: null,
-  start2: null,
-  end2: null,
-});
+export const toMinutes = (hhmm: string): number => {
+  const [h, m] = hhmm.split(":").map(Number);
+  return h * 60 + m;
+};
+
+export const toHHMM = (mins: number): string =>
+  `${String(Math.floor(mins / 60)).padStart(2, "0")}:${String(mins % 60).padStart(2, "0")}`;
+
+/** Une bloques solapados o pegados y los devuelve ordenados. */
+export const mergeBlocks = (blocks: TimeBlock[]): TimeBlock[] => {
+  const sorted = blocks
+    .filter((b) => b.start && b.end && toMinutes(b.end) > toMinutes(b.start))
+    .slice()
+    .sort((a, b) => toMinutes(a.start) - toMinutes(b.start));
+  const out: TimeBlock[] = [];
+  for (const b of sorted) {
+    const last = out[out.length - 1];
+    if (last && toMinutes(b.start) <= toMinutes(last.end)) {
+      if (toMinutes(b.end) > toMinutes(last.end)) last.end = b.end;
+    } else {
+      out.push({ ...b });
+    }
+  }
+  return out;
+};
+
+const emptyDay = (): DayConfig => ({ blocks: [] });
 
 const buildEmptyTemplate = (businessId: string, professionalUserId: string): AvailabilityTemplate => ({
   id: null,
@@ -55,6 +78,39 @@ const buildEmptyTemplate = (businessId: string, professionalUserId: string): Ava
   days: DAY_KEYS.reduce((acc, k) => ({ ...acc, [k]: emptyDay() }), {} as Record<DayKey, DayConfig>),
 });
 
+const HHMM_RE = /^\d{2}:\d{2}$/;
+
+/** Normaliza "HH:MM:SS" (formato de columnas time) a "HH:MM". */
+const clean = (t: string | null): string | null => {
+  if (!t) return null;
+  const short = t.slice(0, 5);
+  return HHMM_RE.test(short) ? short : null;
+};
+
+const dayFromRow = (row: any, key: DayKey): DayConfig => {
+  // Camino nuevo: day_blocks jsonb con N bloques por día
+  const jb = row.day_blocks?.[key];
+  if (Array.isArray(jb)) {
+    const blocks: TimeBlock[] = [];
+    for (const b of jb) {
+      const start = clean(Array.isArray(b) ? b[0] : null);
+      const end = clean(Array.isArray(b) ? b[1] : null);
+      if (start && end && toMinutes(end) > toMinutes(start)) blocks.push({ start, end });
+    }
+    return { blocks: mergeBlocks(blocks) };
+  }
+  // Camino clásico: enabled + 2 rangos en columnas
+  if (!row[`${key}_enabled`]) return emptyDay();
+  const blocks: TimeBlock[] = [];
+  const s1 = clean(row[`${key}_start_1`]);
+  const e1 = clean(row[`${key}_end_1`]);
+  const s2 = clean(row[`${key}_start_2`]);
+  const e2 = clean(row[`${key}_end_2`]);
+  if (s1 && e1 && toMinutes(e1) > toMinutes(s1)) blocks.push({ start: s1, end: e1 });
+  if (s2 && e2 && toMinutes(e2) > toMinutes(s2)) blocks.push({ start: s2, end: e2 });
+  return { blocks: mergeBlocks(blocks) };
+};
+
 const rowToTemplate = (row: any): AvailabilityTemplate => ({
   id: row.id,
   business_id: row.business_id,
@@ -64,47 +120,46 @@ const rowToTemplate = (row: any): AvailabilityTemplate => ({
   slot_duration_minutes: row.slot_duration_minutes,
   modality: row.modality,
   default_price: row.default_price,
-  days: {
-    monday: { enabled: row.monday_enabled, start1: row.monday_start_1, end1: row.monday_end_1, start2: row.monday_start_2, end2: row.monday_end_2 },
-    tuesday: { enabled: row.tuesday_enabled, start1: row.tuesday_start_1, end1: row.tuesday_end_1, start2: row.tuesday_start_2, end2: row.tuesday_end_2 },
-    wednesday: { enabled: row.wednesday_enabled, start1: row.wednesday_start_1, end1: row.wednesday_end_1, start2: row.wednesday_start_2, end2: row.wednesday_end_2 },
-    thursday: { enabled: row.thursday_enabled, start1: row.thursday_start_1, end1: row.thursday_end_1, start2: row.thursday_start_2, end2: row.thursday_end_2 },
-    friday: { enabled: row.friday_enabled, start1: row.friday_start_1, end1: row.friday_end_1, start2: row.friday_start_2, end2: row.friday_end_2 },
-    saturday: { enabled: row.saturday_enabled, start1: row.saturday_start_1, end1: row.saturday_end_1, start2: row.saturday_start_2, end2: row.saturday_end_2 },
-    sunday: { enabled: row.sunday_enabled, start1: row.sunday_start_1, end1: row.sunday_end_1, start2: row.sunday_start_2, end2: row.sunday_end_2 },
-  },
+  days: DAY_KEYS.reduce(
+    (acc, k) => ({ ...acc, [k]: dayFromRow(row, k) }),
+    {} as Record<DayKey, DayConfig>
+  ),
 });
 
-const templateToRow = (t: AvailabilityTemplate): any => ({
-  business_id: t.business_id,
-  professional_user_id: t.professional_user_id,
-  name: t.name,
-  is_active: t.is_active,
-  slot_duration_minutes: t.slot_duration_minutes,
-  modality: t.modality,
-  default_price: t.default_price,
-  monday_enabled: t.days.monday.enabled,
-  monday_start_1: t.days.monday.start1, monday_end_1: t.days.monday.end1,
-  monday_start_2: t.days.monday.start2, monday_end_2: t.days.monday.end2,
-  tuesday_enabled: t.days.tuesday.enabled,
-  tuesday_start_1: t.days.tuesday.start1, tuesday_end_1: t.days.tuesday.end1,
-  tuesday_start_2: t.days.tuesday.start2, tuesday_end_2: t.days.tuesday.end2,
-  wednesday_enabled: t.days.wednesday.enabled,
-  wednesday_start_1: t.days.wednesday.start1, wednesday_end_1: t.days.wednesday.end1,
-  wednesday_start_2: t.days.wednesday.start2, wednesday_end_2: t.days.wednesday.end2,
-  thursday_enabled: t.days.thursday.enabled,
-  thursday_start_1: t.days.thursday.start1, thursday_end_1: t.days.thursday.end1,
-  thursday_start_2: t.days.thursday.start2, thursday_end_2: t.days.thursday.end2,
-  friday_enabled: t.days.friday.enabled,
-  friday_start_1: t.days.friday.start1, friday_end_1: t.days.friday.end1,
-  friday_start_2: t.days.friday.start2, friday_end_2: t.days.friday.end2,
-  saturday_enabled: t.days.saturday.enabled,
-  saturday_start_1: t.days.saturday.start1, saturday_end_1: t.days.saturday.end1,
-  saturday_start_2: t.days.saturday.start2, saturday_end_2: t.days.saturday.end2,
-  sunday_enabled: t.days.sunday.enabled,
-  sunday_start_1: t.days.sunday.start1, sunday_end_1: t.days.sunday.end1,
-  sunday_start_2: t.days.sunday.start2, sunday_end_2: t.days.sunday.end2,
-});
+const templateToRow = (t: AvailabilityTemplate, includeDayBlocks: boolean): any => {
+  const row: any = {
+    business_id: t.business_id,
+    professional_user_id: t.professional_user_id,
+    name: t.name,
+    is_active: t.is_active,
+    slot_duration_minutes: t.slot_duration_minutes,
+    modality: t.modality,
+    default_price: t.default_price,
+  };
+  const dayBlocks: Record<string, [string, string][]> = {};
+  for (const key of DAY_KEYS) {
+    const merged = mergeBlocks(t.days[key].blocks);
+    dayBlocks[key] = merged.map((b) => [b.start, b.end]);
+    // Columnas clásicas: los primeros 2 bloques (compatibilidad con bases
+    // donde la migración de day_blocks todavía no corrió).
+    row[`${key}_enabled`] = merged.length > 0;
+    row[`${key}_start_1`] = merged[0]?.start ?? null;
+    row[`${key}_end_1`] = merged[0]?.end ?? null;
+    row[`${key}_start_2`] = merged[1]?.start ?? null;
+    row[`${key}_end_2`] = merged[1]?.end ?? null;
+  }
+  if (includeDayBlocks) row.day_blocks = dayBlocks;
+  return row;
+};
+
+/** ¿Algún día tiene más de 2 bloques? (la base vieja solo guarda 2) */
+export const hasLooseBlocks = (t: AvailabilityTemplate): boolean =>
+  DAY_KEYS.some((k) => mergeBlocks(t.days[k].blocks).length > 2);
+
+const isMissingColumn = (e: any): boolean => {
+  const msg = `${e?.message ?? ""} ${e?.code ?? ""}`;
+  return msg.includes("day_blocks") || e?.code === "42703" || e?.code === "PGRST204";
+};
 
 export const useAvailabilityTemplate = (businessId: string | null, professionalUserId: string | null) => {
   const [template, setTemplate] = useState<AvailabilityTemplate | null>(null);
@@ -134,8 +189,8 @@ export const useAvailabilityTemplate = (businessId: string | null, professionalU
     load();
   }, [load]);
 
-  const save = useCallback(async (t: AvailabilityTemplate): Promise<AvailabilityTemplate | null> => {
-    const row = templateToRow(t);
+  const persist = useCallback(async (t: AvailabilityTemplate, includeDayBlocks: boolean) => {
+    const row = templateToRow(t, includeDayBlocks);
     if (t.id) {
       const { data, error } = await (supabase as any)
         .from("availability_templates")
@@ -144,21 +199,31 @@ export const useAvailabilityTemplate = (businessId: string | null, professionalU
         .select()
         .single();
       if (error) throw error;
-      const saved = rowToTemplate(data);
-      setTemplate(saved);
-      return saved;
-    } else {
-      const { data, error } = await (supabase as any)
-        .from("availability_templates")
-        .insert(row)
-        .select()
-        .single();
-      if (error) throw error;
-      const saved = rowToTemplate(data);
-      setTemplate(saved);
-      return saved;
+      return data;
     }
+    const { data, error } = await (supabase as any)
+      .from("availability_templates")
+      .insert(row)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
   }, []);
+
+  const save = useCallback(async (t: AvailabilityTemplate): Promise<AvailabilityTemplate | null> => {
+    let data: any;
+    try {
+      data = await persist(t, true);
+    } catch (e: any) {
+      // Base sin la columna day_blocks (migración pendiente): guardar en el
+      // formato clásico igual — se pierden solo los bloques 3+ de cada día.
+      if (!isMissingColumn(e)) throw e;
+      data = await persist(t, false);
+    }
+    const saved = rowToTemplate(data);
+    setTemplate(saved);
+    return saved;
+  }, [persist]);
 
   return { template, setTemplate, loading, save, reload: load };
 };

@@ -200,6 +200,16 @@ const Statistics = () => {
     let total = 0;
     for (const t of templates) {
       for (const day of ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]) {
+        // Formato nuevo: bloques libres por día en day_blocks
+        const jb = t.day_blocks?.[day];
+        if (Array.isArray(jb)) {
+          for (const b of jb) {
+            const s = toMin(Array.isArray(b) ? b[0] : null);
+            const e = toMin(Array.isArray(b) ? b[1] : null);
+            if (e > s) total += e - s;
+          }
+          continue;
+        }
         if (!t[`${day}_enabled`]) continue;
         const s1 = toMin(t[`${day}_start_1`]);
         const e1 = toMin(t[`${day}_end_1`]);
