@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { CalendarPlus, Ban, Loader2, Sparkles } from "lucide-react";
+import { CalendarPlus, Ban, Loader2, Sparkles, Repeat } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -12,6 +12,17 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import type { FreeSlot } from "@/hooks/use-free-slots";
+import {
+  DAY_KEYS,
+  mergeBlocks,
+  parseDayBlocksFromRow,
+  toMinutes,
+  type DayKey,
+  type TimeBlock,
+} from "@/hooks/use-availability-template";
+
+// getDay(): 0=domingo..6=sábado → clave del día en la semana tipo
+const WEEKDAY_KEY: DayKey[] = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
 
 // Logo de WhatsApp (el mismo verde oficial que en compartir huecos)
 const WhatsAppIcon = ({ className }: { className?: string }) => (
@@ -47,12 +58,89 @@ export const SlotActionSheet = ({
   onChanged,
 }: SlotActionSheetProps) => {
   const [closing, setClosing] = useState(false);
+  const [closingWeekly, setClosingWeekly] = useState(false);
   const [sharing, setSharing] = useState(false);
+  // Tocar "Cerrar" despliega las dos opciones: solo hoy / todas las semanas
+  const [closeExpanded, setCloseExpanded] = useState(false);
+
+  useEffect(() => {
+    if (open) setCloseExpanded(false);
+  }, [open]);
 
   if (!slot) return null;
 
   const dayLabel = format(date, "EEEE d 'de' MMMM", { locale: es });
   const dateStr = format(date, "yyyy-MM-dd");
+  const weekdayName = format(date, "EEEE", { locale: es });
+
+  /** Sacar este horario de la semana tipo: no se ofrece más ese día de semana. */
+  const closeWeekly = async () => {
+    setClosingWeekly(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Sesión no válida");
+      const { data: row, error: loadErr } = await (supabase as any)
+        .from("availability_templates")
+        .select("*")
+        .eq("business_id", businessId)
+        .eq("professional_user_id", user.id)
+        .maybeSingle();
+      if (loadErr) throw loadErr;
+      if (!row) {
+        toast({ title: "Este cupo no viene de tu semana tipo", description: "Puede ser un horario suelto — cerralo solo por hoy." });
+        return;
+      }
+
+      const key = WEEKDAY_KEY[date.getDay()];
+      const allDays = parseDayBlocksFromRow(row);
+      const s = toMinutes(slot.start);
+      const e = toMinutes(slot.end);
+      const keep = allDays[key].filter((b) => !(toMinutes(b.start) < e && toMinutes(b.end) > s));
+      if (keep.length === allDays[key].length) {
+        toast({ title: "Este cupo no está en tu semana tipo", description: "Puede ser un horario suelto — cerralo solo por hoy." });
+        return;
+      }
+
+      // Actualizar el día tocado: day_blocks + columnas clásicas
+      const dayBlocks: Record<string, [string, string][]> = {};
+      for (const k of DAY_KEYS) {
+        const blocks: TimeBlock[] = k === key ? keep : allDays[k];
+        dayBlocks[k] = blocks.map((b) => [b.start, b.end]);
+      }
+      const merged = mergeBlocks(keep);
+      const legacyPatch: any = {
+        [`${key}_enabled`]: merged.length > 0,
+        [`${key}_start_1`]: merged[0]?.start ?? null,
+        [`${key}_end_1`]: merged[0]?.end ?? null,
+        [`${key}_start_2`]: merged[1]?.start ?? null,
+        [`${key}_end_2`]: merged[1]?.end ?? null,
+      };
+      let { error: upErr } = await (supabase as any)
+        .from("availability_templates")
+        .update({ ...legacyPatch, day_blocks: dayBlocks })
+        .eq("id", row.id);
+      if (upErr && (`${upErr.message} ${upErr.code}`.includes("day_blocks") || upErr.code === "42703" || upErr.code === "PGRST204")) {
+        // Base sin la columna nueva: alcanza con las columnas clásicas
+        ({ error: upErr } = await (supabase as any)
+          .from("availability_templates")
+          .update(legacyPatch)
+          .eq("id", row.id));
+      }
+      if (upErr) throw upErr;
+
+      toast({
+        title: "Semana tipo actualizada ✓",
+        description: `Los ${weekdayName} a las ${slot.start} ya no se ofrecen. Lo reabrís desde Mis horarios.`,
+      });
+      onOpenChange(false);
+      onChanged();
+    } catch (err: any) {
+      console.error(err);
+      toast({ title: "Error", description: err?.message ?? "No se pudo actualizar la semana tipo", variant: "destructive" });
+    } finally {
+      setClosingWeekly(false);
+    }
+  };
 
   const closeSlot = async () => {
     setClosing(true);
@@ -163,26 +251,58 @@ export const SlotActionSheet = ({
             </div>
           </button>
 
-          <button
-            type="button"
-            disabled={closing}
-            onClick={closeSlot}
-            className="w-full flex items-center gap-4 rounded-2xl border-2 border-border bg-card p-4 text-left transition-all hover:border-amber-500/60 hover:bg-amber-500/5 active:scale-[0.98] disabled:opacity-60"
-          >
-            <div className="w-12 h-12 shrink-0 rounded-2xl bg-amber-500/10 flex items-center justify-center">
-              {closing ? (
-                <Loader2 className="h-6 w-6 text-amber-500 animate-spin" />
-              ) : (
+          {!closeExpanded ? (
+            <button
+              type="button"
+              onClick={() => setCloseExpanded(true)}
+              className="w-full flex items-center gap-4 rounded-2xl border-2 border-border bg-card p-4 text-left transition-all hover:border-amber-500/60 hover:bg-amber-500/5 active:scale-[0.98]"
+            >
+              <div className="w-12 h-12 shrink-0 rounded-2xl bg-amber-500/10 flex items-center justify-center">
                 <Ban className="h-6 w-6 text-amber-500" />
-              )}
+              </div>
+              <div className="min-w-0">
+                <p className="font-semibold text-[15px]">Cerrar este cupo</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Solo por hoy, o todas las semanas
+                </p>
+              </div>
+            </button>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <button
+                type="button"
+                disabled={closing || closingWeekly}
+                onClick={closeSlot}
+                className="flex items-center gap-3 rounded-2xl border-2 border-amber-500/40 bg-amber-500/5 p-4 text-left transition-all hover:bg-amber-500/10 active:scale-[0.98] disabled:opacity-60"
+              >
+                {closing ? (
+                  <Loader2 className="h-5 w-5 text-amber-500 animate-spin shrink-0" />
+                ) : (
+                  <Ban className="h-5 w-5 text-amber-500 shrink-0" />
+                )}
+                <div className="min-w-0">
+                  <p className="font-semibold text-sm capitalize">Solo este {weekdayName}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Tu rutina no cambia</p>
+                </div>
+              </button>
+              <button
+                type="button"
+                disabled={closing || closingWeekly}
+                onClick={closeWeekly}
+                className="flex items-center gap-3 rounded-2xl border-2 border-amber-500/40 bg-amber-500/5 p-4 text-left transition-all hover:bg-amber-500/10 active:scale-[0.98] disabled:opacity-60"
+              >
+                {closingWeekly ? (
+                  <Loader2 className="h-5 w-5 text-amber-500 animate-spin shrink-0" />
+                ) : (
+                  <Repeat className="h-5 w-5 text-amber-500 shrink-0" />
+                )}
+                <div className="min-w-0">
+                  <p className="font-semibold text-sm capitalize">Todos los {weekdayName}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Sale de tu semana tipo</p>
+                </div>
+              </button>
             </div>
-            <div className="min-w-0">
-              <p className="font-semibold text-[15px]">Cerrar este cupo</p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Nadie puede reservarlo online — se reabre tocando el bloque
-              </p>
-            </div>
-          </button>
+          )}
         </div>
       </DialogContent>
     </Dialog>

@@ -62,7 +62,7 @@ const RAIL_TIMES: number[] = (() => {
   return out;
 })();
 
-const TimeRail = ({ value, onChange }: { value: number; onChange: (v: number) => void }) => {
+export const TimeRail = ({ value, onChange }: { value: number; onChange: (v: number) => void }) => {
   const railRef = useRef<HTMLDivElement>(null);
   // El valor puede quedar fuera de grilla por el ajuste fino (ej: 09:15)
   const times = RAIL_TIMES.includes(value)

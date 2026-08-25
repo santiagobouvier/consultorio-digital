@@ -8,6 +8,7 @@ interface MobileAgendaFabProps {
   onAddPayment: () => void;
   onAddPersonal?: () => void;
   onQuickBlock?: () => void;
+  onOpenSlot?: () => void;
 }
 
 /**
@@ -15,7 +16,7 @@ interface MobileAgendaFabProps {
  * dos tarjetas grandes (cita / pago) — reemplaza los botoncitos satélite
  * que eran difíciles de acertar.
  */
-export const MobileAgendaFab = ({ onAddAppointment, onAddPayment, onAddPersonal, onQuickBlock }: MobileAgendaFabProps) => {
+export const MobileAgendaFab = ({ onAddAppointment, onAddPayment, onAddPersonal, onQuickBlock, onOpenSlot }: MobileAgendaFabProps) => {
   const [open, setOpen] = useState(false);
   const { primaryColor } = useDashboardBranding();
   const brandHsl = `hsl(${primaryColor})`;
@@ -46,6 +47,7 @@ export const MobileAgendaFab = ({ onAddAppointment, onAddPayment, onAddPersonal,
         onAddPayment={onAddPayment}
         onAddPersonal={onAddPersonal}
         onQuickBlock={onQuickBlock}
+        onOpenSlot={onOpenSlot}
       />
     </>
   );

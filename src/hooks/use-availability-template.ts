@@ -169,6 +169,17 @@ const templateToRow = (t: AvailabilityTemplate, includeDayBlocks: boolean): any 
   return row;
 };
 
+/**
+ * Sesiones de todos los días a partir de una fila cruda de la base
+ * (day_blocks nuevo o columnas clásicas). Para editar la semana tipo
+ * desde afuera del hook (ej: "cerrar este cupo todas las semanas").
+ */
+export const parseDayBlocksFromRow = (row: any): Record<DayKey, TimeBlock[]> =>
+  DAY_KEYS.reduce(
+    (acc, k) => ({ ...acc, [k]: dayFromRow(row, k).blocks }),
+    {} as Record<DayKey, TimeBlock[]>
+  );
+
 /** ¿Algún día tiene más de 2 bloques? (la base vieja solo guarda 2) */
 export const hasLooseBlocks = (t: AvailabilityTemplate): boolean =>
   DAY_KEYS.some((k) => mergeBlocks(t.days[k].blocks).length > 2);
