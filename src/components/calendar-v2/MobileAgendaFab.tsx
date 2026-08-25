@@ -5,7 +5,7 @@ import { NewActionDialog } from "./NewActionDialog";
 
 interface MobileAgendaFabProps {
   onAddAppointment: () => void;
-  onAddPayment: () => void;
+  onAddPayment?: () => void;
   onAddPersonal?: () => void;
   onQuickBlock?: () => void;
   onOpenSlot?: () => void;

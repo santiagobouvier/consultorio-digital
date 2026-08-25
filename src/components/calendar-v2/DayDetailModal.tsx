@@ -27,7 +27,8 @@ interface DayDetailModalProps {
   onAppointmentClick: (appointment: CalendarAppointment) => void;
   onPaymentClick?: (payment: DayPayment) => void;
   onCreateAppointment: () => void;
-  onCreatePayment: () => void;
+  /** Crear pago suelto: ya no se ofrece desde la agenda (vive en Pagos). */
+  onCreatePayment?: () => void;
   onCreatePersonal?: () => void;
   onQuickBlock?: () => void;
   /** Ir al día anterior/siguiente sin salir del modal. */
@@ -244,10 +245,12 @@ export const DayDetailModal = ({
               <CalendarPlus className="h-4 w-4" />
               Nueva cita
             </Button>
-            <Button variant="outline" onClick={onCreatePayment} className="h-12 rounded-xl gap-2 font-semibold text-[15px]">
-              <CreditCard className="h-4 w-4" />
-              Registrar pago
-            </Button>
+            {onCreatePayment && (
+              <Button variant="outline" onClick={onCreatePayment} className="h-12 rounded-xl gap-2 font-semibold text-[15px]">
+                <CreditCard className="h-4 w-4" />
+                Registrar pago
+              </Button>
+            )}
             {onCreatePersonal && (
               <Button variant="outline" onClick={onCreatePersonal} className="h-12 rounded-xl gap-2 font-semibold text-[15px]">
                 <Coffee className="h-4 w-4 text-slate-500" />
