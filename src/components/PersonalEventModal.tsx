@@ -56,6 +56,8 @@ interface PersonalEventModalProps {
   defaultDate?: Date;
   /** Hora sugerida al crear ("15:00") — al tocar un lapso de la grilla. */
   defaultStartTime?: string | null;
+  /** El día ya viene elegido desde la agenda: el asistente no lo pregunta. */
+  lockDate?: boolean;
   onSaved: () => void;
 }
 
@@ -186,6 +188,7 @@ export const PersonalEventModal = ({
   event,
   defaultDate,
   defaultStartTime = null,
+  lockDate = false,
   onSaved,
 }: PersonalEventModalProps) => {
   const isEdit = !!event;
@@ -418,7 +421,12 @@ export const PersonalEventModal = ({
   const titleText = isEdit ? "Evento personal" : "Nuevo evento personal";
 
   // ── Asistente: navegación entre pasos ──
-  const stepIndex = WIZ_ORDER.indexOf(step);
+  // Con el día ya elegido en la agenda, "¿Qué día?" no se pregunta
+  const wizOrder = useMemo<WizStep[]>(
+    () => (lockDate && !isEdit ? WIZ_ORDER.filter((s) => s !== "when") : WIZ_ORDER),
+    [lockDate, isEdit]
+  );
+  const stepIndex = wizOrder.indexOf(step);
 
   const goNext = () => {
     if (step === "title" && !title.trim()) {
@@ -429,12 +437,12 @@ export const PersonalEventModal = ({
       toast({ title: "Horario inválido", description: "La hora de fin debe ser posterior a la de inicio.", variant: "destructive" });
       return;
     }
-    const next = WIZ_ORDER[Math.min(stepIndex + 1, WIZ_ORDER.length - 1)];
+    const next = wizOrder[Math.min(stepIndex + 1, wizOrder.length - 1)];
     setStep(next);
   };
 
   const goBack = () => {
-    if (stepIndex > 0) setStep(WIZ_ORDER[stepIndex - 1]);
+    if (stepIndex > 0) setStep(wizOrder[stepIndex - 1]);
   };
 
   const fmtDur =
@@ -444,19 +452,20 @@ export const PersonalEventModal = ({
         : `${durationMin} min`
       : "";
 
-  /** Fila del resumen: tocarla salta directo a ese paso. */
-  const SummaryRow = ({ label, value, target, color }: { label: string; value: string; target: WizStep; color?: string }) => (
+  /** Fila del resumen: tocarla salta directo a ese paso (sin target = fija). */
+  const SummaryRow = ({ label, value, target, color }: { label: string; value: string; target?: WizStep; color?: string }) => (
     <button
       type="button"
-      onClick={() => setStep(target)}
-      className="w-full flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3.5 text-left transition-colors hover:border-primary/40 min-h-[52px]"
+      disabled={!target}
+      onClick={() => target && setStep(target)}
+      className="w-full flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3.5 text-left transition-colors hover:border-primary/40 min-h-[52px] disabled:hover:border-border"
     >
       <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground w-20 shrink-0">
         {label}
       </span>
       {color && <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />}
       <span className="flex-1 text-sm font-semibold truncate capitalize">{value}</span>
-      <span className="text-xs text-muted-foreground shrink-0">Cambiar</span>
+      <span className="text-xs text-muted-foreground shrink-0">{target ? "Cambiar" : "Día fijado"}</span>
     </button>
   );
 
@@ -481,7 +490,7 @@ export const PersonalEventModal = ({
             type="button"
             onClick={() => {
               setTitle(ex);
-              setStep("when");
+              setStep(wizOrder[1]);
             }}
             className="rounded-full border border-dashed border-border px-3.5 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground hover:border-foreground/30 min-h-[40px]"
           >
@@ -821,7 +830,7 @@ export const PersonalEventModal = ({
       <SummaryRow
         label="Día"
         value={format(new Date(`${date}T12:00:00`), "EEEE d 'de' MMMM", { locale: es })}
-        target="when"
+        target={lockDate && !isEdit ? undefined : "when"}
       />
       <SummaryRow
         label="Hora"
@@ -867,8 +876,8 @@ export const PersonalEventModal = ({
         </button>
       )}
       <h3 className="text-lg font-bold flex-1 truncate">{WIZ_TITLES[step]}</h3>
-      <div className="flex items-center gap-1 shrink-0" aria-label={`Paso ${stepIndex + 1} de ${WIZ_ORDER.length}`}>
-        {WIZ_ORDER.map((s, i) => (
+      <div className="flex items-center gap-1 shrink-0" aria-label={`Paso ${stepIndex + 1} de ${wizOrder.length}`}>
+        {wizOrder.map((s, i) => (
           <span
             key={s}
             className={cn(
