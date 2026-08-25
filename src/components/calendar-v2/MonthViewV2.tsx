@@ -15,7 +15,7 @@ import { CalendarAppointment, DayPayment, getStatusColor, abbreviatePatientName,
 import type { DayBirthday } from "./BirthdaysStrip";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Plus, AlertCircle, Clock, CreditCard } from "lucide-react";
+import { Plus, AlertCircle, Clock, CreditCard, Cake } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { calculatePaymentStatus } from "@/lib/payments";
 import {
@@ -137,8 +137,62 @@ export const MonthViewV2 = ({
     ? ["L", "M", "X", "J", "V", "S", "D"]
     : ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 
+  // Cumpleaños del mes visible, ordenados por fecha (para la tarjeta rosa)
+  const monthBirthdays = useMemo(() => {
+    if (!birthdaysByDate) return [] as { date: Date; b: DayBirthday }[];
+    const out: { date: Date; b: DayBirthday }[] = [];
+    for (const [key, list] of birthdaysByDate) {
+      const d = new Date(key);
+      if (isSameMonth(d, currentDate)) {
+        for (const b of list) out.push({ date: d, b });
+      }
+    }
+    return out.sort((a, b) => a.date.getTime() - b.date.getTime());
+  }, [birthdaysByDate, currentDate]);
+
   return (
     <>
+      {/* 🎂 Cumpleaños del mes: tarjeta rosa con chips por paciente */}
+      {monthBirthdays.length > 0 && (
+        <div
+          className="relative overflow-hidden rounded-2xl border border-pink-300/40 dark:border-pink-500/25 p-4 mb-3"
+          style={{ background: "linear-gradient(135deg, rgba(236,72,153,0.10), rgba(168,85,247,0.05))" }}
+        >
+          <div className="flex items-start gap-3 flex-wrap md:flex-nowrap">
+            <div className="flex items-center gap-3 min-w-0 md:w-72 shrink-0">
+              <div className="w-11 h-11 rounded-2xl bg-pink-500/15 flex items-center justify-center shrink-0">
+                <Cake className="h-5 w-5 text-pink-500 dark:text-pink-300" />
+              </div>
+              <div className="min-w-0">
+                <p className="font-bold text-[15px] text-pink-600 dark:text-pink-300">Cumpleaños del mes</p>
+                <p className="text-xs text-muted-foreground">
+                  {monthBirthdays.length} paciente{monthBirthdays.length !== 1 ? "s" : ""} cumple{monthBirthdays.length !== 1 ? "n" : ""} en{" "}
+                  {format(currentDate, "MMMM", { locale: es })}
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2 flex-1 md:justify-end">
+              {monthBirthdays.map(({ date, b }) => (
+                <button
+                  key={`${b.id}-${date.toDateString()}`}
+                  type="button"
+                  onClick={() => handleDayClick(date)}
+                  className="inline-flex items-center gap-2 rounded-full border border-pink-300/40 dark:border-pink-500/25 bg-card px-3 py-1.5 min-h-[40px] transition-colors hover:border-pink-400/60 active:scale-[0.98]"
+                >
+                  <span className="w-7 h-7 rounded-full bg-pink-500/15 text-pink-600 dark:text-pink-300 text-xs font-bold flex items-center justify-center shrink-0">
+                    {b.name.trim().charAt(0).toUpperCase()}
+                  </span>
+                  <span className="text-sm font-semibold truncate max-w-[9rem]">{b.name}</span>
+                  <span className="text-[11px] font-semibold text-pink-600 dark:text-pink-300 bg-pink-500/10 rounded-full px-2 py-0.5 capitalize shrink-0">
+                    {format(date, "EEE d", { locale: es })}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div
         className={cn(
           "bg-card overflow-hidden",
@@ -162,7 +216,10 @@ export const MonthViewV2 = ({
         {/* Days grid: en mobile las filas se reparten el alto de la pantalla
             (como Google Calendar), en desktop mantienen su altura propia */}
         <div
-          className={cn("grid grid-cols-7", isMobile && !isDesktop && "flex-1 auto-rows-fr")}
+          className={cn(
+            "grid grid-cols-7 gap-1 p-1 md:gap-1.5 md:p-1.5",
+            isMobile && !isDesktop && "flex-1 auto-rows-fr"
+          )}
           style={isMobile && !isDesktop ? { minHeight: "calc(100dvh - 300px)" } : undefined}
         >
           {days.map((day, index) => {
@@ -179,36 +236,38 @@ export const MonthViewV2 = ({
             const activeApts = dayAppointments.filter(
               (a) => a.status !== "cancelled" && a.status !== "cancelled_by_patient"
             );
+            const dayBdays = birthdaysByDate?.get(day.toDateString()) ?? [];
 
             return (
               <button
                 key={index}
                 onClick={() => handleDayClick(day)}
                 className={cn(
-                  "min-h-[86px] md:min-h-[110px] p-1 md:p-2 border-b border-r border-border/40 transition-all duration-200 text-left relative group",
+                  "min-h-[86px] md:min-h-[110px] p-1 md:p-1.5 rounded-lg md:rounded-xl border transition-all duration-200 text-left relative group",
                   "hover:bg-muted/40 active:bg-muted/60",
+                  isCurrentDay
+                    ? "border-primary/60 bg-primary/[0.06]"
+                    : "border-border/40 bg-background/40",
                   !isCurrentMonth && "opacity-45",
-                  index % 7 === 6 && "border-r-0",
-                  isSelected && "bg-primary/5 ring-2 ring-primary ring-inset"
+                  isSelected && "ring-2 ring-primary ring-inset"
                 )}
               >
-                {/* Day number */}
+                {/* Day number + chip HOY */}
                 <div className="flex items-center justify-between mb-1">
-                  <span className="flex items-center gap-0.5">
+                  <span className="flex items-center gap-1 min-w-0">
                     <span
                       className={cn(
-                        "text-xs md:text-sm font-medium w-6 h-6 md:w-7 md:h-7 flex items-center justify-center rounded-full transition-colors",
+                        "text-xs md:text-sm font-semibold px-0.5 transition-colors",
                         !isCurrentMonth && "text-muted-foreground/50",
-                        isCurrentDay && "bg-primary text-primary-foreground",
-                        isSelected && !isCurrentDay && "bg-primary/20 text-primary"
+                        isCurrentDay && "text-primary",
+                        isSelected && !isCurrentDay && "text-primary"
                       )}
                     >
                       {format(day, "d")}
                     </span>
-                    {/* Cumpleaños de un paciente ese día */}
-                    {birthdaysByDate?.has(day.toDateString()) && (
-                      <span className="text-[11px] md:text-[13px] leading-none" aria-label="Cumpleaños">
-                        🎂
+                    {isCurrentDay && (
+                      <span className="text-[8px] font-bold uppercase tracking-wide bg-primary text-primary-foreground rounded-full px-1.5 py-px shrink-0">
+                        Hoy
                       </span>
                     )}
                   </span>
@@ -243,8 +302,19 @@ export const MonthViewV2 = ({
                 {/* Mobile: mini-chips minimalistas — fondo translúcido del
                     color del evento y texto en ese color. Sin ruido extra:
                     los pagos viven en el panel del día. */}
-                {isMobile && activeApts.length > 0 && (
+                {isMobile && (activeApts.length > 0 || dayBdays.length > 0) && (
                   <div className="space-y-[2.5px] overflow-hidden">
+                    {dayBdays.slice(0, 1).map((b) => (
+                      <div
+                        key={`bd-${b.id}`}
+                        className="h-[15px] rounded-[5px] px-[4px] flex items-center overflow-hidden"
+                        style={{ backgroundColor: "rgba(236, 72, 153, 0.16)" }}
+                      >
+                        <span className="text-[9px] font-semibold truncate text-pink-500 dark:text-pink-300">
+                          🎂 {b.name.split(" ")[0]}
+                        </span>
+                      </div>
+                    ))}
                     {activeApts.slice(0, 3).map((apt) => {
                       const c = getEventHexColor(apt, showProfessionalColors);
                       return (
@@ -279,8 +349,20 @@ export const MonthViewV2 = ({
                     Son SOLO visuales: el click en cualquier parte del casillero
                     abre el panel del día (ahí se toca la cita puntual con
                     botones grandes). Evita abrir el detalle por error. */}
-                {!isMobile && (hasAppointments || hasPayments) && (
+                {!isMobile && (hasAppointments || hasPayments || dayBdays.length > 0) && (
                   <div className="space-y-0.5 overflow-hidden">
+                    {dayBdays.slice(0, 1).map((b) => (
+                      <div
+                        key={`bd-${b.id}`}
+                        className="text-xs px-1.5 py-1 rounded-md overflow-hidden"
+                        style={{ backgroundColor: "rgba(236, 72, 153, 0.14)" }}
+                        title={`Cumpleaños de ${b.name}`}
+                      >
+                        <span className="font-semibold text-pink-500 dark:text-pink-300 truncate block">
+                          🎂 {b.name.split(" ")[0]} {b.name.trim().split(/\s+/)[1]?.charAt(0).toUpperCase() ?? ""}.
+                        </span>
+                      </div>
+                    ))}
                     {dayAppointments.slice(0, 2).map((apt) => {
                       const sc = getStatusColor(apt.status);
                       const label = abbreviatePatientName(apt.patients?.full_name);
@@ -325,7 +407,7 @@ export const MonthViewV2 = ({
                 )}
 
                 {/* Desktop: hover indicator for empty days */}
-                {!isMobile && !hasAppointments && !hasPayments && isCurrentMonth && (
+                {!isMobile && !hasAppointments && !hasPayments && dayBdays.length === 0 && isCurrentMonth && (
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                     <Plus className="w-5 h-5 text-muted-foreground/40" />
                   </div>
@@ -336,6 +418,21 @@ export const MonthViewV2 = ({
         </div>
       </div>
 
+      {/* Leyenda de colores */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 pt-2.5 pb-1 text-[11px] text-muted-foreground">
+        <span className="inline-flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-full bg-primary" />
+          Cita confirmada
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+          Pendiente
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-full bg-pink-500" />
+          Cumpleaños
+        </span>
+      </div>
     </>
   );
 };
