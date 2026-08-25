@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "@/hooks/use-toast";
-import { Users, CalendarPlus, CalendarDays, UserPlus, Bell, LogOut, Camera, CreditCard, AlertTriangle, Clock, Plus, EyeOff, Eye, Smartphone, Building2, ChevronDown, Shield, Settings, ArrowRight, Palette, MessageCircle, CheckCircle2, User, Video, MapPin, Inbox } from "lucide-react";
+import { Users, CalendarPlus, CalendarDays, UserPlus, Bell, LogOut, Camera, CreditCard, AlertTriangle, Clock, Plus, EyeOff, Eye, Smartphone, Building2, ChevronDown, Shield, Settings, ArrowRight, Palette, MessageCircle, CheckCircle2, User, Video, MapPin, Inbox, Share2 } from "lucide-react";
 import { MonthlyHighlights } from "@/components/MonthlyHighlights";
 import LoadingPage from "@/components/LoadingPage";
 import { PublicLinkCard } from "@/components/PublicLinkCard";
@@ -83,6 +83,7 @@ const Dashboard = () => {
   const [allBusinesses, setAllBusinesses] = useState<Business[]>([]);
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
   const [showActivationDone, setShowActivationDone] = useState(false);
+  const [publicSlug, setPublicSlug] = useState<string | null>(null);
 
   const statusMap: Record<string, string> = {
     pending: "pendiente",
@@ -188,7 +189,7 @@ const Dashboard = () => {
         // 0. Profile
         supabase.from("profiles").select("name, avatar_url").eq("id", user.id).single(),
         // 1. Demo check + onboarding
-        supabase.from("businesses").select("is_demo, onboarding_completed, owner_user_id, name").eq("id", currentBusinessId).maybeSingle(),
+        supabase.from("businesses").select("is_demo, onboarding_completed, owner_user_id, name, public_slug").eq("id", currentBusinessId).maybeSingle(),
         // 1b. Business name for selectedBusiness
         supabase.from("businesses").select("id, name, owner_user_id").eq("id", currentBusinessId).maybeSingle(),
         // 2. Active patients count
@@ -236,6 +237,7 @@ const Dashboard = () => {
 
       // Process results
       setIsDemo(bizInfo?.is_demo || false);
+      setPublicSlug((bizInfo as any)?.public_slug || null);
 
 
       setActivePatientsCount(patientsCountRes.count || 0);
@@ -452,6 +454,44 @@ const Dashboard = () => {
       .slice(0, 2);
   };
 
+  // Tipografía display de la familia de diseño (misma que la ficha del paciente)
+  const GROTESK = { fontFamily: "'Space Grotesk', sans-serif" } as const;
+  // Botón fantasma de la familia de diseño
+  const ghostBtnStyle = {
+    background: "rgba(140, 200, 170, 0.08)",
+    border: "1px solid rgba(140, 200, 170, 0.14)",
+    color: "#d9e8df",
+  } as const;
+  // CTA con gradiente de marca
+  const ctaStyle = {
+    background: "linear-gradient(135deg, #34d399, #14b8a6)",
+    color: "#04150d",
+    boxShadow: "0 8px 24px rgba(52, 211, 153, 0.25)",
+  } as const;
+
+  // Compartir el link de reservas: lo más directo para llenar la agenda
+  const shareBookingLink = async () => {
+    if (!publicSlug) {
+      toast({ title: "Configurá tu web primero", description: "Definí el nombre público en Personalizar portal." });
+      return;
+    }
+    const url = `${window.location.origin}/consultorio/${publicSlug}/reservar`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: "Reservar sesión", url });
+        return;
+      }
+      throw new Error("no-share");
+    } catch {
+      try {
+        await navigator.clipboard.writeText(url);
+        toast({ title: "Link de reservas copiado ✓", description: "Pegalo en WhatsApp, Instagram o donde quieras." });
+      } catch {
+        toast({ title: "Tu link de reservas", description: url });
+      }
+    }
+  };
+
   if (loading) {
     return <LoadingPage />;
   }
@@ -466,8 +506,22 @@ const Dashboard = () => {
   }
 
   // Mobile: lo urgente arriba (solicitudes, hoy, deuda), lo de sistema abajo.
+  // El wrapper `.dark` fuerza los tokens oscuros: misma familia visual que la
+  // ficha del paciente y el dashboard de escritorio (fondo #070d0a).
   return (
-      <div className="min-h-screen bg-background">
+      <div
+        className="dark min-h-screen"
+        style={{ background: "#070d0a", fontFamily: "'Instrument Sans', 'Plus Jakarta Sans', sans-serif" }}
+      >
+      <style>{`
+        @keyframes mDashDrift {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          50% { transform: translate(40px, -30px) scale(1.15); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .m-dash-glow { animation: none !important; }
+        }
+      `}</style>
       <div className="max-w-2xl mx-auto p-4 sm:p-6 space-y-6">
         {businessId && (
           <ActivationCompleteModal
@@ -529,11 +583,26 @@ const Dashboard = () => {
           return (
             <div
               className="relative overflow-hidden text-white -mx-4 sm:-mx-6 -mt-4 sm:-mt-6 px-4 sm:px-6 pt-5 pb-6 rounded-b-3xl"
-              style={{ background: "linear-gradient(130deg, hsl(182 20% 5%) 0%, hsl(180 32% 8%) 50%, hsl(176 65% 11%) 100%)" }}
+              style={{
+                background: "linear-gradient(160deg, #0e1d15, #0a1410 55%, #081009)",
+                borderBottom: "1px solid rgba(140, 200, 170, 0.12)",
+              }}
             >
               <div
-                className="absolute -top-20 -right-12 w-[280px] h-[220px] pointer-events-none"
-                style={{ background: "radial-gradient(ellipse at center, hsl(176 90% 45% / 0.22), transparent 65%)" }}
+                className="m-dash-glow absolute -top-24 -right-16 w-[300px] h-[240px] rounded-full pointer-events-none"
+                style={{
+                  background: "radial-gradient(ellipse at center, rgba(52, 211, 153, 0.22), transparent 65%)",
+                  filter: "blur(10px)",
+                  animation: "mDashDrift 14s ease-in-out infinite",
+                }}
+              />
+              <div
+                className="m-dash-glow absolute -bottom-24 -left-20 w-[260px] h-[200px] rounded-full pointer-events-none"
+                style={{
+                  background: "radial-gradient(ellipse at center, rgba(20, 184, 166, 0.14), transparent 65%)",
+                  filter: "blur(10px)",
+                  animation: "mDashDrift 18s ease-in-out infinite reverse",
+                }}
               />
               <div className="relative flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
@@ -545,15 +614,20 @@ const Dashboard = () => {
                       className="hidden"
                       onChange={handleFileChange}
                     />
-                    <Avatar
-                      className="h-12 w-12 cursor-pointer ring-2 ring-white/20"
-                      onClick={handleAvatarClick}
+                    <div
+                      className="rounded-full"
+                      style={{ padding: 2, background: "linear-gradient(135deg, #34d399, #14b8a6, transparent)" }}
                     >
-                      <AvatarImage src={avatarUrl || undefined} alt={userName} />
-                      <AvatarFallback className="bg-white/10 text-[#2dd4bf] font-semibold">
-                        {getInitials(userName)}
-                      </AvatarFallback>
-                    </Avatar>
+                      <Avatar
+                        className="h-12 w-12 cursor-pointer"
+                        onClick={handleAvatarClick}
+                      >
+                        <AvatarImage src={avatarUrl || undefined} alt={userName} />
+                        <AvatarFallback className="bg-[#101a14] text-[#34d399] font-semibold">
+                          {getInitials(userName)}
+                        </AvatarFallback>
+                      </Avatar>
+                    </div>
                     <div
                       className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                       onClick={handleAvatarClick}
@@ -566,7 +640,10 @@ const Dashboard = () => {
                     </div>
                   </div>
                   <div className="min-w-0">
-                    <p className="text-[11px] text-white/55 capitalize">
+                    <p
+                      className="text-[10px] uppercase truncate"
+                      style={{ ...GROTESK, letterSpacing: "0.22em", color: "#34d399" }}
+                    >
                       {(() => {
                         const d = new Date(nowTick);
                         const h = d.getHours();
@@ -574,7 +651,9 @@ const Dashboard = () => {
                         return `${saludo} · ${d.toLocaleDateString("es-UY", { weekday: "long", day: "numeric", month: "long" })}`;
                       })()}
                     </p>
-                    <h1 className="text-lg font-bold truncate">Hola, {userName.split(" ")[0]} 👋</h1>
+                    <h1 className="text-lg font-bold truncate mt-0.5" style={{ color: "#eef6f0" }}>
+                      Hola, {userName.split(" ")[0]} 👋
+                    </h1>
                   </div>
                 </div>
                 <Button
@@ -589,31 +668,80 @@ const Dashboard = () => {
 
               <div className="relative flex items-center justify-between gap-4 mt-4">
                 <div>
-                  <p className="text-4xl font-extrabold tabular-nums tracking-tight leading-none">
+                  <p
+                    className="text-[44px] font-bold tabular-nums tracking-tight leading-none"
+                    style={{ ...GROTESK, color: "#eef6f0" }}
+                  >
                     {new Date(nowTick).toLocaleTimeString("es-UY", { hour: "2-digit", minute: "2-digit" })}
                   </p>
-                  <p className="text-[11px] text-white/55 mt-1.5">
+                  <p className="text-xs mt-2" style={{ color: "rgba(217, 232, 223, 0.6)" }}>
                     {activeH.length === 0
                       ? "Hoy libre en la agenda"
                       : `${doneH} de ${activeH.length} ${activeH.length === 1 ? "sesión" : "sesiones"} del día`}
                   </p>
                 </div>
                 {activeH.length > 0 && (
-                  <div className="relative h-[68px] w-[68px] shrink-0">
-                    <svg viewBox="0 0 72 72" className="h-[68px] w-[68px] -rotate-90">
-                      <circle cx="36" cy="36" r={r} fill="none" strokeWidth="6" className="stroke-white/15" />
+                  <div className="relative h-[72px] w-[72px] shrink-0">
+                    <svg viewBox="0 0 72 72" className="h-[72px] w-[72px] -rotate-90">
+                      <circle cx="36" cy="36" r={r} fill="none" strokeWidth="6" stroke="rgba(140, 200, 170, 0.15)" />
                       <circle
                         cx="36" cy="36" r={r} fill="none" strokeWidth="6" strokeLinecap="round"
-                        className="stroke-[#2dd4bf] transition-[stroke-dashoffset] duration-700"
+                        className="stroke-[#34d399] transition-[stroke-dashoffset] duration-700"
                         strokeDasharray={c} strokeDashoffset={c * (1 - pct)}
                       />
                     </svg>
                     <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <span className="text-base font-bold tabular-nums leading-none">{doneH}</span>
-                      <span className="text-[8px] text-white/50 mt-0.5">de {activeH.length}</span>
+                      <span className="text-lg font-bold tabular-nums leading-none" style={GROTESK}>{doneH}</span>
+                      <span className="text-[9px] mt-0.5" style={{ color: "rgba(217, 232, 223, 0.5)" }}>de {activeH.length}</span>
                     </div>
                   </div>
                 )}
+              </div>
+
+              {/* Mini-métricas de vidrio: lectura del día en un vistazo */}
+              <div className="relative grid grid-cols-3 gap-2 mt-4">
+                {[
+                  { label: "Hoy", value: String(activeH.length), to: "/agenda" },
+                  { label: "Activos", value: String(activePatientsCount), to: "/patients" },
+                  { label: "Por cobrar", value: String(overduePayments + dueSoonPayments), to: "/pagos" },
+                ].map((s) => (
+                  <button
+                    key={s.label}
+                    onClick={() => navigate(s.to)}
+                    className="rounded-2xl px-3 py-2.5 text-left active:scale-[0.97] transition-transform"
+                    style={{ background: "rgba(140, 200, 170, 0.07)", border: "1px solid rgba(140, 200, 170, 0.12)" }}
+                  >
+                    <span
+                      className="block text-[9px] uppercase"
+                      style={{ ...GROTESK, letterSpacing: "0.16em", color: "rgba(217, 232, 223, 0.55)" }}
+                    >
+                      {s.label}
+                    </span>
+                    <span className="block text-xl font-bold tabular-nums mt-0.5" style={{ ...GROTESK, color: "#eef6f0" }}>
+                      {s.value}
+                    </span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Acciones de cabecera: agenda + link de reservas */}
+              <div className="relative flex gap-2 mt-3">
+                <button
+                  onClick={() => navigate("/agenda")}
+                  className="flex-1 h-12 rounded-2xl text-sm font-bold inline-flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+                  style={ctaStyle}
+                >
+                  <CalendarDays className="h-4 w-4" />
+                  Ir a la agenda
+                </button>
+                <button
+                  onClick={shareBookingLink}
+                  className="flex-1 h-12 rounded-2xl text-sm font-semibold inline-flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+                  style={ghostBtnStyle}
+                >
+                  <Share2 className="h-4 w-4" />
+                  Compartir link
+                </button>
               </div>
             </div>
           );
@@ -652,23 +780,29 @@ const Dashboard = () => {
             const phone = nextAppt.patients?.whatsapp_phone || null;
             const debe = nextAppt.patient_id && overduePatientIds.has(nextAppt.patient_id);
             return (
-              <Card className="border-primary/25 bg-gradient-to-br from-primary/[0.09] to-transparent shadow-md">
+              <Card
+                className="shadow-md"
+                style={{ background: "linear-gradient(180deg, #101a14, #0b130e)", border: "1px solid rgba(140, 200, 170, 0.12)" }}
+              >
                 <CardContent className="p-5 space-y-4">
                   {inSession && (
-                    <div className="flex items-center gap-2 text-xs font-medium text-primary">
-                      <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                    <div className="flex items-center gap-2 text-xs font-medium text-[#34d399]">
+                      <span className="h-2 w-2 rounded-full bg-[#34d399] animate-pulse" />
                       En sesión con {inSession.patients?.full_name?.split(" ")[0] || "un paciente"} hasta {inSession.end_at ? formatTime(inSession.end_at) : ""}
                     </div>
                   )}
                   <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+                    <p
+                      className="text-[10px] uppercase"
+                      style={{ ...GROTESK, letterSpacing: "0.22em", color: "#34d399" }}
+                    >
                       {inSession ? "Después" : "Tu próxima sesión"}
                     </p>
-                    <div className="flex items-end justify-between gap-3 mt-1">
-                      <p className="text-4xl font-bold tracking-tight text-foreground leading-none">
+                    <div className="flex items-end justify-between gap-3 mt-1.5">
+                      <p className="text-[42px] font-bold tracking-tight leading-none" style={{ ...GROTESK, color: "#eef6f0" }}>
                         {formatTime(nextAppt.start_at)}
                       </p>
-                      <span className="text-sm font-semibold text-primary">{countdownLabel(nextAppt.start_at)}</span>
+                      <span className="text-sm font-semibold text-[#34d399]">{countdownLabel(nextAppt.start_at)}</span>
                     </div>
                     <div className="flex items-center gap-2 mt-2 flex-wrap">
                       <p className="text-base font-semibold text-foreground truncate">{name}</p>
@@ -685,23 +819,24 @@ const Dashboard = () => {
                   </div>
                   <div className="flex gap-2">
                     {phone && (
-                      <Button
-                        variant="outline"
-                        className="flex-1 h-10 rounded-xl gap-2"
+                      <button
+                        className="flex-1 h-11 rounded-xl text-sm font-semibold inline-flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+                        style={ghostBtnStyle}
                         onClick={() => openWhatsApp(phone, "")}
                       >
                         <MessageCircle className="h-4 w-4" />
                         WhatsApp
-                      </Button>
+                      </button>
                     )}
                     {nextAppt.patient_id && (
-                      <Button
-                        className="flex-1 h-10 rounded-xl gap-2"
+                      <button
+                        className="flex-1 h-11 rounded-xl text-sm font-bold inline-flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+                        style={ctaStyle}
                         onClick={() => navigate(`/patients/${nextAppt.patient_id}`)}
                       >
                         <User className="h-4 w-4" />
                         Ver ficha
-                      </Button>
+                      </button>
                     )}
                   </div>
                 </CardContent>
@@ -712,10 +847,10 @@ const Dashboard = () => {
           // Variante: en sesión y no hay más después
           if (inSession) {
             return (
-              <Card className="border-primary/25 bg-gradient-to-br from-primary/[0.09] to-transparent">
+              <Card style={{ background: "linear-gradient(180deg, #101a14, #0b130e)", border: "1px solid rgba(140, 200, 170, 0.12)" }}>
                 <CardContent className="p-5 space-y-1.5">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-primary">
-                    <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                  <div className="flex items-center gap-2 text-sm font-semibold text-[#34d399]">
+                    <span className="h-2 w-2 rounded-full bg-[#34d399] animate-pulse" />
                     En sesión con {inSession.patients?.full_name || "un paciente"}
                   </div>
                   <p className="text-sm text-muted-foreground">
@@ -729,7 +864,7 @@ const Dashboard = () => {
 
           // Variante: día terminado o día libre
           return (
-            <Card className="border-border/50">
+            <Card style={{ background: "linear-gradient(180deg, #101a14, #0b130e)", border: "1px solid rgba(140, 200, 170, 0.1)" }}>
               <CardContent className="p-5 space-y-2">
                 <p className="text-base font-semibold text-foreground">
                   {active.length > 0
@@ -738,10 +873,24 @@ const Dashboard = () => {
                 </p>
                 <p className="text-sm text-muted-foreground">{tomorrowLine}</p>
                 {active.length === 0 && (
-                  <Button variant="outline" size="sm" className="rounded-xl gap-2 mt-1" onClick={() => setShowAppointmentModal(true)}>
-                    <CalendarPlus className="h-4 w-4" />
-                    Agendar cita
-                  </Button>
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      className="flex-1 h-11 rounded-xl text-sm font-bold inline-flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+                      style={ctaStyle}
+                      onClick={() => setShowAppointmentModal(true)}
+                    >
+                      <CalendarPlus className="h-4 w-4" />
+                      Agendar cita
+                    </button>
+                    <button
+                      className="flex-1 h-11 rounded-xl text-sm font-semibold inline-flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+                      style={ghostBtnStyle}
+                      onClick={shareBookingLink}
+                    >
+                      <Share2 className="h-4 w-4" />
+                      Compartir link
+                    </button>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -795,7 +944,10 @@ const Dashboard = () => {
           }
           return (
             <div className="space-y-2">
-              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+              <h3
+                className="text-[11px] uppercase"
+                style={{ ...GROTESK, letterSpacing: "0.2em", color: "rgba(217, 232, 223, 0.55)" }}
+              >
                 Necesitan de vos
               </h3>
               {items.length === 0 ? (
@@ -824,7 +976,10 @@ const Dashboard = () => {
         })()}
 
         {/* ══════════ 3) TU DÍA: la tira compacta de hoy ══════════ */}
-        <Card className="mobile-card">
+        <Card
+          className="mobile-card"
+          style={{ background: "linear-gradient(180deg, #101a14, #0b130e)", border: "1px solid rgba(140, 200, 170, 0.1)" }}
+        >
           <CardHeader className="pb-3 px-0 pt-0 sm:px-6 sm:pt-6">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base font-bold flex items-center gap-2">
@@ -887,7 +1042,30 @@ const Dashboard = () => {
                 })}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground py-4 text-center">Día libre en la agenda</p>
+              <div
+                className="rounded-2xl py-6 px-4 text-center space-y-3"
+                style={{ border: "1px dashed rgba(140, 200, 170, 0.2)" }}
+              >
+                <p className="text-sm text-muted-foreground">Día libre en la agenda</p>
+                <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                  <button
+                    className="h-11 px-4 rounded-xl text-sm font-bold inline-flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+                    style={ctaStyle}
+                    onClick={() => setShowAppointmentModal(true)}
+                  >
+                    <Plus className="h-4 w-4" />
+                    Agendar cita
+                  </button>
+                  <button
+                    className="h-11 px-4 rounded-xl text-sm font-semibold inline-flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+                    style={ghostBtnStyle}
+                    onClick={shareBookingLink}
+                  >
+                    <Share2 className="h-4 w-4" />
+                    Compartir link de reservas
+                  </button>
+                </div>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -895,7 +1073,10 @@ const Dashboard = () => {
         {/* ══════════ 4) LOS NÚMEROS: chicos y al final ══════════ */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+            <h3
+              className="text-[11px] uppercase"
+              style={{ ...GROTESK, letterSpacing: "0.2em", color: "rgba(217, 232, 223, 0.55)" }}
+            >
               Tu mes
             </h3>
             <Button
@@ -915,25 +1096,40 @@ const Dashboard = () => {
           <div className="grid grid-cols-2 gap-3">
             <button
               onClick={() => navigate("/pagos?status=paid&period=this_month")}
-              className="rounded-xl border border-green-500/30 bg-green-500/5 px-4 py-3 text-left active:scale-[0.98] transition-transform"
+              className="rounded-2xl px-4 py-3.5 text-left active:scale-[0.98] transition-transform"
+              style={{
+                background: "linear-gradient(180deg, #101a14, #0b130e)",
+                border: "1px solid rgba(52, 211, 153, 0.25)",
+              }}
             >
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground inline-flex items-center gap-1">
-                <CreditCard className="h-3 w-3 text-green-600" /> Cobrado
+              <p
+                className="text-[9px] uppercase inline-flex items-center gap-1.5"
+                style={{ ...GROTESK, letterSpacing: "0.16em", color: "rgba(217, 232, 223, 0.55)" }}
+              >
+                <CreditCard className="h-3 w-3 text-[#34d399]" /> Cobrado
               </p>
-              <p className="text-lg font-bold text-green-600 mt-0.5 truncate">
-                {privacyMode ? "•••" : formatCurrency(monthlyIncome, "UYU")}
+              <p className="text-xl font-bold mt-1 truncate text-[#34d399]" style={GROTESK}>
+                {privacyMode ? "$ ••••" : formatCurrency(monthlyIncome, "UYU")}
               </p>
             </button>
             <button
               onClick={() => navigate(overduePayments > 0 ? "/pagos?status=overdue" : "/pagos")}
-              className={`rounded-xl border px-4 py-3 text-left active:scale-[0.98] transition-transform ${
-                overduePayments > 0 ? "border-destructive/30 bg-destructive/5" : "border-border/60"
-              }`}
+              className="rounded-2xl px-4 py-3.5 text-left active:scale-[0.98] transition-transform"
+              style={{
+                background: overduePayments > 0 ? "#1a1013" : "linear-gradient(180deg, #101a14, #0b130e)",
+                border: overduePayments > 0 ? "1px solid rgba(251, 113, 133, 0.3)" : "1px solid rgba(140, 200, 170, 0.1)",
+              }}
             >
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground inline-flex items-center gap-1">
-                <AlertTriangle className={`h-3 w-3 ${overduePayments > 0 ? "text-destructive" : "text-muted-foreground"}`} /> Vencidos
+              <p
+                className="text-[9px] uppercase inline-flex items-center gap-1.5"
+                style={{ ...GROTESK, letterSpacing: "0.16em", color: "rgba(217, 232, 223, 0.55)" }}
+              >
+                <AlertTriangle className={`h-3 w-3 ${overduePayments > 0 ? "text-[#fda4af]" : "text-muted-foreground"}`} /> Vencidos
               </p>
-              <p className={`text-lg font-bold mt-0.5 truncate ${overduePayments > 0 ? "text-destructive" : "text-foreground"}`}>
+              <p
+                className={`text-xl font-bold mt-1 truncate ${overduePayments > 0 ? "text-[#fda4af]" : "text-foreground"}`}
+                style={GROTESK}
+              >
                 {overduePayments > 0 ? (privacyMode ? overduePayments : formatCurrency(overdueAmount, "UYU")) : "0"}
               </p>
             </button>
@@ -942,7 +1138,10 @@ const Dashboard = () => {
 
         {/* Quick Actions */}
         <div>
-          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+          <h3
+            className="text-[11px] uppercase mb-3"
+            style={{ ...GROTESK, letterSpacing: "0.2em", color: "rgba(217, 232, 223, 0.55)" }}
+          >
             Accesos rápidos
           </h3>
           {/* Etiquetas que dicen lo que HACEN (crear/registrar), no sustantivos
@@ -951,33 +1150,37 @@ const Dashboard = () => {
             <Button
               variant="outline"
               className="h-14 flex items-center justify-start gap-2.5 rounded-xl px-3.5"
+              style={ghostBtnStyle}
               onClick={() => setShowAppointmentModal(true)}
             >
-              <CalendarPlus className="h-5 w-5 text-primary shrink-0" />
+              <CalendarPlus className="h-5 w-5 text-[#34d399] shrink-0" />
               <span className="text-sm font-semibold">Nueva cita</span>
             </Button>
             <Button
               variant="outline"
               className="h-14 flex items-center justify-start gap-2.5 rounded-xl px-3.5"
+              style={ghostBtnStyle}
               onClick={() => setShowPaymentForm(true)}
             >
-              <CreditCard className="h-5 w-5 text-primary shrink-0" />
+              <CreditCard className="h-5 w-5 text-[#34d399] shrink-0" />
               <span className="text-sm font-semibold">Registrar pago</span>
             </Button>
             <Button
               variant="outline"
               className="h-14 flex items-center justify-start gap-2.5 rounded-xl px-3.5"
+              style={ghostBtnStyle}
               onClick={() => setShowPatientForm(true)}
             >
-              <UserPlus className="h-5 w-5 text-primary shrink-0" />
+              <UserPlus className="h-5 w-5 text-[#34d399] shrink-0" />
               <span className="text-sm font-semibold">Nuevo paciente</span>
             </Button>
             <Button
               variant="outline"
-              className="h-14 flex items-center justify-start gap-2.5 rounded-xl px-3.5 border-primary/30 bg-primary/5"
+              className="h-14 flex items-center justify-start gap-2.5 rounded-xl px-3.5"
+              style={{ background: "rgba(52, 211, 153, 0.09)", border: "1px solid rgba(52, 211, 153, 0.3)", color: "#d9e8df" }}
               onClick={() => navigate("/personalizar-portal")}
             >
-              <Smartphone className="h-5 w-5 text-primary shrink-0" />
+              <Smartphone className="h-5 w-5 text-[#34d399] shrink-0" />
               <span className="min-w-0 text-left">
                 <span className="block text-sm font-semibold leading-tight">Mi portal</span>
                 <span className="block text-[10px] text-muted-foreground leading-tight">{portalPatientsCount} paciente{portalPatientsCount !== 1 ? "s" : ""} con acceso</span>
