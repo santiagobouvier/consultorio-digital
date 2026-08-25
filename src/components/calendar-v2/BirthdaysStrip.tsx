@@ -14,6 +14,34 @@ interface BirthdayPatient {
   birth_date?: string | null;
 }
 
+export interface DayBirthday {
+  id: string;
+  name: string;
+  phone: string | null;
+  /** Años que cumple ese día (null si no hay año de nacimiento). */
+  age: number | null;
+}
+
+/** Pacientes que cumplen años en una fecha dada (compara mes/día). */
+export const birthdaysOn = (patients: BirthdayPatient[], date: Date): DayBirthday[] => {
+  const mm = date.getMonth() + 1;
+  const dd = date.getDate();
+  const out: DayBirthday[] = [];
+  for (const p of patients) {
+    if (!p.birth_date) continue;
+    const [y, m, d] = p.birth_date.split("-").map(Number);
+    if (m === mm && d === dd) {
+      out.push({
+        id: p.id,
+        name: p.full_name,
+        phone: p.whatsapp_phone,
+        age: y ? date.getFullYear() - y : null,
+      });
+    }
+  }
+  return out;
+};
+
 interface BirthdaysStripProps {
   patients: BirthdayPatient[];
   rangeStart: Date;

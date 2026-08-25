@@ -13,6 +13,9 @@ import { X, CreditCard, CalendarDays } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { calculatePaymentStatus, formatCurrency } from "@/lib/payments";
 import { isToday } from "date-fns";
+import type { DayBirthday } from "./BirthdaysStrip";
+import { openWhatsApp } from "@/lib/whatsapp";
+import { MessageCircle } from "lucide-react";
 
 interface MonthDayDrawerProps {
   open: boolean;
@@ -23,6 +26,9 @@ interface MonthDayDrawerProps {
   onAppointmentClick: (appointment: CalendarAppointment) => void;
   onPaymentClick?: (payment: DayPayment) => void;
   showProfessionalColors: boolean;
+  /** Cumpleaños de pacientes en este día. */
+  birthdays?: DayBirthday[];
+  clinicName?: string;
 }
 
 export const MonthDayDrawer = ({
@@ -34,6 +40,8 @@ export const MonthDayDrawer = ({
   onAppointmentClick,
   onPaymentClick,
   showProfessionalColors,
+  birthdays = [],
+  clinicName = "tu consultorio",
 }: MonthDayDrawerProps) => {
   const dayAppointments = useMemo(() => {
     return appointments
@@ -107,6 +115,63 @@ export const MonthDayDrawer = ({
         </DrawerHeader>
 
         <div className="overflow-y-auto p-4 pb-8 space-y-4">
+          {/* 🎂 Cumpleaños del día */}
+          {birthdays.length > 0 && (
+            <div className="relative overflow-hidden rounded-2xl border border-pink-300/50 dark:border-pink-500/25 p-4"
+              style={{ background: "linear-gradient(135deg, rgba(236,72,153,0.12), rgba(168,85,247,0.06))" }}
+            >
+              <style>{`
+                @keyframes drawerBdayFloat {
+                  0%, 100% { transform: translateY(0) rotate(-4deg); }
+                  50% { transform: translateY(-10px) rotate(5deg); }
+                }
+                @media (prefers-reduced-motion: reduce) { .drawer-bday { animation: none !important; } }
+              `}</style>
+              {["🎈", "🎉", "🎈"].map((e, i) => (
+                <span
+                  key={i}
+                  aria-hidden
+                  className="drawer-bday absolute text-lg pointer-events-none select-none"
+                  style={{
+                    right: `${8 + i * 16}%`,
+                    top: i % 2 === 0 ? "10%" : "45%",
+                    animation: `drawerBdayFloat ${3.4 + i * 0.6}s ease-in-out ${i * 0.4}s infinite`,
+                  }}
+                >
+                  {e}
+                </span>
+              ))}
+              <div className="relative space-y-2">
+                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-pink-600 dark:text-pink-300">
+                  🎂 Día de cumpleaños
+                </p>
+                {birthdays.map((b) => (
+                  <div key={b.id} className="flex items-center gap-2.5 flex-wrap">
+                    <p className="text-[15px] font-bold text-foreground">
+                      ¡Cumple {b.name}
+                      {b.age != null && b.age > 0 && b.age < 120 ? ` (${b.age})` : ""}! 🥳
+                    </p>
+                    {b.phone && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          openWhatsApp(
+                            b.phone!,
+                            `¡Feliz cumpleaños, ${b.name.trim().split(/\s+/)[0]}! 🎂 Que tengas un día hermoso. Un abrazo del equipo de ${clinicName}.`
+                          )
+                        }
+                        className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl bg-[#25D366]/15 text-emerald-600 dark:text-emerald-400 text-xs font-semibold transition-colors hover:bg-[#25D366]/25"
+                      >
+                        <MessageCircle className="h-3.5 w-3.5" />
+                        Saludar
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {dayAppointments.length === 0 && dayPayments.length === 0 ? (
             <div className="flex flex-col items-center py-12 gap-1.5 text-center">
               <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-1.5">
