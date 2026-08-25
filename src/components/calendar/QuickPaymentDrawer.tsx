@@ -20,6 +20,8 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Popover,
   PopoverContent,
@@ -51,6 +53,7 @@ export const QuickPaymentDrawer = ({
   onSuccess,
   lockDate = false,
 }: QuickPaymentDrawerProps) => {
+  const isMobile = useIsMobile();
   const [loading, setLoading] = useState(false);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [loadingPatients, setLoadingPatients] = useState(false);
@@ -160,20 +163,8 @@ export const QuickPaymentDrawer = ({
     }
   };
 
-  return (
-    <Drawer open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DrawerContent className="max-h-[90vh]">
-        <DrawerHeader className="border-b pb-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center">
-              <CreditCard className="w-5 h-5 text-emerald-600" />
-            </div>
-            <div>
-              <DrawerTitle className="text-left">Registrar pago</DrawerTitle>
-            </div>
-          </div>
-        </DrawerHeader>
-
+  const formBody = (
+    <>
         <div className="overflow-y-auto p-4 space-y-5">
           {/* Patient selector */}
           <div className="space-y-2">
@@ -339,7 +330,41 @@ export const QuickPaymentDrawer = ({
             Cancelar
           </Button>
         </div>
-      </DrawerContent>
-    </Drawer>
+    </>
+  );
+
+  const header = (
+    <div className="flex items-center gap-3">
+      <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0">
+        <CreditCard className="w-5 h-5 text-emerald-600" />
+      </div>
+      <span className="text-lg font-bold">Registrar pago</span>
+    </div>
+  );
+
+  // Celular: bottom-sheet. Escritorio: diálogo centrado y angosto
+  // (el drawer a pantalla completa quedaba desproporcionado).
+  if (isMobile) {
+    return (
+      <Drawer open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+        <DrawerContent className="max-h-[94dvh]">
+          <DrawerHeader className="border-b pb-4">
+            <DrawerTitle className="text-left">{header}</DrawerTitle>
+          </DrawerHeader>
+          {formBody}
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+      <DialogContent className="sm:max-w-md max-h-[88dvh] overflow-y-auto p-0 gap-0">
+        <DialogTitle asChild>
+          <div className="border-b p-4">{header}</div>
+        </DialogTitle>
+        {formBody}
+      </DialogContent>
+    </Dialog>
   );
 };

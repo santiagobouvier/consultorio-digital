@@ -39,7 +39,6 @@ import { ShareFreeSlotsDialog } from "@/components/calendar-v2/ShareFreeSlotsDia
 import { QuickBlockDialog } from "@/components/calendar-v2/QuickBlockDialog";
 import { SlotActionSheet } from "@/components/calendar-v2/SlotActionSheet";
 import { OpenSlotDialog } from "@/components/calendar-v2/OpenSlotDialog";
-import { AgendaScheduleSheet } from "@/components/calendar-v2/AgendaScheduleSheet";
 import { useDayFreeSlots, useWeekSlotSummary, type FreeSlot } from "@/hooks/use-free-slots";
 import {
   useTodayPulse,
@@ -170,9 +169,8 @@ const CalendarV2 = () => {
   const [showQuickBlock, setShowQuickBlock] = useState(false);
   // Cupo libre tocado en la grilla del día (agendar / cerrar / compartir)
   const [slotSheetTarget, setSlotSheetTarget] = useState<FreeSlot | null>(null);
-  // Abrir un cupo puntual / editar la semana tipo sin salir de la agenda
+  // Abrir un cupo puntual sin salir de la agenda
   const [showOpenSlot, setShowOpenSlot] = useState(false);
-  const [showScheduleSheet, setShowScheduleSheet] = useState(false);
   // Hora tocada en un hueco de la grilla (se resalta en el modal de cita)
   const [prefilledTimeForAction, setPrefilledTimeForAction] = useState<string | null>(null);
   // Swipe horizontal para cambiar de día/semana/mes (gesto tipo Google)
@@ -704,7 +702,6 @@ const CalendarV2 = () => {
           onQuickBlock={() => setShowQuickBlock(true)}
           onOpenSlot={() => setShowOpenSlot(true)}
           onShareSlots={() => setShowShareSlots(true)}
-          onOpenSchedule={() => setShowScheduleSheet(true)}
           onPickDate={(d) => setCurrentDate(d)}
           extraActions={
             <AgendaLegend
@@ -954,15 +951,6 @@ const CalendarV2 = () => {
           onOpenChange={setShowOpenSlot}
           businessId={businessId}
           date={currentDate}
-          onSaved={() => invalidateAppointmentData(queryClient)}
-        />
-
-        {/* Mis horarios: la semana tipo en un panel, sin salir de la agenda */}
-        <AgendaScheduleSheet
-          open={showScheduleSheet}
-          onOpenChange={setShowScheduleSheet}
-          businessId={businessId}
-          professionalUserId={currentUserId}
           onSaved={() => invalidateAppointmentData(queryClient)}
         />
 
