@@ -399,7 +399,8 @@ export const PersonalEventModal = ({
 
   // ── Cuerpo del formulario (compartido entre drawer y diálogo) ──
   const formBody = (
-    <div className="space-y-5">
+    // min-w-0: los rieles de hora scrollean adentro, nunca agrandan el modal
+    <div className="space-y-5 min-w-0 max-w-full overflow-x-hidden">
       {/* Título + ejemplos que solo sugieren */}
       <div className="space-y-2">
         <Input
@@ -801,7 +802,7 @@ export const PersonalEventModal = ({
               </DrawerDescription>
             </DrawerHeader>
 
-            <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-4">
+            <div className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain px-4 pb-4 min-w-0">
               {formBody}
             </div>
 
@@ -817,7 +818,7 @@ export const PersonalEventModal = ({
       ) : (
         // ── Desktop: diálogo centrado ──
         <Dialog open={open} onOpenChange={onOpenChange}>
-          <DialogContent className="sm:max-w-md max-h-[92dvh] overflow-y-auto">
+          <DialogContent className="sm:max-w-md max-h-[92dvh] overflow-y-auto overflow-x-hidden">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <span

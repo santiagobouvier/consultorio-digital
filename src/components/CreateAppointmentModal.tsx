@@ -145,18 +145,16 @@ export function CreateAppointmentModal({
   const [duration, setDuration] = useState("60");
   const [defaultPrice, setDefaultPrice] = useState<number | null>(null);
 
-  // Paso ¿Cuándo?
+  // Paso ¿Cuándo?: SIEMPRE se muestran todos los lapsos del día cada 30
+  // minutos — los ocupados se atenúan, pero nunca hay "sin horarios".
   const [scheduleMode, setScheduleMode] = useState<"slots" | "manual">("slots");
-  const [starts, setStarts] = useState<Start[]>([]);
-  const [startsLoading, setStartsLoading] = useState(false);
-  // Duración con la que se calcularon los horarios libres (para revalidar
-  // si después se elige una sesión más larga)
-  const [slotsDur, setSlotsDur] = useState(60);
-  const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
-  // Día tocado en la agenda sin lugar: permitir mirar otros días
-  const [dayUnlocked, setDayUnlocked] = useState(false);
+  // Ocupación del día elegido (citas activas): para atenuar lapsos tomados
+  const [busy, setBusy] = useState<{ start: number; end: number; label: string }[]>([]);
+  const [busyLoading, setBusyLoading] = useState(false);
+  // Elegir un día lejano (más allá de la tira de 2 semanas)
+  const [farDateOpen, setFarDateOpen] = useState(false);
 
   // Paso confirmar
   const [modality, setModality] = useState("presencial");
@@ -178,35 +176,51 @@ export function CreateAppointmentModal({
   const selectedService = services.find((s) => s.id === selectedServiceId) ?? null;
   const selectedPatient = patients.find((p) => p.id === selectedPatientId) ?? null;
 
-  // ── Horarios libres del motor (semana tipo + sueltos − citas) ──
-  const loadStarts = useCallback(async (durationMinutes: number, ignoreLock = false) => {
-    if (!businessId || !currentUserId) return;
-    setStartsLoading(true);
-    setSlotsDur(durationMinutes);
+  const toMin = (hhmm: string) => {
+    const [h, m] = hhmm.split(":").map(Number);
+    return h * 60 + m;
+  };
+  const minToHHMM = (min: number) =>
+    `${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
+
+  // ── Citas activas del día elegido (para atenuar lapsos ocupados) ──
+  const loadBusy = useCallback(async (dayStr: string) => {
+    if (!businessId) return;
+    setBusyLoading(true);
     try {
-      const today = new Date();
-      const locked = lockDate && prefilledDate && !ignoreLock;
-      const from = (locked ? prefilledDate! : today).toISOString().slice(0, 10);
-      const toDate = (locked
-        ? prefilledDate!
-        : new Date(today.getTime() + 180 * 86400000)
-      ).toISOString().slice(0, 10);
-      const { data, error } = await (supabase as any).rpc("get_available_starts", {
-        p_business_id: businessId,
-        p_professional_user_id: currentUserId,
-        p_duration_minutes: durationMinutes,
-        p_from: from,
-        p_to: toDate,
-      });
+      const from = new Date(`${dayStr}T00:00:00`);
+      const to = new Date(`${dayStr}T23:59:59`);
+      const { data, error } = await supabase
+        .from("appointments")
+        .select("start_at, end_at, patients (full_name)")
+        .eq("business_id", businessId)
+        .gte("start_at", from.toISOString())
+        .lte("start_at", to.toISOString())
+        .not("status", "in", '("cancelled","cancelled_by_patient")');
       if (error) throw error;
-      setStarts((data ?? []) as Start[]);
+      setBusy(
+        (data ?? []).map((a: any) => {
+          const s = new Date(a.start_at);
+          const e = new Date(a.end_at);
+          return {
+            start: s.getHours() * 60 + s.getMinutes(),
+            end: e.getHours() * 60 + e.getMinutes(),
+            label: a.patients?.full_name?.split(" ")[0] ?? "ocupado",
+          };
+        })
+      );
     } catch (e) {
-      console.error("Error cargando horarios libres:", e);
-      setStarts([]);
+      console.error("Error cargando ocupación del día:", e);
+      setBusy([]);
     } finally {
-      setStartsLoading(false);
+      setBusyLoading(false);
     }
-  }, [businessId, currentUserId, lockDate, prefilledDate]);
+  }, [businessId]);
+
+  // Al abrir o cambiar de día, refrescar la ocupación
+  useEffect(() => {
+    if (open && date) void loadBusy(date);
+  }, [open, date, loadBusy]);
 
   // ── Carga inicial al abrir ──
   useEffect(() => {
@@ -235,18 +249,11 @@ export function CreateAppointmentModal({
 
       const v = (bizRes.data as any)?.default_session_price;
       setDefaultPrice(v != null ? Number(v) : null);
-      const svcs = (svcRes.data ?? []) as ServiceOption[];
-      setServices(svcs);
+      setServices((svcRes.data ?? []) as ServiceOption[]);
       setPatients((patRes.data ?? []) as Patient[]);
       setPatientsLoading(false);
-
-      // Los horarios se muestran con la sesión más corta que ofrecés: así
-      // aparecen TODOS los inicios posibles. Si después elegís una sesión
-      // más larga, se revalida que entre.
-      const minDur = svcs.length > 0 ? Math.min(...svcs.map((s) => s.duration_minutes)) : 60;
-      void loadStarts(minDur);
     })();
-  }, [open, businessId, loadStarts]);
+  }, [open, businessId]);
 
   // Reset al abrir
   useEffect(() => {
@@ -256,9 +263,8 @@ export function CreateAppointmentModal({
     setPatientSearch("");
     setSelectedServiceId(CUSTOM_SERVICE);
     setScheduleMode("slots");
-    setStarts([]);
-    setSelectedDay(null);
-    setDayUnlocked(false);
+    setBusy([]);
+    setFarDateOpen(false);
     setTime(prefilledTime ?? "");
     setModality("presencial");
     setLocation("");
@@ -274,14 +280,11 @@ export function CreateAppointmentModal({
     setChargeMode("per_session");
     setMonthlyAmount("");
     setMonthlyDay("1");
-    if (prefilledDate) {
-      const yyyy = prefilledDate.getFullYear();
-      const mm = String(prefilledDate.getMonth() + 1).padStart(2, "0");
-      const dd = String(prefilledDate.getDate()).padStart(2, "0");
-      setDate(`${yyyy}-${mm}-${dd}`);
-    } else {
-      setDate("");
-    }
+    const base = prefilledDate ?? new Date();
+    const yyyy = base.getFullYear();
+    const mm = String(base.getMonth() + 1).padStart(2, "0");
+    const dd = String(base.getDate()).padStart(2, "0");
+    setDate(`${yyyy}-${mm}-${dd}`);
   }, [open, patientId, prefilledDate, prefilledTime]);
 
   const filteredPatients = useMemo(() => {
@@ -290,50 +293,54 @@ export function CreateAppointmentModal({
     return patients.filter((p) => p.full_name.toLowerCase().includes(q));
   }, [patients, patientSearch]);
 
-  const startsByDate = useMemo(() => {
-    const map = new Map<string, Start[]>();
-    for (const s of starts) {
-      const list = map.get(s.day) ?? [];
-      list.push(s);
-      map.set(s.day, list);
-    }
-    return Array.from(map.entries())
-      .map(([day, items]) => ({
-        day,
-        items: [...items].sort((a, b) => a.start_time.localeCompare(b.start_time)),
-      }))
-      .sort((a, b) => a.day.localeCompare(b.day));
-  }, [starts]);
+  // Tira de días: hoy + 13 días (para más lejos, el calendario de fecha)
+  const dayOptions = useMemo(() => {
+    const base = new Date();
+    base.setHours(0, 0, 0, 0);
+    return Array.from({ length: 14 }, (_, i) => {
+      const d = new Date(base.getTime() + i * 86400000);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      return { str: `${yyyy}-${mm}-${dd}`, d };
+    });
+  }, []);
 
-  // Día por defecto: el prefijado desde la agenda si tiene lugar, sino el
-  // primero con disponibilidad.
-  useEffect(() => {
-    if (step !== "schedule" || scheduleMode !== "slots") return;
-    if (startsByDate.length === 0) {
-      setSelectedDay(null);
-      return;
-    }
-    if (!selectedDay || !startsByDate.some((d) => d.day === selectedDay)) {
-      const prefilled = date && startsByDate.some((d) => d.day === date) ? date : startsByDate[0].day;
-      setSelectedDay(prefilled);
-    }
-  }, [step, scheduleMode, startsByDate, selectedDay, date]);
+  // Todos los lapsos del día, cada 30 min (07:00 → 21:30)
+  const SLOT_TIMES = useMemo(() => {
+    const out: number[] = [];
+    for (let t = 7 * 60; t <= 21 * 60 + 30; t += 30) out.push(t);
+    return out;
+  }, []);
 
-  const timesForSelectedDay = useMemo(
-    () => startsByDate.find((d) => d.day === selectedDay)?.items ?? [],
-    [startsByDate, selectedDay]
-  );
+  const isOccupied = (slotMin: number) =>
+    busy.some((b) => b.start < slotMin + 30 && b.end > slotMin);
+  const occupiedBy = (slotMin: number) =>
+    busy.find((b) => b.start < slotMin + 30 && b.end > slotMin)?.label ?? null;
 
-  const pickStart = (s: Start) => {
-    setDate(s.day);
-    setTime(s.start_time.slice(0, 5));
+  const pickTime = (slotMin: number) => {
+    setTime(minToHHMM(slotMin));
     setStep("service");
   };
 
-  // ── Elegir tipo de sesión (con revalidación del hueco) ──
+  // ── Elegir tipo de sesión ──
   const afterService = () => setStep(patientId ? "confirm" : "patient");
 
-  const pickService = async (svcId: string) => {
+  /** Aviso (no bloqueo) si la sesión se pisa con otra cita del día. */
+  const warnIfOverlap = (dur: number) => {
+    if (!date || !time) return;
+    const s = toMin(time);
+    const e = s + dur;
+    const clash = busy.find((b) => b.start < e && b.end > s);
+    if (clash) {
+      toast({
+        title: "Ojo: se pisa con otra sesión",
+        description: `Esta termina ${minToHHMM(e)} y se cruza con ${clash.label} (${minToHHMM(clash.start)}). Podés seguir igual si es a propósito.`,
+      });
+    }
+  };
+
+  const pickService = (svcId: string) => {
     setSelectedServiceId(svcId);
     if (svcId === CUSTOM_SERVICE) {
       setSessionPrice(defaultPrice != null ? String(defaultPrice) : "");
@@ -346,36 +353,7 @@ export function CreateAppointmentModal({
     else if (svc.mode === "presencial") setModality("presencial");
     const price = svc.suggested_price ?? defaultPrice;
     setSessionPrice(price != null ? String(price) : "");
-    await continueWithDuration(svc.duration_minutes);
-  };
-
-  /** Si la sesión elegida es más larga que la usada para calcular los
-   *  horarios, revalida que el hueco alcance; si no, vuelve a ¿Cuándo? */
-  const continueWithDuration = async (dur: number) => {
-    if (scheduleMode === "slots" && date && time && dur > slotsDur) {
-      try {
-        const { data } = await (supabase as any).rpc("get_available_starts", {
-          p_business_id: businessId,
-          p_professional_user_id: currentUserId,
-          p_duration_minutes: dur,
-          p_from: date,
-          p_to: date,
-        });
-        const fits = (data ?? []).some((r: any) => String(r.start_time).slice(0, 5) === time);
-        if (!fits) {
-          toast({
-            title: `Ese hueco no alcanza para ${dur} min`,
-            description: "Te muestro los horarios donde sí entra esta sesión.",
-          });
-          setTime("");
-          setStep("schedule");
-          void loadStarts(dur, dayUnlocked);
-          return;
-        }
-      } catch {
-        // Si la validación falla, seguimos: el profesional manda
-      }
-    }
+    warnIfOverlap(svc.duration_minutes);
     afterService();
   };
 
@@ -708,94 +686,97 @@ export function CreateAppointmentModal({
         <div className="space-y-4 py-2">
           {scheduleMode === "slots" ? (
             <>
-              {startsLoading ? (
-                <div className="py-10 flex items-center justify-center text-muted-foreground">
-                  <Loader2 className="h-5 w-5 animate-spin mr-2" /> Buscando tus horarios libres...
-                </div>
-              ) : startsByDate.length === 0 ? (
-                <div className="py-8 text-center space-y-3">
-                  <Clock className="h-8 w-8 mx-auto text-muted-foreground" />
-                  <p className="text-sm font-medium">
-                    {lockDate && prefilledDate && !dayUnlocked
-                      ? "Ese día no tiene horarios libres"
-                      : "No hay horarios libres en los próximos 6 meses"}
-                  </p>
-                  {lockDate && prefilledDate && !dayUnlocked && (
-                    <Button
-                      variant="outline"
-                      className="h-11 rounded-xl"
+              {/* Tira de días: hoy + 2 semanas, más "Otro día" para lejos */}
+              <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 snap-x lg:flex-wrap lg:overflow-visible lg:pb-0 lg:snap-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {dayOptions.map(({ str, d }) => {
+                  const isSelected = date === str;
+                  return (
+                    <button
+                      key={str}
+                      type="button"
                       onClick={() => {
-                        setDayUnlocked(true);
-                        void loadStarts(slotsDur, true);
+                        setDate(str);
+                        setFarDateOpen(false);
                       }}
+                      className={cn(
+                        "flex flex-col items-center justify-center rounded-xl border-2 px-3 py-2 min-w-[64px] min-h-[64px] snap-start transition-all hover:border-primary/50",
+                        isSelected
+                          ? "border-primary bg-primary text-primary-foreground hover:border-primary"
+                          : "border-border bg-card"
+                      )}
                     >
-                      Ver otros días con lugar
-                    </Button>
+                      <span className={cn("text-[10px] uppercase tracking-wide", !isSelected && "text-muted-foreground")}>
+                        {DAY_SHORT[d.getDay()]}
+                      </span>
+                      <span className="text-lg font-bold leading-tight">{d.getDate()}</span>
+                      <span className={cn("text-[10px]", !isSelected && "text-muted-foreground")}>
+                        {MONTH_SHORT[d.getMonth()]}
+                      </span>
+                    </button>
+                  );
+                })}
+                <button
+                  type="button"
+                  onClick={() => setFarDateOpen((v) => !v)}
+                  className={cn(
+                    "flex flex-col items-center justify-center rounded-xl border-2 border-dashed px-3 py-2 min-w-[64px] min-h-[64px] snap-start transition-all",
+                    farDateOpen || !dayOptions.some((o) => o.str === date)
+                      ? "border-primary text-primary bg-primary/5"
+                      : "border-border bg-card text-muted-foreground"
                   )}
-                  <p className="text-xs text-muted-foreground">
-                    O elegí el horario a mano, sin límites.
+                >
+                  <CalendarIcon className="h-4 w-4" />
+                  <span className="text-[10px] mt-1">Otro día</span>
+                </button>
+              </div>
+
+              {(farDateOpen || !dayOptions.some((o) => o.str === date)) && (
+                <Input
+                  type="date"
+                  value={date}
+                  min={dayOptions[0]?.str}
+                  onChange={(e) => e.target.value && setDate(e.target.value)}
+                  className="h-11 rounded-xl"
+                />
+              )}
+
+              {/* TODOS los lapsos del día, cada 30 min. Los tomados se
+                  atenúan con el nombre — nunca hay "sin horarios". */}
+              {date && (
+                <div className="space-y-2">
+                  <p className="text-sm font-semibold capitalize flex items-center gap-2">
+                    {formatDayLong(date)}
+                    {busyLoading && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
                   </p>
-                </div>
-              ) : (
-                <>
-                  {/* Días con lugar: tira deslizable en mobile, grilla que
-                      envuelve en desktop */}
-                  <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 snap-x lg:flex-wrap lg:overflow-visible lg:pb-0 lg:snap-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                    {startsByDate.map(({ day }) => {
-                      const { date: d, d: dayNum, m } = parseDay(day);
-                      const isSelected = selectedDay === day;
+                  <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2">
+                    {SLOT_TIMES.map((t) => {
+                      const hhmm = minToHHMM(t);
+                      const occupied = isOccupied(t);
+                      const who = occupied ? occupiedBy(t) : null;
+                      const isTapped = !!prefilledTime && hhmm === prefilledTime;
                       return (
                         <button
-                          key={day}
+                          key={t}
                           type="button"
-                          onClick={() => setSelectedDay(day)}
+                          disabled={occupied}
+                          onClick={() => pickTime(t)}
+                          title={who ? `Ocupado: ${who}` : undefined}
                           className={cn(
-                            "flex flex-col items-center justify-center rounded-xl border-2 px-3 py-2 min-w-[64px] min-h-[64px] snap-start transition-all hover:border-primary/50",
-                            isSelected
-                              ? "border-primary bg-primary text-primary-foreground hover:border-primary"
-                              : "border-border bg-card"
+                            "h-12 rounded-xl border-2 tabular-nums transition-all flex flex-col items-center justify-center leading-tight",
+                            occupied
+                              ? "border-border/50 bg-muted/30 text-muted-foreground/60 cursor-not-allowed"
+                              : "text-[15px] font-semibold border-primary/30 bg-primary/5 text-primary hover:bg-primary hover:text-primary-foreground",
+                            isTapped && !occupied &&
+                              "border-primary bg-primary text-primary-foreground shadow-md ring-2 ring-primary/30"
                           )}
                         >
-                          <span className={cn("text-[10px] uppercase tracking-wide", !isSelected && "text-muted-foreground")}>
-                            {DAY_SHORT[d.getDay()]}
-                          </span>
-                          <span className="text-lg font-bold leading-tight">{dayNum}</span>
-                          <span className={cn("text-[10px]", !isSelected && "text-muted-foreground")}>
-                            {MONTH_SHORT[m - 1]}
-                          </span>
+                          <span className={cn(occupied && "text-[13px] line-through")}>{hhmm}</span>
+                          {who && <span className="text-[9px] no-underline truncate max-w-[64px]">{who}</span>}
                         </button>
                       );
                     })}
                   </div>
-
-                  {/* Horarios del día: tocás uno y seguís */}
-                  {selectedDay && (
-                    <div className="space-y-2">
-                      <p className="text-sm font-semibold capitalize">{formatDayLong(selectedDay)}</p>
-                      <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2">
-                        {timesForSelectedDay.map((s) => {
-                          const isTapped =
-                            !!prefilledTime && s.start_time.slice(0, 5) === prefilledTime;
-                          return (
-                            <button
-                              key={`${s.day}-${s.start_time}`}
-                              type="button"
-                              onClick={() => pickStart(s)}
-                              className={cn(
-                                "h-12 rounded-xl border-2 text-[15px] font-semibold tabular-nums transition-all hover:bg-primary hover:text-primary-foreground",
-                                isTapped
-                                  ? "border-primary bg-primary text-primary-foreground shadow-md ring-2 ring-primary/30"
-                                  : "border-primary/30 bg-primary/5 text-primary"
-                              )}
-                            >
-                              {s.start_time.slice(0, 5)}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </>
+                </div>
               )}
 
               <button
@@ -803,7 +784,7 @@ export function CreateAppointmentModal({
                 onClick={() => setScheduleMode("manual")}
                 className="w-full text-center text-sm text-muted-foreground hover:text-foreground underline underline-offset-4 py-2 min-h-[44px]"
               >
-                Otro horario (elegir a mano)
+                ¿Necesitás otra hora? (ej: 09:15, elegir a mano)
               </button>
             </>
           ) : (
@@ -818,18 +799,8 @@ export function CreateAppointmentModal({
                   type="date"
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
-                  disabled={lockDate && !!prefilledDate && !dayUnlocked}
-                  className="h-11 rounded-xl disabled:opacity-100"
+                  className="h-11 rounded-xl"
                 />
-                {lockDate && !!prefilledDate && !dayUnlocked && (
-                  <button
-                    type="button"
-                    onClick={() => setDayUnlocked(true)}
-                    className="text-xs text-muted-foreground underline underline-offset-4"
-                  >
-                    Cambiar de día
-                  </button>
-                )}
                 {date && (() => {
                   const picked = new Date(`${date}T00:00:00`);
                   const sixMonths = new Date();
@@ -887,13 +858,10 @@ export function CreateAppointmentModal({
               </Button>
               <button
                 type="button"
-                onClick={() => {
-                  setScheduleMode("slots");
-                  if (starts.length === 0) void loadStarts(slotsDur, dayUnlocked);
-                }}
+                onClick={() => setScheduleMode("slots")}
                 className="w-full text-center text-sm text-muted-foreground hover:text-foreground underline underline-offset-4 py-2 min-h-[44px]"
               >
-                Volver a los horarios libres
+                Volver a los horarios de cada media hora
               </button>
             </>
           )}
@@ -922,6 +890,11 @@ export function CreateAppointmentModal({
                   <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-2 flex-wrap">
                     <span className="inline-flex items-center gap-1">
                       <Clock className="h-3.5 w-3.5" /> {s.duration_minutes} min
+                      {time && (
+                        <span className="text-foreground/80 font-medium">
+                          · {time} → {minToHHMM(toMin(time) + s.duration_minutes)}
+                        </span>
+                      )}
                     </span>
                     <span className="inline-flex items-center gap-1">
                       {s.mode === "online" ? <Video className="h-3.5 w-3.5" /> : s.mode === "presencial" ? <MapPin className="h-3.5 w-3.5" /> : null}
@@ -978,9 +951,18 @@ export function CreateAppointmentModal({
                     </button>
                   ))}
                 </div>
+                {time && (
+                  <p className="text-xs text-muted-foreground">
+                    La sesión va de <span className="font-semibold text-foreground tabular-nums">{time}</span> a{" "}
+                    <span className="font-semibold text-foreground tabular-nums">{minToHHMM(toMin(time) + parseInt(duration))}</span>
+                  </p>
+                )}
               </div>
               <Button
-                onClick={() => void continueWithDuration(parseInt(duration))}
+                onClick={() => {
+                  warnIfOverlap(parseInt(duration));
+                  afterService();
+                }}
                 className="w-full h-12 rounded-xl font-semibold"
               >
                 Continuar
