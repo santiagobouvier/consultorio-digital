@@ -38,7 +38,6 @@ import { BirthdaysStrip } from "@/components/calendar-v2/BirthdaysStrip";
 import { ShareFreeSlotsDialog } from "@/components/calendar-v2/ShareFreeSlotsDialog";
 import { QuickBlockDialog } from "@/components/calendar-v2/QuickBlockDialog";
 import { SlotActionSheet } from "@/components/calendar-v2/SlotActionSheet";
-import { OpenSlotDialog } from "@/components/calendar-v2/OpenSlotDialog";
 import { useDayFreeSlots, useWeekSlotSummary, type FreeSlot } from "@/hooks/use-free-slots";
 import {
   useTodayPulse,
@@ -169,8 +168,6 @@ const CalendarV2 = () => {
   const [showQuickBlock, setShowQuickBlock] = useState(false);
   // Cupo libre tocado en la grilla del día (agendar / cerrar / compartir)
   const [slotSheetTarget, setSlotSheetTarget] = useState<FreeSlot | null>(null);
-  // Abrir un cupo puntual sin salir de la agenda
-  const [showOpenSlot, setShowOpenSlot] = useState(false);
   // Hora tocada en un hueco de la grilla (se resalta en el modal de cita)
   const [prefilledTimeForAction, setPrefilledTimeForAction] = useState<string | null>(null);
   // Swipe horizontal para cambiar de día/semana/mes (gesto tipo Google)
@@ -700,7 +697,6 @@ const CalendarV2 = () => {
           }}
           onAddPersonal={() => openCreatePersonal()}
           onQuickBlock={() => setShowQuickBlock(true)}
-          onOpenSlot={() => setShowOpenSlot(true)}
           onShareSlots={() => setShowShareSlots(true)}
           onPickDate={(d) => setCurrentDate(d)}
           extraActions={
@@ -945,15 +941,6 @@ const CalendarV2 = () => {
           }}
         />
 
-        {/* Abrir un cupo puntual desde la agenda */}
-        <OpenSlotDialog
-          open={showOpenSlot}
-          onOpenChange={setShowOpenSlot}
-          businessId={businessId}
-          date={currentDate}
-          onSaved={() => invalidateAppointmentData(queryClient)}
-        />
-
         {/* Imprevisto: bloquear mañana/tarde/día del día que se está mirando */}
         <QuickBlockDialog
           open={showQuickBlock}
@@ -1050,7 +1037,6 @@ const CalendarV2 = () => {
         }}
         onAddPersonal={() => openCreatePersonal()}
         onQuickBlock={() => setShowQuickBlock(true)}
-        onOpenSlot={() => setShowOpenSlot(true)}
       />
     </div>
   );

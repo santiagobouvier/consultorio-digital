@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { addDays, differenceInCalendarDays, format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
-import { Sunrise, Sunset, CalendarOff, Loader2, Plane, ChevronDown } from "lucide-react";
+import { Sunrise, Sunset, CalendarOff, Loader2, Plane, ChevronDown, Clock, ArrowLeft, Ban, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -58,33 +58,196 @@ const OPTIONS: BlockOption[] = [
   },
 ];
 
+// Medias horas de 07:00 a 21:30 para el rango puntual
+const HALF_HOURS: string[] = (() => {
+  const out: string[] = [];
+  for (let h = 7; h <= 21; h++) {
+    out.push(`${String(h).padStart(2, "0")}:00`);
+    if (h < 21) out.push(`${String(h).padStart(2, "0")}:30`);
+  }
+  return out;
+})();
+
+/** Un bloqueo planificado, listo para confirmar contra las citas del rango. */
+interface PlannedBlock {
+  title: string;
+  /** Filas de personal_events a insertar (una por día). */
+  rows: { start_at: string; end_at: string }[];
+  from: Date;
+  to: Date;
+  summary: string;
+}
+
+interface ConflictApt {
+  id: string;
+  start_at: string;
+  name: string;
+}
+
 /**
- * Percance resuelto en dos toques: bloquea la mañana, la tarde o el día
- * entero creando un evento personal. La semana tipo no se toca — cuando
- * pasa el imprevisto, la rutina sigue intacta.
+ * Percance resuelto en dos toques: bloquea la mañana, la tarde, el día,
+ * un rato puntual o varios días. Si hay sesiones agendadas en el rango,
+ * pregunta si también las cancela — inteligencia, no sorpresas.
  */
 export const QuickBlockDialog = ({ open, onOpenChange, businessId, date, onSaved }: QuickBlockDialogProps) => {
-  const [savingKey, setSavingKey] = useState<string | null>(null);
-  // Licencia / vacaciones: cerrar un rango de días entero
+  const [loadingKey, setLoadingKey] = useState<string | null>(null);
+  // Rango puntual dentro del día
+  const [customOpen, setCustomOpen] = useState(false);
+  const [customFrom, setCustomFrom] = useState("14:00");
+  const [customTo, setCustomTo] = useState("16:00");
+  // Licencia / vacaciones
   const [rangeOpen, setRangeOpen] = useState(false);
   const [rangeFrom, setRangeFrom] = useState(() => format(date, "yyyy-MM-dd"));
   const [rangeTo, setRangeTo] = useState(() => format(addDays(date, 6), "yyyy-MM-dd"));
-  const [savingRange, setSavingRange] = useState(false);
+  // Confirmación cuando hay sesiones en el rango
+  const [planned, setPlanned] = useState<PlannedBlock | null>(null);
+  const [conflicts, setConflicts] = useState<ConflictApt[]>([]);
+  const [confirming, setConfirming] = useState(false);
 
   const dayLabel = format(date, "EEEE d 'de' MMMM", { locale: es });
   const dateStr = format(date, "yyyy-MM-dd");
 
-  // Al abrir, el rango arranca en el día que se está mirando
   useEffect(() => {
     if (open) {
       setRangeFrom(format(date, "yyyy-MM-dd"));
       setRangeTo(format(addDays(date, 6), "yyyy-MM-dd"));
       setRangeOpen(false);
+      setCustomOpen(false);
+      setPlanned(null);
+      setConflicts([]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  const applyVacation = async () => {
+  /** Inserta los bloqueos (y opcionalmente cancela las sesiones del rango). */
+  const executeBlock = async (block: PlannedBlock, cancelIds: string[]) => {
+    setConfirming(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Sesión no válida");
+
+      if (cancelIds.length > 0) {
+        const { error: cancelErr } = await supabase
+          .from("appointments")
+          .update({ status: "cancelled" })
+          .in("id", cancelIds);
+        if (cancelErr) throw cancelErr;
+      }
+
+      const { error } = await (supabase as any).from("personal_events").insert(
+        block.rows.map((r) => ({
+          business_id: businessId,
+          professional_user_id: user.id,
+          title: block.title,
+          category: "personal",
+          label_id: null,
+          notes: null,
+          start_at: r.start_at,
+          end_at: r.end_at,
+          recurrence: "none",
+          recurrence_until: null,
+        }))
+      );
+      if (error) throw error;
+
+      toast({
+        title: "Listo ✓",
+        description:
+          `${block.summary}.` +
+          (cancelIds.length > 0
+            ? ` Se cancelaron ${cancelIds.length} sesi${cancelIds.length === 1 ? "ón" : "ones"} — avisales a los pacientes.`
+            : " Nadie puede reservar en ese rango."),
+      });
+      onOpenChange(false);
+      onSaved();
+    } catch (e: any) {
+      console.error(e);
+      toast({ title: "Error", description: e?.message ?? "No se pudo aplicar el bloqueo", variant: "destructive" });
+    } finally {
+      setConfirming(false);
+    }
+  };
+
+  /** Busca sesiones activas en el rango; si hay, pide confirmación. */
+  const prepareBlock = async (key: string, block: PlannedBlock) => {
+    setLoadingKey(key);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Sesión no válida");
+      const { data, error } = await supabase
+        .from("appointments")
+        .select("id, start_at, end_at, professional_id, patients (full_name)")
+        .eq("business_id", businessId)
+        .lt("start_at", block.to.toISOString())
+        .gt("end_at", block.from.toISOString())
+        .not("status", "in", '("cancelled","cancelled_by_patient")');
+      if (error) throw error;
+      // Solo las del profesional (o sin asignar) y dentro de las horas del bloqueo
+      const mine = (data ?? []).filter(
+        (a: any) => !a.professional_id || a.professional_id === user.id
+      );
+      const overlapping = mine.filter((a: any) =>
+        block.rows.some(
+          (r) => new Date(a.start_at) < new Date(r.end_at) && new Date(a.end_at) > new Date(r.start_at)
+        )
+      );
+      if (overlapping.length === 0) {
+        await executeBlock(block, []);
+        return;
+      }
+      setConflicts(
+        overlapping
+          .map((a: any) => ({
+            id: a.id,
+            start_at: a.start_at,
+            name: a.patients?.full_name ?? "Paciente",
+          }))
+          .sort((a, b) => a.start_at.localeCompare(b.start_at))
+      );
+      setPlanned(block);
+    } catch (e: any) {
+      console.error(e);
+      toast({ title: "Error", description: e?.message ?? "No se pudo preparar el bloqueo", variant: "destructive" });
+    } finally {
+      setLoadingKey(null);
+    }
+  };
+
+  const pickOption = (opt: BlockOption) => {
+    void prepareBlock(opt.key, {
+      title: "Imprevisto",
+      rows: [
+        {
+          start_at: new Date(`${dateStr}T${opt.startTime}:00`).toISOString(),
+          end_at: new Date(`${dateStr}T${opt.endTime}:00`).toISOString(),
+        },
+      ],
+      from: new Date(`${dateStr}T${opt.startTime}:00`),
+      to: new Date(`${dateStr}T${opt.endTime}:00`),
+      summary: `${opt.label} del ${dayLabel}`,
+    });
+  };
+
+  const pickCustom = () => {
+    if (customFrom >= customTo) {
+      toast({ title: "Rango inválido", description: "La hora de fin debe ser posterior a la de inicio.", variant: "destructive" });
+      return;
+    }
+    void prepareBlock("custom", {
+      title: "Imprevisto",
+      rows: [
+        {
+          start_at: new Date(`${dateStr}T${customFrom}:00`).toISOString(),
+          end_at: new Date(`${dateStr}T${customTo}:00`).toISOString(),
+        },
+      ],
+      from: new Date(`${dateStr}T${customFrom}:00`),
+      to: new Date(`${dateStr}T${customTo}:00`),
+      summary: `Bloqueado de ${customFrom} a ${customTo} el ${dayLabel}`,
+    });
+  };
+
+  const pickVacation = () => {
     const days = differenceInCalendarDays(parseISO(rangeTo), parseISO(rangeFrom)) + 1;
     if (days < 1) {
       toast({ title: "Rango inválido", description: "La fecha de fin debe ser igual o posterior a la de inicio.", variant: "destructive" });
@@ -94,172 +257,241 @@ export const QuickBlockDialog = ({ open, onOpenChange, businessId, date, onSaved
       toast({ title: "Máximo 60 días", description: "Para licencias más largas, hacelo en dos tandas.", variant: "destructive" });
       return;
     }
-    setSavingRange(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Sesión no válida");
-      // Un bloqueo por día: se ven en la agenda y se pueden borrar de a uno
-      const rows = Array.from({ length: days }, (_, i) => {
-        const d = format(addDays(parseISO(rangeFrom), i), "yyyy-MM-dd");
-        return {
-          business_id: businessId,
-          professional_user_id: user.id,
-          title: "Licencia",
-          category: "personal",
-          label_id: null,
-          notes: null,
-          start_at: new Date(`${d}T07:00:00`).toISOString(),
-          end_at: new Date(`${d}T21:00:00`).toISOString(),
-          recurrence: "none",
-          recurrence_until: null,
-        };
-      });
-      const { error } = await (supabase as any).from("personal_events").insert(rows);
-      if (error) throw error;
-      toast({
-        title: "Días cerrados ✓",
-        description: `${days} día${days !== 1 ? "s" : ""} sin reservas. Cada día aparece como "Licencia" en tu agenda.`,
-      });
-      onOpenChange(false);
-      onSaved();
-    } catch (e: any) {
-      console.error(e);
-      toast({ title: "Error", description: e?.message ?? "No se pudieron cerrar los días", variant: "destructive" });
-    } finally {
-      setSavingRange(false);
-    }
+    const rows = Array.from({ length: days }, (_, i) => {
+      const d = format(addDays(parseISO(rangeFrom), i), "yyyy-MM-dd");
+      return {
+        start_at: new Date(`${d}T07:00:00`).toISOString(),
+        end_at: new Date(`${d}T21:00:00`).toISOString(),
+      };
+    });
+    void prepareBlock("vacation", {
+      title: "Licencia",
+      rows,
+      from: new Date(`${rangeFrom}T07:00:00`),
+      to: new Date(`${rangeTo}T21:00:00`),
+      summary: `${days} día${days !== 1 ? "s" : ""} cerrado${days !== 1 ? "s" : ""} (${format(parseISO(rangeFrom), "d/M")} al ${format(parseISO(rangeTo), "d/M")})`,
+    });
   };
 
-  const applyBlock = async (opt: BlockOption) => {
-    setSavingKey(opt.key);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Sesión no válida");
-      const { error } = await (supabase as any).from("personal_events").insert({
-        business_id: businessId,
-        professional_user_id: user.id,
-        title: "Imprevisto",
-        category: "personal",
-        label_id: null,
-        notes: null,
-        start_at: new Date(`${dateStr}T${opt.startTime}:00`).toISOString(),
-        end_at: new Date(`${dateStr}T${opt.endTime}:00`).toISOString(),
-        recurrence: "none",
-        recurrence_until: null,
-      });
-      if (error) throw error;
-      toast({
-        title: "Horario bloqueado ✓",
-        description: `${opt.label} del ${dayLabel}. Para deshacerlo, tocá el bloque en la agenda.`,
-      });
-      onOpenChange(false);
-      onSaved();
-    } catch (e: any) {
-      console.error(e);
-      toast({ title: "Error", description: e?.message ?? "No se pudo bloquear el horario", variant: "destructive" });
-    } finally {
-      setSavingKey(null);
-    }
-  };
+  const timeSelect = (value: string, onChange: (v: string) => void) => (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="h-11 flex-1 rounded-xl border border-input bg-background px-3 text-sm tabular-nums"
+    >
+      {HALF_HOURS.map((t) => (
+        <option key={t} value={t}>{t}</option>
+      ))}
+    </select>
+  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md max-h-[88dvh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>¿Se te complicó el {dayLabel}?</DialogTitle>
-          <DialogDescription>
-            Bloqueá en un toque — las citas ya agendadas no se tocan, solo se frena la reserva online.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-2.5 pt-1">
-          {OPTIONS.map((opt) => {
-            const Icon = opt.icon;
-            const saving = savingKey === opt.key;
-            return (
-              <button
-                key={opt.key}
-                type="button"
-                disabled={savingKey !== null}
-                onClick={() => applyBlock(opt)}
-                className="w-full flex items-center gap-4 rounded-2xl border-2 border-border bg-card p-4 text-left transition-all hover:border-primary hover:bg-primary/5 active:scale-[0.98] disabled:opacity-60"
-              >
-                <div className="w-12 h-12 shrink-0 rounded-2xl bg-amber-500/10 flex items-center justify-center">
-                  {saving ? (
-                    <Loader2 className="h-6 w-6 text-amber-500 animate-spin" />
-                  ) : (
-                    <Icon className="h-6 w-6 text-amber-500" />
-                  )}
+        {planned ? (
+          /* ── Confirmación: hay sesiones dentro del rango ── */
+          <>
+            <DialogHeader>
+              <DialogTitle>
+                Hay {conflicts.length} sesi{conflicts.length === 1 ? "ón" : "ones"} en ese rango
+              </DialogTitle>
+              <DialogDescription>
+                {planned.summary}. Decidí qué pasa con las sesiones ya agendadas.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-1.5 max-h-[30dvh] overflow-y-auto rounded-xl border p-2.5">
+              {conflicts.map((c) => (
+                <div key={c.id} className="flex items-center gap-2.5 text-sm py-1">
+                  <span className="font-semibold tabular-nums text-foreground">
+                    {format(new Date(c.start_at), "EEE d/M HH:mm", { locale: es })}
+                  </span>
+                  <span className="truncate text-muted-foreground">{c.name}</span>
                 </div>
+              ))}
+            </div>
+            <div className="space-y-2.5">
+              <button
+                type="button"
+                disabled={confirming}
+                onClick={() => void executeBlock(planned, conflicts.map((c) => c.id))}
+                className="w-full flex items-center gap-4 rounded-2xl border-2 border-rose-500/40 bg-rose-500/5 p-4 text-left transition-all hover:bg-rose-500/10 active:scale-[0.98] disabled:opacity-60"
+              >
+                {confirming ? (
+                  <Loader2 className="h-5 w-5 text-rose-400 animate-spin shrink-0" />
+                ) : (
+                  <X className="h-5 w-5 text-rose-400 shrink-0" />
+                )}
                 <div className="min-w-0">
-                  <p className="font-semibold text-[15px]">{opt.label}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{opt.detail}</p>
+                  <p className="font-semibold text-[15px]">Bloquear y cancelar las {conflicts.length}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Después avisales a los pacientes</p>
                 </div>
               </button>
-            );
-          })}
-        </div>
-
-        {/* Licencia / vacaciones: cerrar varios días de una */}
-        <div className="rounded-2xl border-2 border-border overflow-hidden">
-          <button
-            type="button"
-            onClick={() => setRangeOpen((v) => !v)}
-            className="w-full flex items-center gap-4 bg-card p-4 text-left transition-colors hover:bg-primary/5"
-          >
-            <div className="w-12 h-12 shrink-0 rounded-2xl bg-sky-500/10 flex items-center justify-center">
-              <Plane className="h-6 w-6 text-sky-500" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="font-semibold text-[15px]">Me voy unos días</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Licencia o vacaciones: cerrá un rango de fechas</p>
-            </div>
-            <ChevronDown className={`h-4 w-4 text-muted-foreground shrink-0 transition-transform ${rangeOpen ? "rotate-180" : ""}`} />
-          </button>
-          {rangeOpen && (
-            <div className="px-4 pb-4 space-y-3 bg-card">
-              <div className="grid grid-cols-2 gap-2">
-                <label className="space-y-1">
-                  <span className="text-xs font-medium text-muted-foreground">Desde</span>
-                  <input
-                    type="date"
-                    value={rangeFrom}
-                    onChange={(e) => {
-                      setRangeFrom(e.target.value);
-                      if (e.target.value > rangeTo) setRangeTo(e.target.value);
-                    }}
-                    className="w-full h-11 rounded-xl border border-input bg-background px-3 text-sm tabular-nums"
-                  />
-                </label>
-                <label className="space-y-1">
-                  <span className="text-xs font-medium text-muted-foreground">Hasta</span>
-                  <input
-                    type="date"
-                    value={rangeTo}
-                    min={rangeFrom}
-                    onChange={(e) => setRangeTo(e.target.value)}
-                    className="w-full h-11 rounded-xl border border-input bg-background px-3 text-sm tabular-nums"
-                  />
-                </label>
-              </div>
-              <Button
+              <button
                 type="button"
-                disabled={savingRange}
-                onClick={applyVacation}
-                className="w-full h-11 rounded-xl font-bold"
+                disabled={confirming}
+                onClick={() => void executeBlock(planned, [])}
+                className="w-full flex items-center gap-4 rounded-2xl border-2 border-border bg-card p-4 text-left transition-all hover:border-amber-500/60 hover:bg-amber-500/5 active:scale-[0.98] disabled:opacity-60"
               >
-                {savingRange ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <>Cerrar del {format(parseISO(rangeFrom), "d/M")} al {format(parseISO(rangeTo), "d/M")}</>
-                )}
-              </Button>
+                <Ban className="h-5 w-5 text-amber-500 shrink-0" />
+                <div className="min-w-0">
+                  <p className="font-semibold text-[15px]">Solo bloquear — las sesiones quedan</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Frena reservas nuevas, no toca lo agendado</p>
+                </div>
+              </button>
+              <button
+                type="button"
+                disabled={confirming}
+                onClick={() => {
+                  setPlanned(null);
+                  setConflicts([]);
+                }}
+                className="w-full inline-flex items-center justify-center gap-1.5 text-sm text-muted-foreground hover:text-foreground py-2 min-h-[44px]"
+              >
+                <ArrowLeft className="h-4 w-4" /> Volver
+              </button>
             </div>
-          )}
-        </div>
+          </>
+        ) : (
+          <>
+            <DialogHeader>
+              <DialogTitle>¿Se te complicó el {dayLabel}?</DialogTitle>
+              <DialogDescription>
+                Bloqueá en un toque. Si hay sesiones en el rango, te pregunto qué hacer con ellas.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2.5 pt-1">
+              {OPTIONS.map((opt) => {
+                const Icon = opt.icon;
+                const loading = loadingKey === opt.key;
+                return (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    disabled={loadingKey !== null}
+                    onClick={() => pickOption(opt)}
+                    className="w-full flex items-center gap-4 rounded-2xl border-2 border-border bg-card p-4 text-left transition-all hover:border-primary hover:bg-primary/5 active:scale-[0.98] disabled:opacity-60"
+                  >
+                    <div className="w-12 h-12 shrink-0 rounded-2xl bg-amber-500/10 flex items-center justify-center">
+                      {loading ? (
+                        <Loader2 className="h-6 w-6 text-amber-500 animate-spin" />
+                      ) : (
+                        <Icon className="h-6 w-6 text-amber-500" />
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-semibold text-[15px]">{opt.label}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{opt.detail}</p>
+                    </div>
+                  </button>
+                );
+              })}
 
-        <p className="text-xs text-muted-foreground text-center">
-          Se marca como evento personal en tu agenda: tocalo para eliminarlo y liberar el horario.
-        </p>
+              {/* Un rato puntual: el lapso exacto que no podés atender */}
+              <div className="rounded-2xl border-2 border-border overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setCustomOpen((v) => !v)}
+                  className="w-full flex items-center gap-4 bg-card p-4 text-left transition-colors hover:bg-primary/5"
+                >
+                  <div className="w-12 h-12 shrink-0 rounded-2xl bg-amber-500/10 flex items-center justify-center">
+                    <Clock className="h-6 w-6 text-amber-500" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-[15px]">Un rato puntual</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Elegí desde y hasta qué hora no podés</p>
+                  </div>
+                  <ChevronDown className={`h-4 w-4 text-muted-foreground shrink-0 transition-transform ${customOpen ? "rotate-180" : ""}`} />
+                </button>
+                {customOpen && (
+                  <div className="px-4 pb-4 space-y-3 bg-card">
+                    <div className="flex items-center gap-2">
+                      {timeSelect(customFrom, (v) => {
+                        setCustomFrom(v);
+                        if (v >= customTo) setCustomTo(HALF_HOURS[Math.min(HALF_HOURS.indexOf(v) + 2, HALF_HOURS.length - 1)]);
+                      })}
+                      <span className="text-muted-foreground text-sm shrink-0">a</span>
+                      {timeSelect(customTo, setCustomTo)}
+                    </div>
+                    <Button
+                      type="button"
+                      disabled={loadingKey !== null}
+                      onClick={pickCustom}
+                      className="w-full h-11 rounded-xl font-bold"
+                    >
+                      {loadingKey === "custom" ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <>Bloquear {customFrom}–{customTo}</>
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              {/* Licencia / vacaciones: cerrar varios días de una */}
+              <div className="rounded-2xl border-2 border-border overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setRangeOpen((v) => !v)}
+                  className="w-full flex items-center gap-4 bg-card p-4 text-left transition-colors hover:bg-primary/5"
+                >
+                  <div className="w-12 h-12 shrink-0 rounded-2xl bg-sky-500/10 flex items-center justify-center">
+                    <Plane className="h-6 w-6 text-sky-500" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-[15px]">Me voy unos días</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Licencia o vacaciones: cerrá un rango de fechas</p>
+                  </div>
+                  <ChevronDown className={`h-4 w-4 text-muted-foreground shrink-0 transition-transform ${rangeOpen ? "rotate-180" : ""}`} />
+                </button>
+                {rangeOpen && (
+                  <div className="px-4 pb-4 space-y-3 bg-card">
+                    <div className="grid grid-cols-2 gap-2">
+                      <label className="space-y-1">
+                        <span className="text-xs font-medium text-muted-foreground">Desde</span>
+                        <input
+                          type="date"
+                          value={rangeFrom}
+                          onChange={(e) => {
+                            setRangeFrom(e.target.value);
+                            if (e.target.value > rangeTo) setRangeTo(e.target.value);
+                          }}
+                          className="w-full h-11 rounded-xl border border-input bg-background px-3 text-sm tabular-nums"
+                        />
+                      </label>
+                      <label className="space-y-1">
+                        <span className="text-xs font-medium text-muted-foreground">Hasta</span>
+                        <input
+                          type="date"
+                          value={rangeTo}
+                          min={rangeFrom}
+                          onChange={(e) => setRangeTo(e.target.value)}
+                          className="w-full h-11 rounded-xl border border-input bg-background px-3 text-sm tabular-nums"
+                        />
+                      </label>
+                    </div>
+                    <Button
+                      type="button"
+                      disabled={loadingKey !== null}
+                      onClick={pickVacation}
+                      className="w-full h-11 rounded-xl font-bold"
+                    >
+                      {loadingKey === "vacation" ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <>Cerrar del {format(parseISO(rangeFrom), "d/M")} al {format(parseISO(rangeTo), "d/M")}</>
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <p className="text-xs text-muted-foreground text-center">
+              Los bloqueos aparecen en tu agenda como eventos personales: tocalos para deshacerlos.
+            </p>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );
