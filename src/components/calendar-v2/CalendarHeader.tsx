@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ChevronLeft, ChevronRight, ChevronDown, Plus, Filter, Download, Share2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, Plus, Filter, Download, Share2, CalendarCog } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as MiniCalendar } from "@/components/ui/calendar";
@@ -21,7 +21,10 @@ interface CalendarHeaderProps {
   onAddPayment?: () => void;
   onAddPersonal?: () => void;
   onQuickBlock?: () => void;
+  onOpenSlot?: () => void;
   onShareSlots?: () => void;
+  /** Editar la semana tipo sin salir de la agenda ("Mis horarios"). */
+  onOpenSchedule?: () => void;
   /** Tocar el título abre un mini-mes para saltar a cualquier fecha. */
   onPickDate?: (date: Date) => void;
   /** Acciones extra (ej: Referencias) integradas al cluster de íconos. */
@@ -91,7 +94,9 @@ export const CalendarHeader = ({
   onAddPayment,
   onAddPersonal,
   onQuickBlock,
+  onOpenSlot,
   onShareSlots,
+  onOpenSchedule,
   onPickDate,
   extraActions,
   onToggleFilters,
@@ -139,6 +144,15 @@ export const CalendarHeader = ({
           </div>
           <div className="flex items-center gap-0.5 shrink-0">
             {extraActions}
+            {onOpenSchedule && (
+              <button
+                onClick={onOpenSchedule}
+                className="h-9 w-9 rounded-full flex items-center justify-center text-muted-foreground/70 transition-colors active:bg-muted hover:text-foreground"
+                aria-label="Mis horarios"
+              >
+                <CalendarCog className="h-[17px] w-[17px]" strokeWidth={1.8} />
+              </button>
+            )}
             {onShareSlots && (
               <button
                 onClick={onShareSlots}
@@ -291,6 +305,14 @@ export const CalendarHeader = ({
             )}
           </Button>
 
+          {/* Mis horarios: la semana tipo sin salir de la agenda */}
+          {onOpenSchedule && (
+            <Button variant="outline" size="sm" onClick={onOpenSchedule} className="rounded-xl gap-2">
+              <CalendarCog className="h-4 w-4" />
+              Mis horarios
+            </Button>
+          )}
+
           {/* Compartir huecos libres */}
           {onShareSlots && (
             <Button variant="outline" size="sm" onClick={onShareSlots} className="rounded-xl gap-2">
@@ -321,6 +343,7 @@ export const CalendarHeader = ({
           onAddPayment={onAddPayment}
           onAddPersonal={onAddPersonal}
           onQuickBlock={onQuickBlock}
+          onOpenSlot={onOpenSlot}
         />
       )}
     </div>
