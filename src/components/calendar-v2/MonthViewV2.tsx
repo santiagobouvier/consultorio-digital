@@ -15,7 +15,10 @@ import { CalendarAppointment, DayPayment, getStatusColor, abbreviatePatientName,
 import type { DayBirthday } from "./BirthdaysStrip";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Plus, AlertCircle, Clock, CreditCard } from "lucide-react";
+import { Plus, AlertCircle, Clock, CreditCard, Cake, ChevronDown } from "lucide-react";
+
+// La tarjeta de cumpleaños recuerda tu último movimiento (abierta/cerrada)
+const BDAY_CARD_KEY = "month-birthdays-card-open";
 import { Button } from "@/components/ui/button";
 import { calculatePaymentStatus } from "@/lib/payments";
 import {
@@ -137,8 +140,89 @@ export const MonthViewV2 = ({
     ? ["L", "M", "X", "J", "V", "S", "D"]
     : ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 
+  // Cumpleaños del mes visible, ordenados por fecha (tarjeta rosa plegable)
+  const monthBirthdays = useMemo(() => {
+    if (!birthdaysByDate) return [] as { date: Date; b: DayBirthday }[];
+    const out: { date: Date; b: DayBirthday }[] = [];
+    for (const [key, list] of birthdaysByDate) {
+      const d = new Date(key);
+      if (isSameMonth(d, currentDate)) {
+        for (const b of list) out.push({ date: d, b });
+      }
+    }
+    return out.sort((a, b) => a.date.getTime() - b.date.getTime());
+  }, [birthdaysByDate, currentDate]);
+
+  const [bdayOpen, setBdayOpen] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(BDAY_CARD_KEY) !== "0";
+    } catch {
+      return true;
+    }
+  });
+  const toggleBdayCard = () =>
+    setBdayOpen((v) => {
+      const next = !v;
+      try {
+        localStorage.setItem(BDAY_CARD_KEY, next ? "1" : "0");
+      } catch { /* sin storage no pasa nada */ }
+      return next;
+    });
+
   return (
     <>
+      {/* 🎂 Cumpleaños del mes: plegable, recuerda cómo la dejaste */}
+      {monthBirthdays.length > 0 && (
+        <div
+          className="relative overflow-hidden rounded-2xl border border-pink-300/40 dark:border-pink-500/25 mb-3"
+          style={{ background: "linear-gradient(135deg, rgba(236,72,153,0.10), rgba(168,85,247,0.05))" }}
+        >
+          <button
+            type="button"
+            onClick={toggleBdayCard}
+            className="w-full flex items-center gap-3 p-4 text-left min-h-[60px]"
+            aria-expanded={bdayOpen}
+          >
+            <div className="w-11 h-11 rounded-2xl bg-pink-500/15 flex items-center justify-center shrink-0">
+              <Cake className="h-5 w-5 text-pink-500 dark:text-pink-300" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="font-bold text-[15px] text-pink-600 dark:text-pink-300">Cumpleaños del mes</p>
+              <p className="text-xs text-muted-foreground">
+                {monthBirthdays.length} paciente{monthBirthdays.length !== 1 ? "s" : ""} cumple{monthBirthdays.length !== 1 ? "n" : ""} en{" "}
+                {format(currentDate, "MMMM", { locale: es })}
+              </p>
+            </div>
+            <ChevronDown
+              className={cn(
+                "h-4 w-4 text-pink-500/70 dark:text-pink-300/70 shrink-0 transition-transform",
+                bdayOpen && "rotate-180"
+              )}
+            />
+          </button>
+          {bdayOpen && (
+            <div className="flex flex-wrap gap-2 px-4 pb-4">
+              {monthBirthdays.map(({ date, b }) => (
+                <button
+                  key={`${b.id}-${date.toDateString()}`}
+                  type="button"
+                  onClick={() => handleDayClick(date)}
+                  className="inline-flex items-center gap-2 rounded-full border border-pink-300/40 dark:border-pink-500/25 bg-card px-3 py-1.5 min-h-[40px] transition-colors hover:border-pink-400/60 active:scale-[0.98]"
+                >
+                  <span className="w-7 h-7 rounded-full bg-pink-500/15 text-pink-600 dark:text-pink-300 text-xs font-bold flex items-center justify-center shrink-0">
+                    {b.name.trim().charAt(0).toUpperCase()}
+                  </span>
+                  <span className="text-sm font-semibold truncate max-w-[9rem]">{b.name}</span>
+                  <span className="text-[11px] font-semibold text-pink-600 dark:text-pink-300 bg-pink-500/10 rounded-full px-2 py-0.5 capitalize shrink-0">
+                    {format(date, "EEE d", { locale: es })}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       <div
         className={cn(
           "bg-card overflow-hidden",
