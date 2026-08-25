@@ -1041,16 +1041,21 @@ const CalendarV2 = () => {
       <MobileAgendaFab
         onAddAppointment={() => {
           setSelectedDateForAction(currentDate);
-          setLockDateForAction(false);
+          // Parado en un día concreto: lo que se crea queda fijo para ese día.
+          // El flujo general (todos los días) vive en "+ Nuevo" del header.
+          setLockDateForAction(viewType === "day");
           setShowCreateModal(true);
         }}
         onAddPayment={() => {
           setSelectedDateForAction(currentDate);
-          setLockDateForAction(false);
+          setLockDateForAction(viewType === "day");
           setShowPaymentDrawer(true);
         }}
         onAddPersonal={() => openCreatePersonal()}
         onQuickBlock={() => setShowQuickBlock(true)}
+        fixedDateLabel={
+          viewType === "day" ? format(currentDate, "EEEE d 'de' MMMM", { locale: es }) : null
+        }
       />
     </div>
   );

@@ -686,6 +686,18 @@ export function CreateAppointmentModal({
         <div className="space-y-4 py-2">
           {scheduleMode === "slots" ? (
             <>
+              {/* Día fijado desde la agenda: no se elige otro (el flujo con
+                  todos los días vive en "+ Nuevo" del encabezado) */}
+              {lockDate && prefilledDate ? (
+                <div className="flex items-center gap-2.5 rounded-xl bg-primary/10 border border-primary/25 px-3.5 py-2.5">
+                  <CalendarIcon className="h-4 w-4 text-primary shrink-0" />
+                  <span className="text-sm font-semibold capitalize">{date ? formatDayLong(date) : ""}</span>
+                  <span className="ml-auto text-[10px] font-bold uppercase tracking-wide text-primary shrink-0">
+                    Día fijado
+                  </span>
+                </div>
+              ) : (
+              <>
               {/* Tira de días: hoy + 2 semanas, más "Otro día" para lejos */}
               <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 snap-x lg:flex-wrap lg:overflow-visible lg:pb-0 lg:snap-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {dayOptions.map(({ str, d }) => {
@@ -738,6 +750,8 @@ export function CreateAppointmentModal({
                   onChange={(e) => e.target.value && setDate(e.target.value)}
                   className="h-11 rounded-xl"
                 />
+              )}
+              </>
               )}
 
               {/* TODOS los lapsos del día, cada 30 min. Los tomados se
@@ -799,8 +813,14 @@ export function CreateAppointmentModal({
                   type="date"
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
-                  className="h-11 rounded-xl"
+                  disabled={lockDate && !!prefilledDate}
+                  className="h-11 rounded-xl disabled:opacity-100"
                 />
+                {lockDate && !!prefilledDate && (
+                  <p className="text-xs text-muted-foreground">
+                    Día fijado desde la agenda. Para otro día, usá "+ Nuevo" arriba a la derecha.
+                  </p>
+                )}
                 {date && (() => {
                   const picked = new Date(`${date}T00:00:00`);
                   const sixMonths = new Date();
