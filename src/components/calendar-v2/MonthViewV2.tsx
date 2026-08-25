@@ -15,7 +15,6 @@ import { CalendarAppointment, DayPayment, getStatusColor, abbreviatePatientName,
 import type { DayBirthday } from "./BirthdaysStrip";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { MonthDayDrawer } from "./MonthDayDrawer";
 import { Plus, AlertCircle, Clock, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { calculatePaymentStatus } from "@/lib/payments";
@@ -95,8 +94,6 @@ export const MonthViewV2 = ({
   onQuickBlockForDay,
 }: MonthViewV2Props) => {
   const isMobile = useIsMobile();
-  const [mobileSelectedDay, setMobileSelectedDay] = useState<Date | null>(null);
-  const [drawerOpen, setDrawerOpen] = useState(false);
 
   const getPaymentsForDay = (date: Date): DayPayment[] => {
     if (!paymentsByDay) return [];
@@ -129,16 +126,11 @@ export const MonthViewV2 = ({
     };
   };
 
+  // Tocar un día abre SIEMPRE su desglose: en mobile navega a la vista día
+  // (todas las horas, como Google Calendar); en desktop el padre abre el
+  // modal del día completo.
   const handleDayClick = (day: Date) => {
-    if (isDesktop) {
-      // On desktop, let parent handle via onDayClick
-      onDayClick(day);
-    } else if (isMobile) {
-      setMobileSelectedDay(day);
-      setDrawerOpen(true);
-    } else {
-      onDayClick(day);
-    }
+    onDayClick(day);
   };
 
   const weekDays = isMobile
@@ -343,68 +335,6 @@ export const MonthViewV2 = ({
           })}
         </div>
       </div>
-
-      {/* Mobile: Day drawer (only on mobile) */}
-      {isMobile && !isDesktop && (
-        <MonthDayDrawer
-          open={drawerOpen}
-          onClose={() => setDrawerOpen(false)}
-          selectedDate={mobileSelectedDay || currentDate}
-          appointments={appointments}
-          dayPayments={mobileSelectedDay ? getPaymentsForDay(mobileSelectedDay) : []}
-          birthdays={birthdaysByDate?.get((mobileSelectedDay || currentDate).toDateString()) ?? []}
-          clinicName={clinicName}
-          onAppointmentClick={(apt) => {
-            setDrawerOpen(false);
-            onAppointmentClick(apt);
-          }}
-          onPaymentClick={(p) => {
-            setDrawerOpen(false);
-            onPaymentClick?.(p);
-          }}
-          onNavigateDay={(delta) =>
-            setMobileSelectedDay((prev) => {
-              const base = prev || currentDate;
-              const next = new Date(base);
-              next.setDate(next.getDate() + delta);
-              return next;
-            })
-          }
-          onCreateAppointment={
-            onCreateForDay
-              ? () => {
-                  setDrawerOpen(false);
-                  onCreateForDay(mobileSelectedDay || currentDate);
-                }
-              : undefined
-          }
-          onCreatePayment={
-            onCreatePaymentForDay
-              ? () => {
-                  setDrawerOpen(false);
-                  onCreatePaymentForDay(mobileSelectedDay || currentDate);
-                }
-              : undefined
-          }
-          onCreatePersonal={
-            onCreatePersonalForDay
-              ? () => {
-                  setDrawerOpen(false);
-                  onCreatePersonalForDay(mobileSelectedDay || currentDate);
-                }
-              : undefined
-          }
-          onQuickBlock={
-            onQuickBlockForDay
-              ? () => {
-                  setDrawerOpen(false);
-                  onQuickBlockForDay(mobileSelectedDay || currentDate);
-                }
-              : undefined
-          }
-          showProfessionalColors={showProfessionalColors}
-        />
-      )}
 
     </>
   );
