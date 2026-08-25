@@ -567,7 +567,7 @@ const PatientDetail = () => {
         }
       `}</style>
 
-      <div className="mx-auto w-full max-w-[1200px] flex flex-col gap-[18px]" style={{ padding: "clamp(14px, 3vw, 36px)" }}>
+      <div className="mx-auto w-full max-w-[1500px] flex flex-col gap-[18px]" style={{ padding: "clamp(14px, 2.2vw, 28px)" }}>
 
         {/* ── Top bar: volver + breadcrumb + acciones ── */}
         <div className="flex flex-wrap items-center gap-3">
