@@ -21,18 +21,14 @@ import { notifyPatient } from "@/lib/push-notifications";
 import { useDashboardBranding } from "@/contexts/DashboardBrandingContext";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { Loader2, Clock, ArrowRight, RefreshCw } from "lucide-react";
+import { Loader2, ArrowRight, RefreshCw, CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// Reprogramar una cita existente: elegir nuevo día/horario (horarios libres
-// del motor, con opción manual) y mover la cita. Los recordatorios y el
-// cobro la siguen solos (triggers de la base); acá además le avisamos al
-// paciente por email + push. El WhatsApp de reprogramación lo encola la base.
-
-interface Start {
-  day: string;        // YYYY-MM-DD
-  start_time: string; // HH:MM:SS
-}
+// Reprogramar una cita existente: elegir nuevo día y horario tocando —
+// SIEMPRE se ven todos los lapsos del día cada 30 minutos (los ocupados se
+// atenúan). Los recordatorios y el cobro la siguen solos (triggers de la
+// base); acá además le avisamos al paciente por email + push. El WhatsApp
+// de reprogramación lo encola la base.
 
 const DAY_SHORT = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 const MONTH_SHORT = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
@@ -78,14 +74,16 @@ export const RescheduleAppointmentModal = ({
 }: RescheduleAppointmentModalProps) => {
   const { displayName: clinicDisplayName } = useDashboardBranding();
   const [mode, setMode] = useState<"slots" | "manual">("slots");
-  const [starts, setStarts] = useState<Start[]>([]);
-  const [startsLoading, setStartsLoading] = useState(false);
-  const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [selectedDay, setSelectedDay] = useState<string>("");
+  const [farDateOpen, setFarDateOpen] = useState(false);
   const [manualDate, setManualDate] = useState("");
   const [manualTime, setManualTime] = useState("");
   // Selección final (de cualquiera de los dos modos)
   const [picked, setPicked] = useState<{ day: string; time: string } | null>(null);
   const [saving, setSaving] = useState(false);
+  // Citas activas del día elegido: se atenúan (sin contar la que se mueve)
+  const [busy, setBusy] = useState<{ start: number; end: number; label: string }[]>([]);
+  const [busyLoading, setBusyLoading] = useState(false);
 
   const durationMinutes = useMemo(() => {
     if (!appointment) return 60;
@@ -93,58 +91,89 @@ export const RescheduleAppointmentModal = ({
     return Math.max(15, Math.round(ms / 60000));
   }, [appointment]);
 
-  const loadStarts = useCallback(async () => {
-    if (!businessId) return;
-    setStartsLoading(true);
+  const toMin = (hhmm: string) => {
+    const [h, m] = hhmm.split(":").map(Number);
+    return h * 60 + m;
+  };
+  const minToHHMM = (min: number) =>
+    `${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
+
+  const loadBusy = useCallback(async (dayStr: string) => {
+    if (!businessId || !appointment) return;
+    setBusyLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      const today = new Date();
-      const { data, error } = await (supabase as any).rpc("get_available_starts", {
-        p_business_id: businessId,
-        p_professional_user_id: user?.id ?? null,
-        p_duration_minutes: durationMinutes,
-        p_from: today.toISOString().slice(0, 10),
-        p_to: new Date(today.getTime() + 180 * 86400000).toISOString().slice(0, 10),
-      });
+      const from = new Date(`${dayStr}T00:00:00`);
+      const to = new Date(`${dayStr}T23:59:59`);
+      const { data, error } = await supabase
+        .from("appointments")
+        .select("id, start_at, end_at, patients (full_name)")
+        .eq("business_id", businessId)
+        .gte("start_at", from.toISOString())
+        .lte("start_at", to.toISOString())
+        .not("status", "in", '("cancelled","cancelled_by_patient")');
       if (error) throw error;
-      setStarts((data ?? []) as Start[]);
+      setBusy(
+        (data ?? [])
+          .filter((a: any) => a.id !== appointment.id)
+          .map((a: any) => {
+            const s = new Date(a.start_at);
+            const e = new Date(a.end_at);
+            return {
+              start: s.getHours() * 60 + s.getMinutes(),
+              end: e.getHours() * 60 + e.getMinutes(),
+              label: a.patients?.full_name?.split(" ")[0] ?? "ocupado",
+            };
+          })
+      );
     } catch (e) {
-      console.error("Error cargando horarios libres:", e);
-      setStarts([]);
+      console.error("Error cargando ocupación del día:", e);
+      setBusy([]);
     } finally {
-      setStartsLoading(false);
+      setBusyLoading(false);
     }
-  }, [businessId, durationMinutes]);
+  }, [businessId, appointment]);
 
   useEffect(() => {
     if (!open) return;
     setMode("slots");
-    setSelectedDay(null);
+    setFarDateOpen(false);
     setManualDate("");
     setManualTime("");
     setPicked(null);
-    void loadStarts();
-  }, [open, loadStarts]);
+    // Arranca en mañana: lo más común al reprogramar
+    const t = new Date(Date.now() + 86400000);
+    setSelectedDay(
+      `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`
+    );
+  }, [open]);
 
-  const startsByDate = useMemo(() => {
-    const map = new Map<string, Start[]>();
-    for (const s of starts) {
-      const list = map.get(s.day) ?? [];
-      list.push(s);
-      map.set(s.day, list);
-    }
-    return Array.from(map.entries())
-      .map(([day, items]) => ({
-        day,
-        items: [...items].sort((a, b) => a.start_time.localeCompare(b.start_time)),
-      }))
-      .sort((a, b) => a.day.localeCompare(b.day));
-  }, [starts]);
+  useEffect(() => {
+    if (open && selectedDay) void loadBusy(selectedDay);
+  }, [open, selectedDay, loadBusy]);
 
-  const timesForSelectedDay = useMemo(
-    () => startsByDate.find((g) => g.day === selectedDay)?.items ?? [],
-    [startsByDate, selectedDay]
-  );
+  // Tira de días: hoy + 13 (para más lejos, el calendario)
+  const dayOptions = useMemo(() => {
+    const base = new Date();
+    base.setHours(0, 0, 0, 0);
+    return Array.from({ length: 14 }, (_, i) => {
+      const d = new Date(base.getTime() + i * 86400000);
+      return {
+        str: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`,
+        d,
+      };
+    });
+  }, []);
+
+  const SLOT_TIMES = useMemo(() => {
+    const out: number[] = [];
+    for (let t = 7 * 60; t <= 21 * 60 + 30; t += 30) out.push(t);
+    return out;
+  }, []);
+
+  const isOccupied = (slotMin: number) =>
+    busy.some((b) => b.start < slotMin + 30 && b.end > slotMin);
+  const occupiedBy = (slotMin: number) =>
+    busy.find((b) => b.start < slotMin + 30 && b.end > slotMin)?.label ?? null;
 
   if (!appointment) return null;
 
@@ -250,80 +279,110 @@ export const RescheduleAppointmentModal = ({
 
           {mode === "slots" ? (
             <>
-              {startsLoading ? (
-                <div className="py-10 flex items-center justify-center text-muted-foreground">
-                  <Loader2 className="h-5 w-5 animate-spin mr-2" /> Buscando horarios libres...
-                </div>
-              ) : startsByDate.length === 0 ? (
-                <div className="py-8 text-center space-y-2">
-                  <Clock className="h-8 w-8 mx-auto text-muted-foreground" />
-                  <p className="text-sm font-medium">No hay horarios libres en los próximos 6 meses</p>
-                  <p className="text-xs text-muted-foreground">Podés elegir el horario a mano.</p>
-                </div>
-              ) : (
-                <>
-                  <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 snap-x lg:flex-wrap lg:overflow-visible lg:pb-0 lg:snap-none">
-                    {startsByDate.map(({ day }) => {
-                      const { date: d, d: dayNum, m } = parseDay(day);
-                      const isSelected = selectedDay === day;
+              {/* Tira de días + "Otro día" para fechas lejanas */}
+              <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 snap-x lg:flex-wrap lg:overflow-visible lg:pb-0 lg:snap-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {dayOptions.map(({ str, d }) => {
+                  const isSelected = selectedDay === str;
+                  return (
+                    <button
+                      key={str}
+                      type="button"
+                      onClick={() => {
+                        setSelectedDay(str);
+                        setPicked(null);
+                        setFarDateOpen(false);
+                      }}
+                      className={cn(
+                        "flex flex-col items-center justify-center rounded-xl border-2 px-3 py-2 min-w-[64px] min-h-[64px] snap-start transition-all hover:border-primary/50",
+                        isSelected
+                          ? "border-primary bg-primary text-primary-foreground hover:border-primary"
+                          : "border-border bg-card"
+                      )}
+                    >
+                      <span className={cn("text-[10px] uppercase tracking-wide", !isSelected && "text-muted-foreground")}>
+                        {DAY_SHORT[d.getDay()]}
+                      </span>
+                      <span className="text-lg font-bold leading-tight">{d.getDate()}</span>
+                      <span className={cn("text-[10px]", !isSelected && "text-muted-foreground")}>
+                        {MONTH_SHORT[d.getMonth()]}
+                      </span>
+                    </button>
+                  );
+                })}
+                <button
+                  type="button"
+                  onClick={() => setFarDateOpen((v) => !v)}
+                  className={cn(
+                    "flex flex-col items-center justify-center rounded-xl border-2 border-dashed px-3 py-2 min-w-[64px] min-h-[64px] snap-start transition-all",
+                    farDateOpen || !dayOptions.some((o) => o.str === selectedDay)
+                      ? "border-primary text-primary bg-primary/5"
+                      : "border-border bg-card text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="h-4 w-4" />
+                  <span className="text-[10px] mt-1">Otro día</span>
+                </button>
+              </div>
+
+              {(farDateOpen || !dayOptions.some((o) => o.str === selectedDay)) && (
+                <Input
+                  type="date"
+                  value={selectedDay}
+                  min={dayOptions[0]?.str}
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      setSelectedDay(e.target.value);
+                      setPicked(null);
+                    }
+                  }}
+                  className="h-11 rounded-xl"
+                />
+              )}
+
+              {/* TODOS los lapsos del día cada 30 min; los tomados, atenuados */}
+              {selectedDay && (
+                <div className="space-y-2">
+                  <p className="text-sm font-semibold capitalize flex items-center gap-2">
+                    {formatDayLong(selectedDay)}
+                    {busyLoading && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
+                  </p>
+                  <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2">
+                    {SLOT_TIMES.map((t) => {
+                      const hhmm = minToHHMM(t);
+                      const occupied = isOccupied(t);
+                      const who = occupied ? occupiedBy(t) : null;
+                      const isPicked = picked?.day === selectedDay && picked?.time === hhmm;
                       return (
                         <button
-                          key={day}
+                          key={t}
                           type="button"
-                          onClick={() => { setSelectedDay(day); setPicked(null); }}
+                          disabled={occupied}
+                          onClick={() => setPicked({ day: selectedDay, time: hhmm })}
+                          title={who ? `Ocupado: ${who}` : undefined}
                           className={cn(
-                            "flex flex-col items-center justify-center rounded-xl border-2 px-3 py-2 min-w-[60px] snap-start transition-all hover:border-primary/50",
-                            isSelected
-                              ? "border-primary bg-primary text-primary-foreground hover:border-primary"
-                              : "border-border bg-card"
+                            "h-12 rounded-xl border-2 tabular-nums transition-all flex flex-col items-center justify-center leading-tight",
+                            occupied
+                              ? "border-border/50 bg-muted/30 text-muted-foreground/60 cursor-not-allowed"
+                              : "text-[15px] font-semibold border-primary/30 bg-primary/5 text-primary hover:bg-primary hover:text-primary-foreground",
+                            isPicked && !occupied &&
+                              "border-primary bg-primary text-primary-foreground shadow-md"
                           )}
                         >
-                          <span className={cn("text-[10px] uppercase tracking-wide", !isSelected && "text-muted-foreground")}>
-                            {DAY_SHORT[d.getDay()]}
-                          </span>
-                          <span className="text-base font-bold leading-tight">{dayNum}</span>
-                          <span className={cn("text-[10px]", !isSelected && "text-muted-foreground")}>
-                            {MONTH_SHORT[m - 1]}
-                          </span>
+                          <span className={cn(occupied && "text-[13px] line-through")}>{hhmm}</span>
+                          {who && <span className="text-[9px] no-underline truncate max-w-[64px]">{who}</span>}
                         </button>
                       );
                     })}
                   </div>
-
-                  {selectedDay && (
-                    <div className="space-y-2">
-                      <p className="text-sm font-semibold">{formatDayLong(selectedDay)}</p>
-                      <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2">
-                        {timesForSelectedDay.map((s) => {
-                          const isPicked = picked?.day === s.day && picked?.time === s.start_time.slice(0, 5);
-                          return (
-                            <button
-                              key={`${s.day}-${s.start_time}`}
-                              type="button"
-                              onClick={() => setPicked({ day: s.day, time: s.start_time.slice(0, 5) })}
-                              className={cn(
-                                "px-2 py-2.5 rounded-xl border-2 text-sm font-semibold tabular-nums transition-all",
-                                isPicked
-                                  ? "border-primary bg-primary text-primary-foreground"
-                                  : "border-primary/30 bg-primary/5 text-primary hover:bg-primary hover:text-primary-foreground"
-                              )}
-                            >
-                              {s.start_time.slice(0, 5)}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </>
+                </div>
               )}
 
               <button
                 type="button"
                 onClick={() => { setMode("manual"); setPicked(null); }}
-                className="w-full text-center text-sm text-muted-foreground hover:text-foreground underline underline-offset-4 py-1"
+                className="w-full text-center text-sm text-muted-foreground hover:text-foreground underline underline-offset-4 py-2 min-h-[44px]"
               >
-                Otro horario (elegir a mano)
+                ¿Necesitás otra hora? (ej: 09:15, elegir a mano)
               </button>
             </>
           ) : (
