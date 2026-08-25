@@ -82,8 +82,8 @@ const problems = [
   { icon: AlertTriangle, text: "Agenda desordenada entre cuadernos y apps" },
   { icon: AlertTriangle, text: "Pagos que se olvidan o no se registran" },
   { icon: AlertTriangle, text: "Pacientes que no recuerdan sus turnos" },
-  { icon: AlertTriangle, text: "Información repartida en planillas y apps" },
-  { icon: AlertTriangle, text: "Sin una web propia donde te encuentren y reserven" },
+  { icon: AlertTriangle, text: "Un imprevisto y media agenda para reacomodar a mano" },
+  { icon: AlertTriangle, text: "Historias clínicas repartidas en planillas y cuadernos" },
 ];
 
 // Per-plan feature definitions. El item de recordatorios se personaliza por
@@ -120,9 +120,9 @@ const planFeatures: Record<string, string[]> = {
 };
 const Landing = () => {
   usePageMeta({
-    title: "Consultorio Digital | Agenda online para profesionales",
+    title: "Consultorio Digital | La agenda que trabaja por vos",
     description:
-      "Tu link público de reservas y tu panel privado en un solo lugar: agenda, recordatorios, pacientes y cobros para profesionales de la salud en Uruguay.",
+      "Agenda, expediente clínico, cobros y recordatorios automáticos en un solo lugar. El sistema de gestión para profesionales de la salud en Uruguay.",
     canonicalPath: "/",
   });
 
@@ -312,9 +312,9 @@ const Landing = () => {
               >
                 <ul className="space-y-4">
                   {[
-                    "Un sistema privado para tu consultorio",
-                    "Todo centralizado y claro",
-                    "Acceso para vos y tus pacientes",
+                    "Una agenda que se maneja en dos toques: citas, imprevistos y cumpleaños",
+                    "El expediente clínico de cada paciente, completo y privado",
+                    "Cobros claros: quién te debe, cuánto ganás",
                     "Recordatorios automáticos por WhatsApp y email — salen solos",
                     "Tu propia página web con tu dominio — la armamos por vos",
                   ].map((text, i) => (
@@ -347,7 +347,7 @@ const Landing = () => {
 
             {[
               { step: "1", title: "Creá tu cuenta gratis", description: "Registrate en menos de 2 minutos. Sin tarjeta." },
-              { step: "2", title: "Configurá tu consultorio", description: "Cargá tus pacientes, servicios y horarios disponibles." },
+              { step: "2", title: "Configurá tu consultorio", description: "Cargá tus pacientes y tus tipos de sesión. Con eso alcanza." },
               { step: "3", title: "Invitá a tus pacientes", description: "Cada paciente accede a su portal propio con tu marca." },
             ].map((item, index) => (
               <ScrollReveal key={item.step} delay={index * 150}>
@@ -434,21 +434,22 @@ const Landing = () => {
                   style={{ backgroundColor: GREEN_BG, color: GREEN }}
                 >
                   <CalendarCheck className="w-3.5 h-3.5" />
-                  Autogestión
+                  Reserva online — vos elegís cuánto automatizar
                 </div>
                 <h2 className="text-xl sm:text-3xl md:text-4xl font-bold mb-4 tracking-tight">
-                  Tus pacientes reservan solos
+                  ¿Mucho volumen? Que reserven solos
                 </h2>
                 <p className="text-gray-400 text-sm sm:text-base leading-relaxed font-light mb-6">
-                  El paciente entra al portal, ve tus <strong className="text-white">horarios disponibles en tiempo real</strong>, 
-                  elige fecha y hora, y listo. Sin mensajes de ida y vuelta.
+                  Para consultorios con mucho movimiento: el paciente ve tus{" "}
+                  <strong className="text-white">horarios reales</strong>, elige y queda agendado.
+                  ¿Preferís el control total? La dejás apagada y el paciente solicita — vos confirmás.
                 </p>
                 <ul className="space-y-3">
                   {[
-                    "Calendario con disponibilidad real",
+                    "Calendario con disponibilidad real, calculada sola",
                     "Selección de modalidad (presencial / online)",
-                    "Confirmación instantánea",
                     "El turno aparece directo en tu agenda",
+                    "Opcional: nada se agenda sin tu OK si así lo querés",
                   ].map((text, i) => (
                     <li key={i} className="flex items-center gap-3 text-gray-300 text-sm">
                       <Check className="w-4 h-4 flex-shrink-0" style={{ color: GREEN }} />
@@ -522,22 +523,23 @@ const Landing = () => {
                   style={{ backgroundColor: GREEN_BG, color: GREEN }}
                 >
                   <Calendar className="w-3.5 h-3.5" />
-                  Agenda inteligente
+                  Agenda viva
                 </div>
                 <h2 className="text-xl sm:text-3xl md:text-4xl font-bold mb-4 tracking-tight">
-                  Agenda inteligente,{" "}
-                  <span style={{ color: GREEN }}>visión clara</span>
+                  Abrís un día{" "}
+                  <span style={{ color: GREEN }}>y está todo</span>
                 </h2>
                 <p className="text-gray-400 text-sm sm:text-base leading-relaxed font-light mb-6">
-                  Vista diaria, semanal y mensual de tu consultorio.
-                  Creá citas en segundos, marcá tu disponibilidad y tené todo bajo control.
+                  Sesiones, cobros, cumpleaños 🎂 y lo que hay que hacer — tu día entero en un toque.
+                  ¿Se te complicó? <strong className="text-white">Bloqueás la mañana o cancelás con un imprevisto</strong>,
+                  sin desarmar tu rutina.
                 </p>
                 <ul className="space-y-3">
                   {[
-                    "Citas únicas o semanales en un par de toques",
-                    "Filtros rápidos por estado y paciente",
-                    "Vistas: día, semana, mes",
-                    "Pagos pendientes del día en la agenda",
+                    "El día completo en un toque: citas, pagos y cumpleaños",
+                    "Imprevistos: bloqueá la mañana, el día o una sesión en dos toques",
+                    "Citas guiadas: día, horario, sesión y paciente — sin pantallas confusas",
+                    "Vistas día, semana y mes — en el celular y en la compu",
                   ].map((text, i) => (
                     <li key={i} className="flex items-center gap-3 text-gray-300 text-sm">
                       <Check className="w-4 h-4 flex-shrink-0" style={{ color: GREEN }} />
@@ -551,6 +553,50 @@ const Landing = () => {
             <ScrollReveal direction="right" delay={200}>
               <AgendaPreview />
             </ScrollReveal>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Expediente clínico ── */}
+      <section className="relative px-4 sm:px-6 py-14 sm:py-24 z-10 bg-black">
+        <div className="max-w-4xl mx-auto">
+          <ScrollReveal>
+            <div className="text-center mb-10 sm:mb-12">
+              <div
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium mb-6"
+                style={{ backgroundColor: 'rgba(167, 139, 250, 0.15)', color: '#a78bfa' }}
+              >
+                <Lock className="w-3.5 h-3.5" />
+                Expediente clínico
+              </div>
+              <h2 className="text-xl sm:text-3xl md:text-4xl font-bold mb-4 tracking-tight">
+                La historia de cada paciente, completa
+              </h2>
+              <p className="text-gray-400 text-sm sm:text-base font-light max-w-2xl mx-auto">
+                La ficha que abrís antes de cada sesión: tratamiento, notas, pagos y próximas citas.
+                <strong className="text-white"> Privado — solo lo ves vos.</strong>
+              </p>
+            </div>
+          </ScrollReveal>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-3xl mx-auto">
+            {[
+              { icon: "📝", title: "Notas de sesión con plantillas", text: "Escribís la nota al marcar la sesión como realizada. Con tus propias plantillas." },
+              { icon: "🔢", title: "Sesiones numeradas", text: "Sesión 1, 2, 3... el recorrido del tratamiento de un vistazo." },
+              { icon: "⏰", title: "Nada se te escapa", text: "El sistema te marca las sesiones que quedaron sin nota." },
+              { icon: "🔒", title: "Privacidad real", text: "Lo clínico nunca es visible desde el portal del paciente." },
+            ].map((f, i) => (
+              <ScrollReveal key={f.title} delay={i * 100}>
+                <div
+                  className="p-5 sm:p-6 rounded-xl sm:rounded-2xl border border-white/5 h-full transition-all duration-500 hover:border-white/15"
+                  style={{ backgroundColor: '#111111' }}
+                >
+                  <div className="text-2xl mb-3">{f.icon}</div>
+                  <h3 className="text-base font-bold text-white mb-1.5">{f.title}</h3>
+                  <p className="text-gray-500 text-sm font-light leading-relaxed">{f.text}</p>
+                </div>
+              </ScrollReveal>
+            ))}
           </div>
         </div>
       </section>

@@ -57,7 +57,7 @@ export function HeroSection() {
           className="hero-up text-4xl sm:text-6xl md:text-7xl font-bold tracking-tight leading-[1.12] mb-6"
           style={{ animationDelay: "0.1s" }}
         >
-          Todo tu consultorio,
+          La agenda que
           <span
             className="block bg-clip-text text-transparent pb-2"
             style={{
@@ -66,7 +66,7 @@ export function HeroSection() {
               animation: "heroGrad 6s linear infinite",
             }}
           >
-            en un solo lugar.
+            trabaja por vos.
           </span>
         </h1>
 
@@ -75,8 +75,8 @@ export function HeroSection() {
           className="hero-up text-base sm:text-lg md:text-xl text-gray-400 max-w-2xl mx-auto mb-9 leading-relaxed font-light"
           style={{ animationDelay: "0.2s" }}
         >
-          Agenda, pacientes, pagos y recordatorios automáticos. Sin planillas ni mensajes sueltos,
-          con tu marca y listo para tus pacientes.
+          Tu consultorio entero en un solo lugar: agenda, pacientes, expediente y cobros.
+          Vos atendés — de los recordatorios, los imprevistos y las deudas se ocupa el sistema.
         </p>
 
         {/* CTAs */}
