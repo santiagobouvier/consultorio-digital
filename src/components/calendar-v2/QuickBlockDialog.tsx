@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { addDays, differenceInCalendarDays, format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
-import { Sunrise, Sunset, CalendarOff, Loader2, Plane, ChevronDown, Clock, ArrowLeft, Ban, X } from "lucide-react";
+import { Sunrise, Sunset, CalendarOff, Loader2, Plane, ChevronDown, Clock, ArrowLeft, Ban, X, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -95,6 +95,11 @@ export const QuickBlockDialog = ({ open, onOpenChange, businessId, date, onSaved
   const [customOpen, setCustomOpen] = useState(false);
   const [customFrom, setCustomFrom] = useState("14:00");
   const [customTo, setCustomTo] = useState("16:00");
+  // Una sesión concreta del día
+  const [sessionsOpen, setSessionsOpen] = useState(false);
+  const [sessions, setSessions] = useState<{ id: string; start_at: string; end_at: string; name: string }[]>([]);
+  const [sessionsLoading, setSessionsLoading] = useState(false);
+  const [sessionsFetched, setSessionsFetched] = useState(false);
   // Licencia / vacaciones
   const [rangeOpen, setRangeOpen] = useState(false);
   const [rangeFrom, setRangeFrom] = useState(() => format(date, "yyyy-MM-dd"));
@@ -113,11 +118,62 @@ export const QuickBlockDialog = ({ open, onOpenChange, businessId, date, onSaved
       setRangeTo(format(addDays(date, 6), "yyyy-MM-dd"));
       setRangeOpen(false);
       setCustomOpen(false);
+      setSessionsOpen(false);
+      setSessions([]);
+      setSessionsFetched(false);
       setPlanned(null);
       setConflicts([]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  /** Sesiones activas del día (del profesional): para bloquear una puntual. */
+  const loadSessions = async () => {
+    setSessionsLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Sesión no válida");
+      const from = new Date(`${dateStr}T00:00:00`);
+      const to = new Date(`${dateStr}T23:59:59`);
+      const { data, error } = await supabase
+        .from("appointments")
+        .select("id, start_at, end_at, professional_id, patients (full_name)")
+        .eq("business_id", businessId)
+        .gte("start_at", from.toISOString())
+        .lte("start_at", to.toISOString())
+        .not("status", "in", '("cancelled","cancelled_by_patient")')
+        .order("start_at", { ascending: true });
+      if (error) throw error;
+      setSessions(
+        (data ?? [])
+          .filter((a: any) => !a.professional_id || a.professional_id === user.id)
+          .map((a: any) => ({
+            id: a.id,
+            start_at: a.start_at,
+            end_at: a.end_at,
+            name: a.patients?.full_name ?? "Paciente",
+          }))
+      );
+      setSessionsFetched(true);
+    } catch (e) {
+      console.error(e);
+      setSessions([]);
+      setSessionsFetched(true);
+    } finally {
+      setSessionsLoading(false);
+    }
+  };
+
+  const pickSession = (s: { id: string; start_at: string; end_at: string; name: string }) => {
+    const hhmm = format(new Date(s.start_at), "HH:mm");
+    void prepareBlock("session", {
+      title: "Imprevisto",
+      rows: [{ start_at: s.start_at, end_at: s.end_at }],
+      from: new Date(s.start_at),
+      to: new Date(s.end_at),
+      summary: `Bloqueada la sesión de las ${hhmm} (${s.name.split(" ")[0]}) el ${dayLabel}`,
+    });
+  };
 
   /** Inserta los bloqueos (y opcionalmente cancela las sesiones del rango). */
   const executeBlock = async (block: PlannedBlock, cancelIds: string[]) => {
@@ -385,6 +441,61 @@ export const QuickBlockDialog = ({ open, onOpenChange, businessId, date, onSaved
                   </button>
                 );
               })}
+
+              {/* Una sesión concreta del día */}
+              <div className="rounded-2xl border-2 border-border overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = !sessionsOpen;
+                    setSessionsOpen(next);
+                    if (next && !sessionsFetched) void loadSessions();
+                  }}
+                  className="w-full flex items-center gap-4 bg-card p-4 text-left transition-colors hover:bg-primary/5"
+                >
+                  <div className="w-12 h-12 shrink-0 rounded-2xl bg-amber-500/10 flex items-center justify-center">
+                    <User className="h-6 w-6 text-amber-500" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-[15px]">Una sesión del día</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Elegí cuál de las sesiones agendadas no podés dar</p>
+                  </div>
+                  <ChevronDown className={`h-4 w-4 text-muted-foreground shrink-0 transition-transform ${sessionsOpen ? "rotate-180" : ""}`} />
+                </button>
+                {sessionsOpen && (
+                  <div className="px-4 pb-4 space-y-2 bg-card">
+                    {sessionsLoading ? (
+                      <div className="py-4 flex items-center justify-center text-muted-foreground text-sm">
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" /> Buscando sesiones...
+                      </div>
+                    ) : sessions.length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-3">
+                        No hay sesiones agendadas este día.
+                      </p>
+                    ) : (
+                      sessions.map((s) => (
+                        <button
+                          key={s.id}
+                          type="button"
+                          disabled={loadingKey !== null}
+                          onClick={() => pickSession(s)}
+                          className="w-full flex items-center gap-3 rounded-xl border border-border bg-background p-3.5 text-left transition-all hover:border-amber-500/60 hover:bg-amber-500/5 active:scale-[0.98] disabled:opacity-60 min-h-[52px]"
+                        >
+                          <span className="font-bold tabular-nums text-[15px] shrink-0">
+                            {format(new Date(s.start_at), "HH:mm")}–{format(new Date(s.end_at), "HH:mm")}
+                          </span>
+                          <span className="truncate text-sm text-muted-foreground flex-1">{s.name}</span>
+                          {loadingKey === "session" ? (
+                            <Loader2 className="h-4 w-4 animate-spin text-amber-500 shrink-0" />
+                          ) : (
+                            <Ban className="h-4 w-4 text-amber-500 shrink-0" />
+                          )}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
 
               {/* Un rato puntual: el lapso exacto que no podés atender */}
               <div className="rounded-2xl border-2 border-border overflow-hidden">
