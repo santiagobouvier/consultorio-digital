@@ -299,32 +299,8 @@ export const MonthViewV2 = ({
                       );
                     })}
 
-                    {dayPayments.slice(0, Math.max(0, 3 - Math.min(dayAppointments.length, 2))).map((p) => {
-                      const st = calculatePaymentStatus(p);
-                      return (
-                        <div
-                          key={`pay-${p.id}`}
-                          className={cn(
-                            "text-xs p-1.5 rounded-lg truncate transition-all",
-                            "flex items-center gap-1",
-                            st === "overdue"
-                              ? "bg-rose-50 dark:bg-rose-500/10 border-l-2 border-l-rose-500"
-                              : st === "due_soon"
-                                ? "bg-amber-50 dark:bg-amber-500/10 border-l-2 border-l-amber-500"
-                                : "bg-emerald-50 dark:bg-emerald-500/10 border-l-2 border-l-emerald-500"
-                          )}
-                        >
-                          <CreditCard className="h-3 w-3 shrink-0" />
-                          <span className="truncate font-medium">
-                            ${p.amount.toLocaleString()}
-                          </span>
-                          <span className="text-muted-foreground truncate">
-                            {p.patient_name.split(" ")[0]}
-                          </span>
-                        </div>
-                      );
-                    })}
-
+                    {/* Los cobros NO se muestran en el mes: ensuciaban y se
+                        confundían con citas. Viven al abrir el día. */}
                     {dayAppointments.length > 2 && (
                       <p className="text-[10px] text-muted-foreground text-center py-0.5 font-medium">
                         + {dayAppointments.length - 2} más

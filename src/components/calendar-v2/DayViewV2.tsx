@@ -6,7 +6,7 @@ import { DayTimeGrid } from "./DayTimeGrid";
 import { DayMiniTimeline } from "./DayMiniTimeline";
 import { useDashboardBranding } from "@/contexts/DashboardBrandingContext";
 import type { FreeSlot, WeekSlotSummary } from "@/hooks/use-free-slots";
-import { CalendarDays, Plus, Clock, AlertTriangle, CreditCard, Check, X, CircleDashed } from "lucide-react";
+import { CalendarDays, Plus, Clock, AlertTriangle, CreditCard, Check, X, CircleDashed, Sparkles, ChevronRight, CalendarCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -307,6 +307,71 @@ export const DayViewV2 = ({
           </div>
         )}
       </div>
+
+      {/* ── Para hacer este día: el día te dice qué necesita de vos ── */}
+      {(() => {
+        const pendingApts = dayAppointments.filter((a) => a.status === "pending");
+        const duePayments = dayPayments.filter((p) => {
+          const st = calculatePaymentStatus({ due_date: p.due_date, paid_at: p.paid_at, status: p.status });
+          return st === "overdue" || st === "due_soon";
+        });
+        const freedSlots = decoratedFreeSlots.filter((s) => s.freed);
+        type TodoRow = { key: string; icon: React.ReactNode; text: string; action?: () => void };
+        const rows: TodoRow[] = [];
+        if (freedSlots.length > 0) {
+          rows.push({
+            key: "freed",
+            icon: <Sparkles className="h-4 w-4 text-amber-500" />,
+            text: freedSlots.length === 1
+              ? `Se te liberó las ${freedSlots[0].start} — buscale paciente`
+              : `Se te liberaron ${freedSlots.length} horarios — buscales paciente`,
+            action: onFreeSlotClick ? () => onFreeSlotClick(freedSlots[0]) : undefined,
+          });
+        }
+        if (pendingApts.length > 0) {
+          rows.push({
+            key: "pending",
+            icon: <CalendarCheck className="h-4 w-4 text-primary" />,
+            text: pendingApts.length === 1
+              ? `Confirmá la cita de ${pendingApts[0].patients?.full_name?.split(" ")[0] ?? "las"} ${format(new Date(pendingApts[0].start_at), "HH:mm")}`
+              : `${pendingApts.length} citas esperan tu confirmación`,
+            action: () => onAppointmentClick(pendingApts[0]),
+          });
+        }
+        if (duePayments.length > 0) {
+          rows.push({
+            key: "payments",
+            icon: <CreditCard className="h-4 w-4 text-rose-400" />,
+            text: duePayments.length === 1
+              ? `Reclamale el cobro a ${duePayments[0].patient_name.split(" ")[0]} ($${duePayments[0].amount.toLocaleString()})`
+              : `${duePayments.length} cobros del día para reclamar`,
+            action: onPaymentClick ? () => onPaymentClick(duePayments[0]) : undefined,
+          });
+        }
+        if (rows.length === 0) return null;
+        return (
+          <div className="rounded-2xl border border-border/60 bg-card overflow-hidden">
+            <p className="px-4 pt-3 pb-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Para hacer este día
+            </p>
+            <div className="pb-1.5">
+              {rows.map((r) => (
+                <button
+                  key={r.key}
+                  type="button"
+                  onClick={r.action}
+                  disabled={!r.action}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-muted/40 active:bg-muted/60 min-h-[44px]"
+                >
+                  <span className="shrink-0">{r.icon}</span>
+                  <span className="flex-1 text-sm font-medium text-foreground">{r.text}</span>
+                  {r.action && <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />}
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Multi-column time grid (desktop, 2+ professionals) */}
       {useMultiColumn && columnData ? (
