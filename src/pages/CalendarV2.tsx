@@ -34,7 +34,7 @@ import { WeekViewV2 } from "@/components/calendar-v2/WeekViewV2";
 import { MonthViewV2 } from "@/components/calendar-v2/MonthViewV2";
 import { DesktopCalendarLayout } from "@/components/calendar-v2/DesktopCalendarLayout";
 import { MobileAgendaFab } from "@/components/calendar-v2/MobileAgendaFab";
-import { BirthdaysStrip, birthdaysOn, type DayBirthday } from "@/components/calendar-v2/BirthdaysStrip";
+import { birthdaysOn, type DayBirthday } from "@/components/calendar-v2/BirthdaysStrip";
 import { QuickBlockDialog } from "@/components/calendar-v2/QuickBlockDialog";
 import { SlotActionSheet } from "@/components/calendar-v2/SlotActionSheet";
 import { SlotCreateChooser } from "@/components/calendar-v2/SlotCreateChooser";
@@ -763,13 +763,8 @@ const CalendarV2 = () => {
           }}
         />
 
-        {/* Cumpleaños del rango visible, con saludo por WhatsApp a un toque */}
-        <BirthdaysStrip
-          patients={patients}
-          rangeStart={getDateRange().startDate}
-          rangeEnd={getDateRange().endDate}
-          clinicName={displayName || "tu consultorio"}
-        />
+        {/* Los cumpleaños viven en el calendario: chip 🎂 en su celda del mes
+            y tarjeta festiva al abrir el día (la tira vieja duplicaba). */}
 
         {/* Professional filter chips (for shared calendar) */}
         <ProfessionalFilter
