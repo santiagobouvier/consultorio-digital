@@ -37,6 +37,7 @@ import { MobileAgendaFab } from "@/components/calendar-v2/MobileAgendaFab";
 import { BirthdaysStrip, birthdaysOn, type DayBirthday } from "@/components/calendar-v2/BirthdaysStrip";
 import { QuickBlockDialog } from "@/components/calendar-v2/QuickBlockDialog";
 import { SlotActionSheet } from "@/components/calendar-v2/SlotActionSheet";
+import { SlotCreateChooser } from "@/components/calendar-v2/SlotCreateChooser";
 import { useDayFreeSlots, useWeekSlotSummary, type FreeSlot } from "@/hooks/use-free-slots";
 import {
   useTodayPulse,
@@ -171,6 +172,10 @@ const CalendarV2 = () => {
   }, []);
   // Cupo libre tocado en la grilla del día (agendar / cerrar / compartir)
   const [slotSheetTarget, setSlotSheetTarget] = useState<FreeSlot | null>(null);
+  // Hora vacía tocada en la grilla: elegir qué crear ahí (cita / personal)
+  const [slotChooserTime, setSlotChooserTime] = useState<string | null>(null);
+  // Hora sugerida para el evento personal (viene del lapso tocado)
+  const [personalDefaultTime, setPersonalDefaultTime] = useState<string | null>(null);
   // Hora tocada en un hueco de la grilla (se resalta en el modal de cita)
   const [prefilledTimeForAction, setPrefilledTimeForAction] = useState<string | null>(null);
   // Swipe horizontal para cambiar de día/semana/mes (gesto tipo Google)
@@ -641,14 +646,20 @@ const CalendarV2 = () => {
     setShowAppointmentModal(true);
   }, []);
 
-  const openCreatePersonal = useCallback((date?: Date) => {
+  const openCreatePersonal = useCallback((date?: Date, startTime?: string) => {
     setPersonalEventTarget(null);
     setSelectedDateForAction(date ?? currentDate);
+    setPersonalDefaultTime(startTime ?? null);
     setShowPersonalModal(true);
   }, [currentDate]);
 
-  // Tocar un hueco libre en la grilla del día: crear cita a esa hora
+  // Tocar un hueco libre en la grilla del día: elegir qué crear a esa hora
+  // (cita o evento personal), estilo Google Calendar.
   const handleSlotTap = useCallback((time: string) => {
+    setSlotChooserTime(time);
+  }, []);
+
+  const createAppointmentAt = useCallback((time: string) => {
     setSelectedDateForAction(currentDate);
     setLockDateForAction(true);
     setPrefilledTimeForAction(time);
@@ -968,10 +979,26 @@ const CalendarV2 = () => {
           businessId={businessId}
           date={currentDate}
           slot={slotSheetTarget}
-          onSchedule={handleSlotTap}
+          onSchedule={createAppointmentAt}
           onChanged={() => {
             invalidateAppointmentData(queryClient);
             queryClient.invalidateQueries({ queryKey: ["personal_events"] });
+          }}
+        />
+
+        {/* Hora vacía tocada en la grilla: ¿cita o evento personal? */}
+        <SlotCreateChooser
+          open={!!slotChooserTime}
+          onOpenChange={(o) => {
+            if (!o) setSlotChooserTime(null);
+          }}
+          date={currentDate}
+          time={slotChooserTime}
+          onCreateAppointment={() => {
+            if (slotChooserTime) createAppointmentAt(slotChooserTime);
+          }}
+          onCreatePersonal={() => {
+            if (slotChooserTime) openCreatePersonal(currentDate, slotChooserTime);
           }}
         />
 
@@ -992,11 +1019,15 @@ const CalendarV2 = () => {
           open={showPersonalModal}
           onOpenChange={(o) => {
             setShowPersonalModal(o);
-            if (!o) setPersonalEventTarget(null);
+            if (!o) {
+              setPersonalEventTarget(null);
+              setPersonalDefaultTime(null);
+            }
           }}
           businessId={businessId}
           event={personalEventTarget}
           defaultDate={selectedDateForAction}
+          defaultStartTime={personalDefaultTime}
           onSaved={() => {
             queryClient.invalidateQueries({ queryKey: ["personal_events"] });
             // Los cupos libres dependen de los eventos personales
