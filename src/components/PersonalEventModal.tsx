@@ -54,6 +54,8 @@ interface PersonalEventModalProps {
   event?: PersonalEvent | null;
   /** Fecha sugerida al crear (día visible en la agenda). */
   defaultDate?: Date;
+  /** Hora sugerida al crear ("15:00") — al tocar un lapso de la grilla. */
+  defaultStartTime?: string | null;
   onSaved: () => void;
 }
 
@@ -172,6 +174,7 @@ export const PersonalEventModal = ({
   businessId,
   event,
   defaultDate,
+  defaultStartTime = null,
   onSaved,
 }: PersonalEventModalProps) => {
   const isEdit = !!event;
@@ -217,15 +220,16 @@ export const PersonalEventModal = ({
       setTitle("");
       setLabelId(null);
       setDate(format(defaultDate ?? new Date(), "yyyy-MM-dd"));
-      setStartTime("09:00");
-      setEndTime("10:00");
+      const start = defaultStartTime ?? "09:00";
+      setStartTime(start);
+      setEndTime(addMinutes(start, 60));
       setRecurrence("none");
       setUntil("");
       setNotes("");
     }
     setCreatingLabel(false);
     setNewLabelName("");
-  }, [open, event, defaultDate]);
+  }, [open, event, defaultDate, defaultStartTime]);
 
   // Etiquetas del profesional
   useEffect(() => {
