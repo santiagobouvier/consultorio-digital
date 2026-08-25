@@ -115,15 +115,22 @@ export const DayTimeGrid = ({
 
   return (
     <div className="flex bg-card">
-      {/* Eje de horas */}
+      {/* Eje de horas: también las medias horas, para acertarle a las 16:30 */}
       <div className="relative w-12 shrink-0 border-r bg-muted/20" style={{ height: bodyHeight }}>
         {hours.map((h, i) => (
-          <span
-            key={h}
-            className="absolute right-1.5 text-[10px] text-muted-foreground font-medium tabular-nums"
-            style={{ top: i * HOUR_H - (i === 0 ? 0 : 7) }}
-          >
-            {`${String(h).padStart(2, "0")}:00`}
+          <span key={h}>
+            <span
+              className="absolute right-1.5 text-[10px] text-muted-foreground font-medium tabular-nums"
+              style={{ top: i * HOUR_H - (i === 0 ? 0 : 7) }}
+            >
+              {`${String(h).padStart(2, "0")}:00`}
+            </span>
+            <span
+              className="absolute right-1.5 text-[9px] text-muted-foreground/50 tabular-nums"
+              style={{ top: i * HOUR_H + HOUR_H / 2 - 6 }}
+            >
+              {`${String(h).padStart(2, "0")}:30`}
+            </span>
           </span>
         ))}
       </div>
@@ -152,7 +159,7 @@ export const DayTimeGrid = ({
               aria-hidden
             />
             <div
-              className="absolute inset-x-0 border-t border-dashed border-border/30"
+              className="absolute inset-x-0 border-t border-dashed border-border/50"
               style={{ top: i * HOUR_H + HOUR_H / 2 }}
               aria-hidden
             />
