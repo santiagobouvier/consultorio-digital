@@ -1,11 +1,8 @@
 import { useState, useMemo } from "react";
-import { isSameDay } from "date-fns";
 import { CalendarAppointment, DayPayment } from "./types";
-import { DesktopDaySidebar } from "./DesktopDaySidebar";
+import { DayDetailModal } from "./DayDetailModal";
 import { MonthViewV2 } from "./MonthViewV2";
 import type { DayBirthday } from "./BirthdaysStrip";
-import { cn } from "@/lib/utils";
-import { ChevronRight } from "lucide-react";
 
 interface DesktopCalendarLayoutProps {
   currentDate: Date;
@@ -32,23 +29,13 @@ export const DesktopCalendarLayout = ({
   birthdaysByDate,
   clinicName,
 }: DesktopCalendarLayoutProps) => {
+  // Tocar un día abre EL DÍA COMPLETO en un modal (impacto > panel lateral)
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
-  // Cerrado por defecto: un panel vacío ocupando lugar queda feo. Se abre al
-  // tocar un día del calendario o con la flechita del borde.
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [dayModalOpen, setDayModalOpen] = useState(false);
 
   const handleDayClick = (date: Date) => {
-    if (selectedDay && isSameDay(date, selectedDay)) {
-      setSidebarOpen(!sidebarOpen);
-    } else {
-      setSelectedDay(date);
-      setSidebarOpen(true);
-    }
-  };
-
-  const handleCloseSidebar = () => {
-    setSidebarOpen(false);
-    setSelectedDay(null);
+    setSelectedDay(date);
+    setDayModalOpen(true);
   };
 
   // Get day indicators for month view
@@ -75,12 +62,9 @@ export const DesktopCalendarLayout = ({
   }, [selectedDay, paymentsByDay]);
 
   return (
-    <div className="flex gap-6 h-[calc(100vh-200px)] min-h-[600px]">
+    <div className="h-[calc(100vh-200px)] min-h-[600px]">
       {/* Calendar area */}
-      <div className={cn(
-        "transition-all duration-300 ease-out min-w-0",
-        sidebarOpen ? "flex-1" : "w-full"
-      )}>
+      <div className="w-full min-w-0">
         <MonthViewV2
           currentDate={currentDate}
           appointments={appointments}
@@ -98,49 +82,35 @@ export const DesktopCalendarLayout = ({
         />
       </div>
 
-      {/* Side panel container with attached toggle */}
-      <div className="relative shrink-0 flex">
-        {/* Toggle tab — always visible, attached to sidebar edge */}
-        <button
-          onClick={() => setSidebarOpen((v) => !v)}
-          className={cn(
-            "self-center -mr-px h-16 w-6 rounded-l-lg border border-r-0 bg-card hover:bg-muted",
-            "flex items-center justify-center transition-colors shadow-sm z-10"
-          )}
-          aria-label={sidebarOpen ? "Ocultar panel del día" : "Mostrar panel del día"}
-        >
-          <ChevronRight
-            className={cn(
-              "w-4 h-4 text-muted-foreground transition-transform duration-300",
-              sidebarOpen ? "rotate-0" : "rotate-180"
-            )}
-          />
-        </button>
-
-        {/* Side panel */}
-        <div className={cn(
-          "overflow-hidden transition-all duration-300 ease-out rounded-r-2xl shadow-lg",
-          sidebarOpen
-            ? "w-[380px] opacity-100 border bg-card"
-            : "w-0 opacity-0"
-        )}>
-          {sidebarOpen && (
-            <DesktopDaySidebar
-              selectedDate={selectedDay}
-              appointments={appointments}
-              dayPayments={selectedDayPayments}
-              onAppointmentClick={(apt) => {
-                onAppointmentClick(apt);
-              }}
-              onPaymentClick={(p) => onPaymentClick?.(p)}
-              onCreateAppointment={() => onCreateAppointment(selectedDay || undefined)}
-              onCreatePayment={() => onCreatePayment(selectedDay || undefined)}
-              onClose={handleCloseSidebar}
-              showProfessionalColors={showProfessionalColors}
-            />
-          )}
-        </div>
-      </div>
+      {/* El día completo, en modal */}
+      {selectedDay && (
+        <DayDetailModal
+          open={dayModalOpen}
+          onClose={() => setDayModalOpen(false)}
+          selectedDate={selectedDay}
+          appointments={appointments}
+          dayPayments={selectedDayPayments}
+          birthdays={birthdaysByDate?.get(selectedDay.toDateString()) ?? []}
+          clinicName={clinicName}
+          onAppointmentClick={(apt) => {
+            setDayModalOpen(false);
+            onAppointmentClick(apt);
+          }}
+          onPaymentClick={(p) => {
+            setDayModalOpen(false);
+            onPaymentClick?.(p);
+          }}
+          onCreateAppointment={() => {
+            setDayModalOpen(false);
+            onCreateAppointment(selectedDay || undefined);
+          }}
+          onCreatePayment={() => {
+            setDayModalOpen(false);
+            onCreatePayment(selectedDay || undefined);
+          }}
+          showProfessionalColors={showProfessionalColors}
+        />
+      )}
     </div>
   );
 };
