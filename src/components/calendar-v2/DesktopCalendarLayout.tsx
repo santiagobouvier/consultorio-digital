@@ -10,7 +10,7 @@ interface DesktopCalendarLayoutProps {
   appointments: CalendarAppointment[];
   onAppointmentClick: (appointment: CalendarAppointment) => void;
   onCreateAppointment: (date?: Date) => void;
-  onCreatePayment: (date?: Date) => void;
+  onCreatePayment?: (date?: Date) => void;
   onCreatePersonal?: (date: Date) => void;
   onQuickBlock?: (date: Date) => void;
   showProfessionalColors: boolean;
@@ -109,10 +109,14 @@ export const DesktopCalendarLayout = ({
             setDayModalOpen(false);
             onCreateAppointment(selectedDay || undefined);
           }}
-          onCreatePayment={() => {
-            setDayModalOpen(false);
-            onCreatePayment(selectedDay || undefined);
-          }}
+          onCreatePayment={
+            onCreatePayment
+              ? () => {
+                  setDayModalOpen(false);
+                  onCreatePayment(selectedDay || undefined);
+                }
+              : undefined
+          }
           onCreatePersonal={
             onCreatePersonal
               ? () => {

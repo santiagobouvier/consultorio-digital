@@ -107,9 +107,10 @@ export const CalendarHeader = ({
 }: CalendarHeaderProps) => {
   const [pickerOpen, setPickerOpen] = useState(false);
 
-  // "+ Nuevo": abre el selector de dos tarjetas grandes (cita / pago).
+  // "+ Nuevo": abre el selector de tarjetas grandes si hay más de una opción
+  const hasPicker = !!(onAddPayment || onAddPersonal || onQuickBlock);
   const AddMenu = ({ triggerClassName, iconOnly = false }: { triggerClassName?: string; iconOnly?: boolean }) => {
-    if (!onAddPayment) {
+    if (!hasPicker) {
       return (
         <Button onClick={onAddAppointment} className={triggerClassName} size={iconOnly ? "icon" : "default"}>
           <Plus className={iconOnly ? "h-5 w-5" : "h-4 w-4"} />
@@ -335,7 +336,7 @@ export const CalendarHeader = ({
         </div>
       </div>
 
-      {onAddPayment && (
+      {hasPicker && (
         <NewActionDialog
           open={pickerOpen}
           onOpenChange={setPickerOpen}

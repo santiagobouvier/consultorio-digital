@@ -11,7 +11,8 @@ interface NewActionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onAddAppointment: () => void;
-  onAddPayment: () => void;
+  /** Crear pago suelto: ya no se ofrece desde la agenda (vive en Pagos). */
+  onAddPayment?: () => void;
   onAddPersonal?: () => void;
   onQuickBlock?: () => void;
   onOpenSlot?: () => void;
@@ -63,7 +64,7 @@ export const NewActionDialog = ({
           <button
             type="button"
             onClick={() => pick(onAddAppointment)}
-            className="flex flex-col items-center gap-3 rounded-2xl border-2 border-border bg-card p-6 sm:p-7 text-center transition-all hover:border-primary hover:bg-primary/5 active:scale-[0.98]"
+            className={`${onAddPayment ? "" : "sm:col-span-2 "}flex flex-col items-center gap-3 rounded-2xl border-2 border-border bg-card p-6 sm:p-7 text-center transition-all hover:border-primary hover:bg-primary/5 active:scale-[0.98]`}
           >
             <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
               <CalendarPlus className="h-8 w-8 text-primary" />
@@ -76,21 +77,23 @@ export const NewActionDialog = ({
             </div>
           </button>
 
-          <button
-            type="button"
-            onClick={() => pick(onAddPayment)}
-            className="flex flex-col items-center gap-3 rounded-2xl border-2 border-border bg-card p-6 sm:p-7 text-center transition-all hover:border-primary hover:bg-primary/5 active:scale-[0.98]"
-          >
-            <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 flex items-center justify-center">
-              <CreditCard className="h-8 w-8 text-emerald-500" />
-            </div>
-            <div>
-              <p className="font-bold text-[16px]">Registrar pago</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {fixedDateLabel ? "Cobro con fecha de este día" : "Un cobro o vencimiento para un paciente"}
-              </p>
-            </div>
-          </button>
+          {onAddPayment && (
+            <button
+              type="button"
+              onClick={() => pick(onAddPayment)}
+              className="flex flex-col items-center gap-3 rounded-2xl border-2 border-border bg-card p-6 sm:p-7 text-center transition-all hover:border-primary hover:bg-primary/5 active:scale-[0.98]"
+            >
+              <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 flex items-center justify-center">
+                <CreditCard className="h-8 w-8 text-emerald-500" />
+              </div>
+              <div>
+                <p className="font-bold text-[16px]">Registrar pago</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {fixedDateLabel ? "Cobro con fecha de este día" : "Un cobro o vencimiento para un paciente"}
+                </p>
+              </div>
+            </button>
+          )}
 
           {onAddPersonal && (
             <button

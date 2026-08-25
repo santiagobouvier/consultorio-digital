@@ -727,11 +727,6 @@ const CalendarV2 = () => {
             setLockDateForAction(false);
             setShowCreateModal(true);
           }}
-          onAddPayment={() => {
-            setSelectedDateForAction(currentDate);
-            setLockDateForAction(false);
-            setShowPaymentDrawer(true);
-          }}
           onAddPersonal={() => openCreatePersonal()}
           onQuickBlock={() => openQuickBlock()}
           onPickDate={(d) => setCurrentDate(d)}
@@ -867,15 +862,6 @@ const CalendarV2 = () => {
                       setLockDateForAction(false);
                     }
                     setShowCreateModal(true);
-                  }}
-                  onCreatePayment={(date) => {
-                    if (date) {
-                      setSelectedDateForAction(date);
-                      setLockDateForAction(true);
-                    } else {
-                      setLockDateForAction(false);
-                    }
-                    setShowPaymentDrawer(true);
                   }}
                   showProfessionalColors={showProfessionalColors}
                   paymentsByDay={paymentsByDay}
@@ -1100,11 +1086,6 @@ const CalendarV2 = () => {
           // El flujo general (todos los días) vive en "+ Nuevo" del header.
           setLockDateForAction(viewType === "day");
           setShowCreateModal(true);
-        }}
-        onAddPayment={() => {
-          setSelectedDateForAction(currentDate);
-          setLockDateForAction(viewType === "day");
-          setShowPaymentDrawer(true);
         }}
         onAddPersonal={() =>
           openCreatePersonal(
