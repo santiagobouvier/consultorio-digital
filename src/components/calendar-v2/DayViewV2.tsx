@@ -175,7 +175,9 @@ export const DayViewV2 = ({
     return m === 0 ? `${h} h` : `${h} h ${m}`;
   };
 
-  // Marcar cupos que se liberaron por una cancelación del día: oportunidad
+  // De los cupos del motor solo se muestran los LIBERADOS por una
+  // cancelación (ámbar): el espacio vacío de la grilla ya es lo libre —
+  // pintar todo "Libre" era ruido.
   const decoratedFreeSlots = useMemo(() => {
     if (freeSlots.length === 0) return freeSlots;
     const cancelledRanges = cancelledAppointments.map((a) => {
@@ -198,6 +200,12 @@ export const DayViewV2 = ({
       return freed ? { ...slot, freed: true } : slot;
     });
   }, [freeSlots, cancelledAppointments]);
+
+  // Solo los liberados se dibujan en la grilla
+  const freedSlotsOnly = useMemo(
+    () => decoratedFreeSlots.filter((s) => s.freed),
+    [decoratedFreeSlots]
+  );
 
   // Group appointments by professional for multi-column view
   const columnData = useMemo(() => {
@@ -275,17 +283,12 @@ export const DayViewV2 = ({
           className="mt-4"
         />
 
-        {(dayStats.first || dayStats.done > 0 || dayStats.cancelled > 0 || weekSummary || freeSlots.length > 0) && (
+        {(dayStats.first || dayStats.done > 0 || dayStats.cancelled > 0 || freedSlotsOnly.length > 0) && (
           <div className="mt-3 flex flex-wrap items-center gap-1.5">
-            {freeSlots.length > 0 && (
-              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-full px-2.5 py-1 tabular-nums">
+            {freedSlotsOnly.length > 0 && (
+              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-full px-2.5 py-1 tabular-nums">
                 <CircleDashed className="h-3 w-3" />
-                {freeSlots.length} cupo{freeSlots.length !== 1 ? "s" : ""} libre{freeSlots.length !== 1 ? "s" : ""}
-              </span>
-            )}
-            {weekSummary && (weekSummary.free > 0 || weekSummary.booked > 0) && (
-              <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground bg-background/60 border border-border/50 rounded-full px-2.5 py-1 tabular-nums">
-                Semana: {weekSummary.booked} reservada{weekSummary.booked !== 1 ? "s" : ""} · {weekSummary.free} libre{weekSummary.free !== 1 ? "s" : ""}
+                Se liberó {freedSlotsOnly.length === 1 ? `las ${freedSlotsOnly[0].start}` : `${freedSlotsOnly.length} horarios`}
               </span>
             )}
             {dayStats.first && dayStats.last && (
@@ -523,7 +526,7 @@ export const DayViewV2 = ({
         {/* La grilla se muestra SIEMPRE (día vacío incluido): tocás una hora
             y creás — como Google Calendar. Nada de pantallas intermedias. */}
         <>
-            {dayAppointments.length === 0 && decoratedFreeSlots.length === 0 && (
+            {dayAppointments.length === 0 && (
               <p className="text-center text-sm text-muted-foreground pb-3">
                 Día libre 🙌 — tocá una hora para agendar
               </p>
@@ -536,7 +539,7 @@ export const DayViewV2 = ({
                 isCurrentDay={isCurrentDay}
                 nowTick={nowTick}
                 onSlotTap={onSlotTap}
-                freeSlots={decoratedFreeSlots}
+                freeSlots={freedSlotsOnly}
                 onFreeSlotClick={onFreeSlotClick}
               />
             </div>
