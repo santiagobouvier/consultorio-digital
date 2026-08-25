@@ -37,6 +37,8 @@ import { MobileAgendaFab } from "@/components/calendar-v2/MobileAgendaFab";
 import { BirthdaysStrip } from "@/components/calendar-v2/BirthdaysStrip";
 import { ShareFreeSlotsDialog } from "@/components/calendar-v2/ShareFreeSlotsDialog";
 import { QuickBlockDialog } from "@/components/calendar-v2/QuickBlockDialog";
+import { SlotActionSheet } from "@/components/calendar-v2/SlotActionSheet";
+import { useDayFreeSlots, useWeekSlotSummary, type FreeSlot } from "@/hooks/use-free-slots";
 import {
   useTodayPulse,
   AgendaHero,
@@ -164,6 +166,8 @@ const CalendarV2 = () => {
   const [showShareSlots, setShowShareSlots] = useState(false);
   // Imprevisto: bloquear mañana/tarde/día en un toque
   const [showQuickBlock, setShowQuickBlock] = useState(false);
+  // Cupo libre tocado en la grilla del día (agendar / cerrar / compartir)
+  const [slotSheetTarget, setSlotSheetTarget] = useState<FreeSlot | null>(null);
   // Hora tocada en un hueco de la grilla (se resalta en el modal de cita)
   const [prefilledTimeForAction, setPrefilledTimeForAction] = useState<string | null>(null);
   // Swipe horizontal para cambiar de día/semana/mes (gesto tipo Google)
@@ -171,6 +175,9 @@ const CalendarV2 = () => {
   const viewsRef = useRef<HTMLDivElement>(null);
   // Pulso del día: alimenta el hero, la tarjeta "en sesión" y el festejo
   const todayPulse = useTodayPulse(businessId);
+  // Cupos libres del día visible + resumen de la semana (solo en vista día)
+  const { data: dayFreeSlots } = useDayFreeSlots(businessId, currentDate, viewType === "day");
+  const { data: weekSlotSummary } = useWeekSlotSummary(businessId, currentDate, viewType === "day");
 
   // Fetch business settings
   useEffect(() => {
@@ -855,6 +862,9 @@ const CalendarV2 = () => {
                       dayPayments={dayPayments}
                       onPaymentClick={handlePaymentClick}
                       onSlotTap={handleSlotTap}
+                      freeSlots={dayFreeSlots ?? []}
+                      onFreeSlotClick={(slot) => setSlotSheetTarget(slot)}
+                      weekSummary={weekSlotSummary ?? null}
                     />
                   )}
                   {viewType === "week" && (
@@ -915,6 +925,22 @@ const CalendarV2 = () => {
           currentUserId={currentUserId}
         />
 
+        {/* Cupo libre tocado: agendar acá / cerrar cupo / ofrecer por WhatsApp */}
+        <SlotActionSheet
+          open={!!slotSheetTarget}
+          onOpenChange={(o) => {
+            if (!o) setSlotSheetTarget(null);
+          }}
+          businessId={businessId}
+          date={currentDate}
+          slot={slotSheetTarget}
+          onSchedule={handleSlotTap}
+          onChanged={() => {
+            invalidateAppointmentData(queryClient);
+            queryClient.invalidateQueries({ queryKey: ["personal_events"] });
+          }}
+        />
+
         {/* Imprevisto: bloquear mañana/tarde/día del día que se está mirando */}
         <QuickBlockDialog
           open={showQuickBlock}
@@ -923,6 +949,7 @@ const CalendarV2 = () => {
           date={currentDate}
           onSaved={() => {
             queryClient.invalidateQueries({ queryKey: ["personal_events"] });
+            invalidateAppointmentData(queryClient);
           }}
         />
 
@@ -938,6 +965,8 @@ const CalendarV2 = () => {
           defaultDate={selectedDateForAction}
           onSaved={() => {
             queryClient.invalidateQueries({ queryKey: ["personal_events"] });
+            // Los cupos libres dependen de los eventos personales
+            invalidateAppointmentData(queryClient);
           }}
         />
 

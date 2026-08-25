@@ -5,13 +5,14 @@
 import { useEffect, useMemo, useRef } from "react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { Coffee, Repeat, Video } from "lucide-react";
+import { Coffee, Repeat, Video, Sparkles } from "lucide-react";
 import {
   CalendarAppointment,
   getPersonalLabel,
   getPaymentColorInfo,
   getEventHexColor,
 } from "./types";
+import type { FreeSlot } from "@/hooks/use-free-slots";
 
 const HOUR_H = 64;
 
@@ -30,7 +31,15 @@ interface DayTimeGridProps {
   /** Tocar un hueco libre de la grilla: crea una cita a esa hora (redondeada
    *  a la media hora, como Google Calendar). */
   onSlotTap?: (time: string) => void;
+  /** Cupos que la reserva online está ofreciendo: se dibujan punteados. */
+  freeSlots?: FreeSlot[];
+  onFreeSlotClick?: (slot: FreeSlot) => void;
 }
+
+const timeToMin = (hhmm: string) => {
+  const [h, m] = hhmm.split(":").map(Number);
+  return h * 60 + m;
+};
 
 export const DayTimeGrid = ({
   appointments,
@@ -39,6 +48,8 @@ export const DayTimeGrid = ({
   isCurrentDay,
   nowTick,
   onSlotTap,
+  freeSlots = [],
+  onFreeSlotClick,
 }: DayTimeGridProps) => {
   const nowRef = useRef<HTMLDivElement>(null);
 
@@ -52,8 +63,12 @@ export const DayTimeGrid = ({
       s = Math.min(s, sD.getHours());
       e = Math.max(e, eD.getMinutes() > 0 ? eD.getHours() + 1 : eD.getHours());
     }
+    for (const slot of freeSlots) {
+      s = Math.min(s, Math.floor(timeToMin(slot.start) / 60));
+      e = Math.max(e, Math.ceil(timeToMin(slot.end) / 60));
+    }
     return { startHour: s, endHour: Math.min(e, 24) };
-  }, [appointments]);
+  }, [appointments, freeSlots]);
 
   const hours = useMemo(() => {
     const out: number[] = [];
@@ -143,6 +158,59 @@ export const DayTimeGrid = ({
             />
           </div>
         ))}
+
+        {/* Cupos libres: lo que la reserva online está ofreciendo ahora.
+            Se dibujan punteados detrás de las citas; tocarlos abre acciones
+            (agendar, cerrar el cupo, compartirlo por WhatsApp). */}
+        {freeSlots.map((slot) => {
+          const sMin = timeToMin(slot.start);
+          const eMin = timeToMin(slot.end);
+          const top = (sMin / 60 - startHour) * HOUR_H;
+          const height = Math.max(((eMin - sMin) / 60) * HOUR_H - 3, 24);
+          const compact = height < 44;
+          return (
+            <button
+              key={`free-${slot.start}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                onFreeSlotClick?.(slot);
+              }}
+              className={cn(
+                "absolute left-[3px] right-[3px] rounded-[10px] border-2 border-dashed text-left transition-colors",
+                slot.freed
+                  ? "border-amber-500/60 bg-amber-500/[0.07] hover:bg-amber-500/15"
+                  : "border-emerald-500/40 bg-emerald-500/[0.05] hover:bg-emerald-500/10"
+              )}
+              style={{ top, height }}
+            >
+              <div className={cn("flex items-center gap-1.5 min-w-0", compact ? "px-2 py-0.5" : "px-2.5 py-1.5")}>
+                {slot.freed && <Sparkles className="h-3 w-3 shrink-0 text-amber-500" />}
+                <span
+                  className={cn(
+                    "font-semibold tabular-nums",
+                    compact ? "text-[10.5px]" : "text-[12px]",
+                    slot.freed
+                      ? "text-amber-600 dark:text-amber-400"
+                      : "text-emerald-600 dark:text-emerald-400"
+                  )}
+                >
+                  {slot.start}
+                </span>
+                <span
+                  className={cn(
+                    "font-medium truncate",
+                    compact ? "text-[10px]" : "text-[11px]",
+                    slot.freed
+                      ? "text-amber-600/90 dark:text-amber-400/90"
+                      : "text-emerald-600/80 dark:text-emerald-400/80"
+                  )}
+                >
+                  {slot.freed ? "¡Se liberó!" : "Libre"}
+                </span>
+              </div>
+            </button>
+          );
+        })}
 
         {/* Bloques */}
         {placed.items.map(({ apt, col }, idx) => {
