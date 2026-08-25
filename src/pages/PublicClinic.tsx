@@ -43,6 +43,14 @@ type ScheduleRow = { day: DayKey; ranges: string[] };
 const buildSchedule = (template: any): ScheduleRow[] => {
   if (!template) return [];
   return DAY_ORDER.map((day) => {
+    // Formato nuevo: bloques libres por día en day_blocks
+    const jb = template.day_blocks?.[day];
+    if (Array.isArray(jb)) {
+      const ranges = jb
+        .map((b: any) => (Array.isArray(b) ? formatRange(b[0], b[1]) : null))
+        .filter(Boolean) as string[];
+      return { day, ranges };
+    }
     if (!template[`${day}_enabled`]) return { day, ranges: [] };
     const r1 = formatRange(template[`${day}_start_1`], template[`${day}_end_1`]);
     const r2 = formatRange(template[`${day}_start_2`], template[`${day}_end_2`]);

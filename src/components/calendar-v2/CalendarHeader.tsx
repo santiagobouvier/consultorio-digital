@@ -20,6 +20,7 @@ interface CalendarHeaderProps {
   onAddAppointment: () => void;
   onAddPayment?: () => void;
   onAddPersonal?: () => void;
+  onQuickBlock?: () => void;
   onShareSlots?: () => void;
   /** Tocar el título abre un mini-mes para saltar a cualquier fecha. */
   onPickDate?: (date: Date) => void;
@@ -89,6 +90,7 @@ export const CalendarHeader = ({
   onAddAppointment,
   onAddPayment,
   onAddPersonal,
+  onQuickBlock,
   onShareSlots,
   onPickDate,
   extraActions,
@@ -318,6 +320,7 @@ export const CalendarHeader = ({
           onAddAppointment={onAddAppointment}
           onAddPayment={onAddPayment}
           onAddPersonal={onAddPersonal}
+          onQuickBlock={onQuickBlock}
         />
       )}
     </div>

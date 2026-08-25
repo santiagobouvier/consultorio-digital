@@ -1,4 +1,4 @@
-import { CalendarPlus, CreditCard, Coffee } from "lucide-react";
+import { CalendarPlus, CreditCard, Coffee, CalendarOff } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -13,6 +13,7 @@ interface NewActionDialogProps {
   onAddAppointment: () => void;
   onAddPayment: () => void;
   onAddPersonal?: () => void;
+  onQuickBlock?: () => void;
 }
 
 /**
@@ -25,6 +26,7 @@ export const NewActionDialog = ({
   onAddAppointment,
   onAddPayment,
   onAddPersonal,
+  onQuickBlock,
 }: NewActionDialogProps) => {
   const pick = (fn: () => void) => {
     onOpenChange(false);
@@ -84,6 +86,24 @@ export const NewActionDialog = ({
                 <p className="font-semibold">Evento personal</p>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   Gimnasio, trámite, almuerzo... bloquea el horario para que nadie reserve
+                </p>
+              </div>
+            </button>
+          )}
+
+          {onQuickBlock && (
+            <button
+              type="button"
+              onClick={() => pick(onQuickBlock)}
+              className="sm:col-span-2 flex items-center gap-4 rounded-2xl border-2 border-border bg-card p-4 text-left transition-all hover:border-amber-500/60 hover:bg-amber-500/5 active:scale-[0.98]"
+            >
+              <div className="w-12 h-12 shrink-0 rounded-2xl bg-amber-500/10 flex items-center justify-center">
+                <CalendarOff className="h-6 w-6 text-amber-500" />
+              </div>
+              <div>
+                <p className="font-semibold">Imprevisto</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Se te complicó el día: bloqueá la mañana, la tarde o todo el día en un toque
                 </p>
               </div>
             </button>

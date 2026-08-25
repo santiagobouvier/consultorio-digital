@@ -36,6 +36,7 @@ import { DesktopCalendarLayout } from "@/components/calendar-v2/DesktopCalendarL
 import { MobileAgendaFab } from "@/components/calendar-v2/MobileAgendaFab";
 import { BirthdaysStrip } from "@/components/calendar-v2/BirthdaysStrip";
 import { ShareFreeSlotsDialog } from "@/components/calendar-v2/ShareFreeSlotsDialog";
+import { QuickBlockDialog } from "@/components/calendar-v2/QuickBlockDialog";
 import {
   useTodayPulse,
   AgendaHero,
@@ -161,6 +162,8 @@ const CalendarV2 = () => {
   const [personalEventTarget, setPersonalEventTarget] = useState<PersonalEvent | null>(null);
   // Compartir huecos libres
   const [showShareSlots, setShowShareSlots] = useState(false);
+  // Imprevisto: bloquear mañana/tarde/día en un toque
+  const [showQuickBlock, setShowQuickBlock] = useState(false);
   // Hora tocada en un hueco de la grilla (se resalta en el modal de cita)
   const [prefilledTimeForAction, setPrefilledTimeForAction] = useState<string | null>(null);
   // Swipe horizontal para cambiar de día/semana/mes (gesto tipo Google)
@@ -686,6 +689,7 @@ const CalendarV2 = () => {
             setShowPaymentDrawer(true);
           }}
           onAddPersonal={() => openCreatePersonal()}
+          onQuickBlock={() => setShowQuickBlock(true)}
           onShareSlots={() => setShowShareSlots(true)}
           onPickDate={(d) => setCurrentDate(d)}
           extraActions={
@@ -911,6 +915,17 @@ const CalendarV2 = () => {
           currentUserId={currentUserId}
         />
 
+        {/* Imprevisto: bloquear mañana/tarde/día del día que se está mirando */}
+        <QuickBlockDialog
+          open={showQuickBlock}
+          onOpenChange={setShowQuickBlock}
+          businessId={businessId}
+          date={currentDate}
+          onSaved={() => {
+            queryClient.invalidateQueries({ queryKey: ["personal_events"] });
+          }}
+        />
+
         {/* Personal event modal (crear/editar) */}
         <PersonalEventModal
           open={showPersonalModal}
@@ -992,6 +1007,7 @@ const CalendarV2 = () => {
           setShowPaymentDrawer(true);
         }}
         onAddPersonal={() => openCreatePersonal()}
+        onQuickBlock={() => setShowQuickBlock(true)}
       />
     </div>
   );
