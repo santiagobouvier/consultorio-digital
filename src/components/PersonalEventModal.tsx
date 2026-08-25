@@ -38,7 +38,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Loader2, Trash2, Lock, Plus, Check, X, Pipette, Minus } from "lucide-react";
+import { Loader2, Trash2, Lock, Plus, Check, X, Pipette, Minus, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   LABEL_PALETTE,
@@ -81,6 +81,17 @@ const RECURRENCES: { id: Recurrence; label: string }[] = [
 ];
 
 const NEUTRAL = "#64748b";
+
+type WizStep = "title" | "when" | "time" | "repeat" | "label" | "summary";
+const WIZ_ORDER: WizStep[] = ["title", "when", "time", "repeat", "label", "summary"];
+const WIZ_TITLES: Record<WizStep, string> = {
+  title: "¿Qué tenés?",
+  when: "¿Qué día?",
+  time: "¿A qué hora?",
+  repeat: "¿Se repite?",
+  label: "Etiqueta y color",
+  summary: "Revisá y listo",
+};
 
 const toMin = (time: string) => Number(time.slice(0, 2)) * 60 + Number(time.slice(3, 5));
 const toTime = (min: number) => {
@@ -197,6 +208,9 @@ export const PersonalEventModal = ({
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // Asistente de a UNA pregunta por vez (el resumen final permite saltar
+  // a cualquier paso tocando la fila)
+  const [step, setStep] = useState<WizStep>("title");
 
   // Prefill al abrir
   useEffect(() => {
@@ -229,6 +243,8 @@ export const PersonalEventModal = ({
     }
     setCreatingLabel(false);
     setNewLabelName("");
+    // Crear = asistente pregunta por pregunta; editar = arranca en el resumen
+    setStep(event ? "summary" : "title");
   }, [open, event, defaultDate, defaultStartTime]);
 
   // Etiquetas del profesional
@@ -401,90 +417,146 @@ export const PersonalEventModal = ({
 
   const titleText = isEdit ? "Evento personal" : "Nuevo evento personal";
 
-  // ── Cuerpo del formulario (compartido entre drawer y diálogo) ──
-  const formBody = (
-    // min-w-0: los rieles de hora scrollean adentro, nunca agrandan el modal
-    <div className="space-y-5 min-w-0 max-w-full overflow-x-hidden">
-      {/* Título + ejemplos que solo sugieren */}
-      <div className="space-y-2">
-        <Input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="¿Qué tenés? Ej: Gimnasio, Pediatra..."
-          maxLength={80}
-          className="h-11 text-[15px] font-medium"
-        />
-        {!isEdit && !title && (
-          <div className="flex flex-wrap gap-1.5">
-            {TITLE_EXAMPLES.map((ex) => (
-              <button
-                key={ex}
-                type="button"
-                onClick={() => setTitle(ex)}
-                className="rounded-full border border-dashed border-border px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground hover:border-foreground/30"
-              >
-                {ex}
-              </button>
-            ))}
-          </div>
-        )}
+  // ── Asistente: navegación entre pasos ──
+  const stepIndex = WIZ_ORDER.indexOf(step);
+
+  const goNext = () => {
+    if (step === "title" && !title.trim()) {
+      toast({ title: "Contame qué tenés", description: "Ej: Gimnasio, Pediatra, Almuerzo..." });
+      return;
+    }
+    if (step === "time" && (!startTime || !endTime || startTime >= endTime)) {
+      toast({ title: "Horario inválido", description: "La hora de fin debe ser posterior a la de inicio.", variant: "destructive" });
+      return;
+    }
+    const next = WIZ_ORDER[Math.min(stepIndex + 1, WIZ_ORDER.length - 1)];
+    setStep(next);
+  };
+
+  const goBack = () => {
+    if (stepIndex > 0) setStep(WIZ_ORDER[stepIndex - 1]);
+  };
+
+  const fmtDur =
+    durationMin > 0
+      ? durationMin >= 60
+        ? `${Math.floor(durationMin / 60)} h${durationMin % 60 ? ` ${durationMin % 60}` : ""}`
+        : `${durationMin} min`
+      : "";
+
+  /** Fila del resumen: tocarla salta directo a ese paso. */
+  const SummaryRow = ({ label, value, target, color }: { label: string; value: string; target: WizStep; color?: string }) => (
+    <button
+      type="button"
+      onClick={() => setStep(target)}
+      className="w-full flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3.5 text-left transition-colors hover:border-primary/40 min-h-[52px]"
+    >
+      <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground w-20 shrink-0">
+        {label}
+      </span>
+      {color && <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />}
+      <span className="flex-1 text-sm font-semibold truncate capitalize">{value}</span>
+      <span className="text-xs text-muted-foreground shrink-0">Cambiar</span>
+    </button>
+  );
+
+  // ── Paso: ¿Qué tenés? ──
+  const stepTitle = (
+    <div className="space-y-3">
+      <Input
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") goNext();
+        }}
+        placeholder="Ej: Gimnasio, Pediatra, Almuerzo..."
+        maxLength={80}
+        autoFocus={!isMobile}
+        className="h-12 text-[16px] font-medium rounded-xl"
+      />
+      <div className="flex flex-wrap gap-2">
+        {TITLE_EXAMPLES.map((ex) => (
+          <button
+            key={ex}
+            type="button"
+            onClick={() => {
+              setTitle(ex);
+              setStep("when");
+            }}
+            className="rounded-full border border-dashed border-border px-3.5 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground hover:border-foreground/30 min-h-[40px]"
+          >
+            {ex}
+          </button>
+        ))}
       </div>
+    </div>
+  );
 
-      {/* Cuándo */}
-      <div className="space-y-3">
-        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Cuándo
-        </Label>
+  // ── Paso: ¿Qué día? ──
+  const stepWhen = (
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-2">
+        {[
+          { label: "Hoy", d: new Date() },
+          { label: "Mañana", d: addDays(new Date(), 1) },
+        ].map(({ label, d }) => {
+          const v = format(d, "yyyy-MM-dd");
+          return (
+            <button
+              key={label}
+              type="button"
+              onClick={() => {
+                setDate(v);
+                setStep("time");
+              }}
+              className={cn(
+                "rounded-xl border-2 py-4 text-[15px] font-bold transition-all",
+                date === v
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "border-border bg-card text-muted-foreground hover:border-primary/40"
+              )}
+            >
+              {label}
+              <span className="block text-[11px] font-normal capitalize mt-0.5">
+                {format(d, "EEE d/M", { locale: es })}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      <div className="space-y-1.5">
+        <Label className="text-xs text-muted-foreground">U otro día:</Label>
+        <Input
+          type="date"
+          value={date}
+          onChange={(e) => e.target.value && setDate(e.target.value)}
+          className="h-12 rounded-xl text-[15px]"
+          aria-label="Fecha"
+        />
+      </div>
+    </div>
+  );
 
-        {/* Fecha: atajos + selector */}
-        <div className="flex items-center gap-1.5">
-          {[
-            { label: "Hoy", d: new Date() },
-            { label: "Mañana", d: addDays(new Date(), 1) },
-          ].map(({ label, d }) => {
-            const v = format(d, "yyyy-MM-dd");
-            return (
-              <button
-                key={label}
-                type="button"
-                onClick={() => setDate(v)}
-                className={cn(
-                  "rounded-full px-3 py-1.5 text-xs font-semibold transition-colors shrink-0",
-                  date === v
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted/60 text-muted-foreground hover:text-foreground"
-                )}
-              >
-                {label}
-              </button>
-            );
-          })}
-          <Input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="h-8 flex-1 min-w-0 rounded-full text-xs px-3"
-            aria-label="Fecha"
+  // ── Paso: ¿A qué hora? (hora + duración juntas: van de la mano) ──
+  const stepTime = (
+    <div className="space-y-4 min-w-0">
+      <div className="space-y-1">
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-muted-foreground">
+            Empieza{" "}
+            <span className="font-bold text-foreground tabular-nums text-base">{startTime}</span>
+          </span>
+          <FineTune
+            onDelta={(d) => {
+              // Mover el inicio conserva la duración (como Google)
+              const dur = Math.max(toMin(endTime) - toMin(startTime), 15);
+              const ns = addMinutes(startTime, d);
+              setStartTime(ns);
+              setEndTime(addMinutes(ns, dur));
+            }}
           />
         </div>
-
-        {/* Hora de inicio: riel deslizable + ajuste fino */}
-        <div className="space-y-1">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">
-              Empieza{" "}
-              <span className="font-bold text-foreground tabular-nums text-sm">{startTime}</span>
-            </span>
-            <FineTune
-              onDelta={(d) => {
-                // Mover el inicio conserva la duración (como Google)
-                const dur = Math.max(toMin(endTime) - toMin(startTime), 15);
-                const ns = addMinutes(startTime, d);
-                setStartTime(ns);
-                setEndTime(addMinutes(ns, dur));
-              }}
-            />
-          </div>
+        <div className="w-full min-w-0 overflow-hidden">
           <TimeRail
             value={startTime}
             onChange={(t) => {
@@ -494,104 +566,104 @@ export const PersonalEventModal = ({
             }}
           />
         </div>
-
-        {/* Duración de un toque + ajuste fino del fin */}
-        <div className="space-y-1">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">
-              Termina{" "}
-              <span className="font-bold text-foreground tabular-nums text-sm">{endTime}</span>
-            </span>
-            <FineTune
-              onDelta={(d) => {
-                const ne = addMinutes(endTime, d);
-                if (toMin(ne) > toMin(startTime)) setEndTime(ne);
-              }}
-            />
-          </div>
-          <div className="flex flex-wrap items-center gap-1.5">
-            {DURATIONS.map((d) => (
-              <button
-                key={d.min}
-                type="button"
-                onClick={() => setEndTime(addMinutes(startTime, d.min))}
-                className={cn(
-                  "rounded-full px-2.5 py-1.5 text-xs font-semibold transition-colors",
-                  durationMin === d.min
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "bg-muted/60 text-muted-foreground hover:text-foreground"
-                )}
-              >
-                {d.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Resumen vivo */}
-        <p className="text-[12px] text-muted-foreground capitalize">
-          {format(new Date(`${date}T12:00:00`), "EEEE d 'de' MMMM", { locale: es })}
-          <span className="normal-case">
-            {" "}· {startTime} → {endTime}
-            {durationMin > 0 &&
-              ` (${durationMin >= 60 ? `${Math.floor(durationMin / 60)} h${durationMin % 60 ? ` ${durationMin % 60}` : ""}` : `${durationMin} min`})`}
-          </span>
-        </p>
       </div>
 
-      {/* Repetición */}
-      <div className="space-y-2.5">
-        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Repetición
-        </Label>
-        <div className="grid grid-cols-2 gap-1.5">
-          {RECURRENCES.map((r) => (
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-muted-foreground">
+            Termina{" "}
+            <span className="font-bold text-foreground tabular-nums text-base">{endTime}</span>
+          </span>
+          <FineTune
+            onDelta={(d) => {
+              const ne = addMinutes(endTime, d);
+              if (toMin(ne) > toMin(startTime)) setEndTime(ne);
+            }}
+          />
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          {DURATIONS.map((d) => (
             <button
-              key={r.id}
+              key={d.min}
               type="button"
-              onClick={() => setRecurrence(r.id)}
+              onClick={() => setEndTime(addMinutes(startTime, d.min))}
               className={cn(
-                "rounded-xl py-2 text-[12.5px] font-semibold transition-all",
-                recurrence === r.id
+                "rounded-xl py-3 text-sm font-semibold transition-all",
+                durationMin === d.min
                   ? "bg-primary text-primary-foreground shadow-sm"
                   : "bg-muted/50 text-muted-foreground hover:text-foreground"
               )}
             >
-              {r.label}
+              {d.label}
             </button>
           ))}
         </div>
-        {recurrence !== "none" && (
-          <>
-            <p className="text-[11.5px] text-muted-foreground">
-              {recurrence === "daily" && "Se repite todos los días a esta hora."}
-              {recurrence === "weekly" &&
-                `Se repite cada ${format(new Date(`${date}T12:00:00`), "EEEE", { locale: es })}.`}
-              {recurrence === "monthly" &&
-                `Se repite el ${format(new Date(`${date}T12:00:00`), "d")} de cada mes.`}
-            </p>
-            <div className="flex items-center gap-2">
-              <Label htmlFor="pe-until" className="text-xs text-muted-foreground shrink-0">
-                Hasta el (opcional)
-              </Label>
-              <Input
-                id="pe-until"
-                type="date"
-                value={until}
-                min={date}
-                onChange={(e) => setUntil(e.target.value)}
-                className="h-9"
-              />
-            </div>
-          </>
-        )}
       </div>
 
-      {/* Etiqueta: 100% del usuario */}
-      <div className="space-y-2.5">
-        <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Etiqueta y color
-        </Label>
+      {/* Resumen vivo */}
+      <p className="text-[13px] text-muted-foreground capitalize">
+        {format(new Date(`${date}T12:00:00`), "EEEE d 'de' MMMM", { locale: es })}
+        <span className="normal-case">
+          {" "}· {startTime} → {endTime}
+          {fmtDur && ` (${fmtDur})`}
+        </span>
+      </p>
+    </div>
+  );
+
+  // ── Paso: ¿Se repite? ──
+  const stepRepeat = (
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-2">
+        {RECURRENCES.map((r) => (
+          <button
+            key={r.id}
+            type="button"
+            onClick={() => {
+              setRecurrence(r.id);
+              if (r.id === "none") setStep("label");
+            }}
+            className={cn(
+              "rounded-xl border-2 py-4 text-[15px] font-bold transition-all",
+              recurrence === r.id
+                ? "border-primary bg-primary/10 text-primary"
+                : "border-border bg-card text-muted-foreground hover:border-primary/40"
+            )}
+          >
+            {r.label}
+          </button>
+        ))}
+      </div>
+      {recurrence !== "none" && (
+        <div className="rounded-xl border border-border/70 bg-muted/20 p-3.5 space-y-2.5">
+          <p className="text-sm text-muted-foreground">
+            {recurrence === "daily" && "Se repite todos los días a esta hora."}
+            {recurrence === "weekly" &&
+              `Se repite cada ${format(new Date(`${date}T12:00:00`), "EEEE", { locale: es })} a esta hora.`}
+            {recurrence === "monthly" &&
+              `Se repite el ${format(new Date(`${date}T12:00:00`), "d")} de cada mes a esta hora.`}
+          </p>
+          <div className="flex items-center gap-2">
+            <Label htmlFor="pe-until" className="text-xs text-muted-foreground shrink-0">
+              Hasta el (opcional)
+            </Label>
+            <Input
+              id="pe-until"
+              type="date"
+              value={until}
+              min={date}
+              onChange={(e) => setUntil(e.target.value)}
+              className="h-11 rounded-xl"
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  // ── Paso: etiqueta (opcional, 100% del usuario) ──
+  const stepLabel = (
+    <div className="space-y-2.5">
         <div className="flex flex-wrap gap-1.5">
           <button
             type="button"
@@ -738,37 +810,114 @@ export const PersonalEventModal = ({
           </div>
         )}
       </div>
+  );
 
-      {/* Notas */}
+  // ── Paso: resumen final (cada fila salta a su paso) ──
+  const recurrenceLabel = RECURRENCES.find((r) => r.id === recurrence)?.label ?? "Una vez";
+  const selectedLabelName = customLabels.find((l) => l.id === labelId)?.name ?? "Sin etiqueta";
+  const stepSummary = (
+    <div className="space-y-2.5">
+      <SummaryRow label="Qué" value={title || "—"} target="title" />
+      <SummaryRow
+        label="Día"
+        value={format(new Date(`${date}T12:00:00`), "EEEE d 'de' MMMM", { locale: es })}
+        target="when"
+      />
+      <SummaryRow
+        label="Hora"
+        value={`${startTime} → ${endTime}${fmtDur ? ` (${fmtDur})` : ""}`}
+        target="time"
+      />
+      <SummaryRow
+        label="Repite"
+        value={recurrenceLabel + (recurrence !== "none" && until ? ` · hasta ${format(new Date(`${until}T12:00:00`), "d/M")}` : "")}
+        target="repeat"
+      />
+      <SummaryRow label="Etiqueta" value={selectedLabelName} target="label" color={selectedColor} />
       <Textarea
         rows={2}
         value={notes}
         onChange={(e) => setNotes(e.target.value)}
         placeholder="Notas (opcional)"
+        className="rounded-xl"
       />
     </div>
   );
 
-  const saveButton = (
-    <Button
-      type="button"
-      onClick={handleSave}
-      disabled={saving || deleting}
-      className={cn(isMobile ? "flex-1 h-12 text-[15px] rounded-xl" : "min-w-[160px]")}
-    >
-      {saving ? (
-        <>
-          <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Guardando...
-        </>
-      ) : isEdit ? (
-        "Guardar cambios"
-      ) : (
-        "Agendar en mi vida"
+  const STEP_BODIES: Record<WizStep, JSX.Element> = {
+    title: stepTitle,
+    when: stepWhen,
+    time: stepTime,
+    repeat: stepRepeat,
+    label: stepLabel,
+    summary: stepSummary,
+  };
+
+  // Encabezado del asistente: pregunta + puntitos de progreso
+  const wizardHeader = (
+    <div className="flex items-center gap-2 pt-1 pb-2">
+      {stepIndex > 0 && (
+        <button
+          type="button"
+          onClick={goBack}
+          className="h-9 w-9 -ml-2 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground shrink-0"
+          aria-label="Paso anterior"
+        >
+          <ArrowLeft className="h-4 w-4" />
+        </button>
       )}
-    </Button>
+      <h3 className="text-lg font-bold flex-1 truncate">{WIZ_TITLES[step]}</h3>
+      <div className="flex items-center gap-1 shrink-0" aria-label={`Paso ${stepIndex + 1} de ${WIZ_ORDER.length}`}>
+        {WIZ_ORDER.map((s, i) => (
+          <span
+            key={s}
+            className={cn(
+              "h-1.5 rounded-full transition-all",
+              i <= stepIndex ? "w-4 bg-primary" : "w-2 bg-muted"
+            )}
+          />
+        ))}
+      </div>
+    </div>
   );
 
-  const deleteButton = isEdit ? (
+  const formBody = (
+    <div className="min-w-0 max-w-full overflow-x-hidden">
+      {wizardHeader}
+      {STEP_BODIES[step]}
+    </div>
+  );
+
+  const saveButton =
+    step === "summary" ? (
+      <Button
+        type="button"
+        onClick={handleSave}
+        disabled={saving || deleting}
+        className={cn(isMobile ? "flex-1 h-12 text-[15px] rounded-xl" : "min-w-[160px]")}
+      >
+        {saving ? (
+          <>
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Guardando...
+          </>
+        ) : isEdit ? (
+          "Guardar cambios"
+        ) : (
+          "Agendar en mi vida"
+        )}
+      </Button>
+    ) : (
+      <Button
+        type="button"
+        onClick={goNext}
+        disabled={saving || deleting}
+        className={cn(isMobile ? "flex-1 h-12 text-[15px] rounded-xl" : "min-w-[160px]")}
+      >
+        Continuar
+      </Button>
+    );
+
+  const deleteButton = isEdit && step === "summary" ? (
     <Button
       type="button"
       variant="ghost"
