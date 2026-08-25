@@ -435,7 +435,9 @@ export function CreateAppointmentModal({
             location: location.trim() || null,
             notes: notes.trim() || null,
             patient_note: patientNote.trim() || null,
-            status: "pending" as const,
+            // La agenda el profesional: nace confirmada (pending es para
+            // solicitudes del paciente que esperan respuesta)
+            status: "confirmed" as const,
             payment_status: "pendiente",
             recurrence_group_id: groupId,
             session_price: seriesPrice,
@@ -504,7 +506,7 @@ export function CreateAppointmentModal({
           location: location.trim() || null,
           notes: notes.trim() || null,
           patient_note: patientNote.trim() || null,
-          status: "pending",
+          status: "confirmed",
           payment_status: "pendiente",
           session_price: sessionPrice ? Number(sessionPrice) : null,
         } as any).select("id").single();
