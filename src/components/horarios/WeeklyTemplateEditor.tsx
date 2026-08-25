@@ -37,7 +37,7 @@ const summaryText = (blocks: TimeBlock[]): string => {
 };
 
 /** Mini línea del día: barra 06–22 con las sesiones pintadas. */
-const DayBar = ({ blocks }: { blocks: TimeBlock[] }) => (
+export const DayBar = ({ blocks }: { blocks: TimeBlock[] }) => (
   <div className="relative h-2 w-20 sm:w-32 rounded-full bg-muted overflow-hidden shrink-0">
     {mergeBlocks(blocks).map((b, i) => {
       const s = Math.max(0, (toMinutes(b.start) - GRID_START) / (GRID_END - GRID_START));

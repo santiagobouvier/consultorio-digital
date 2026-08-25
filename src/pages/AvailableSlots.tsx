@@ -1,21 +1,22 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { ArrowLeft, Users, Loader2, Plus, ListChecks, ChevronDown } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { ArrowLeft, Users, Loader2, ListChecks, CalendarCog, ArrowRight } from "lucide-react";
 import { useBusinessId } from "@/hooks/use-business-id";
 import { useProfessionals } from "@/hooks/use-professionals";
-import { useAvailabilityTemplate } from "@/hooks/use-availability-template";
-import { WeeklyTemplateEditor } from "@/components/horarios/WeeklyTemplateEditor";
+import { useAvailabilityTemplate, DAY_KEYS, DAY_LABELS } from "@/hooks/use-availability-template";
 import { ServicesManager } from "@/components/horarios/ServicesManager";
-import { PunctualBlockForm } from "@/components/horarios/PunctualBlockForm";
-import { SlotsList, SlotRow } from "@/components/horarios/SlotsList";
-import { toast } from "@/hooks/use-toast";
+import { DayBar } from "@/components/horarios/WeeklyTemplateEditor";
+import { AgendaScheduleSheet } from "@/components/calendar-v2/AgendaScheduleSheet";
 import { HelpTooltip } from "@/components/HelpTooltip";
 
+/**
+ * Horarios y sesiones. La semana tipo se EDITA en el panel de la agenda
+ * ("Mis horarios") — acá solo se ve el resumen y viven los tipos de sesión,
+ * que son configuración de verdad (precios y duraciones de la reserva).
+ */
 const AvailableSlots = () => {
   const navigate = useNavigate();
   const { businessId, loading: businessLoading } = useBusinessId();
@@ -23,83 +24,26 @@ const AvailableSlots = () => {
 
   // Profesional seleccionado para gestionar
   const [selectedProUserId, setSelectedProUserId] = useState<string | null>(null);
+  const [editorOpen, setEditorOpen] = useState(false);
 
-  // Cuando carguen los profesionales, default = el actual logueado
   useEffect(() => {
     if (!selectedProUserId && currentUserId) {
       setSelectedProUserId(currentUserId);
     }
   }, [currentUserId, selectedProUserId]);
 
-  const { template, setTemplate, loading: templateLoading, save } = useAvailabilityTemplate(
+  const { template, loading: templateLoading, reload } = useAvailabilityTemplate(
     businessId,
     selectedProUserId
   );
 
-  const [saving, setSaving] = useState(false);
-  const [punctualOpen, setPunctualOpen] = useState(false);
-  // Sección "días puntuales": secundaria, arranca colapsada
-  const [punctualSectionOpen, setPunctualSectionOpen] = useState(false);
-  const [slots, setSlots] = useState<SlotRow[]>([]);
-  const [slotsLoading, setSlotsLoading] = useState(true);
-
-  const loadSlots = async () => {
-    if (!businessId || !selectedProUserId) return;
-    setSlotsLoading(true);
-    try {
-      const today = new Date().toISOString().slice(0, 10);
-      // Solo horarios sueltos: los de la semana tipo ya no se materializan,
-      // el motor de disponibilidad los calcula directo desde la plantilla.
-      const { data, error } = await (supabase as any)
-        .from("availability_slots")
-        .select("id, date, start_time, end_time, modality, price, status, notes, professional_user_id, generated_from_template")
-        .eq("business_id", businessId)
-        .is("generated_from_template", null)
-        .or(`professional_user_id.eq.${selectedProUserId},professional_user_id.is.null`)
-        .gte("date", today)
-        .order("date", { ascending: true })
-        .order("start_time", { ascending: true });
-      if (error) throw error;
-      setSlots(data ?? []);
-    } catch (e: any) {
-      console.error(e);
-      toast({ title: "Error", description: "No se pudieron cargar los horarios", variant: "destructive" });
-    } finally {
-      setSlotsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (businessId && selectedProUserId) loadSlots();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [businessId, selectedProUserId]);
-
-  const handleSaveTemplate = async () => {
-    if (!template) return;
-    setSaving(true);
-    try {
-      // Guardar la semana tipo alcanza: la disponibilidad se calcula en vivo
-      // desde la plantilla, sin pregenerar casilleros.
-      await save(template);
-
-      toast({
-        title: "Semana guardada",
-        description: "Tu disponibilidad ya está al día en la web pública y el portal.",
-      });
-    } catch (e: any) {
-      console.error(e);
-      toast({ title: "Error", description: e?.message ?? "No se pudo guardar", variant: "destructive" });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const loading = businessLoading || profLoading || templateLoading;
-  const showProfessionalSelector = isOwner && professionals.length > 1;
-  const selectedPro = useMemo(
-    () => professionals.find((p) => p.userId === selectedProUserId),
-    [professionals, selectedProUserId]
+  const totalWeek = useMemo(
+    () => (template ? DAY_KEYS.reduce((sum, k) => sum + template.days[k].blocks.length, 0) : 0),
+    [template]
   );
+
+  const loading = businessLoading || profLoading;
+  const showProfessionalSelector = isOwner && professionals.length > 1;
 
   return (
     <div className="min-h-screen bg-background">
@@ -116,8 +60,7 @@ const AvailableSlots = () => {
                 <HelpTooltip id="schedules" />
               </h1>
               <p className="text-sm text-muted-foreground">
-                Definí cuándo atendés y qué tipos de sesión ofrecés (duración y precio) —
-                la reserva online se arma sola con esto.
+                Qué tipos de sesión ofrecés y cuándo atendés — la reserva online se arma sola con esto.
               </p>
             </div>
           </div>
@@ -146,88 +89,96 @@ const AvailableSlots = () => {
           </div>
         </div>
 
-        {loading || !businessId || !selectedProUserId || !template ? (
+        {loading || !businessId || !selectedProUserId ? (
           <Card>
             <CardContent className="py-16 flex items-center justify-center text-muted-foreground">
               <Loader2 className="h-5 w-5 animate-spin mr-2" /> Cargando...
             </CardContent>
           </Card>
         ) : (
-          <>
-            {/* Desktop: semana tipo protagonista (2/3) + panel derecho con
-                tipos de sesión y días puntuales (secundario, colapsado) */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-              <div className="order-2 lg:order-1 lg:col-span-2">
-                {/* Semana tipo (guardar = agenda generada y mantenida sola) */}
-                <WeeklyTemplateEditor
-                  template={template}
-                  onChange={setTemplate as any}
-                  onSave={handleSaveTemplate}
-                  saving={saving}
-                />
-              </div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+            {/* Tipos de sesión: la configuración de verdad, protagonista */}
+            <div className="order-2 lg:order-1 lg:col-span-2">
+              <ServicesManager businessId={businessId} />
+            </div>
 
-              <div className="order-1 lg:order-2 space-y-6">
-                {/* Tipos de sesión (qué ofrecés) */}
-                <ServicesManager businessId={businessId} />
-
-                {/* Días puntuales: secundario y colapsado — para el sábado
-                    excepcional o el horario extra de una semana concreta */}
-                <div className="rounded-xl border bg-muted/20">
-                  <button
-                    type="button"
-                    onClick={() => setPunctualSectionOpen((v) => !v)}
-                    className="w-full flex items-center justify-between gap-2 p-4 text-left"
-                  >
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-foreground">¿Abrís un día puntual?</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        Horarios sueltos fuera de tu semana tipo
-                        {slots.length > 0 ? ` · ${slots.length} activo${slots.length !== 1 ? "s" : ""}` : ""}
+            {/* Tu semana tipo: resumen + editar (mismo panel que la agenda) */}
+            <Card className="order-1 lg:order-2">
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <CardTitle className="text-base">Tu semana tipo</CardTitle>
+                    <CardDescription className="mt-1">
+                      Los cupos que ofrecés cada semana
+                    </CardDescription>
+                  </div>
+                  {totalWeek > 0 && (
+                    <div className="text-right shrink-0">
+                      <p className="text-2xl font-bold leading-none text-primary" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                        {totalWeek}
                       </p>
-                    </div>
-                    <ChevronDown
-                      className={`h-4 w-4 text-muted-foreground shrink-0 transition-transform ${punctualSectionOpen ? "rotate-180" : ""}`}
-                    />
-                  </button>
-                  {punctualSectionOpen && (
-                    <div className="px-4 pb-4 space-y-3">
-                      <Button variant="outline" size="sm" onClick={() => setPunctualOpen(true)} className="w-full">
-                        <Plus className="h-4 w-4 mr-1" /> Agregar horario suelto
-                      </Button>
-                      {slotsLoading ? (
-                        <div className="py-8 flex items-center justify-center text-muted-foreground text-sm">
-                          <Loader2 className="h-4 w-4 animate-spin mr-2" /> Cargando...
-                        </div>
-                      ) : (
-                        <SlotsList slots={slots} onChange={loadSlots} />
-                      )}
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">
+                        sesiones
+                      </p>
                     </div>
                   )}
                 </div>
-              </div>
-            </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {templateLoading || !template ? (
+                  <div className="py-6 flex items-center justify-center text-muted-foreground text-sm">
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" /> Cargando...
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    {DAY_KEYS.map((k) => {
+                      const blocks = template.days[k].blocks;
+                      return (
+                        <div key={k} className="flex items-center gap-3">
+                          <span className={`w-16 text-xs font-medium shrink-0 ${blocks.length > 0 ? "text-foreground" : "text-muted-foreground/60"}`}>
+                            {DAY_LABELS[k]}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <DayBar blocks={blocks} />
+                          </div>
+                          <span className="w-6 text-right text-xs tabular-nums text-muted-foreground shrink-0">
+                            {blocks.length > 0 ? blocks.length : "—"}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
 
-            {/* Horario suelto (fuera de la semana tipo) */}
-            <Dialog open={punctualOpen} onOpenChange={setPunctualOpen}>
-              <DialogContent className="sm:max-w-lg">
-                <DialogHeader>
-                  <DialogTitle>Agregar horario suelto</DialogTitle>
-                  <DialogDescription>
-                    Un turno puntual fuera de tu semana tipo (por ejemplo, un sábado excepcional).
-                  </DialogDescription>
-                </DialogHeader>
-                <PunctualBlockForm
-                  businessId={businessId}
-                  professionalUserId={selectedProUserId}
-                  onCreated={() => {
-                    setPunctualOpen(false);
-                    loadSlots();
-                  }}
-                />
-              </DialogContent>
-            </Dialog>
-          </>
+                <Button
+                  onClick={() => setEditorOpen(true)}
+                  className="w-full h-12 rounded-xl gap-2 font-bold"
+                >
+                  <CalendarCog className="h-4 w-4" />
+                  Editar mis horarios
+                </Button>
+                <button
+                  type="button"
+                  onClick={() => navigate("/agenda")}
+                  className="w-full inline-flex items-center justify-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors py-1"
+                >
+                  El día a día se maneja tocando los cupos en la agenda
+                  <ArrowRight className="h-3 w-3" />
+                </button>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* El MISMO editor que abre la agenda: una sola fuente de verdad */}
+        {businessId && selectedProUserId && (
+          <AgendaScheduleSheet
+            open={editorOpen}
+            onOpenChange={setEditorOpen}
+            businessId={businessId}
+            professionalUserId={selectedProUserId}
+            onSaved={reload}
+          />
         )}
       </div>
     </div>
