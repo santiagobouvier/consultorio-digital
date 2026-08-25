@@ -196,7 +196,7 @@ export const SlotActionSheet = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[88dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="capitalize">
             {dayLabel} · {slot.start}
