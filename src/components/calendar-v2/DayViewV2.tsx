@@ -6,7 +6,9 @@ import { DayTimeGrid } from "./DayTimeGrid";
 import { DayMiniTimeline } from "./DayMiniTimeline";
 import { useDashboardBranding } from "@/contexts/DashboardBrandingContext";
 import type { FreeSlot, WeekSlotSummary } from "@/hooks/use-free-slots";
-import { CalendarDays, Plus, Clock, AlertTriangle, CreditCard, Check, X, CircleDashed, Sparkles, ChevronRight, CalendarCheck } from "lucide-react";
+import type { DayBirthday } from "./BirthdaysStrip";
+import { openWhatsApp } from "@/lib/whatsapp";
+import { CalendarDays, Plus, Clock, AlertTriangle, CreditCard, Check, X, CircleDashed, Sparkles, ChevronRight, CalendarCheck, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -30,6 +32,9 @@ interface DayViewV2Props {
   onFreeSlotClick?: (slot: FreeSlot) => void;
   /** Resumen de control de la semana: cupos libres vs reservadas. */
   weekSummary?: WeekSlotSummary | null;
+  /** Cumpleaños de pacientes en este día (tarjeta con globitos 🎈). */
+  birthdays?: DayBirthday[];
+  clinicName?: string;
 }
 
 const CANCELLED_STATUSES = ["cancelled", "cancelled_by_patient"];
@@ -115,6 +120,8 @@ export const DayViewV2 = ({
   freeSlots = [],
   onFreeSlotClick,
   weekSummary = null,
+  birthdays = [],
+  clinicName = "tu consultorio",
 }: DayViewV2Props) => {
   const dayAppointments = useMemo(
     () =>
@@ -307,6 +314,78 @@ export const DayViewV2 = ({
           </div>
         )}
       </div>
+
+      {/* ── 🎂 Cumpleaños del día: tarjeta festiva con globos flotando ── */}
+      {birthdays.length > 0 && (
+        <div
+          className="relative overflow-hidden rounded-2xl border border-pink-300/50 dark:border-pink-500/25 p-4 sm:p-5"
+          style={{
+            background:
+              "linear-gradient(135deg, rgba(236, 72, 153, 0.12) 0%, rgba(168, 85, 247, 0.08) 55%, rgba(236, 72, 153, 0.04) 100%)",
+          }}
+        >
+          <style>{`
+            @keyframes bdayFloat {
+              0% { transform: translateY(0) rotate(-4deg); }
+              50% { transform: translateY(-14px) rotate(5deg); }
+              100% { transform: translateY(0) rotate(-4deg); }
+            }
+            @keyframes bdayRise {
+              0% { transform: translateY(16px); opacity: 0; }
+              20% { opacity: 1; }
+              100% { transform: translateY(-10px); opacity: 1; }
+            }
+            @media (prefers-reduced-motion: reduce) {
+              .bday-float, .bday-rise { animation: none !important; }
+            }
+          `}</style>
+          {/* Globitos decorativos, flotando suave */}
+          {["🎈", "🎉", "🎈", "🎊", "🎈"].map((e, i) => (
+            <span
+              key={i}
+              aria-hidden
+              className="bday-float absolute text-xl sm:text-2xl pointer-events-none select-none"
+              style={{
+                right: `${6 + i * 13}%`,
+                top: i % 2 === 0 ? "8%" : "42%",
+                opacity: 0.85,
+                animation: `bdayFloat ${3.6 + i * 0.7}s ease-in-out ${i * 0.45}s infinite`,
+              }}
+            >
+              {e}
+            </span>
+          ))}
+
+          <div className="bday-rise relative space-y-2.5" style={{ animation: "bdayRise 600ms ease-out both" }}>
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-pink-600 dark:text-pink-300">
+              🎂 Día de cumpleaños
+            </p>
+            {birthdays.map((b) => (
+              <div key={b.id} className="flex items-center gap-3 flex-wrap">
+                <p className="text-base sm:text-lg font-bold text-foreground">
+                  ¡{isCurrentDay ? "Hoy" : "Este día"} cumple {b.name}
+                  {b.age != null && b.age > 0 && b.age < 120 ? ` (${b.age})` : ""}! 🥳
+                </p>
+                {b.phone && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      openWhatsApp(
+                        b.phone!,
+                        `¡Feliz cumpleaños, ${b.name.trim().split(/\s+/)[0]}! 🎂 Que tengas un día hermoso. Un abrazo del equipo de ${clinicName}.`
+                      )
+                    }
+                    className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-[#25D366]/15 text-emerald-600 dark:text-emerald-400 text-sm font-semibold transition-colors hover:bg-[#25D366]/25 active:scale-[0.97]"
+                  >
+                    <MessageCircle className="h-4 w-4" />
+                    Mandar saludo
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── Para hacer este día: el día te dice qué necesita de vos ── */}
       {(() => {

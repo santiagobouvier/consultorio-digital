@@ -12,6 +12,7 @@ import {
 } from "date-fns";
 import { es } from "date-fns/locale";
 import { CalendarAppointment, DayPayment, getStatusColor, abbreviatePatientName, getEventHexColor } from "./types";
+import type { DayBirthday } from "./BirthdaysStrip";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MonthDayDrawer } from "./MonthDayDrawer";
@@ -64,6 +65,9 @@ interface MonthViewV2Props {
   isDesktop?: boolean;
   selectedDay?: Date | null;
   dayIndicators?: Map<string, DayIndicator>;
+  /** Cumpleaños por día (toDateString): 🎂 en la celda + detalle al abrir. */
+  birthdaysByDate?: Map<string, DayBirthday[]>;
+  clinicName?: string;
 }
 
 export const MonthViewV2 = ({
@@ -78,6 +82,8 @@ export const MonthViewV2 = ({
   dayIndicators,
   paymentsByDay,
   onPaymentClick,
+  birthdaysByDate,
+  clinicName,
 }: MonthViewV2Props) => {
   const isMobile = useIsMobile();
   const [mobileSelectedDay, setMobileSelectedDay] = useState<Date | null>(null);
@@ -187,15 +193,23 @@ export const MonthViewV2 = ({
               >
                 {/* Day number */}
                 <div className="flex items-center justify-between mb-1">
-                  <span
-                    className={cn(
-                      "text-xs md:text-sm font-medium w-6 h-6 md:w-7 md:h-7 flex items-center justify-center rounded-full transition-colors",
-                      !isCurrentMonth && "text-muted-foreground/50",
-                      isCurrentDay && "bg-primary text-primary-foreground",
-                      isSelected && !isCurrentDay && "bg-primary/20 text-primary"
+                  <span className="flex items-center gap-0.5">
+                    <span
+                      className={cn(
+                        "text-xs md:text-sm font-medium w-6 h-6 md:w-7 md:h-7 flex items-center justify-center rounded-full transition-colors",
+                        !isCurrentMonth && "text-muted-foreground/50",
+                        isCurrentDay && "bg-primary text-primary-foreground",
+                        isSelected && !isCurrentDay && "bg-primary/20 text-primary"
+                      )}
+                    >
+                      {format(day, "d")}
+                    </span>
+                    {/* Cumpleaños de un paciente ese día */}
+                    {birthdaysByDate?.has(day.toDateString()) && (
+                      <span className="text-[11px] md:text-[13px] leading-none" aria-label="Cumpleaños">
+                        🎂
+                      </span>
                     )}
-                  >
-                    {format(day, "d")}
                   </span>
 
                   {/* Desktop: Payment indicators */}
@@ -329,6 +343,8 @@ export const MonthViewV2 = ({
           selectedDate={mobileSelectedDay || currentDate}
           appointments={appointments}
           dayPayments={mobileSelectedDay ? getPaymentsForDay(mobileSelectedDay) : []}
+          birthdays={birthdaysByDate?.get((mobileSelectedDay || currentDate).toDateString()) ?? []}
+          clinicName={clinicName}
           onAppointmentClick={(apt) => {
             setDrawerOpen(false);
             onAppointmentClick(apt);

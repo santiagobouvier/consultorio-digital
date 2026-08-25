@@ -3,6 +3,7 @@ import { isSameDay } from "date-fns";
 import { CalendarAppointment, DayPayment } from "./types";
 import { DesktopDaySidebar } from "./DesktopDaySidebar";
 import { MonthViewV2 } from "./MonthViewV2";
+import type { DayBirthday } from "./BirthdaysStrip";
 import { cn } from "@/lib/utils";
 import { ChevronRight } from "lucide-react";
 
@@ -15,6 +16,8 @@ interface DesktopCalendarLayoutProps {
   showProfessionalColors: boolean;
   paymentsByDay?: Map<string, DayPayment[]>;
   onPaymentClick?: (payment: DayPayment) => void;
+  birthdaysByDate?: Map<string, DayBirthday[]>;
+  clinicName?: string;
 }
 
 export const DesktopCalendarLayout = ({
@@ -26,6 +29,8 @@ export const DesktopCalendarLayout = ({
   showProfessionalColors,
   paymentsByDay,
   onPaymentClick,
+  birthdaysByDate,
+  clinicName,
 }: DesktopCalendarLayoutProps) => {
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
   // Cerrado por defecto: un panel vacío ocupando lugar queda feo. Se abre al
@@ -88,6 +93,8 @@ export const DesktopCalendarLayout = ({
           dayIndicators={dayIndicators}
           paymentsByDay={paymentsByDay}
           onPaymentClick={onPaymentClick}
+          birthdaysByDate={birthdaysByDate}
+          clinicName={clinicName}
         />
       </div>
 

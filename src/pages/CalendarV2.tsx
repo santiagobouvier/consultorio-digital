@@ -34,8 +34,7 @@ import { WeekViewV2 } from "@/components/calendar-v2/WeekViewV2";
 import { MonthViewV2 } from "@/components/calendar-v2/MonthViewV2";
 import { DesktopCalendarLayout } from "@/components/calendar-v2/DesktopCalendarLayout";
 import { MobileAgendaFab } from "@/components/calendar-v2/MobileAgendaFab";
-import { BirthdaysStrip } from "@/components/calendar-v2/BirthdaysStrip";
-import { ShareFreeSlotsDialog } from "@/components/calendar-v2/ShareFreeSlotsDialog";
+import { BirthdaysStrip, birthdaysOn, type DayBirthday } from "@/components/calendar-v2/BirthdaysStrip";
 import { QuickBlockDialog } from "@/components/calendar-v2/QuickBlockDialog";
 import { SlotActionSheet } from "@/components/calendar-v2/SlotActionSheet";
 import { useDayFreeSlots, useWeekSlotSummary, type FreeSlot } from "@/hooks/use-free-slots";
@@ -162,8 +161,6 @@ const CalendarV2 = () => {
   // Eventos personales: modal (crear si target=null, editar si tiene evento)
   const [showPersonalModal, setShowPersonalModal] = useState(false);
   const [personalEventTarget, setPersonalEventTarget] = useState<PersonalEvent | null>(null);
-  // Compartir huecos libres
-  const [showShareSlots, setShowShareSlots] = useState(false);
   // Imprevisto: bloquear mañana/tarde/día en un toque
   const [showQuickBlock, setShowQuickBlock] = useState(false);
   // Cupo libre tocado en la grilla del día (agendar / cerrar / compartir)
@@ -574,6 +571,26 @@ const CalendarV2 = () => {
   const showProfessionalColors = sharedCalendar && professionals.length > 1;
 
   // Compute payments for the currently selected day (for day view)
+  // Cumpleaños: del día visible (tarjeta festiva) y del rango (🎂 en el mes)
+  const dayBirthdays = useMemo<DayBirthday[]>(
+    () => birthdaysOn(patients, currentDate),
+    [patients, currentDate]
+  );
+  const birthdaysByDate = useMemo<Map<string, DayBirthday[]>>(() => {
+    const map = new Map<string, DayBirthday[]>();
+    const { startDate, endDate } = getDateRange();
+    const cursor = new Date(startDate);
+    cursor.setHours(12, 0, 0, 0);
+    let guard = 0;
+    while (cursor <= endDate && guard < 45) {
+      const hits = birthdaysOn(patients, cursor);
+      if (hits.length > 0) map.set(cursor.toDateString(), hits);
+      cursor.setDate(cursor.getDate() + 1);
+      guard++;
+    }
+    return map;
+  }, [patients, getDateRange]);
+
   const dayPayments = useMemo<DayPayment[]>(() => {
     if (viewType !== "day") return [];
     return allPayments
@@ -697,7 +714,6 @@ const CalendarV2 = () => {
           }}
           onAddPersonal={() => openCreatePersonal()}
           onQuickBlock={() => setShowQuickBlock(true)}
-          onShareSlots={() => setShowShareSlots(true)}
           onPickDate={(d) => setCurrentDate(d)}
           extraActions={
             <AgendaLegend
@@ -844,6 +860,8 @@ const CalendarV2 = () => {
                   showProfessionalColors={showProfessionalColors}
                   paymentsByDay={paymentsByDay}
                   onPaymentClick={handlePaymentClick}
+                  birthdaysByDate={birthdaysByDate}
+                  clinicName={displayName || "tu consultorio"}
                 />
               ) : (
                 <>
@@ -865,6 +883,8 @@ const CalendarV2 = () => {
                       freeSlots={dayFreeSlots ?? []}
                       onFreeSlotClick={(slot) => setSlotSheetTarget(slot)}
                       weekSummary={weekSlotSummary ?? null}
+                      birthdays={dayBirthdays}
+                      clinicName={displayName || "tu consultorio"}
                     />
                   )}
                   {viewType === "week" && (
@@ -897,6 +917,8 @@ const CalendarV2 = () => {
                       showProfessionalColors={showProfessionalColors}
                       paymentsByDay={paymentsByDay}
                       onPaymentClick={handlePaymentClick}
+                      birthdaysByDate={birthdaysByDate}
+                      clinicName={displayName || "tu consultorio"}
                     />
                   )}
                 </>
@@ -915,14 +937,6 @@ const CalendarV2 = () => {
           }}
           businessId={businessId}
           onPaymentRegistered={handleRefresh}
-        />
-
-        {/* Compartir huecos libres */}
-        <ShareFreeSlotsDialog
-          open={showShareSlots}
-          onOpenChange={setShowShareSlots}
-          businessId={businessId}
-          currentUserId={currentUserId}
         />
 
         {/* Cupo libre tocado: agendar acá / cerrar cupo / ofrecer por WhatsApp */}
