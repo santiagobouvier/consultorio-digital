@@ -161,8 +161,14 @@ const CalendarV2 = () => {
   // Eventos personales: modal (crear si target=null, editar si tiene evento)
   const [showPersonalModal, setShowPersonalModal] = useState(false);
   const [personalEventTarget, setPersonalEventTarget] = useState<PersonalEvent | null>(null);
-  // Imprevisto: bloquear mañana/tarde/día en un toque
+  // Imprevisto: bloquear mañana/tarde/día en un toque (con fecha propia
+  // cuando se abre desde el panel de un día concreto)
   const [showQuickBlock, setShowQuickBlock] = useState(false);
+  const [quickBlockDate, setQuickBlockDate] = useState<Date | null>(null);
+  const openQuickBlock = useCallback((date?: Date) => {
+    setQuickBlockDate(date ?? null);
+    setShowQuickBlock(true);
+  }, []);
   // Cupo libre tocado en la grilla del día (agendar / cerrar / compartir)
   const [slotSheetTarget, setSlotSheetTarget] = useState<FreeSlot | null>(null);
   // Hora tocada en un hueco de la grilla (se resalta en el modal de cita)
@@ -713,7 +719,7 @@ const CalendarV2 = () => {
             setShowPaymentDrawer(true);
           }}
           onAddPersonal={() => openCreatePersonal()}
-          onQuickBlock={() => setShowQuickBlock(true)}
+          onQuickBlock={() => openQuickBlock()}
           onPickDate={(d) => setCurrentDate(d)}
           extraActions={
             <AgendaLegend
@@ -862,6 +868,8 @@ const CalendarV2 = () => {
                   onPaymentClick={handlePaymentClick}
                   birthdaysByDate={birthdaysByDate}
                   clinicName={displayName || "tu consultorio"}
+                  onCreatePersonal={(d) => openCreatePersonal(d)}
+                  onQuickBlock={(d) => openQuickBlock(d)}
                 />
               ) : (
                 <>
@@ -919,6 +927,18 @@ const CalendarV2 = () => {
                       onPaymentClick={handlePaymentClick}
                       birthdaysByDate={birthdaysByDate}
                       clinicName={displayName || "tu consultorio"}
+                      onCreateForDay={(d) => {
+                        setSelectedDateForAction(d);
+                        setLockDateForAction(true);
+                        setShowCreateModal(true);
+                      }}
+                      onCreatePaymentForDay={(d) => {
+                        setSelectedDateForAction(d);
+                        setLockDateForAction(true);
+                        setShowPaymentDrawer(true);
+                      }}
+                      onCreatePersonalForDay={(d) => openCreatePersonal(d)}
+                      onQuickBlockForDay={(d) => openQuickBlock(d)}
                     />
                   )}
                 </>
@@ -960,7 +980,7 @@ const CalendarV2 = () => {
           open={showQuickBlock}
           onOpenChange={setShowQuickBlock}
           businessId={businessId}
-          date={currentDate}
+          date={quickBlockDate ?? currentDate}
           onSaved={() => {
             queryClient.invalidateQueries({ queryKey: ["personal_events"] });
             invalidateAppointmentData(queryClient);
@@ -1052,7 +1072,7 @@ const CalendarV2 = () => {
           setShowPaymentDrawer(true);
         }}
         onAddPersonal={() => openCreatePersonal()}
-        onQuickBlock={() => setShowQuickBlock(true)}
+        onQuickBlock={() => openQuickBlock(viewType === "day" ? currentDate : undefined)}
         fixedDateLabel={
           viewType === "day" ? format(currentDate, "EEEE d 'de' MMMM", { locale: es }) : null
         }

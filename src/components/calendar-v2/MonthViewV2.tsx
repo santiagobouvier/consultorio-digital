@@ -68,6 +68,11 @@ interface MonthViewV2Props {
   /** Cumpleaños por día (toDateString): 🎂 en la celda + detalle al abrir. */
   birthdaysByDate?: Map<string, DayBirthday[]>;
   clinicName?: string;
+  /** Crear para un día concreto desde el panel del día (mobile). */
+  onCreateForDay?: (date: Date) => void;
+  onCreatePaymentForDay?: (date: Date) => void;
+  onCreatePersonalForDay?: (date: Date) => void;
+  onQuickBlockForDay?: (date: Date) => void;
 }
 
 export const MonthViewV2 = ({
@@ -84,6 +89,10 @@ export const MonthViewV2 = ({
   onPaymentClick,
   birthdaysByDate,
   clinicName,
+  onCreateForDay,
+  onCreatePaymentForDay,
+  onCreatePersonalForDay,
+  onQuickBlockForDay,
 }: MonthViewV2Props) => {
   const isMobile = useIsMobile();
   const [mobileSelectedDay, setMobileSelectedDay] = useState<Date | null>(null);
@@ -353,6 +362,46 @@ export const MonthViewV2 = ({
             setDrawerOpen(false);
             onPaymentClick?.(p);
           }}
+          onNavigateDay={(delta) =>
+            setMobileSelectedDay((prev) => {
+              const base = prev || currentDate;
+              const next = new Date(base);
+              next.setDate(next.getDate() + delta);
+              return next;
+            })
+          }
+          onCreateAppointment={
+            onCreateForDay
+              ? () => {
+                  setDrawerOpen(false);
+                  onCreateForDay(mobileSelectedDay || currentDate);
+                }
+              : undefined
+          }
+          onCreatePayment={
+            onCreatePaymentForDay
+              ? () => {
+                  setDrawerOpen(false);
+                  onCreatePaymentForDay(mobileSelectedDay || currentDate);
+                }
+              : undefined
+          }
+          onCreatePersonal={
+            onCreatePersonalForDay
+              ? () => {
+                  setDrawerOpen(false);
+                  onCreatePersonalForDay(mobileSelectedDay || currentDate);
+                }
+              : undefined
+          }
+          onQuickBlock={
+            onQuickBlockForDay
+              ? () => {
+                  setDrawerOpen(false);
+                  onQuickBlockForDay(mobileSelectedDay || currentDate);
+                }
+              : undefined
+          }
           showProfessionalColors={showProfessionalColors}
         />
       )}

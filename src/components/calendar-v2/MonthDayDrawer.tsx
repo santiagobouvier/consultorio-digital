@@ -9,7 +9,7 @@ import { CalendarAppointment, DayPayment } from "./types";
 import { AppointmentCard } from "./AppointmentCard";
 import { DayMiniTimeline } from "./DayMiniTimeline";
 import { useDashboardBranding } from "@/contexts/DashboardBrandingContext";
-import { X, CreditCard, CalendarDays } from "lucide-react";
+import { X, CreditCard, CalendarDays, ChevronLeft, ChevronRight, CalendarPlus, Coffee, CalendarOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { calculatePaymentStatus, formatCurrency } from "@/lib/payments";
 import { isToday } from "date-fns";
@@ -29,6 +29,12 @@ interface MonthDayDrawerProps {
   /** Cumpleaños de pacientes en este día. */
   birthdays?: DayBirthday[];
   clinicName?: string;
+  /** Ir al día anterior/siguiente sin salir del panel. */
+  onNavigateDay?: (delta: 1 | -1) => void;
+  onCreateAppointment?: () => void;
+  onCreatePayment?: () => void;
+  onCreatePersonal?: () => void;
+  onQuickBlock?: () => void;
 }
 
 export const MonthDayDrawer = ({
@@ -42,6 +48,11 @@ export const MonthDayDrawer = ({
   showProfessionalColors,
   birthdays = [],
   clinicName = "tu consultorio",
+  onNavigateDay,
+  onCreateAppointment,
+  onCreatePayment,
+  onCreatePersonal,
+  onQuickBlock,
 }: MonthDayDrawerProps) => {
   const dayAppointments = useMemo(() => {
     return appointments
@@ -100,9 +111,33 @@ export const MonthDayDrawer = ({
                 </p>
               </div>
             </div>
-            <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full shrink-0">
-              <X className="w-5 h-5" />
-            </Button>
+            <div className="flex items-center gap-1 shrink-0">
+              {onNavigateDay && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => onNavigateDay(-1)}
+                    className="rounded-full h-10 w-10"
+                    aria-label="Día anterior"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => onNavigateDay(1)}
+                    className="rounded-full h-10 w-10"
+                    aria-label="Día siguiente"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </Button>
+                </>
+              )}
+              <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full h-10 w-10">
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
           </div>
 
           {/* El día en miniatura */}
@@ -172,13 +207,47 @@ export const MonthDayDrawer = ({
             </div>
           )}
 
+          {/* Crear cualquier cosa para ESTE día, de entrada */}
+          {(onCreateAppointment || onCreatePayment || onCreatePersonal || onQuickBlock) && (
+            <div className="grid grid-cols-2 gap-2">
+              {onCreateAppointment && (
+                <Button onClick={onCreateAppointment} className="h-12 rounded-xl gap-2 font-bold text-[15px]">
+                  <CalendarPlus className="h-4 w-4" />
+                  Nueva cita
+                </Button>
+              )}
+              {onCreatePayment && (
+                <Button variant="outline" onClick={onCreatePayment} className="h-12 rounded-xl gap-2 font-semibold text-[15px]">
+                  <CreditCard className="h-4 w-4" />
+                  Registrar pago
+                </Button>
+              )}
+              {onCreatePersonal && (
+                <Button variant="outline" onClick={onCreatePersonal} className="h-12 rounded-xl gap-2 font-semibold text-[15px]">
+                  <Coffee className="h-4 w-4 text-slate-500" />
+                  Evento personal
+                </Button>
+              )}
+              {onQuickBlock && (
+                <Button
+                  variant="outline"
+                  onClick={onQuickBlock}
+                  className="h-12 rounded-xl gap-2 font-semibold text-[15px] border-amber-500/40 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10"
+                >
+                  <CalendarOff className="h-4 w-4" />
+                  Imprevisto
+                </Button>
+              )}
+            </div>
+          )}
+
           {dayAppointments.length === 0 && dayPayments.length === 0 ? (
-            <div className="flex flex-col items-center py-12 gap-1.5 text-center">
+            <div className="flex flex-col items-center py-8 gap-1.5 text-center">
               <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-1.5">
                 <CalendarDays className="h-8 w-8 text-muted-foreground/50" />
               </div>
               <p className="font-semibold text-foreground/80">Día libre 🙌</p>
-              <p className="text-sm text-muted-foreground">Sin citas ni pagos este día.</p>
+              <p className="text-sm text-muted-foreground">Creá lo que necesites con los botones de arriba.</p>
             </div>
           ) : (
             <>
