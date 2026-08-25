@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { addDays } from "date-fns";
 import { CalendarAppointment, DayPayment } from "./types";
 import { DayDetailModal } from "./DayDetailModal";
 import { MonthViewV2 } from "./MonthViewV2";
@@ -10,6 +11,8 @@ interface DesktopCalendarLayoutProps {
   onAppointmentClick: (appointment: CalendarAppointment) => void;
   onCreateAppointment: (date?: Date) => void;
   onCreatePayment: (date?: Date) => void;
+  onCreatePersonal?: (date: Date) => void;
+  onQuickBlock?: (date: Date) => void;
   showProfessionalColors: boolean;
   paymentsByDay?: Map<string, DayPayment[]>;
   onPaymentClick?: (payment: DayPayment) => void;
@@ -23,6 +26,8 @@ export const DesktopCalendarLayout = ({
   onAppointmentClick,
   onCreateAppointment,
   onCreatePayment,
+  onCreatePersonal,
+  onQuickBlock,
   showProfessionalColors,
   paymentsByDay,
   onPaymentClick,
@@ -108,6 +113,23 @@ export const DesktopCalendarLayout = ({
             setDayModalOpen(false);
             onCreatePayment(selectedDay || undefined);
           }}
+          onCreatePersonal={
+            onCreatePersonal
+              ? () => {
+                  setDayModalOpen(false);
+                  onCreatePersonal(selectedDay);
+                }
+              : undefined
+          }
+          onQuickBlock={
+            onQuickBlock
+              ? () => {
+                  setDayModalOpen(false);
+                  onQuickBlock(selectedDay);
+                }
+              : undefined
+          }
+          onNavigateDay={(delta) => setSelectedDay((prev) => (prev ? addDays(prev, delta) : prev))}
           showProfessionalColors={showProfessionalColors}
         />
       )}
