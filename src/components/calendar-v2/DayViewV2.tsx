@@ -5,7 +5,8 @@ import { CalendarAppointment, Professional, DayPayment } from "./types";
 import { DayTimeGrid } from "./DayTimeGrid";
 import { DayMiniTimeline } from "./DayMiniTimeline";
 import { useDashboardBranding } from "@/contexts/DashboardBrandingContext";
-import { CalendarDays, Plus, Clock, AlertTriangle, CreditCard, Check, X } from "lucide-react";
+import type { FreeSlot, WeekSlotSummary } from "@/hooks/use-free-slots";
+import { CalendarDays, Plus, Clock, AlertTriangle, CreditCard, Check, X, CircleDashed } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -24,6 +25,11 @@ interface DayViewV2Props {
   dayPayments?: DayPayment[];
   onPaymentClick?: (payment: DayPayment) => void;
   onSlotTap?: (time: string) => void;
+  /** Cupos libres del día (lo que ofrece la reserva online). */
+  freeSlots?: FreeSlot[];
+  onFreeSlotClick?: (slot: FreeSlot) => void;
+  /** Resumen de control de la semana: cupos libres vs reservadas. */
+  weekSummary?: WeekSlotSummary | null;
 }
 
 const CANCELLED_STATUSES = ["cancelled", "cancelled_by_patient"];
@@ -106,6 +112,9 @@ export const DayViewV2 = ({
   dayPayments = [],
   onPaymentClick,
   onSlotTap,
+  freeSlots = [],
+  onFreeSlotClick,
+  weekSummary = null,
 }: DayViewV2Props) => {
   const dayAppointments = useMemo(
     () =>
@@ -158,6 +167,30 @@ export const DayViewV2 = ({
     if (h === 0) return `${m} min`;
     return m === 0 ? `${h} h` : `${h} h ${m}`;
   };
+
+  // Marcar cupos que se liberaron por una cancelación del día: oportunidad
+  const decoratedFreeSlots = useMemo(() => {
+    if (freeSlots.length === 0) return freeSlots;
+    const cancelledRanges = cancelledAppointments.map((a) => {
+      const s = new Date(a.start_at);
+      const e = new Date(a.end_at);
+      return {
+        start: s.getHours() * 60 + s.getMinutes(),
+        end: e.getHours() * 60 + e.getMinutes(),
+      };
+    });
+    if (cancelledRanges.length === 0) return freeSlots;
+    const toMin = (t: string) => {
+      const [h, m] = t.split(":").map(Number);
+      return h * 60 + m;
+    };
+    return freeSlots.map((slot) => {
+      const s = toMin(slot.start);
+      const e = toMin(slot.end);
+      const freed = cancelledRanges.some((r) => r.start < e && r.end > s);
+      return freed ? { ...slot, freed: true } : slot;
+    });
+  }, [freeSlots, cancelledAppointments]);
 
   // Group appointments by professional for multi-column view
   const columnData = useMemo(() => {
@@ -235,8 +268,19 @@ export const DayViewV2 = ({
           className="mt-4"
         />
 
-        {(dayStats.first || dayStats.done > 0 || dayStats.cancelled > 0) && (
+        {(dayStats.first || dayStats.done > 0 || dayStats.cancelled > 0 || weekSummary || freeSlots.length > 0) && (
           <div className="mt-3 flex flex-wrap items-center gap-1.5">
+            {freeSlots.length > 0 && (
+              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-full px-2.5 py-1 tabular-nums">
+                <CircleDashed className="h-3 w-3" />
+                {freeSlots.length} cupo{freeSlots.length !== 1 ? "s" : ""} libre{freeSlots.length !== 1 ? "s" : ""}
+              </span>
+            )}
+            {weekSummary && (weekSummary.free > 0 || weekSummary.booked > 0) && (
+              <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground bg-background/60 border border-border/50 rounded-full px-2.5 py-1 tabular-nums">
+                Semana: {weekSummary.booked} reservada{weekSummary.booked !== 1 ? "s" : ""} · {weekSummary.free} libre{weekSummary.free !== 1 ? "s" : ""}
+              </span>
+            )}
             {dayStats.first && dayStats.last && (
               <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground bg-background/60 border border-border/50 rounded-full px-2.5 py-1 tabular-nums">
                 <Clock className="h-3 w-3" />
@@ -332,7 +376,7 @@ export const DayViewV2 = ({
           TODO el ancho de la pantalla; con varios profesionales en desktop
           se usa la grilla multi-columna de arriba. */}
       <div className={cn(useMultiColumn && "md:hidden")}>
-        {dayAppointments.length === 0 ? (
+        {dayAppointments.length === 0 && decoratedFreeSlots.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 px-4">
             <div className="w-20 h-20 rounded-full bg-muted/50 flex items-center justify-center mb-4">
               <CalendarDays className="h-10 w-10 text-muted-foreground" />
@@ -354,6 +398,8 @@ export const DayViewV2 = ({
                 isCurrentDay={isCurrentDay}
                 nowTick={nowTick}
                 onSlotTap={onSlotTap}
+                freeSlots={decoratedFreeSlots}
+                onFreeSlotClick={onFreeSlotClick}
               />
             </div>
 
