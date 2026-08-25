@@ -520,20 +520,14 @@ export const DayViewV2 = ({
           TODO el ancho de la pantalla; con varios profesionales en desktop
           se usa la grilla multi-columna de arriba. */}
       <div className={cn(useMultiColumn && "md:hidden")}>
-        {dayAppointments.length === 0 && decoratedFreeSlots.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 px-4">
-            <div className="w-20 h-20 rounded-full bg-muted/50 flex items-center justify-center mb-4">
-              <CalendarDays className="h-10 w-10 text-muted-foreground" />
-            </div>
-            <h3 className="text-lg font-semibold text-foreground mb-1">Sin citas programadas</h3>
-            <p className="text-muted-foreground text-center mb-6">No hay citas para este día</p>
-            <Button onClick={onAddAppointment} className="rounded-xl gap-2">
-              <Plus className="h-4 w-4" />
-              Agregar cita
-            </Button>
-          </div>
-        ) : (
-          <>
+        {/* La grilla se muestra SIEMPRE (día vacío incluido): tocás una hora
+            y creás — como Google Calendar. Nada de pantallas intermedias. */}
+        <>
+            {dayAppointments.length === 0 && decoratedFreeSlots.length === 0 && (
+              <p className="text-center text-sm text-muted-foreground pb-3">
+                Día libre 🙌 — tocá una hora para agendar
+              </p>
+            )}
             <div className="-mx-4 sm:-mx-6 md:mx-0 border-y md:border md:rounded-2xl overflow-hidden">
               <DayTimeGrid
                 appointments={activeAppointments}
@@ -565,8 +559,7 @@ export const DayViewV2 = ({
                 ))}
               </div>
             )}
-          </>
-        )}
+        </>
       </div>
 
       {/* Pending payments for this day */}
