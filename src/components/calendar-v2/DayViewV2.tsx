@@ -420,14 +420,13 @@ export const DayViewV2 = ({
             action: () => onAppointmentClick(pendingApts[0]),
           });
         }
-        if (duePayments.length > 0) {
+        // Un cobro = una fila: con diez pendientes se van cobrando uno a uno
+        for (const p of duePayments) {
           rows.push({
-            key: "payments",
+            key: `payment-${p.id}`,
             icon: <CreditCard className="h-4 w-4 text-rose-400" />,
-            text: duePayments.length === 1
-              ? `Reclamale el cobro a ${duePayments[0].patient_name.split(" ")[0]} ($${duePayments[0].amount.toLocaleString()})`
-              : `${duePayments.length} cobros del día para reclamar`,
-            action: onPaymentClick ? () => onPaymentClick(duePayments[0]) : undefined,
+            text: `Reclamale el cobro a ${p.patient_name.split(" ")[0]} ($${p.amount.toLocaleString()})`,
+            action: onPaymentClick ? () => onPaymentClick(p) : undefined,
           });
         }
         if (rows.length === 0) return null;
