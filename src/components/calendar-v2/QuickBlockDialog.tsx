@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { addDays, differenceInCalendarDays, format, parseISO } from "date-fns";
+import { addDays, differenceInCalendarDays, format, isToday, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { Sunrise, Sunset, CalendarOff, Loader2, Plane, ChevronDown, Clock, ArrowLeft, Ban, X, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -410,11 +410,30 @@ export const QuickBlockDialog = ({ open, onOpenChange, businessId, date, onSaved
         ) : (
           <>
             <DialogHeader>
-              <DialogTitle>¿Se te complicó el {dayLabel}?</DialogTitle>
+              <DialogTitle>{isToday(date) ? "¿Se te complicó hoy?" : `¿Se te complicó el ${dayLabel}?`}</DialogTitle>
               <DialogDescription>
                 Bloqueá en un toque. Si hay sesiones en el rango, te pregunto qué hacer con ellas.
               </DialogDescription>
             </DialogHeader>
+
+            {/* A qué día se aplica — clarísimo, sin sorpresas */}
+            <div className="rounded-xl bg-amber-500/10 border border-amber-500/25 px-3.5 py-2.5 space-y-1">
+              <p className="text-sm font-semibold capitalize flex items-center gap-2">
+                <CalendarOff className="h-4 w-4 text-amber-500 shrink-0" />
+                {isToday(date) ? `Hoy · ${dayLabel}` : dayLabel}
+                {isToday(date) && (
+                  <span className="ml-auto text-[10px] font-bold uppercase tracking-wide text-amber-600 dark:text-amber-400 shrink-0">
+                    Día de hoy
+                  </span>
+                )}
+              </p>
+              {isToday(date) && (
+                <p className="text-xs text-muted-foreground">
+                  Para otro día, tocá primero ese día en el calendario y usá Imprevisto desde ahí.
+                </p>
+              )}
+            </div>
+
             <div className="space-y-2.5 pt-1">
               {OPTIONS.map((opt) => {
                 const Icon = opt.icon;
