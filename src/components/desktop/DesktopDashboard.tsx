@@ -89,6 +89,9 @@ interface DesktopDashboardProps {
 
 const CANCELLED = ["cancelled", "cancelled_by_patient"];
 
+// Tipografía de display (misma familia visual que la ficha de paciente)
+const GROTESK = { fontFamily: "'Space Grotesk', sans-serif" } as const;
+
 /** "en 3 min" / "en 2 h 15 min" */
 const formatCountdown = (ms: number) => {
   const min = Math.max(1, Math.round(ms / 60000));
@@ -105,6 +108,7 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
   const pendingRequestsCount = usePendingRequestsCount();
 
   const [businessName, setBusinessName] = useState("");
+  const [publicSlug, setPublicSlug] = useState<string | null>(null);
   const [selectedProfessionalId, setSelectedProfessionalId] = useState<string>("all");
 
   // Datos del día (hoy + ayer para detectar notas pendientes)
@@ -150,7 +154,7 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
 
       const [businessRes, apptsRes, upcomingRes, patientsCountRes, paidMonthRes, pendingPaymentsRes, paidRecentRes, apptsRecentRes, policyRes] =
         await Promise.all([
-          supabase.from("businesses").select("name").eq("id", businessId).single(),
+          supabase.from("businesses").select("name, public_slug").eq("id", businessId).single(),
           // Ayer + hoy completos: el día de hoy para la línea de tiempo,
           // ayer para detectar sesiones sin nota clínica.
           supabase
@@ -178,7 +182,10 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
           supabase.from("payment_policies").select("mp_connected").eq("business_id", businessId).maybeSingle(),
         ]);
 
-      if (businessRes.data) setBusinessName(businessRes.data.name);
+      if (businessRes.data) {
+        setBusinessName(businessRes.data.name);
+        setPublicSlug((businessRes.data as any).public_slug ?? null);
+      }
 
       const allAppts = (apptsRes.data || []) as any as Appointment[];
       setAppts(allAppts);
@@ -365,6 +372,29 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
     [pendingPayments],
   );
 
+  // Compartir el link de reservas: lo más directo para llenar la agenda
+  const shareBookingLink = async () => {
+    if (!publicSlug) {
+      toast({ title: "Configurá tu web primero", description: "Definí el nombre público en Personalizar portal." });
+      return;
+    }
+    const url = `${window.location.origin}/consultorio/${publicSlug}/reservar`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: businessName || "Reservar sesión", url });
+        return;
+      }
+      throw new Error("no-share");
+    } catch {
+      try {
+        await navigator.clipboard.writeText(url);
+        toast({ title: "Link de reservas copiado ✓", description: "Pegalo en WhatsApp, Instagram o donde quieras." });
+      } catch {
+        toast({ title: "Tu link de reservas", description: url });
+      }
+    }
+  };
+
   const getGreeting = () => {
     const hour = new Date(nowTick).getHours();
     if (hour < 12) return "Buenos días";
@@ -393,7 +423,7 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
           <circle cx="36" cy="36" r={r} fill="none" strokeWidth="5.5" className={onDark ? "stroke-white/15" : "stroke-muted"} />
           <circle
             cx="36" cy="36" r={r} fill="none" strokeWidth="5.5" strokeLinecap="round"
-            className={onDark ? "stroke-[#2dd4bf] transition-[stroke-dashoffset] duration-700" : "stroke-primary transition-[stroke-dashoffset] duration-700"}
+            className={onDark ? "stroke-[#34d399] transition-[stroke-dashoffset] duration-700" : "stroke-primary transition-[stroke-dashoffset] duration-700"}
             strokeDasharray={c} strokeDashoffset={c * (1 - pct)}
           />
         </svg>
@@ -504,7 +534,7 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background p-10">
+      <div className="dark min-h-screen p-10" style={{ background: "#070d0a" }}>
         <div className="max-w-screen-2xl mx-auto space-y-8">
           <Skeleton className="h-20 w-full rounded-2xl" />
           <div className="grid grid-cols-[1fr_400px] gap-6">
@@ -523,29 +553,39 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
   const tomorrowFirst = upcomingAppointments.find((a) => isTomorrow(new Date(a.start_at)));
 
   return (
-    <div className="min-h-screen bg-background">
+    <div
+      className="dark min-h-screen"
+      style={{ background: "#070d0a", fontFamily: "'Instrument Sans', 'Plus Jakarta Sans', sans-serif" }}
+    >
+      <style>{`
+        @keyframes dashDrift {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          50% { transform: translate(40px, -30px) scale(1.15); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .dash-glow { animation: none !important; }
+        }
+      `}</style>
       {/* ══════════ BANDA HERO: el cockpit del día ══════════ */}
-      <section className="relative overflow-hidden text-white">
+      <section className="relative overflow-hidden text-white" style={{ borderBottom: "1px solid rgba(140,200,170,0.12)" }}>
         <div
           className="absolute inset-0"
-          style={{ background: "linear-gradient(130deg, hsl(182 20% 5%) 0%, hsl(180 32% 8%) 45%, hsl(176 65% 11%) 100%)" }}
+          style={{ background: "linear-gradient(160deg, #0e1d15, #0a1410 55%, #081009)" }}
         />
         <div
-          className="absolute -top-32 right-[8%] w-[560px] h-[420px] pointer-events-none"
-          style={{ background: "radial-gradient(ellipse at center, hsl(176 90% 45% / 0.22), transparent 65%)" }}
-        />
-        <div
-          className="absolute -bottom-40 -left-24 w-[440px] h-[360px] pointer-events-none"
-          style={{ background: "radial-gradient(ellipse at center, hsl(176 90% 45% / 0.10), transparent 65%)" }}
-        />
-        <div
-          className="absolute inset-0 pointer-events-none opacity-[0.35]"
+          className="dash-glow absolute -top-32 right-[8%] w-[560px] h-[420px] pointer-events-none rounded-full"
           style={{
-            backgroundImage:
-              "linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px)",
-            backgroundSize: "56px 56px",
-            maskImage: "linear-gradient(to bottom, rgba(0,0,0,0.7), transparent 85%)",
-            WebkitMaskImage: "linear-gradient(to bottom, rgba(0,0,0,0.7), transparent 85%)",
+            background: "radial-gradient(ellipse at center, rgba(52,211,153,0.22), transparent 65%)",
+            filter: "blur(10px)",
+            animation: "dashDrift 14s ease-in-out infinite",
+          }}
+        />
+        <div
+          className="dash-glow absolute -bottom-40 -left-24 w-[440px] h-[360px] pointer-events-none rounded-full"
+          style={{
+            background: "radial-gradient(ellipse at center, rgba(20,184,166,0.14), transparent 65%)",
+            filter: "blur(10px)",
+            animation: "dashDrift 18s ease-in-out infinite reverse",
           }}
         />
 
@@ -557,7 +597,7 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
                 <img src={brandLogoUrl} alt="Logo" className="h-12 w-12 rounded-xl object-cover ring-2 ring-white/20" />
               ) : (
                 <div className="h-12 w-12 rounded-xl bg-white/10 ring-2 ring-white/15 flex items-center justify-center">
-                  <Building2 className="h-6 w-6 text-[#2dd4bf]" />
+                  <Building2 className="h-6 w-6 text-[#34d399]" />
                 </div>
               )}
               <div className="min-w-0">
@@ -574,7 +614,7 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
                 </p>
                 <p className="text-[11px] text-white/45">Consultorio Digital</p>
               </div>
-              <div className="text-4xl font-extrabold tabular-nums tracking-tight pl-3 border-l border-white/15">
+              <div className="text-4xl font-extrabold tabular-nums tracking-tight pl-3 border-l border-white/15" style={GROTESK}>
                 {format(new Date(nowTick), "HH:mm")}
               </div>
             </div>
@@ -597,13 +637,18 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
                   </SelectContent>
                 </Select>
               )}
-              <Button
-                className="h-10 px-5 gap-2 rounded-xl font-semibold bg-primary hover:bg-primary/90 shadow-[0_8px_30px_-8px_hsl(176_90%_45%/0.6)]"
+              <button
+                className="h-10 px-5 inline-flex items-center gap-2 rounded-xl font-semibold text-sm transition hover:brightness-110 active:scale-[0.98]"
+                style={{
+                  background: "linear-gradient(135deg, #34d399, #14b8a6)",
+                  color: "#04150d",
+                  boxShadow: "0 8px 24px rgba(52,211,153,0.25)",
+                }}
                 onClick={() => navigate("/agenda")}
               >
                 <CalendarDays className="h-4 w-4" />
                 Ver agenda
-              </Button>
+              </button>
             </div>
           </div>
 
@@ -614,15 +659,15 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
                 <>
                   <div className="flex items-center gap-2.5 mb-3">
                     <span className="relative flex h-3 w-3">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#2dd4bf] opacity-60" />
-                      <span className="relative inline-flex rounded-full h-3 w-3 bg-[#2dd4bf]" />
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#34d399] opacity-60" />
+                      <span className="relative inline-flex rounded-full h-3 w-3 bg-[#34d399]" />
                     </span>
-                    <span className="text-xs font-bold tracking-[0.22em] text-[#2dd4bf]">EN SESIÓN</span>
+                    <span className="text-xs font-bold tracking-[0.22em] text-[#34d399]">EN SESIÓN</span>
                     <span className="text-xs text-white/50">
                       hasta las {format(new Date(endOf(currentSession)), "HH:mm")} hs
                     </span>
                   </div>
-                  <h2 className="text-[42px] leading-none font-extrabold tracking-tight truncate">
+                  <h2 className="text-[42px] leading-none font-extrabold tracking-tight truncate" style={GROTESK}>
                     {currentSession.patients?.full_name || "Sin paciente"}
                   </h2>
                   <p className="text-sm text-white/60 mt-3 flex items-center gap-2 flex-wrap">
@@ -639,12 +684,12 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
                 </>
               ) : nextSession ? (
                 <>
-                  <p className="text-xs font-bold tracking-[0.22em] text-[#2dd4bf] mb-3">PRÓXIMA SESIÓN</p>
+                  <p className="text-xs font-bold tracking-[0.22em] text-[#34d399] mb-3">PRÓXIMA SESIÓN</p>
                   <div className="flex items-baseline gap-4 flex-wrap">
-                    <span className="text-[52px] leading-none font-extrabold tabular-nums tracking-tight">
+                    <span className="text-[52px] leading-none font-extrabold tabular-nums tracking-tight" style={GROTESK}>
                       {format(new Date(nextSession.start_at), "HH:mm")}
                     </span>
-                    <span className="text-xl font-semibold text-[#2dd4bf]">
+                    <span className="text-xl font-semibold text-[#34d399]">
                       {formatCountdown(new Date(nextSession.start_at).getTime() - nowTick)}
                     </span>
                   </div>
@@ -659,11 +704,11 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
                 </>
               ) : activeToday.length > 0 ? (
                 <>
-                  <p className="text-xs font-bold tracking-[0.22em] text-[#2dd4bf] mb-3 flex items-center gap-2">
+                  <p className="text-xs font-bold tracking-[0.22em] text-[#34d399] mb-3 flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4" /> DÍA COMPLETADO
                   </p>
                   <div className="flex items-baseline gap-3 flex-wrap">
-                    <span className="text-[52px] leading-none font-extrabold tabular-nums tracking-tight">
+                    <span className="text-[52px] leading-none font-extrabold tabular-nums tracking-tight" style={GROTESK}>
                       {formatCurrency(collectedToday)}
                     </span>
                     <span className="text-sm text-white/55">cobrado hoy</span>
@@ -686,20 +731,31 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
                 </>
               ) : (
                 <>
-                  <p className="text-xs font-bold tracking-[0.22em] text-[#2dd4bf] mb-3">HOY LIBRE</p>
-                  <h2 className="text-[36px] leading-tight font-extrabold tracking-tight">Sin sesiones para hoy</h2>
+                  <p className="text-xs font-bold tracking-[0.22em] text-[#34d399] mb-3" style={GROTESK}>
+                    HOY LIBRE
+                  </p>
+                  <h2 className="text-[36px] leading-tight font-extrabold tracking-tight" style={GROTESK}>
+                    Sin sesiones para hoy
+                  </h2>
                   <p className="text-sm text-white/60 mt-2">
                     {upcomingAppointments.length > 0
                       ? `La próxima es ${format(new Date(upcomingAppointments[0].start_at), "EEEE d 'a las' HH:mm", { locale: es })} hs con ${firstName(upcomingAppointments[0].patients?.full_name)}.`
-                      : "Aprovechá para compartir tu link de reservas."}
+                      : "Aprovechá para compartir tu link de reservas y llenar la semana."}
                   </p>
-                  <div className="mt-5">
+                  <div className="mt-5 flex items-center gap-2 flex-wrap">
                     <Button
                       variant="outline"
                       className="rounded-xl gap-2 h-9 border-white/15 bg-white/[0.08] text-white hover:bg-white/[0.18] hover:text-white"
                       onClick={() => navigate("/agenda")}
                     >
                       <CalendarDays className="h-4 w-4" /> Ir a la agenda
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="rounded-xl gap-2 h-9 border-white/15 bg-white/[0.08] text-white hover:bg-white/[0.18] hover:text-white"
+                      onClick={shareBookingLink}
+                    >
+                      <ArrowRight className="h-4 w-4 rotate-[-45deg]" /> Compartir link
                     </Button>
                   </div>
                 </>
@@ -716,8 +772,8 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
                   { label: "Citas esta semana", value: String(weekApptsCount) },
                 ].map((c) => (
                   <div key={c.label} className="rounded-xl border border-white/10 bg-white/[0.06] backdrop-blur-sm px-4 py-2 min-w-[170px]">
-                    <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-white/45">{c.label}</p>
-                    <p className="text-base font-bold tabular-nums">{c.value}</p>
+                    <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-white/45" style={GROTESK}>{c.label}</p>
+                    <p className="text-base font-bold tabular-nums" style={GROTESK}>{c.value}</p>
                   </div>
                 ))}
               </div>
@@ -754,7 +810,17 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
                   </span>
                 </div>
                 {todayAppts.length === 0 ? (
-                  <p className="text-sm text-muted-foreground py-6 text-center">Sin citas para hoy.</p>
+                  <div className="rounded-xl border border-dashed border-border py-8 text-center space-y-3">
+                    <p className="text-sm text-muted-foreground">Sin citas para hoy</p>
+                    <div className="flex items-center justify-center gap-2 flex-wrap px-4">
+                      <Button variant="outline" size="sm" className="rounded-xl gap-1.5 h-9" onClick={() => navigate("/agenda")}>
+                        + Agendar cita
+                      </Button>
+                      <Button variant="outline" size="sm" className="rounded-xl gap-1.5 h-9" onClick={shareBookingLink}>
+                        Compartir link de reservas
+                      </Button>
+                    </div>
+                  </div>
                 ) : (
                   <div className="relative">
                     <div className="absolute left-[7px] top-2 bottom-2 w-px bg-border" aria-hidden />
@@ -871,7 +937,7 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
                         <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                           <k.icon className="h-3.5 w-3.5" /> {k.label}
                         </p>
-                        <p className={`text-[22px] font-bold tabular-nums tracking-tight mt-1.5 ${k.cls}`}>{k.value}</p>
+                        <p className={`text-[22px] font-bold tabular-nums tracking-tight mt-1.5 ${k.cls}`} style={GROTESK}>{k.value}</p>
                       </div>
                       {k.spark && <SparkBars data={k.spark} accent />}
                     </div>
