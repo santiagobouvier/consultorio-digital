@@ -9,9 +9,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { TimeRail } from "@/components/horarios/WeeklyTemplateEditor";
 import { toHHMM } from "@/hooks/use-availability-template";
 
@@ -30,8 +32,10 @@ interface OpenSlotDialogProps {
 /**
  * Abrir un cupo puntual desde la agenda: un horario suelto que la reserva
  * online ofrece ese día, sin tocar la semana tipo.
+ * Bottom-sheet en celular, dialog en escritorio.
  */
 export const OpenSlotDialog = ({ open, onOpenChange, businessId, date, onSaved }: OpenSlotDialogProps) => {
+  const isMobile = useIsMobile();
   const [dateStr, setDateStr] = useState(() => format(date, "yyyy-MM-dd"));
   const [time, setTime] = useState(9 * 60);
   const [dur, setDur] = useState(60);
@@ -73,69 +77,95 @@ export const OpenSlotDialog = ({ open, onOpenChange, businessId, date, onSaved }
     }
   };
 
+  const body = (
+    <div className="space-y-3.5 min-w-0">
+      <label className="block space-y-1">
+        <span className="text-xs font-medium text-muted-foreground">Día</span>
+        <input
+          type="date"
+          value={dateStr}
+          min={format(new Date(), "yyyy-MM-dd")}
+          onChange={(e) => setDateStr(e.target.value)}
+          className="w-full h-12 rounded-xl border border-input bg-background px-3 text-[15px] tabular-nums"
+        />
+      </label>
+
+      <div className="space-y-1 min-w-0">
+        <span className="text-xs font-medium text-muted-foreground">Hora</span>
+        {/* min-w-0 + overflow-hidden: el riel scrollea adentro, nunca
+            agranda el diálogo */}
+        <div className="w-full min-w-0 overflow-hidden">
+          <TimeRail value={time} onChange={setTime} />
+        </div>
+      </div>
+
+      <div className="space-y-1">
+        <span className="text-xs font-medium text-muted-foreground">Duración</span>
+        <div className="grid grid-cols-4 gap-1.5">
+          {DUR_OPTIONS.map((d) => (
+            <button
+              key={d}
+              type="button"
+              onClick={() => setDur(d)}
+              className={`h-11 rounded-xl text-sm font-semibold tabular-nums transition-colors border ${
+                dur === d
+                  ? "bg-primary/15 text-primary border-primary/50"
+                  : "bg-background text-muted-foreground border-border"
+              }`}
+              style={GROTESK}
+            >
+              {d}’
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <Button
+        type="button"
+        disabled={saving}
+        onClick={openSlot}
+        className="w-full h-12 rounded-xl gap-2 text-[15px] font-bold"
+      >
+        {saving ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <>
+            <Plus className="h-4 w-4" />
+            Abrir cupo {toHHMM(time)}–{toHHMM(time + dur)}
+          </>
+        )}
+      </Button>
+    </div>
+  );
+
+  const title = "Abrir un cupo";
+  const description = "Un horario suelto fuera de tu rutina — la reserva online lo ofrece solo ese día.";
+
+  if (isMobile) {
+    return (
+      <Drawer open={open} onOpenChange={onOpenChange}>
+        <DrawerContent className="max-h-[94dvh]">
+          <div
+            className="overflow-y-auto overflow-x-hidden px-4 pt-3"
+            style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 1.5rem)" }}
+          >
+            <DrawerTitle className="text-lg font-bold">{title}</DrawerTitle>
+            <p className="text-sm text-muted-foreground mt-1 mb-4">{description}</p>
+            {body}
+          </div>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md max-h-[88dvh] overflow-y-auto">
+      <DialogContent className="sm:max-w-md max-h-[88dvh] overflow-y-auto overflow-x-hidden">
         <DialogHeader>
-          <DialogTitle>Abrir un cupo</DialogTitle>
-          <DialogDescription>
-            Un horario suelto fuera de tu rutina — la reserva online lo ofrece solo ese día.
-          </DialogDescription>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
-        <div className="space-y-3 pt-1">
-          <label className="block space-y-1">
-            <span className="text-xs font-medium text-muted-foreground">Día</span>
-            <input
-              type="date"
-              value={dateStr}
-              min={format(new Date(), "yyyy-MM-dd")}
-              onChange={(e) => setDateStr(e.target.value)}
-              className="w-full h-11 rounded-xl border border-input bg-background px-3 text-sm tabular-nums"
-            />
-          </label>
-
-          <div className="space-y-1">
-            <span className="text-xs font-medium text-muted-foreground">Hora</span>
-            <TimeRail value={time} onChange={setTime} />
-          </div>
-
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs text-muted-foreground shrink-0">Dura</span>
-            <div className="flex gap-1.5 flex-1">
-              {DUR_OPTIONS.map((d) => (
-                <button
-                  key={d}
-                  type="button"
-                  onClick={() => setDur(d)}
-                  className={`h-10 flex-1 rounded-xl text-[13px] font-semibold tabular-nums transition-colors border ${
-                    dur === d
-                      ? "bg-primary/15 text-primary border-primary/50"
-                      : "bg-background text-muted-foreground border-border"
-                  }`}
-                  style={GROTESK}
-                >
-                  {d}’
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <Button
-            type="button"
-            disabled={saving}
-            onClick={openSlot}
-            className="w-full h-12 rounded-xl gap-2 text-[15px] font-bold"
-          >
-            {saving ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <>
-                <Plus className="h-4 w-4" />
-                Abrir cupo {toHHMM(time)}–{toHHMM(time + dur)}
-              </>
-            )}
-          </Button>
-        </div>
+        {body}
       </DialogContent>
     </Dialog>
   );
