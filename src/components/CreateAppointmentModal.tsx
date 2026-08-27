@@ -19,6 +19,7 @@ import { toast } from "@/hooks/use-toast";
 import { useBusinessId } from "@/hooks/use-business-id";
 import { useProfessionals } from "@/hooks/use-professionals";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { fetchExternalBusyDay, type ExternalBusyBlock } from "@/hooks/use-external-busy";
 import { notifyPatient } from "@/lib/push-notifications";
 import { addWeeks, addMonths, format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -153,6 +154,8 @@ export function CreateAppointmentModal({
   // Ocupación del día elegido (citas activas): para atenuar lapsos tomados
   const [busy, setBusy] = useState<{ start: number; end: number; label: string }[]>([]);
   const [busyLoading, setBusyLoading] = useState(false);
+  // Calendario personal conectado (Google/iPhone): avisa choques, no bloquea
+  const [extBusy, setExtBusy] = useState<ExternalBusyBlock[]>([]);
   // Elegir un día lejano (más allá de la tira de 2 semanas)
   const [farDateOpen, setFarDateOpen] = useState(false);
 
@@ -221,6 +224,19 @@ export function CreateAppointmentModal({
   useEffect(() => {
     if (open && date) void loadBusy(date);
   }, [open, date, loadBusy]);
+
+  // Y lo del calendario personal (si no hay conectado, vuelve vacío al toque)
+  useEffect(() => {
+    if (!open || !date) return;
+    let cancelled = false;
+    setExtBusy([]);
+    void fetchExternalBusyDay(date).then((b) => {
+      if (!cancelled) setExtBusy(b);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, date]);
 
   // ── Carga inicial al abrir ──
   useEffect(() => {
@@ -317,16 +333,28 @@ export function CreateAppointmentModal({
     busy.some((b) => b.start < slotMin + 30 && b.end > slotMin);
   const occupiedBy = (slotMin: number) =>
     busy.find((b) => b.start < slotMin + 30 && b.end > slotMin)?.label ?? null;
+  // Choque con el calendario personal (Google/iPhone): se puede agendar
+  // igual, pero se avisa — "a esa hora ya tenés Dentista"
+  const extClashAt = (slotMin: number) =>
+    extBusy.find((b) => b.start < slotMin + 30 && b.end > slotMin) ?? null;
 
   const pickTime = (slotMin: number) => {
     setTime(minToHHMM(slotMin));
+    const ext = extClashAt(slotMin);
+    if (ext) {
+      toast({
+        title: "Ojo: chocás con tu calendario",
+        description: `A esa hora ya tenés ${ext.label}, ${minToHHMM(ext.start)}–${minToHHMM(ext.end)}. Podés agendar igual.`,
+      });
+    }
     setStep("service");
   };
 
   // ── Elegir tipo de sesión ──
   const afterService = () => setStep(patientId ? "confirm" : "patient");
 
-  /** Aviso (no bloqueo) si la sesión se pisa con otra cita del día. */
+  /** Aviso (no bloqueo) si la sesión se pisa con otra cita del día
+   *  o con algo del calendario personal conectado. */
   const warnIfOverlap = (dur: number) => {
     if (!date || !time) return;
     const s = toMin(time);
@@ -336,6 +364,14 @@ export function CreateAppointmentModal({
       toast({
         title: "Ojo: se pisa con otra sesión",
         description: `Esta termina ${minToHHMM(e)} y se cruza con ${clash.label} (${minToHHMM(clash.start)}). Podés seguir igual si es a propósito.`,
+      });
+      return;
+    }
+    const ext = extBusy.find((b) => b.start < e && b.end > s);
+    if (ext) {
+      toast({
+        title: "Ojo: chocás con tu calendario",
+        description: `Se cruza con ${ext.label}, ${minToHHMM(ext.start)}–${minToHHMM(ext.end)}. Podés agendar igual.`,
       });
     }
   };
@@ -767,6 +803,7 @@ export function CreateAppointmentModal({
                       const hhmm = minToHHMM(t);
                       const occupied = isOccupied(t);
                       const who = occupied ? occupiedBy(t) : null;
+                      const ext = !occupied ? extClashAt(t) : null;
                       const isTapped = !!prefilledTime && hhmm === prefilledTime;
                       return (
                         <button
@@ -774,18 +811,29 @@ export function CreateAppointmentModal({
                           type="button"
                           disabled={occupied}
                           onClick={() => pickTime(t)}
-                          title={who ? `Ocupado: ${who}` : undefined}
+                          title={
+                            who
+                              ? `Ocupado: ${who}`
+                              : ext
+                                ? `En tu calendario: ${ext.label}`
+                                : undefined
+                          }
                           className={cn(
                             "h-12 rounded-xl border-2 tabular-nums transition-all flex flex-col items-center justify-center leading-tight",
                             occupied
                               ? "border-border/50 bg-muted/30 text-muted-foreground/60 cursor-not-allowed"
-                              : "text-[15px] font-semibold border-primary/30 bg-primary/5 text-primary hover:bg-primary hover:text-primary-foreground",
+                              : ext
+                                ? "text-[15px] font-semibold border-amber-400/60 bg-amber-500/10 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20"
+                                : "text-[15px] font-semibold border-primary/30 bg-primary/5 text-primary hover:bg-primary hover:text-primary-foreground",
                             isTapped && !occupied &&
                               "border-primary bg-primary text-primary-foreground shadow-md ring-2 ring-primary/30"
                           )}
                         >
                           <span className={cn(occupied && "text-[13px] line-through")}>{hhmm}</span>
                           {who && <span className="text-[9px] no-underline truncate max-w-[64px]">{who}</span>}
+                          {!who && ext && (
+                            <span className="text-[9px] truncate max-w-[64px]">📅 tuyo</span>
+                          )}
                         </button>
                       );
                     })}
