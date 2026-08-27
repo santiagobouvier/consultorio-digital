@@ -9,6 +9,8 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -60,6 +62,7 @@ export const PaymentDayDrawer = ({
   onUpdated,
 }: PaymentDayDrawerProps) => {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [actionLoading, setActionLoading] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
@@ -122,41 +125,42 @@ export const PaymentDayDrawer = ({
     navigate(`/patients/${payment.patient_id}`);
   };
 
-  return (
-    <>
-      <Drawer open={open} onOpenChange={(o) => !o && onClose()}>
-        <DrawerContent className="max-h-[90vh]">
-          <DrawerHeader className="border-b pb-4">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex items-center gap-3 min-w-0">
-                <Avatar className="h-12 w-12 shrink-0 ring-2 ring-emerald-500/30">
-                  <AvatarImage src={payment.patient_avatar_url || undefined} alt={payment.patient_name} />
-                  <AvatarFallback className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-semibold">
-                    {(payment.patient_name?.trim().split(/\s+/).map((p) => p[0]).slice(0, 2).join("") || "?").toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="min-w-0">
-                  <DrawerTitle className="text-left text-lg truncate">
-                    {payment.patient_name}
-                  </DrawerTitle>
-                  <p className="text-sm text-muted-foreground flex items-center gap-1.5">
-                    <CreditCard className="w-3.5 h-3.5" />
-                    Detalle del pago
-                  </p>
-                </div>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onClose}
-                className="rounded-full shrink-0"
-              >
-                <X className="w-5 h-5" />
-              </Button>
-            </div>
-          </DrawerHeader>
+  // Mismo contenido en dos cáscaras: cajón en mobile, modal centrado en escritorio
+  const header = (TitleTag: typeof DrawerTitle, withClose: boolean) => (
+    <div className="flex items-start justify-between gap-3">
+      <div className="flex items-center gap-3 min-w-0">
+        <Avatar className="h-12 w-12 shrink-0 ring-2 ring-emerald-500/30">
+          <AvatarImage src={payment.patient_avatar_url || undefined} alt={payment.patient_name} />
+          <AvatarFallback className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-semibold">
+            {(payment.patient_name?.trim().split(/\s+/).map((p) => p[0]).slice(0, 2).join("") || "?").toUpperCase()}
+          </AvatarFallback>
+        </Avatar>
+        <div className="min-w-0">
+          <TitleTag className="text-left text-lg truncate">
+            {payment.patient_name}
+          </TitleTag>
+          <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+            <CreditCard className="w-3.5 h-3.5" />
+            Detalle del pago
+          </p>
+        </div>
+      </div>
+      {withClose && (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onClose}
+          className="rounded-full shrink-0"
+        >
+          <X className="w-5 h-5" />
+        </Button>
+      )}
+    </div>
+  );
 
-          <div className="overflow-y-auto p-5 space-y-5">
+  const body = (
+    <>
+          <div className="overflow-y-auto flex-1 min-h-0 p-5 space-y-5">
             {/* Amount + status */}
             <div className="flex items-center justify-between gap-3">
               <div>
@@ -281,8 +285,26 @@ export const PaymentDayDrawer = ({
               </Button>
             </div>
           </div>
-        </DrawerContent>
-      </Drawer>
+    </>
+  );
+
+  return (
+    <>
+      {isMobile ? (
+        <Drawer open={open} onOpenChange={(o) => !o && onClose()}>
+          <DrawerContent className="max-h-[90vh]">
+            <DrawerHeader className="border-b pb-4">{header(DrawerTitle, true)}</DrawerHeader>
+            {body}
+          </DrawerContent>
+        </Drawer>
+      ) : (
+        <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+          <DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden max-h-[88dvh] flex flex-col">
+            <div className="border-b p-5 pb-4">{header(DialogTitle, false)}</div>
+            {body}
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Edit modal */}
       <PaymentForm
