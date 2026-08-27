@@ -318,10 +318,15 @@ export const DayViewV2 = ({
         )}
       </div>
 
+      {/* En escritorio el día se parte en dos: la grilla protagonista a la
+          izquierda y un panel derecho con cumpleaños, pendientes y pagos.
+          En mobile todo sigue apilado en el mismo orden de siempre. */}
+      <div className="space-y-4 lg:space-y-0 lg:grid lg:grid-cols-[minmax(0,1fr),380px] lg:gap-5 lg:items-start">
+
       {/* ── 🎂 Cumpleaños del día: tarjeta festiva con globos flotando ── */}
       {birthdays.length > 0 && (
         <div
-          className="relative overflow-hidden rounded-2xl border border-pink-300/50 dark:border-pink-500/25 p-4 sm:p-5"
+          className="lg:col-start-2 relative overflow-hidden rounded-2xl border border-pink-300/50 dark:border-pink-500/25 p-4 sm:p-5"
           style={{
             background:
               "linear-gradient(135deg, rgba(236, 72, 153, 0.12) 0%, rgba(168, 85, 247, 0.08) 55%, rgba(236, 72, 153, 0.04) 100%)",
@@ -431,7 +436,7 @@ export const DayViewV2 = ({
         }
         if (rows.length === 0) return null;
         return (
-          <div className="rounded-2xl border border-border/60 bg-card overflow-hidden">
+          <div className="lg:col-start-2 rounded-2xl border border-border/60 bg-card overflow-hidden">
             <p className="px-4 pt-3 pb-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
               Para hacer este día
             </p>
@@ -456,7 +461,7 @@ export const DayViewV2 = ({
 
       {/* Multi-column time grid (desktop, 2+ professionals) */}
       {useMultiColumn && columnData ? (
-        <div className="hidden md:block bg-card rounded-2xl border overflow-hidden">
+        <div className="hidden md:block lg:col-start-1 lg:row-start-1 lg:row-span-6 bg-card rounded-2xl border overflow-hidden">
           {/* Column headers */}
           <div className="grid border-b" style={{ gridTemplateColumns: `48px repeat(${columnData.length}, 1fr)` }}>
             <div className="border-r" />
@@ -521,7 +526,7 @@ export const DayViewV2 = ({
       {/* Grilla horaria del día, estilo Google Calendar. En mobile ocupa
           TODO el ancho de la pantalla; con varios profesionales en desktop
           se usa la grilla multi-columna de arriba. */}
-      <div className={cn(useMultiColumn && "md:hidden")}>
+      <div className={cn("lg:col-start-1 lg:row-start-1 lg:row-span-6", useMultiColumn && "md:hidden")}>
         {/* La grilla se muestra SIEMPRE (día vacío incluido): tocás una hora
             y creás — como Google Calendar. Nada de pantallas intermedias. */}
         <>
@@ -566,7 +571,7 @@ export const DayViewV2 = ({
 
       {/* Pending payments for this day */}
       {dayPayments.length > 0 && (
-        <div className="bg-card rounded-2xl border p-4 space-y-3">
+        <div className="lg:col-start-2 bg-card rounded-2xl border p-4 space-y-3">
           <div className="flex items-center gap-2">
             <CreditCard className="h-4 w-4 text-muted-foreground" />
             <h3 className="text-sm font-semibold">
@@ -617,6 +622,7 @@ export const DayViewV2 = ({
           })}
         </div>
       )}
+      </div>
     </div>
   );
 };
