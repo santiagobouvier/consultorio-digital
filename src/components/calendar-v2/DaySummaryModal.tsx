@@ -10,10 +10,24 @@ import {
 } from "./types";
 import { calculatePaymentStatus } from "@/lib/payments";
 import { useDashboardBranding } from "@/contexts/DashboardBrandingContext";
-import { Clock, Video, MapPin, CreditCard, X, ClipboardList, Check } from "lucide-react";
+import { Clock, Video, MapPin, CreditCard, X, ClipboardList, Check, Sunrise, Sun, Moon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const CANCELLED_STATUSES = ["cancelled", "cancelled_by_patient"];
+
+/** Momentos del día: ordenan la ficha visualmente (mañana / tarde / noche). */
+const DAY_PERIODS = [
+  { id: "morning", label: "Mañana", icon: Sunrise, iconClass: "text-amber-500", from: 0, to: 13 },
+  { id: "afternoon", label: "Tarde", icon: Sun, iconClass: "text-orange-500", from: 13, to: 19 },
+  { id: "evening", label: "Noche", icon: Moon, iconClass: "text-indigo-400", from: 19, to: 24 },
+] as const;
+
+const formatGap = (min: number) => {
+  const h = Math.floor(min / 60);
+  const m = Math.round(min % 60);
+  if (h === 0) return `${m} min`;
+  return m === 0 ? `${h} h` : `${h} h ${m}`;
+};
 
 interface DaySummaryModalProps {
   open: boolean;
@@ -99,8 +113,8 @@ export const DaySummaryModal = ({
               Día libre 🙌 — sin sesiones agendadas
             </p>
           ) : (
-            <div className="space-y-1">
-              {active.map((apt) => {
+            (() => {
+              const renderRow = (apt: CalendarAppointment) => {
                 const isPersonal = !!apt.isPersonal;
                 const label = isPersonal ? getPersonalLabel(apt.personalEvent) : null;
                 const statusColor = getStatusColor(apt.status);
@@ -153,8 +167,74 @@ export const DaySummaryModal = ({
                     </span>
                   </button>
                 );
-              })}
-            </div>
+              };
+
+              // La jornada agrupada por momentos: mañana / tarde / noche.
+              // Los momentos vacíos solo se muestran si quedan ENTRE momentos
+              // con sesiones ("la tarde la tenés libre"); los de las puntas no
+              // (si nunca atendés de noche, no hace falta decirlo cada día).
+              const byPeriod = DAY_PERIODS.map((p) =>
+                active.filter((a) => {
+                  const h = new Date(a.start_at).getHours();
+                  return h >= p.from && h < p.to;
+                })
+              );
+              const firstIdx = byPeriod.findIndex((g) => g.length > 0);
+              const lastIdx = byPeriod.length - 1 - [...byPeriod].reverse().findIndex((g) => g.length > 0);
+
+              return (
+                <div className="space-y-4">
+                  {DAY_PERIODS.map((period, idx) => {
+                    const inPeriod = byPeriod[idx];
+                    const isEmpty = inPeriod.length === 0;
+                    if (isEmpty && (idx < firstIdx || idx > lastIdx)) return null;
+                    const Icon = period.icon;
+                    return (
+                      <div key={period.id}>
+                        <div className="flex items-center gap-2 px-1 pb-1.5">
+                          <Icon className={cn("h-3.5 w-3.5", period.iconClass)} />
+                          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                            {period.label}
+                          </p>
+                          <span className="flex-1 border-t border-dashed border-border/60" />
+                          <span className="text-[11px] text-muted-foreground tabular-nums">
+                            {isEmpty
+                              ? "libre 🙌"
+                              : `${inPeriod.length} sesion${inPeriod.length !== 1 ? "es" : ""}`}
+                          </span>
+                        </div>
+                        {!isEmpty && (
+                          <div className="space-y-1">
+                            {inPeriod.map((apt, i) => {
+                              const prev = inPeriod[i - 1];
+                              const gapMin = prev
+                                ? Math.round(
+                                    (new Date(apt.start_at).getTime() - new Date(prev.end_at).getTime()) / 60000
+                                  )
+                                : 0;
+                              return (
+                                <div key={apt.id}>
+                                  {gapMin >= 60 && (
+                                    <div className="flex items-center gap-2 px-3 py-1.5">
+                                      <span className="flex-1 border-t border-dashed border-border/50" />
+                                      <span className="text-[10px] font-medium text-muted-foreground/80 tabular-nums">
+                                        {formatGap(gapMin)} libre
+                                      </span>
+                                      <span className="flex-1 border-t border-dashed border-border/50" />
+                                    </div>
+                                  )}
+                                  {renderRow(apt)}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()
           )}
 
           {/* Canceladas, aparte para no ensuciar la cronología */}
