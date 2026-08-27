@@ -10,6 +10,7 @@ import { es } from "date-fns/locale";
 import { ViewType } from "./types";
 import { HelpTooltip } from "@/components/HelpTooltip";
 import { NewActionDialog } from "./NewActionDialog";
+import { CalendarSyncButton } from "./CalendarSyncButton";
 
 interface CalendarHeaderProps {
   currentDate: Date;
@@ -145,6 +146,7 @@ export const CalendarHeader = ({
           </div>
           <div className="flex items-center gap-0.5 shrink-0">
             {extraActions}
+            <CalendarSyncButton mobile />
             {onOpenSchedule && (
               <button
                 onClick={onOpenSchedule}
@@ -329,6 +331,9 @@ export const CalendarHeader = ({
               Exportar
             </Button>
           )}
+
+          {/* Google Calendar / iPhone: perillita de estado + pop-up */}
+          <CalendarSyncButton />
 
           {/* Add Button */}
           <AddMenu triggerClassName="rounded-xl gap-2" />
