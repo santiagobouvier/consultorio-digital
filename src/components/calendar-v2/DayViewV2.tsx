@@ -8,7 +8,8 @@ import { useDashboardBranding } from "@/contexts/DashboardBrandingContext";
 import type { FreeSlot, WeekSlotSummary } from "@/hooks/use-free-slots";
 import type { DayBirthday } from "./BirthdaysStrip";
 import { openWhatsApp } from "@/lib/whatsapp";
-import { CalendarDays, Plus, Clock, AlertTriangle, CreditCard, Check, X, CircleDashed, Sparkles, ChevronRight, CalendarCheck, MessageCircle } from "lucide-react";
+import { CalendarDays, Plus, Clock, AlertTriangle, CreditCard, Check, X, CircleDashed, Sparkles, ChevronRight, CalendarCheck, MessageCircle, ClipboardList } from "lucide-react";
+import { DaySummaryModal } from "./DaySummaryModal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -142,6 +143,9 @@ export const DayViewV2 = ({
     [dayAppointments]
   );
   const hours = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => START_HOUR + i);
+
+  // Pop-up con la ficha del día (resumen clínico de la jornada)
+  const [fichaOpen, setFichaOpen] = useState(false);
 
   // Reloj para la línea de "ahora" y el estado EN CURSO (se mueve solo)
   const [nowTick, setNowTick] = useState(() => Date.now());
@@ -322,6 +326,30 @@ export const DayViewV2 = ({
           izquierda y un panel derecho con cumpleaños, pendientes y pagos.
           En mobile todo sigue apilado en el mismo orden de siempre. */}
       <div className="space-y-4 lg:space-y-0 lg:grid lg:grid-cols-[minmax(0,1fr),380px] lg:gap-5 lg:items-start">
+
+      {/* Ficha del día: siempre presente en el panel derecho de escritorio,
+          abre el pop-up con el resumen clínico de la jornada */}
+      <div className="hidden lg:block lg:col-start-2 rounded-2xl border border-border/60 bg-card p-4">
+        <p className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] text-primary">
+          <ClipboardList className="h-3.5 w-3.5" />
+          Ficha del día
+        </p>
+        <p className="mt-1.5 text-sm text-muted-foreground">
+          {dayStats.activeCount === 0
+            ? "Día libre, sin sesiones agendadas."
+            : `${dayStats.activeCount} sesion${dayStats.activeCount !== 1 ? "es" : ""}${
+                dayStats.first ? `, de ${dayStats.first} a ${dayStats.last}` : ""
+              }${dayStats.cancelled > 0 ? ` · ${dayStats.cancelled} cancelada${dayStats.cancelled !== 1 ? "s" : ""}` : ""}.`}
+        </p>
+        <Button
+          variant="secondary"
+          className="mt-3 w-full h-11 rounded-xl font-semibold"
+          onClick={() => setFichaOpen(true)}
+        >
+          <ClipboardList className="h-4 w-4 mr-2" />
+          Ver ficha del día
+        </Button>
+      </div>
 
       {/* ── 🎂 Cumpleaños del día: tarjeta festiva con globos flotando ── */}
       {birthdays.length > 0 && (
@@ -623,6 +651,26 @@ export const DayViewV2 = ({
         </div>
       )}
       </div>
+
+      <DaySummaryModal
+        open={fichaOpen}
+        onClose={() => setFichaOpen(false)}
+        date={currentDate}
+        appointments={dayAppointments}
+        payments={dayPayments}
+        onAppointmentClick={(apt) => {
+          setFichaOpen(false);
+          onAppointmentClick(apt);
+        }}
+        onPaymentClick={
+          onPaymentClick
+            ? (p) => {
+                setFichaOpen(false);
+                onPaymentClick(p);
+              }
+            : undefined
+        }
+      />
     </div>
   );
 };
