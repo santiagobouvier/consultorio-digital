@@ -17,6 +17,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
+import { fetchExternalBusyDay, type ExternalBusyBlock } from "@/hooks/use-external-busy";
 import { notifyPatient } from "@/lib/push-notifications";
 import { useDashboardBranding } from "@/contexts/DashboardBrandingContext";
 import { format } from "date-fns";
@@ -84,6 +85,8 @@ export const RescheduleAppointmentModal = ({
   // Citas activas del día elegido: se atenúan (sin contar la que se mueve)
   const [busy, setBusy] = useState<{ start: number; end: number; label: string }[]>([]);
   const [busyLoading, setBusyLoading] = useState(false);
+  // Calendario personal conectado (Google/iPhone): avisa choques, no bloquea
+  const [extBusy, setExtBusy] = useState<ExternalBusyBlock[]>([]);
 
   const durationMinutes = useMemo(() => {
     if (!appointment) return 60;
@@ -151,6 +154,18 @@ export const RescheduleAppointmentModal = ({
     if (open && selectedDay) void loadBusy(selectedDay);
   }, [open, selectedDay, loadBusy]);
 
+  useEffect(() => {
+    if (!open || !selectedDay) return;
+    let cancelled = false;
+    setExtBusy([]);
+    void fetchExternalBusyDay(selectedDay).then((b) => {
+      if (!cancelled) setExtBusy(b);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, selectedDay]);
+
   // Tira de días: hoy + 13 (para más lejos, el calendario)
   const dayOptions = useMemo(() => {
     const base = new Date();
@@ -174,6 +189,8 @@ export const RescheduleAppointmentModal = ({
     busy.some((b) => b.start < slotMin + 30 && b.end > slotMin);
   const occupiedBy = (slotMin: number) =>
     busy.find((b) => b.start < slotMin + 30 && b.end > slotMin)?.label ?? null;
+  const extClashAt = (slotMin: number) =>
+    extBusy.find((b) => b.start < slotMin + 30 && b.end > slotMin) ?? null;
 
   if (!appointment) return null;
 
@@ -351,25 +368,45 @@ export const RescheduleAppointmentModal = ({
                       const hhmm = minToHHMM(t);
                       const occupied = isOccupied(t);
                       const who = occupied ? occupiedBy(t) : null;
+                      const ext = !occupied ? extClashAt(t) : null;
                       const isPicked = picked?.day === selectedDay && picked?.time === hhmm;
                       return (
                         <button
                           key={t}
                           type="button"
                           disabled={occupied}
-                          onClick={() => setPicked({ day: selectedDay, time: hhmm })}
-                          title={who ? `Ocupado: ${who}` : undefined}
+                          onClick={() => {
+                            setPicked({ day: selectedDay, time: hhmm });
+                            if (ext) {
+                              toast({
+                                title: "Ojo: chocás con tu calendario",
+                                description: `A esa hora ya tenés ${ext.label}, ${minToHHMM(ext.start)}–${minToHHMM(ext.end)}. Podés reprogramar igual.`,
+                              });
+                            }
+                          }}
+                          title={
+                            who
+                              ? `Ocupado: ${who}`
+                              : ext
+                                ? `En tu calendario: ${ext.label}`
+                                : undefined
+                          }
                           className={cn(
                             "h-12 rounded-xl border-2 tabular-nums transition-all flex flex-col items-center justify-center leading-tight",
                             occupied
                               ? "border-border/50 bg-muted/30 text-muted-foreground/60 cursor-not-allowed"
-                              : "text-[15px] font-semibold border-primary/30 bg-primary/5 text-primary hover:bg-primary hover:text-primary-foreground",
+                              : ext
+                                ? "text-[15px] font-semibold border-amber-400/60 bg-amber-500/10 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20"
+                                : "text-[15px] font-semibold border-primary/30 bg-primary/5 text-primary hover:bg-primary hover:text-primary-foreground",
                             isPicked && !occupied &&
                               "border-primary bg-primary text-primary-foreground shadow-md"
                           )}
                         >
                           <span className={cn(occupied && "text-[13px] line-through")}>{hhmm}</span>
                           {who && <span className="text-[9px] no-underline truncate max-w-[64px]">{who}</span>}
+                          {!who && ext && (
+                            <span className="text-[9px] truncate max-w-[64px]">📅 tuyo</span>
+                          )}
                         </button>
                       );
                     })}

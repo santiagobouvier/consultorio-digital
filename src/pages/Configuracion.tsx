@@ -8,6 +8,7 @@ import { useBusinessId } from "@/hooks/use-business-id";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   ArrowLeft,
   AlarmClock,
@@ -18,10 +19,12 @@ import {
   LifeBuoy,
   ChevronRight,
   CalendarHeart,
+  CalendarSearch,
   Copy,
   Check,
   RefreshCw,
   Loader2,
+  Trash2,
 } from "lucide-react";
 
 type ConfigTile = {
@@ -239,6 +242,169 @@ const CalendarFeedCard = () => {
   );
 };
 
+/**
+ * El camino inverso: el sistema LEE el calendario personal del profesional
+ * (Google / iCloud / Outlook) para avisar choques al agendar. Se conecta
+ * pegando el link iCal privado una sola vez; el link nunca vuelve al
+ * navegador (solo lo lee el servidor).
+ */
+type ExternalCal = { id: string; label: string; host: string };
+
+const ExternalCalendarsCard = () => {
+  const { businessId } = useBusinessId(false);
+  const [cals, setCals] = useState<ExternalCal[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [working, setWorking] = useState(false);
+  const [url, setUrl] = useState("");
+  const [showHelp, setShowHelp] = useState(false);
+
+  const refresh = async () => {
+    const { data, error } = await supabase.functions.invoke("external-calendar", {
+      body: { action: "list" },
+    });
+    if (!error && Array.isArray(data?.calendars)) setCals(data.calendars);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    void refresh();
+  }, []);
+
+  const handleAdd = async () => {
+    if (!url.trim()) return;
+    setWorking(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("external-calendar", {
+        body: { action: "add", url: url.trim(), businessId },
+      });
+      const errMsg = (data as any)?.error || (error ? "No se pudo conectar el calendario" : null);
+      if (errMsg) {
+        toast({ title: "No se pudo conectar", description: errMsg, variant: "destructive" });
+        return;
+      }
+      setUrl("");
+      toast({
+        title: "Calendario conectado 🎉",
+        description: "Al agendar, el sistema te va a avisar si chocás con algo tuyo.",
+      });
+      await refresh();
+    } finally {
+      setWorking(false);
+    }
+  };
+
+  const handleRemove = async (id: string) => {
+    setWorking(true);
+    try {
+      await supabase.functions.invoke("external-calendar", { body: { action: "remove", id } });
+      setCals((prev) => prev.filter((c) => c.id !== id));
+    } finally {
+      setWorking(false);
+    }
+  };
+
+  return (
+    <div className="rounded-2xl border border-border/70 bg-card p-5 sm:p-6 space-y-4">
+      <div className="flex items-start gap-4">
+        <span
+          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl"
+          style={{ background: "hsla(258, 75%, 62%, 0.14)", boxShadow: "inset 0 0 0 1px hsla(258, 75%, 62%, 0.25)" }}
+        >
+          <CalendarSearch className="h-[22px] w-[22px]" style={{ color: "hsl(258 75% 62%)" }} strokeWidth={2} />
+        </span>
+        <div className="min-w-0">
+          <h2 className="text-[15px] font-semibold leading-tight">
+            Que tu agenda vea tu calendario personal
+          </h2>
+          <p className="mt-1 text-[13px] leading-snug text-muted-foreground">
+            Conectá tu Google Calendar o el calendario del iPhone y, al agendar un paciente, el
+            sistema te avisa si esa hora choca con algo tuyo ("Dentista 15:00"). Solo lectura:
+            acá no se toca nada de tu calendario.
+          </p>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" /> Cargando...
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {cals.length > 0 && (
+            <div className="space-y-2">
+              {cals.map((c) => (
+                <div
+                  key={c.id}
+                  className="flex items-center gap-3 rounded-xl border border-border/70 bg-muted/30 px-3 py-2.5"
+                >
+                  <Check className="h-4 w-4 text-emerald-500 shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium truncate">{c.label}</p>
+                    <p className="text-[11.5px] text-muted-foreground truncate">{c.host}</p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 rounded-xl text-muted-foreground hover:text-destructive shrink-0"
+                    onClick={() => handleRemove(c.id)}
+                    disabled={working}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {cals.length < 3 && (
+            <div className="flex items-center gap-2">
+              <Input
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                placeholder="Pegá acá el link iCal de tu calendario"
+                className="h-11 rounded-xl text-sm"
+              />
+              <Button
+                onClick={handleAdd}
+                disabled={working || !url.trim()}
+                className="h-11 rounded-xl shrink-0"
+              >
+                {working ? <Loader2 className="h-4 w-4 animate-spin" /> : "Conectar"}
+              </Button>
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={() => setShowHelp((v) => !v)}
+            className="text-[12.5px] text-muted-foreground hover:text-foreground underline underline-offset-4"
+          >
+            ¿De dónde saco ese link?
+          </button>
+          {showHelp && (
+            <div className="rounded-xl bg-muted/40 p-3 text-[12.5px] leading-relaxed text-muted-foreground space-y-1.5">
+              <p>
+                <span className="font-medium text-foreground">Google Calendar (compu):</span>{" "}
+                Configuración → tu calendario → Integrar el calendario → copiá la
+                "Dirección secreta en formato iCal".
+              </p>
+              <p>
+                <span className="font-medium text-foreground">iPhone / iCloud:</span>{" "}
+                app Calendario → Calendarios → (i) junto a tu calendario → activá
+                "Calendario público" → Compartir enlace → copialo (empieza con webcal://).
+              </p>
+              <p className="text-[11.5px]">
+                El link es de solo lectura y queda guardado en el servidor: nunca se muestra
+                entero ni sale de ahí. Podés desconectarlo cuando quieras.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const Configuracion = () => {
   const navigate = useNavigate();
   const { isSuperAdmin } = useAuth();
@@ -307,8 +473,11 @@ const Configuracion = () => {
           })}
         </div>
 
-        {/* Extra: agenda en el calendario del celular */}
-        <CalendarFeedCard />
+        {/* Extra: integración con Google Calendar / iPhone, en los dos sentidos */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 items-start">
+          <CalendarFeedCard />
+          <ExternalCalendarsCard />
+        </div>
       </div>
     </div>
   );
