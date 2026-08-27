@@ -858,13 +858,12 @@ const CalendarV2 = () => {
                     }
                     setShowCreateModal(true);
                   }}
+                  onDayClick={handleDayClick}
                   showProfessionalColors={showProfessionalColors}
                   paymentsByDay={paymentsByDay}
                   onPaymentClick={handlePaymentClick}
                   birthdaysByDate={birthdaysByDate}
                   clinicName={displayName || "tu consultorio"}
-                  onCreatePersonal={(d) => openCreatePersonal(d, undefined, true)}
-                  onQuickBlock={(d) => openQuickBlock(d)}
                 />
               ) : (
                 <>

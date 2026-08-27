@@ -1,7 +1,5 @@
-import { useState, useMemo } from "react";
-import { addDays } from "date-fns";
+import { useMemo } from "react";
 import { CalendarAppointment, DayPayment } from "./types";
-import { DayDetailModal } from "./DayDetailModal";
 import { MonthViewV2 } from "./MonthViewV2";
 import type { DayBirthday } from "./BirthdaysStrip";
 
@@ -10,9 +8,7 @@ interface DesktopCalendarLayoutProps {
   appointments: CalendarAppointment[];
   onAppointmentClick: (appointment: CalendarAppointment) => void;
   onCreateAppointment: (date?: Date) => void;
-  onCreatePayment?: (date?: Date) => void;
-  onCreatePersonal?: (date: Date) => void;
-  onQuickBlock?: (date: Date) => void;
+  onDayClick: (date: Date) => void;
   showProfessionalColors: boolean;
   paymentsByDay?: Map<string, DayPayment[]>;
   onPaymentClick?: (payment: DayPayment) => void;
@@ -25,24 +21,13 @@ export const DesktopCalendarLayout = ({
   appointments,
   onAppointmentClick,
   onCreateAppointment,
-  onCreatePayment,
-  onCreatePersonal,
-  onQuickBlock,
+  onDayClick,
   showProfessionalColors,
   paymentsByDay,
   onPaymentClick,
   birthdaysByDate,
   clinicName,
 }: DesktopCalendarLayoutProps) => {
-  // Tocar un día abre EL DÍA COMPLETO en un modal (impacto > panel lateral)
-  const [selectedDay, setSelectedDay] = useState<Date | null>(null);
-  const [dayModalOpen, setDayModalOpen] = useState(false);
-
-  const handleDayClick = (date: Date) => {
-    setSelectedDay(date);
-    setDayModalOpen(true);
-  };
-
   // Get day indicators for month view
   const dayIndicators = useMemo(() => {
     const indicators = new Map<string, { count: number; hasOverdue: boolean; hasPending: boolean }>();
@@ -61,24 +46,20 @@ export const DesktopCalendarLayout = ({
     return indicators;
   }, [appointments]);
 
-  const selectedDayPayments = useMemo(() => {
-    if (!selectedDay || !paymentsByDay) return [];
-    return paymentsByDay.get(selectedDay.toDateString()) || [];
-  }, [selectedDay, paymentsByDay]);
-
   return (
     <div className="h-[calc(100vh-200px)] min-h-[600px]">
-      {/* Calendar area */}
+      {/* Calendar area — tocar un día abre EL DÍA COMPLETO (vista Día,
+          grilla horaria estilo Google Calendar), igual que en mobile */}
       <div className="w-full min-w-0">
         <MonthViewV2
           currentDate={currentDate}
           appointments={appointments}
           onAppointmentClick={onAppointmentClick}
-          onDayClick={handleDayClick}
+          onDayClick={onDayClick}
           onAddAppointment={() => onCreateAppointment()}
           showProfessionalColors={showProfessionalColors}
           isDesktop
-          selectedDay={selectedDay}
+          selectedDay={null}
           dayIndicators={dayIndicators}
           paymentsByDay={paymentsByDay}
           onPaymentClick={onPaymentClick}
@@ -86,57 +67,6 @@ export const DesktopCalendarLayout = ({
           clinicName={clinicName}
         />
       </div>
-
-      {/* El día completo, en modal */}
-      {selectedDay && (
-        <DayDetailModal
-          open={dayModalOpen}
-          onClose={() => setDayModalOpen(false)}
-          selectedDate={selectedDay}
-          appointments={appointments}
-          dayPayments={selectedDayPayments}
-          birthdays={birthdaysByDate?.get(selectedDay.toDateString()) ?? []}
-          clinicName={clinicName}
-          onAppointmentClick={(apt) => {
-            setDayModalOpen(false);
-            onAppointmentClick(apt);
-          }}
-          onPaymentClick={(p) => {
-            setDayModalOpen(false);
-            onPaymentClick?.(p);
-          }}
-          onCreateAppointment={() => {
-            setDayModalOpen(false);
-            onCreateAppointment(selectedDay || undefined);
-          }}
-          onCreatePayment={
-            onCreatePayment
-              ? () => {
-                  setDayModalOpen(false);
-                  onCreatePayment(selectedDay || undefined);
-                }
-              : undefined
-          }
-          onCreatePersonal={
-            onCreatePersonal
-              ? () => {
-                  setDayModalOpen(false);
-                  onCreatePersonal(selectedDay);
-                }
-              : undefined
-          }
-          onQuickBlock={
-            onQuickBlock
-              ? () => {
-                  setDayModalOpen(false);
-                  onQuickBlock(selectedDay);
-                }
-              : undefined
-          }
-          onNavigateDay={(delta) => setSelectedDay((prev) => (prev ? addDays(prev, delta) : prev))}
-          showProfessionalColors={showProfessionalColors}
-        />
-      )}
     </div>
   );
 };
