@@ -180,23 +180,15 @@ const CalendarFeedCard = () => {
   };
 
   return (
-    <div className="rounded-2xl border border-border/70 bg-card p-5 sm:p-6 space-y-4">
-      <div className="flex items-start gap-4">
-        <span
-          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl"
-          style={{ background: "hsla(190, 85%, 50%, 0.14)", boxShadow: "inset 0 0 0 1px hsla(190, 85%, 50%, 0.25)" }}
-        >
-          <CalendarHeart className="h-[22px] w-[22px]" style={{ color: "hsl(190 85% 50%)" }} strokeWidth={2} />
-        </span>
-        <div className="min-w-0">
-          <h2 className="text-[15px] font-semibold leading-tight">
-            Tu agenda, en el calendario de tu celular
-          </h2>
-          <p className="mt-1 text-[13px] leading-snug text-muted-foreground">
-            Suscribí Google Calendar o el calendario del iPhone a tus turnos: aparecen solos y se
-            actualizan solos. El link es privado, solo tuyo.
-          </p>
-        </div>
+    <div className="space-y-4">
+      <div className="min-w-0">
+        <h3 className="text-sm font-semibold leading-tight">
+          1 · Tus citas, en el calendario de tu celular
+        </h3>
+        <p className="mt-1 text-[13px] leading-snug text-muted-foreground">
+          Suscribí tu Google Calendar o el calendario del iPhone a tus turnos: aparecen solos y
+          se actualizan solos. El link es privado, solo tuyo.
+        </p>
       </div>
 
       {loading ? (
@@ -304,24 +296,16 @@ const ExternalCalendarsCard = () => {
   };
 
   return (
-    <div className="rounded-2xl border border-border/70 bg-card p-5 sm:p-6 space-y-4">
-      <div className="flex items-start gap-4">
-        <span
-          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl"
-          style={{ background: "hsla(258, 75%, 62%, 0.14)", boxShadow: "inset 0 0 0 1px hsla(258, 75%, 62%, 0.25)" }}
-        >
-          <CalendarSearch className="h-[22px] w-[22px]" style={{ color: "hsl(258 75% 62%)" }} strokeWidth={2} />
-        </span>
-        <div className="min-w-0">
-          <h2 className="text-[15px] font-semibold leading-tight">
-            Que tu agenda vea tu calendario personal
-          </h2>
-          <p className="mt-1 text-[13px] leading-snug text-muted-foreground">
-            Conectá tu Google Calendar o el calendario del iPhone y, al agendar un paciente, el
-            sistema te avisa si esa hora choca con algo tuyo ("Dentista 15:00"). Solo lectura:
-            acá no se toca nada de tu calendario.
-          </p>
-        </div>
+    <div className="space-y-4">
+      <div className="min-w-0">
+        <h3 className="text-sm font-semibold leading-tight">
+          2 · Que tu agenda vea tu calendario personal
+        </h3>
+        <p className="mt-1 text-[13px] leading-snug text-muted-foreground">
+          Pegá el link de tu calendario y, al agendar un paciente, el sistema te avisa si esa
+          hora choca con algo tuyo ("Dentista 15:00"). Solo lectura: acá no se toca nada de tu
+          calendario.
+        </p>
       </div>
 
       {loading ? (
@@ -473,10 +457,31 @@ const Configuracion = () => {
           })}
         </div>
 
-        {/* Extra: integración con Google Calendar / iPhone, en los dos sentidos */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 items-start">
-          <CalendarFeedCard />
-          <ExternalCalendarsCard />
+        {/* Integración con Google Calendar / iPhone: UNA tarjeta, dos sentidos */}
+        <div className="rounded-2xl border border-border/70 bg-card p-5 sm:p-6 space-y-5">
+          <div className="flex items-start gap-4">
+            <span
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl"
+              style={{ background: "hsla(190, 85%, 50%, 0.14)", boxShadow: "inset 0 0 0 1px hsla(190, 85%, 50%, 0.25)" }}
+            >
+              <CalendarHeart className="h-[22px] w-[22px]" style={{ color: "hsl(190 85% 50%)" }} strokeWidth={2} />
+            </span>
+            <div className="min-w-0">
+              <h2 className="text-[15px] font-semibold leading-tight">
+                Google Calendar y iPhone
+              </h2>
+              <p className="mt-1 text-[13px] leading-snug text-muted-foreground">
+                La conexión va en los dos sentidos: tus citas del consultorio aparecen en tu
+                calendario de siempre, y tu agenda te avisa si un paciente choca con algo tuyo.
+              </p>
+            </div>
+          </div>
+          <div className="border-t border-border/60 pt-4">
+            <CalendarFeedCard />
+          </div>
+          <div className="border-t border-border/60 pt-4">
+            <ExternalCalendarsCard />
+          </div>
         </div>
       </div>
     </div>
