@@ -432,6 +432,7 @@ export type Database = {
         Row: {
           business_id: string
           created_at: string
+          day_blocks: Json | null
           default_price: number | null
           friday_enabled: boolean
           friday_end_1: string | null
@@ -479,6 +480,7 @@ export type Database = {
         Insert: {
           business_id: string
           created_at?: string
+          day_blocks?: Json | null
           default_price?: number | null
           friday_enabled?: boolean
           friday_end_1?: string | null
@@ -526,6 +528,7 @@ export type Database = {
         Update: {
           business_id?: string
           created_at?: string
+          day_blocks?: Json | null
           default_price?: number | null
           friday_enabled?: boolean
           friday_end_1?: string | null
@@ -886,6 +889,48 @@ export type Database = {
           whatsapp_contact_phone?: string | null
         }
         Relationships: []
+      }
+      external_calendars: {
+        Row: {
+          business_id: string | null
+          created_at: string
+          ics_url: string
+          id: string
+          label: string
+          professional_user_id: string
+        }
+        Insert: {
+          business_id?: string | null
+          created_at?: string
+          ics_url: string
+          id?: string
+          label?: string
+          professional_user_id: string
+        }
+        Update: {
+          business_id?: string | null
+          created_at?: string
+          ics_url?: string
+          id?: string
+          label?: string
+          professional_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "external_calendars_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "external_calendars_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public_branding"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       note_templates: {
         Row: {
