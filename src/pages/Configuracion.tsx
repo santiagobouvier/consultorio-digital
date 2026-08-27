@@ -105,8 +105,20 @@ const CalendarFeedCard = () => {
         .eq("business_id", businessId)
         .eq("professional_user_id", user.id)
         .maybeSingle();
+      if (cancelled) return;
+      if (data?.token) {
+        setToken(data.token);
+        setLoading(false);
+        return;
+      }
+      // Sin link todavía: se crea solo, así el botón está siempre pronto
+      const { data: created } = await (supabase as any)
+        .from("calendar_feed_tokens")
+        .insert({ business_id: businessId, professional_user_id: user.id })
+        .select("token")
+        .single();
       if (!cancelled) {
-        setToken(data?.token ?? null);
+        setToken(created?.token ?? null);
         setLoading(false);
       }
     })();
@@ -119,27 +131,12 @@ const CalendarFeedCard = () => {
     ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/calendar-feed?token=${token}`
     : null;
 
-  const handleActivate = async () => {
-    if (!businessId) return;
-    setWorking(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Sesión no válida");
-      const { data, error } = await (supabase as any)
-        .from("calendar_feed_tokens")
-        .insert({ business_id: businessId, professional_user_id: user.id })
-        .select("token")
-        .single();
-      if (error) throw error;
-      setToken(data.token);
-      toast({ title: "Link creado", description: "Agregalo a tu calendario y listo." });
-    } catch (e) {
-      console.error(e);
-      toast({ title: "Error", description: "No se pudo crear el link", variant: "destructive" });
-    } finally {
-      setWorking(false);
-    }
-  };
+  // Botones de un toque: Google abre su pantalla de "Añadir calendario" con
+  // todo pronto; webcal:// abre el calendario nativo en iPhone/Mac.
+  const webcalUrl = feedUrl ? feedUrl.replace(/^https:\/\//, "webcal://") : null;
+  const googleAddUrl = webcalUrl
+    ? `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(webcalUrl)}`
+    : null;
 
   const handleRegenerate = async () => {
     if (!businessId) return;
@@ -181,49 +178,31 @@ const CalendarFeedCard = () => {
 
   return (
     <div className="space-y-4">
-      <div className="min-w-0">
-        <h3 className="text-sm font-semibold leading-tight">
-          1 · Tus citas, en el calendario de tu celular
-        </h3>
-        <p className="mt-1 text-[13px] leading-snug text-muted-foreground">
-          Suscribí tu Google Calendar o el calendario del iPhone a tus turnos: aparecen solos y
-          se actualizan solos. El link es privado, solo tuyo.
-        </p>
-      </div>
-
-      {loading ? (
+      {loading || !feedUrl ? (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" /> Cargando...
+          <Loader2 className="h-4 w-4 animate-spin" /> Preparando tu conexión...
         </div>
-      ) : !token ? (
-        <Button onClick={handleActivate} disabled={working}>
-          {working ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CalendarHeart className="h-4 w-4 mr-2" />}
-          Crear mi link privado
-        </Button>
       ) : (
         <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <code className="flex-1 min-w-0 truncate rounded-xl border border-border/70 bg-muted/40 px-3 py-2.5 text-xs">
-              {feedUrl}
-            </code>
-            <Button variant="outline" size="icon" className="shrink-0 h-10 w-10 rounded-xl" onClick={handleCopy}>
-              {copied ? <Check className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <Button asChild className="h-12 rounded-xl text-[15px] font-semibold">
+              <a href={googleAddUrl!} target="_blank" rel="noreferrer">
+                Conectar Google Calendar
+              </a>
+            </Button>
+            <Button asChild variant="secondary" className="h-12 rounded-xl text-[15px] font-semibold">
+              <a href={webcalUrl!}>Conectar iPhone / Mac</a>
             </Button>
           </div>
-          <div className="rounded-xl bg-muted/40 p-3 text-[12.5px] leading-relaxed text-muted-foreground space-y-1.5">
-            <p>
-              <span className="font-medium text-foreground">Google Calendar (compu):</span>{" "}
-              Otros calendarios → + → Desde URL → pegá el link.
-            </p>
-            <p>
-              <span className="font-medium text-foreground">iPhone:</span>{" "}
-              Ajustes → Apps → Calendario → Cuentas → Añadir cuenta → Otra → Añadir calendario suscrito.
-            </p>
-            <p className="text-[11.5px]">
-              Los calendarios tardan un rato en refrescar (Google puede demorar unas horas). Nadie ve
-              notas clínicas por acá: solo paciente, tipo de sesión y horario.
-            </p>
-          </div>
+          <p className="text-[12.5px] leading-snug text-muted-foreground">
+            Un toque: se abre tu calendario con todo pronto, confirmás y listo — tus citas
+            aparecen y se actualizan solas. Nada clínico viaja por acá: solo paciente, tipo de
+            sesión y horario. (Google puede tardar unas horas en refrescar.)
+          </p>
+          <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={handleCopy}>
+            {copied ? <Check className="h-3.5 w-3.5 mr-2 text-emerald-500" /> : <Copy className="h-3.5 w-3.5 mr-2" />}
+            Copiar link (para agregarlo a mano)
+          </Button>
           <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={handleRegenerate} disabled={working}>
             {working ? <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-2" />}
             Regenerar link (invalida el anterior)
@@ -249,12 +228,17 @@ const ExternalCalendarsCard = () => {
   const [working, setWorking] = useState(false);
   const [url, setUrl] = useState("");
   const [showHelp, setShowHelp] = useState(false);
+  // Plegado por defecto: es lo opcional/avanzado. Con algo conectado, abierto.
+  const [openSec, setOpenSec] = useState(false);
 
   const refresh = async () => {
     const { data, error } = await supabase.functions.invoke("external-calendar", {
       body: { action: "list" },
     });
-    if (!error && Array.isArray(data?.calendars)) setCals(data.calendars);
+    if (!error && Array.isArray(data?.calendars)) {
+      setCals(data.calendars);
+      if (data.calendars.length > 0) setOpenSec(true);
+    }
     setLoading(false);
   };
 
@@ -296,19 +280,33 @@ const ExternalCalendarsCard = () => {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="min-w-0">
-        <h3 className="text-sm font-semibold leading-tight">
-          2 · Que tu agenda vea tu calendario personal
-        </h3>
-        <p className="mt-1 text-[13px] leading-snug text-muted-foreground">
-          Pegá el link de tu calendario y, al agendar un paciente, el sistema te avisa si esa
-          hora choca con algo tuyo ("Dentista 15:00"). Solo lectura: acá no se toca nada de tu
-          calendario.
-        </p>
-      </div>
+    <div className="space-y-3">
+      <button
+        type="button"
+        onClick={() => setOpenSec((v) => !v)}
+        className="w-full flex items-center justify-between gap-3 text-left min-h-[44px]"
+      >
+        <div className="min-w-0">
+          <h3 className="text-sm font-semibold leading-tight">
+            ¿Que también te avise si chocás con algo tuyo?
+            <span className="ml-2 align-middle text-[10px] font-semibold uppercase tracking-wide text-muted-foreground bg-muted rounded-full px-2 py-0.5">
+              Opcional
+            </span>
+          </h3>
+          <p className="mt-1 text-[13px] leading-snug text-muted-foreground">
+            Conectá tu calendario personal y, al agendar un paciente, te aviso si esa hora
+            choca con algo tuyo ("Dentista 15:00").
+          </p>
+        </div>
+        <ChevronRight
+          className={
+            "h-4 w-4 shrink-0 text-muted-foreground transition-transform " +
+            (openSec ? "rotate-90" : "")
+          }
+        />
+      </button>
 
-      {loading ? (
+      {!openSec ? null : loading ? (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" /> Cargando...
         </div>
@@ -471,8 +469,7 @@ const Configuracion = () => {
                 Google Calendar y iPhone
               </h2>
               <p className="mt-1 text-[13px] leading-snug text-muted-foreground">
-                La conexión va en los dos sentidos: tus citas del consultorio aparecen en tu
-                calendario de siempre, y tu agenda te avisa si un paciente choca con algo tuyo.
+                Un toque y tus citas del consultorio aparecen en tu calendario de siempre.
               </p>
             </div>
           </div>
