@@ -36,6 +36,8 @@ import {
   ArrowRight,
   ChevronDown,
   XCircle,
+  Share2,
+  ExternalLink,
 } from "lucide-react";
 import { RouteSkeleton } from "@/components/RouteSkeleton";
 import { useBusinessId } from "@/hooks/use-business-id";
@@ -674,6 +676,50 @@ const AppointmentRequests = () => {
     }
   };
 
+  // Link público del consultorio (para los botones del estado vacío)
+  const { data: publicSlug = null } = useQuery({
+    queryKey: ["business_public_slug", businessId],
+    enabled: !!businessId,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("businesses")
+        .select("public_slug")
+        .eq("id", businessId!)
+        .maybeSingle();
+      return (data as any)?.public_slug ?? null;
+    },
+  });
+
+  const shareBookingLink = async () => {
+    if (!publicSlug) {
+      toast({ title: "Configurá tu web primero", description: "Definí el nombre público en Personalizar portal." });
+      return;
+    }
+    const url = `${window.location.origin}/consultorio/${publicSlug}/reservar`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: "Reservar sesión", url });
+        return;
+      }
+      throw new Error("no-share");
+    } catch {
+      try {
+        await navigator.clipboard.writeText(url);
+        toast({ title: "Link de reservas copiado ✓", description: "Pegalo en WhatsApp, Instagram o donde quieras." });
+      } catch {
+        toast({ title: "Tu link de reservas", description: url });
+      }
+    }
+  };
+
+  const openPublicWeb = () => {
+    if (!publicSlug) {
+      toast({ title: "Configurá tu web primero", description: "Definí el nombre público en Personalizar portal." });
+      return;
+    }
+    window.open(`${window.location.origin}/consultorio/${publicSlug}`, "_blank");
+  };
+
   const whatsappLink = (phone: string, name: string, dt: string) => {
     const datetime = new Date(dt);
     const message = `Hola ${name}, sobre tu solicitud de cita para ${format(datetime, "dd/MM/yyyy 'a las' HH:mm", { locale: es })}.`;
@@ -707,7 +753,7 @@ const AppointmentRequests = () => {
               </p>
             </div>
           </div>
-          <Button variant="ghost" onClick={() => navigate("/dashboard")}>
+          <Button variant="outline" className="rounded-xl" onClick={() => navigate("/dashboard")}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Volver al panel
           </Button>
@@ -727,14 +773,29 @@ const AppointmentRequests = () => {
             {loading ? (
               <div className="py-12 text-center text-muted-foreground text-sm">Cargando…</div>
             ) : items.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-center">
-                <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
-                  <Inbox className="h-8 w-8 text-muted-foreground" />
+              <div className="rounded-2xl border-2 border-dashed border-border/60 px-6 py-14 flex flex-col items-center text-center">
+                <div className="relative mb-4">
+                  <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
+                    <Inbox className="h-8 w-8 text-primary" />
+                  </div>
+                  <span className="absolute -top-1.5 -right-1.5 h-6 w-6 rounded-full bg-emerald-500 ring-4 ring-card flex items-center justify-center">
+                    <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} />
+                  </span>
                 </div>
-                <p className="font-medium text-foreground">Nada pendiente</p>
-                <p className="text-sm text-muted-foreground mt-1">
+                <p className="font-bold text-lg text-foreground">Nada pendiente</p>
+                <p className="text-sm text-muted-foreground mt-1 max-w-sm">
                   Cuando un paciente reserve, solicite o pida reprogramar una cita, va a aparecer acá.
                 </p>
+                <div className="flex items-center gap-2 mt-6 flex-wrap justify-center">
+                  <Button className="rounded-xl h-11 px-5 font-semibold gap-2" onClick={shareBookingLink}>
+                    <Share2 className="h-4 w-4" />
+                    Compartir link de reservas
+                  </Button>
+                  <Button variant="outline" className="rounded-xl h-11 px-5 gap-2" onClick={openPublicWeb}>
+                    <ExternalLink className="h-4 w-4" />
+                    Ver mi web pública
+                  </Button>
+                </div>
               </div>
             ) : (
               <div className="space-y-3">
@@ -807,7 +868,11 @@ const AppointmentRequests = () => {
                 ].map((row) => (
                   <div
                     key={row.label}
-                    className="flex items-center justify-between rounded-xl border border-border/50 bg-muted/20 px-3.5 py-2.5"
+                    className="flex items-center justify-between rounded-xl border px-3.5 py-2.5"
+                    style={{
+                      background: `hsla(${row.tint}, 0.06)`,
+                      borderColor: `hsla(${row.tint}, ${row.count > 0 ? 0.4 : 0.18})`,
+                    }}
                   >
                     <span className="text-sm text-muted-foreground inline-flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full" style={{ background: `hsl(${row.tint})` }} />
@@ -822,9 +887,12 @@ const AppointmentRequests = () => {
                   </div>
                 ))}
                 {items.length === 0 && (
-                  <p className="text-xs text-muted-foreground pt-1">
-                    Todo al día ✓ — cuando llegue algo nuevo, te avisamos por email y notificación.
-                  </p>
+                  <div className="flex items-start gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/[0.07] px-3.5 py-2.5 mt-1">
+                    <Check className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      Todo al día — cuando llegue algo nuevo, te avisamos por email y notificación.
+                    </p>
+                  </div>
                 )}
               </CardContent>
             </Card>
