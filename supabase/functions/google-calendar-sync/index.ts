@@ -190,6 +190,7 @@ Deno.serve(async (req) => {
               .from("appointments")
               .update({ google_event_id: null, google_synced_at: new Date().toISOString() })
               .eq("id", a.id);
+            (a as any).google_event_id = null;
             pushed++;
             continue;
           }
@@ -226,6 +227,8 @@ Deno.serve(async (req) => {
             .from("appointments")
             .update({ google_event_id: eventId, google_synced_at: new Date().toISOString() })
             .eq("id", a.id);
+          (a as any).google_event_id = eventId;
+          (a as any).google_synced_at = new Date().toISOString();
           pushed++;
         } catch (e) {
           console.error("push failed for", a.id, e);
@@ -287,45 +290,135 @@ Deno.serve(async (req) => {
             .from("personal_events")
             .update({ google_event_id: eventId, google_synced_at: new Date().toISOString() })
             .eq("id", ev.id);
+          (ev as any).google_event_id = eventId;
+          (ev as any).google_synced_at = new Date().toISOString();
           pushed++;
         } catch (e) {
           console.error("push personal failed for", ev.id, e);
         }
       }
 
-      // ── Reconciliación: lo que se borró acá, se borra allá también ──
-      // Se listan los eventos con nuestra marca (cd_origin) y se elimina
-      // todo el que ya no exista en el sistema (citas o eventos borrados).
+      // ── Reconciliación en los DOS sentidos ──
+      // Regla: una cosa reemplaza a la otra, nunca conviven desincronizadas.
+      //  · borrado acá  → se borra allá
+      //  · movido allá  → se mueve acá (eventos simples, no series)
+      //  · borrado allá → se ELIMINA acá (si la cita tiene datos atados que
+      //    impiden borrarla, queda cancelada como red de seguridad)
       try {
-        const aptIds = new Set((apts ?? []).map((a: any) => a.id));
-        const perIds = new Set((pevts ?? []).map((p: any) => p.id));
-        const listParams = new URLSearchParams({
-          timeMin: from.toISOString(),
-          timeMax: to.toISOString(),
-          singleEvents: "true",
-          maxResults: "250",
-          privateExtendedProperty: "cd_origin=consultorio",
-        });
-        const listRes = await fetch(
-          `https://www.googleapis.com/calendar/v3/calendars/${calId}/events?${listParams.toString()}`,
-          { headers: gHeaders }
-        );
-        if (listRes.ok) {
+        const aptById = new Map((apts ?? []).map((a: any) => [a.id, a]));
+        const perById = new Map((pevts ?? []).map((p: any) => [p.id, p]));
+
+        // Todos nuestros eventos en Google dentro del rango (con paginación)
+        const items: any[] = [];
+        let pageToken: string | undefined;
+        for (let page = 0; page < 4; page++) {
+          const listParams = new URLSearchParams({
+            timeMin: from.toISOString(),
+            timeMax: to.toISOString(),
+            singleEvents: "true",
+            maxResults: "250",
+            privateExtendedProperty: "cd_origin=consultorio",
+          });
+          if (pageToken) listParams.set("pageToken", pageToken);
+          const listRes = await fetch(
+            `https://www.googleapis.com/calendar/v3/calendars/${calId}/events?${listParams.toString()}`,
+            { headers: gHeaders }
+          );
+          if (!listRes.ok) throw new Error(`list failed: ${listRes.status}`);
           const listData = await listRes.json();
-          const toDelete = new Set<string>();
-          for (const e of listData.items ?? []) {
-            const p = e?.extendedProperties?.private ?? {};
-            const target = e.recurringEventId ?? e.id; // instancia → su serie
-            if (p.cd_personal_event_id && !perIds.has(p.cd_personal_event_id)) toDelete.add(target);
-            if (p.cd_appointment_id && !aptIds.has(p.cd_appointment_id)) toDelete.add(target);
+          items.push(...(listData.items ?? []));
+          pageToken = listData.nextPageToken;
+          if (!pageToken) break;
+        }
+
+        const presentIds = new Set<string>();
+        const toDeleteInGoogle = new Set<string>();
+
+        for (const e of items) {
+          presentIds.add(e.id);
+          if (e.recurringEventId) presentIds.add(e.recurringEventId);
+          const p = e?.extendedProperties?.private ?? {};
+          const target = e.recurringEventId ?? e.id; // instancia → su serie
+
+          // Borrado acá → borrar allá
+          if (p.cd_personal_event_id && !perById.has(p.cd_personal_event_id)) toDeleteInGoogle.add(target);
+          if (p.cd_appointment_id && !aptById.has(p.cd_appointment_id)) toDeleteInGoogle.add(target);
+
+          // Movido allá → mover acá (solo eventos simples con horario)
+          if (e.recurringEventId || !e.start?.dateTime || !e.end?.dateTime) continue;
+          const evUpdated = e.updated ? new Date(e.updated).getTime() : 0;
+          const applyMove = async (table: string, row: any) => {
+            const syncedAt = row.google_synced_at ? new Date(row.google_synced_at).getTime() : 0;
+            const gStart = new Date(e.start.dateTime).getTime();
+            const gEnd = new Date(e.end.dateTime).getTime();
+            const moved =
+              Math.abs(gStart - new Date(row.start_at).getTime()) >= 60_000 ||
+              Math.abs(gEnd - new Date(row.end_at).getTime()) >= 60_000;
+            // Margen de 2 min: nuestro propio PATCH también actualiza e.updated
+            if (moved && evUpdated > syncedAt + 120_000) {
+              await admin
+                .from(table)
+                .update({
+                  start_at: new Date(gStart).toISOString(),
+                  end_at: new Date(gEnd).toISOString(),
+                  google_synced_at: new Date().toISOString(),
+                })
+                .eq("id", row.id);
+              pushed++;
+            }
+          };
+          if (p.cd_appointment_id && aptById.has(p.cd_appointment_id)) {
+            const row = aptById.get(p.cd_appointment_id);
+            if (!ACTIVE_EXCLUDED.includes(row.status)) await applyMove("appointments", row);
           }
-          for (const id of toDelete) {
-            await fetch(
-              `https://www.googleapis.com/calendar/v3/calendars/${calId}/events/${encodeURIComponent(id)}`,
-              { method: "DELETE", headers: gHeaders }
-            );
-            pushed++;
+          if (p.cd_personal_event_id && perById.has(p.cd_personal_event_id)) {
+            const row = perById.get(p.cd_personal_event_id);
+            if (row.recurrence === "none") await applyMove("personal_events", row);
           }
+        }
+
+        for (const id of toDeleteInGoogle) {
+          await fetch(
+            `https://www.googleapis.com/calendar/v3/calendars/${calId}/events/${encodeURIComponent(id)}`,
+            { method: "DELETE", headers: gHeaders }
+          );
+          pushed++;
+        }
+
+        // Borrado allá → eliminar acá. Antes de borrar se verifica el evento
+        // uno a uno (pudo simplemente moverse fuera del rango listado).
+        const confirmGone = async (eventId: string): Promise<boolean> => {
+          const res = await fetch(
+            `https://www.googleapis.com/calendar/v3/calendars/${calId}/events/${encodeURIComponent(eventId)}`,
+            { headers: gHeaders }
+          );
+          if (res.status === 404 || res.status === 410) return true;
+          if (!res.ok) return false; // ante la duda, no borrar nada
+          const ev = await res.json();
+          return ev?.status === "cancelled";
+        };
+
+        for (const a of apts ?? []) {
+          if (!a.google_event_id || !a.google_synced_at) continue;
+          if (ACTIVE_EXCLUDED.includes(a.status)) continue;
+          if (presentIds.has(a.google_event_id)) continue;
+          if (!(await confirmGone(a.google_event_id))) continue;
+          const { error: delErr } = await admin.from("appointments").delete().eq("id", a.id);
+          if (delErr) {
+            // Datos atados (pagos, notas): no se puede borrar → cancelada
+            await admin
+              .from("appointments")
+              .update({ status: "cancelled", google_event_id: null, google_synced_at: new Date().toISOString() })
+              .eq("id", a.id);
+          }
+          pushed++;
+        }
+        for (const pv of pevts ?? []) {
+          if (!pv.google_event_id || !pv.google_synced_at) continue;
+          if (presentIds.has(pv.google_event_id)) continue;
+          if (!(await confirmGone(pv.google_event_id))) continue;
+          await admin.from("personal_events").delete().eq("id", pv.id);
+          pushed++;
         }
       } catch (e) {
         console.error("reconcile failed:", e);
