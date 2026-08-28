@@ -253,7 +253,7 @@ const Configuracion = () => {
               <button
                 key={tile.url}
                 onClick={() => navigate(tile.url)}
-                className="group flex items-start gap-4 rounded-2xl border border-border/70 bg-card p-4 sm:p-5 text-left transition-all duration-200 hover:border-border hover:shadow-md active:scale-[0.99]"
+                className="group flex h-full items-start gap-4 rounded-2xl border border-border/70 bg-card p-4 sm:p-5 text-left transition-all duration-200 hover:border-border hover:shadow-md active:scale-[0.99]"
               >
                 <span
                   className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl transition-transform duration-200 group-hover:scale-[1.06]"
