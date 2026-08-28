@@ -41,3 +41,8 @@ verify_jwt = false
 # que process-scheduled-reminders).
 [functions.daily-agenda-summary]
 verify_jwt = false
+
+# google-oauth-callback: recibe el redirect de Google (GET sin sesión).
+# La seguridad es el state one-time en google_oauth_states.
+[functions.google-oauth-callback]
+verify_jwt = false
