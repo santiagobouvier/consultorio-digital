@@ -5,7 +5,6 @@ import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { Switch } from "@/components/ui/switch";
 import { useDashboardBranding } from "@/contexts/DashboardBrandingContext";
 import {
   CalendarHeart,
@@ -22,7 +21,11 @@ import { cn } from "@/lib/utils";
 // y tiene los botones de un toque. Vive acá porque ES una función de la
 // agenda, no un ajuste perdido en Configuración.
 
-const LS_KEY = "calendar-sync-connected";
+// Se marca cada destino cuando el profesional toca su botón de conectar.
+// Desconectar es REAL: se borra el token y el link deja de servir citas
+// (para los dos destinos a la vez: es el mismo link).
+const LS_G = "calendar-sync-google";
+const LS_A = "calendar-sync-apple";
 
 type ExternalCal = { id: string; label: string; host: string };
 
@@ -30,13 +33,17 @@ export const CalendarSyncButton = ({ mobile = false }: { mobile?: boolean }) => 
   const { businessId } = useBusinessId(false);
   const { primaryColor } = useDashboardBranding();
   const [open, setOpen] = useState(false);
-  const [connected, setConnected] = useState<boolean>(() => {
+  const [dest, setDest] = useState<{ google: boolean; apple: boolean }>(() => {
     try {
-      return localStorage.getItem(LS_KEY) === "1";
+      return {
+        google: localStorage.getItem(LS_G) === "1",
+        apple: localStorage.getItem(LS_A) === "1",
+      };
     } catch {
-      return false;
+      return { google: false, apple: false };
     }
   });
+  const connected = dest.google || dest.apple;
 
   // Link privado del feed (se crea solo la primera vez que se abre el pop-up)
   const [token, setToken] = useState<string | null>(null);
@@ -50,34 +57,51 @@ export const CalendarSyncButton = ({ mobile = false }: { mobile?: boolean }) => 
   const [extWorking, setExtWorking] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
 
-  const markConnected = () => {
+  const markConnected = (which: "google" | "apple" = "google") => {
     try {
-      localStorage.setItem(LS_KEY, "1");
+      localStorage.setItem(which === "google" ? LS_G : LS_A, "1");
     } catch {
       /* sin localStorage no pasa nada: el puntito queda gris */
     }
-    setConnected(true);
+    setDest((d) => ({ ...d, [which]: true }));
   };
 
-  // La perillita: encendido = ya lo conectaste en tu calendario. Apagarla
-  // solo apaga el estado acá (el calendario suscrito se borra desde Google
-  // o el iPhone, eso no lo podemos hacer nosotros).
-  const handleToggle = (checked: boolean) => {
-    if (checked) {
-      markConnected();
-      return;
-    }
+  // Desconectar DE VERDAD: borra el token → el link viejo muere y Google /
+  // iPhone dejan de recibir citas. Enseguida se crea un link nuevo (limpio)
+  // por si quiere volver a conectar.
+  const [disconnecting, setDisconnecting] = useState(false);
+  const handleDisconnect = async () => {
+    if (!businessId) return;
+    setDisconnecting(true);
     try {
-      localStorage.removeItem(LS_KEY);
-    } catch {
-      /* nada */
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      await (supabase as any)
+        .from("calendar_feed_tokens")
+        .delete()
+        .eq("business_id", businessId)
+        .eq("professional_user_id", user.id);
+      const { data: created } = await (supabase as any)
+        .from("calendar_feed_tokens")
+        .insert({ business_id: businessId, professional_user_id: user.id })
+        .select("token")
+        .single();
+      setToken(created?.token ?? null);
+      try {
+        localStorage.removeItem(LS_G);
+        localStorage.removeItem(LS_A);
+      } catch {
+        /* nada */
+      }
+      setDest({ google: false, apple: false });
+      toast({
+        title: "Desconectado",
+        description:
+          "El link dejó de funcionar: tu calendario ya no recibe citas nuevas. Para limpiar del todo, borrá el calendario suscrito en tu Google o iPhone.",
+      });
+    } finally {
+      setDisconnecting(false);
     }
-    setConnected(false);
-    toast({
-      title: "Marcada como apagada",
-      description:
-        "Si además querés sacar tus citas de tu calendario, borrá el calendario suscrito desde tu Google o iPhone.",
-    });
   };
 
   // Al abrir el pop-up: buscar (o crear) el token del feed + calendarios
@@ -112,10 +136,7 @@ export const CalendarSyncButton = ({ mobile = false }: { mobile?: boolean }) => 
       });
       if (!cancelled && !error && Array.isArray(res?.calendars)) {
         setCals(res.calendars);
-        if (res.calendars.length > 0) {
-          setExtOpen(true);
-          markConnected();
-        }
+        if (res.calendars.length > 0) setExtOpen(true);
       }
     })();
     return () => {
@@ -136,7 +157,6 @@ export const CalendarSyncButton = ({ mobile = false }: { mobile?: boolean }) => 
     try {
       await navigator.clipboard.writeText(feedUrl);
       setCopied(true);
-      markConnected();
       setTimeout(() => setCopied(false), 2000);
     } catch {
       toast({ title: "No se pudo copiar", description: feedUrl });
@@ -156,7 +176,6 @@ export const CalendarSyncButton = ({ mobile = false }: { mobile?: boolean }) => 
         return;
       }
       setExtUrl("");
-      markConnected();
       toast({
         title: "Calendario conectado 🎉",
         description: "Al agendar, te aviso si chocás con algo tuyo.",
@@ -237,19 +256,23 @@ export const CalendarSyncButton = ({ mobile = false }: { mobile?: boolean }) => 
               </div>
             </div>
 
-            {/* La perillita: encendido / apagado */}
-            <div className="mt-3.5 flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-background/70 px-3.5 py-2.5">
-              <span className="flex items-center gap-2.5 text-sm font-semibold">
-                <span
-                  className={cn(
-                    "w-2 h-2 rounded-full",
-                    connected ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" : "bg-muted-foreground/40"
-                  )}
-                />
-                {connected ? "Conectado" : "Apagado"}
-              </span>
-              <Switch checked={connected} onCheckedChange={handleToggle} className="scale-110" />
-            </div>
+            {/* Estado actual, clarito */}
+            <p
+              className={cn(
+                "mt-3 inline-flex items-center gap-1.5 text-xs font-semibold rounded-full px-2.5 py-1",
+                connected
+                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                  : "bg-muted text-muted-foreground"
+              )}
+            >
+              <span
+                className={cn(
+                  "w-1.5 h-1.5 rounded-full",
+                  connected ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" : "bg-muted-foreground/50"
+                )}
+              />
+              {connected ? "Conectado" : "Sin conectar"}
+            </p>
           </div>
 
           <div className="overflow-y-auto flex-1 px-4 py-4 space-y-4">
@@ -276,34 +299,72 @@ export const CalendarSyncButton = ({ mobile = false }: { mobile?: boolean }) => 
               </div>
             ) : (
               <div className="space-y-2">
-                <Button
-                  asChild
-                  className="w-full h-12 rounded-xl text-[15px] font-semibold"
-                  style={{ boxShadow: `0 10px 24px -10px hsla(${primaryColor}, 0.65)` }}
-                  onClick={markConnected}
-                >
-                  <a href={googleAddUrl!} target="_blank" rel="noreferrer">
-                    Conectar Google Calendar
-                  </a>
-                </Button>
-                <Button
-                  asChild
-                  variant="outline"
-                  className="w-full h-12 rounded-xl text-[15px] font-semibold border-2"
-                  onClick={markConnected}
-                >
-                  <a href={webcalUrl!}>Conectar iPhone / Mac</a>
-                </Button>
+                {/* Google: botón para conectar, fila verde cuando ya está */}
+                {dest.google ? (
+                  <div className="flex items-center justify-between gap-3 h-12 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3.5">
+                    <span className="flex items-center gap-2 text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+                      <Check className="h-4 w-4" />
+                      Google Calendar conectado
+                    </span>
+                  </div>
+                ) : (
+                  <Button
+                    asChild
+                    className="w-full h-12 rounded-xl text-[15px] font-semibold"
+                    style={{ boxShadow: `0 10px 24px -10px hsla(${primaryColor}, 0.65)` }}
+                    onClick={() => markConnected("google")}
+                  >
+                    <a href={googleAddUrl!} target="_blank" rel="noreferrer">
+                      Conectar Google Calendar
+                    </a>
+                  </Button>
+                )}
+
+                {/* iPhone / Mac: ídem */}
+                {dest.apple ? (
+                  <div className="flex items-center justify-between gap-3 h-12 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3.5">
+                    <span className="flex items-center gap-2 text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+                      <Check className="h-4 w-4" />
+                      iPhone / Mac conectado
+                    </span>
+                  </div>
+                ) : (
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="w-full h-12 rounded-xl text-[15px] font-semibold border-2"
+                    onClick={() => markConnected("apple")}
+                  >
+                    <a href={webcalUrl!}>Conectar iPhone / Mac</a>
+                  </Button>
+                )}
+
                 <p className="text-[12px] leading-snug text-muted-foreground text-center">
                   Un toque, confirmás en tu calendario y listo para siempre.
                   <br />
                   (Google puede tardar unas horas en refrescar.)
                 </p>
-                <div className="flex justify-center">
+                <div className="flex items-center justify-center gap-1 flex-wrap">
                   <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={handleCopy}>
                     {copied ? <Check className="h-3.5 w-3.5 mr-2 text-emerald-500" /> : <Copy className="h-3.5 w-3.5 mr-2" />}
-                    Copiar link (para agregarlo a mano)
+                    Copiar link
                   </Button>
+                  {connected && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-muted-foreground hover:text-destructive"
+                      onClick={handleDisconnect}
+                      disabled={disconnecting}
+                    >
+                      {disconnecting ? (
+                        <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-3.5 w-3.5 mr-2" />
+                      )}
+                      Desconectar
+                    </Button>
+                  )}
                 </div>
               </div>
             )}
