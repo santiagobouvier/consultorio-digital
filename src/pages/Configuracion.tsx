@@ -107,7 +107,8 @@ const Configuracion = () => {
   const navigate = useNavigate();
   const { isSuperAdmin } = useAuth();
   const { businessId } = useBusinessId(false);
-  const { planName } = usePlanLimits(businessId);
+  const { planInfo } = usePlanLimits(businessId);
+  const planName = planInfo.loading ? null : planInfo.planName;
 
   const [brandColor, setBrandColor] = useState(DEFAULT_PORTAL_COLOR);
   const [meta, setMeta] = useState<Record<string, string | null>>({});
@@ -222,7 +223,7 @@ const Configuracion = () => {
             aria-label="Volver al inicio"
             className="h-11 w-11 shrink-0 rounded-2xl border border-border/70 bg-card flex items-center justify-center text-muted-foreground transition-colors hover:text-foreground hover:border-border"
           >
-            <ArrowLeft className="h-4.5 w-4.5" />
+            <ArrowLeft className="h-[18px] w-[18px]" />
           </button>
           <span
             className="h-11 w-11 rounded-2xl flex items-center justify-center shrink-0"
