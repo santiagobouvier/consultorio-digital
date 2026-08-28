@@ -238,11 +238,12 @@ export const CalendarSyncButton = ({ mobile = false }: { mobile?: boolean }) => 
     }
   };
 
-  // Al abrir el pop-up: preparar links + calendarios personales
+  // Al abrir el pop-up: refrescar estado de Google + links + calendarios
   useEffect(() => {
     if (!open || !businessId) return;
     let cancelled = false;
     setLoading(true);
+    void refreshGoogleStatus();
     (async () => {
       await loadTokens();
       if (!cancelled) setLoading(false);
