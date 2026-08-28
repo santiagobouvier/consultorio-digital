@@ -737,26 +737,64 @@ const AppointmentRequests = () => {
 
   return (
     <div className="min-h-screen bg-background p-4 sm:p-6">
-      <div className="mx-auto w-full max-w-[1500px]">
+      <div className="w-full">
         {/* Encabezado de página */}
-        <div className="mb-6 flex items-center justify-between gap-3 flex-wrap">
+        <div className="mb-5 flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-3 min-w-0">
+            {/* Volver, versión celular: flechita al lado del título */}
+            <button
+              onClick={() => navigate("/dashboard")}
+              className="sm:hidden h-10 w-10 rounded-xl border border-border/70 bg-card flex items-center justify-center shrink-0 active:scale-95 transition-transform"
+              aria-label="Volver al panel"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </button>
             <span className="h-11 w-11 rounded-2xl flex items-center justify-center shrink-0" style={{ background: "hsla(38, 92%, 55%, 0.14)" }}>
               <Inbox className="h-5 w-5" style={{ color: "hsl(38 92% 55%)" }} />
             </span>
             <div className="min-w-0">
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Solicitudes</h1>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+                <span
+                  className={cn(
+                    "inline-block w-1.5 h-1.5 rounded-full",
+                    items.length === 0 ? "bg-emerald-500" : "bg-amber-500"
+                  )}
+                />
                 {items.length === 0
                   ? "Nada espera tu respuesta"
                   : `${items.length} pendiente${items.length !== 1 ? "s" : ""} de aprobar`}
               </p>
             </div>
           </div>
-          <Button variant="outline" className="rounded-xl" onClick={() => navigate("/dashboard")}>
+          <Button variant="outline" className="rounded-xl hidden sm:inline-flex" onClick={() => navigate("/dashboard")}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Volver al panel
           </Button>
+        </div>
+
+        {/* Mobile: los tres contadores arriba, como tarjetitas */}
+        <div className="grid grid-cols-3 gap-2 mb-4 lg:hidden">
+          {[
+            { label: "Portal", count: items.filter((i) => i.kind === "portal_booking").length, tint: "176 100% 32%" },
+            { label: "Públicas", count: items.filter((i) => i.kind === "public_request").length, tint: "210 90% 60%" },
+            { label: "Reprogr.", count: items.filter((i) => i.kind === "reschedule").length, tint: "38 92% 55%" },
+          ].map((s) => (
+            <div
+              key={s.label}
+              className="rounded-2xl border px-3 py-2.5 text-center"
+              style={{
+                background: `hsla(${s.tint}, 0.06)`,
+                borderColor: `hsla(${s.tint}, ${s.count > 0 ? 0.45 : 0.2})`,
+              }}
+            >
+              <p className="text-xl font-bold tabular-nums leading-none">{s.count}</p>
+              <p className="text-[10.5px] text-muted-foreground mt-1 inline-flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full" style={{ background: `hsl(${s.tint})` }} />
+                {s.label}
+              </p>
+            </div>
+          ))}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
@@ -786,12 +824,12 @@ const AppointmentRequests = () => {
                 <p className="text-sm text-muted-foreground mt-1 max-w-sm">
                   Cuando un paciente reserve, solicite o pida reprogramar una cita, va a aparecer acá.
                 </p>
-                <div className="flex items-center gap-2 mt-6 flex-wrap justify-center">
-                  <Button className="rounded-xl h-11 px-5 font-semibold gap-2" onClick={shareBookingLink}>
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center sm:justify-center gap-2 mt-6 w-full sm:w-auto">
+                  <Button className="rounded-xl h-11 px-5 font-semibold gap-2 w-full sm:w-auto" onClick={shareBookingLink}>
                     <Share2 className="h-4 w-4" />
                     Compartir link de reservas
                   </Button>
-                  <Button variant="outline" className="rounded-xl h-11 px-5 gap-2" onClick={openPublicWeb}>
+                  <Button variant="outline" className="rounded-xl h-11 px-5 gap-2 w-full sm:w-auto" onClick={openPublicWeb}>
                     <ExternalLink className="h-4 w-4" />
                     Ver mi web pública
                   </Button>
@@ -844,7 +882,18 @@ const AppointmentRequests = () => {
 
           {/* Panel lateral: resumen + cancelaciones recientes */}
           <div className="space-y-4">
-            <Card>
+            {/* Mobile: "Todo al día" como fila propia (los contadores ya están arriba) */}
+            {items.length === 0 && (
+              <div className="lg:hidden flex items-start gap-2.5 rounded-2xl border border-emerald-500/30 bg-emerald-500/[0.07] px-4 py-3">
+                <span className="h-6 w-6 rounded-lg bg-emerald-500 flex items-center justify-center shrink-0">
+                  <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} />
+                </span>
+                <p className="text-sm text-foreground/90 leading-relaxed">
+                  Todo al día — cuando llegue algo nuevo, te avisamos por email y notificación.
+                </p>
+              </div>
+            )}
+            <Card className="hidden lg:block">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base">Resumen</CardTitle>
               </CardHeader>
@@ -955,9 +1004,9 @@ const AppointmentRequests = () => {
             {/* Cómo funciona */}
             <Card className="border-dashed">
               <CardContent className="p-4 text-xs text-muted-foreground leading-relaxed">
-                Al <span className="font-medium text-foreground">confirmar</span>, la cita entra a tu
+                Al <span className="font-semibold text-primary">confirmar</span>, la cita entra a tu
                 agenda y el paciente recibe el aviso automáticamente. Al{" "}
-                <span className="font-medium text-foreground">rechazar</span>, también se le avisa —
+                <span className="font-semibold text-rose-400">rechazar</span>, también se le avisa —
                 nunca queda esperando sin respuesta.
               </CardContent>
             </Card>
