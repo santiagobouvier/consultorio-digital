@@ -45,6 +45,7 @@ import {
   Line,
   CartesianGrid,
   Legend,
+  LabelList,
 } from "recharts";
 import { exportCSV, todayDateString } from "@/lib/csv-export";
 import { buildStatisticsPdf } from "@/lib/statistics-pdf";
@@ -621,34 +622,63 @@ const Statistics = () => {
 
   if (bizLoading || loading) return <LoadingPage />;
 
+  const GROTESK = { fontFamily: "'Space Grotesk', sans-serif" } as const;
+  const CARD_BG = {
+    background: "linear-gradient(180deg,#101a14,#0b130e)",
+    border: "1px solid rgba(140,200,170,0.1)",
+  } as const;
+  const PILL = {
+    background: "rgba(140,200,170,0.05)",
+    border: "1px solid rgba(140,200,170,0.12)",
+    color: "#a9c4b7",
+  } as const;
+
   return (
-    <div className="min-h-screen bg-background">
-      <div className="mx-auto w-full max-w-[1500px] px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
+    <div
+      className="dark min-h-screen"
+      style={{ background: "#070d0a", fontFamily: "'Instrument Sans', 'Plus Jakarta Sans', sans-serif" }}
+    >
+      <div className="w-full px-4 sm:px-6 py-6 space-y-4">
         {/* Encabezado de página */}
         <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-3 min-w-0">
-            <span className="h-11 w-11 rounded-2xl flex items-center justify-center shrink-0" style={{ background: "hsla(190, 85%, 50%, 0.14)" }}>
-              <BarChart3 className="h-5 w-5" style={{ color: "hsl(190 85% 50%)" }} />
+          <div className="flex items-center gap-3.5 min-w-0">
+            <span
+              className="h-[46px] w-[46px] rounded-[14px] flex items-center justify-center shrink-0"
+              style={{ background: "rgba(52,211,153,0.12)", border: "1px solid rgba(52,211,153,0.25)" }}
+            >
+              <BarChart3 className="h-5 w-5" style={{ color: "#34d399" }} />
             </span>
             <div className="min-w-0">
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight inline-flex items-center gap-2">
+              <h1 className="text-[22px] sm:text-[28px] font-bold tracking-tight inline-flex items-center gap-2" style={GROTESK}>
                 Estadísticas
                 <HelpTooltip id="statistics" />
               </h1>
-              <p className="text-sm text-muted-foreground truncate">{PERIOD_LABELS[period]}</p>
+              <p className="text-[13px] truncate" style={{ color: "#7e988b" }}>{PERIOD_LABELS[period]}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <Tabs value={period} onValueChange={(v) => setPeriod(v as PeriodKey)}>
-              <TabsList>
-                <TabsTrigger value="30d">30d</TabsTrigger>
-                <TabsTrigger value="90d">90d</TabsTrigger>
-                <TabsTrigger value="year">Año</TabsTrigger>
-                <TabsTrigger value="all">Todo</TabsTrigger>
-              </TabsList>
-            </Tabs>
-            <Button variant="outline" size="sm" onClick={handleExport} className="gap-2">
-              <Download className="h-4 w-4" />
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <div
+              className="flex gap-[3px] p-1 rounded-[13px]"
+              style={{ background: "rgba(140,200,170,0.06)", border: "1px solid rgba(140,200,170,0.12)" }}
+            >
+              {([["30d", "30d"], ["90d", "90d"], ["year", "Año"], ["all", "Todo"]] as const).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setPeriod(key)}
+                  className="px-[15px] py-2 rounded-[10px] text-[12.5px] transition-colors"
+                  style={
+                    period === key
+                      ? { background: "#eaf3ee", color: "#0a120e", fontWeight: 600 }
+                      : { background: "transparent", color: "#7e988b", fontWeight: 500 }
+                  }
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <Button variant="outline" size="sm" onClick={handleExport} className="gap-2 h-10 px-4 rounded-xl border-0 text-[13px] font-medium" style={PILL}>
+              <Download className="h-[13px] w-[13px]" />
               <span className="hidden sm:inline">Exportar CSV</span>
               <span className="sm:hidden">CSV</span>
             </Button>
@@ -657,9 +687,10 @@ const Statistics = () => {
               size="sm"
               onClick={handleExportPDF}
               disabled={exportingPDF}
-              className="gap-2"
+              className="gap-2 h-10 px-4 rounded-xl border-0 text-[13px] font-medium"
+              style={PILL}
             >
-              <FileDown className="h-4 w-4" />
+              <FileDown className="h-[13px] w-[13px]" />
               <span className="hidden sm:inline">
                 {exportingPDF ? "Generando..." : "Exportar PDF"}
               </span>
@@ -671,145 +702,291 @@ const Statistics = () => {
         {/* Reportable content (captured for PDF) */}
         <div ref={reportRef} className="space-y-6 bg-background">
 
-        <Tabs value={view} onValueChange={(v) => setView(v as typeof view)} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 sm:w-auto sm:inline-grid h-auto p-1">
-            <TabsTrigger value="finanzas" className="gap-1.5 sm:px-6">
-              <DollarSign className="h-4 w-4" /> Finanzas
+        <Tabs value={view} onValueChange={(v) => setView(v as typeof view)} className="space-y-4">
+          <TabsList
+            className="grid w-full grid-cols-3 sm:w-auto sm:inline-grid h-auto p-1 gap-1 rounded-[14px] bg-transparent"
+            style={{ background: "rgba(140,200,170,0.05)", border: "1px solid rgba(140,200,170,0.1)" }}
+          >
+            <TabsTrigger
+              value="finanzas"
+              className="gap-1.5 sm:px-[18px] py-[9px] rounded-[11px] text-[13px] font-medium text-[#7e988b] data-[state=active]:bg-[#eaf3ee] data-[state=active]:text-[#0a120e] data-[state=active]:font-semibold data-[state=active]:shadow-none"
+            >
+              <DollarSign className="h-[13px] w-[13px]" /> Finanzas
             </TabsTrigger>
-            <TabsTrigger value="actividad" className="gap-1.5 sm:px-6">
-              <Activity className="h-4 w-4" /> Actividad
+            <TabsTrigger
+              value="actividad"
+              className="gap-1.5 sm:px-[18px] py-[9px] rounded-[11px] text-[13px] font-medium text-[#7e988b] data-[state=active]:bg-[#eaf3ee] data-[state=active]:text-[#0a120e] data-[state=active]:font-semibold data-[state=active]:shadow-none"
+            >
+              <Activity className="h-[13px] w-[13px]" /> Actividad
             </TabsTrigger>
-            <TabsTrigger value="pacientes" className="gap-1.5 sm:px-6">
-              <Users className="h-4 w-4" /> Pacientes
+            <TabsTrigger
+              value="pacientes"
+              className="gap-1.5 sm:px-[18px] py-[9px] rounded-[11px] text-[13px] font-medium text-[#7e988b] data-[state=active]:bg-[#eaf3ee] data-[state=active]:text-[#0a120e] data-[state=active]:font-semibold data-[state=active]:shadow-none"
+            >
+              <Users className="h-[13px] w-[13px]" /> Pacientes
             </TabsTrigger>
           </TabsList>
 
         {/* ══════════ FINANZAS: la historia de tu plata ══════════ */}
         <TabsContent value="finanzas" className="space-y-6 mt-0">
-        {/* Cobros destacado */}
-        <Card className="border-2 border-primary/20">
-          <CardContent className="p-4 sm:p-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <DollarSign className="h-4 w-4 text-primary" />
-                  <p className="text-xs sm:text-sm text-muted-foreground">Cobrado en el período</p>
-                </div>
-                <p className="text-2xl sm:text-3xl font-bold text-primary">
+        {/* Hero de cobros (mockup): tres celdas sobre gradiente con glow */}
+        <div
+          className="relative overflow-hidden rounded-[22px]"
+          style={{
+            border: "1px solid rgba(140,200,170,0.14)",
+            background: "linear-gradient(160deg,#0e1d15 0%,#0a1410 60%,#081009 100%)",
+          }}
+        >
+          <div
+            className="absolute pointer-events-none"
+            style={{
+              top: -100, right: -50, width: 320, height: 320, borderRadius: "50%",
+              background: "radial-gradient(circle,rgba(52,211,153,.15) 0%,rgba(52,211,153,0) 65%)",
+              filter: "blur(10px)",
+            }}
+            aria-hidden
+          />
+          <div className="relative grid gap-0.5" style={{ gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))" }}>
+            <div className="px-6 lg:px-7 py-6">
+              <div
+                className="flex items-center gap-2 uppercase mb-2.5 text-[11px] font-semibold"
+                style={{ ...GROTESK, letterSpacing: "0.16em", color: "#34d399" }}
+              >
+                <DollarSign className="h-[13px] w-[13px]" />
+                Cobrado en el período
+              </div>
+              <div className="flex items-baseline gap-2.5 flex-wrap">
+                <span
+                  className="font-bold leading-none tracking-tight text-[28px] lg:text-[38px]"
+                  style={{ ...GROTESK, color: "#6ee7b7" }}
+                >
                   {formatCurrency(kpis.cobrado)}
-                  <TrendBadge value={trends?.cobrado ?? null} className="ml-2 align-middle" />
-                </p>
+                </span>
+                <TrendBadge value={trends?.cobrado ?? null} />
               </div>
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <TrendingUp className="h-4 w-4 text-[hsl(var(--warning))]" />
-                  <p className="text-xs sm:text-sm text-muted-foreground">Pendiente de cobro</p>
-                </div>
-                <p className="text-2xl sm:text-3xl font-bold text-[hsl(var(--warning))]">{formatCurrency(kpis.pendiente)}</p>
-              </div>
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <Percent className="h-4 w-4 text-primary" />
-                  <p className="text-xs sm:text-sm text-muted-foreground">Tasa de cobranza</p>
-                </div>
-                {(() => {
-                  const total = kpis.cobrado + kpis.pendiente;
-                  const rate = total > 0 ? Math.round((kpis.cobrado / total) * 100) : 0;
-                  return <p className="text-2xl sm:text-3xl font-bold">{rate}%</p>;
-                })()}
-              </div>
+              <div className="mt-2 text-xs" style={{ color: "#5f7a6d" }}>vs. período anterior</div>
             </div>
-          </CardContent>
-        </Card>
+            <div className="px-6 lg:px-7 py-6 sm:border-l sm:border-l-[rgba(140,200,170,0.08)]">
+              <div
+                className="flex items-center gap-2 uppercase mb-2.5 text-[11px] font-semibold"
+                style={{ ...GROTESK, letterSpacing: "0.16em", color: "#a08657" }}
+              >
+                <TrendingUp className="h-[13px] w-[13px]" />
+                Pendiente de cobro
+              </div>
+              <div
+                className="font-bold leading-none tracking-tight text-[28px] lg:text-[38px]"
+                style={{ ...GROTESK, color: "#fcd34d" }}
+              >
+                {formatCurrency(kpis.pendiente)}
+              </div>
+              <div className="mt-2 text-xs" style={{ color: "#5f7a6d" }}>en pagos aún no realizados</div>
+            </div>
+            <div className="px-6 lg:px-7 py-6 sm:border-l sm:border-l-[rgba(140,200,170,0.08)]">
+              <div
+                className="flex items-center gap-2 uppercase mb-2.5 text-[11px] font-semibold"
+                style={{ ...GROTESK, letterSpacing: "0.16em", color: "#7e988b" }}
+              >
+                <Percent className="h-[13px] w-[13px]" />
+                Tasa de cobranza
+              </div>
+              {(() => {
+                const total = kpis.cobrado + kpis.pendiente;
+                const rate = total > 0 ? Math.round((kpis.cobrado / total) * 100) : 0;
+                return (
+                  <div className="flex items-center gap-4">
+                    <div className="relative shrink-0" style={{ width: 76, height: 76 }}>
+                      <svg width="76" height="76" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="41" fill="none" stroke="rgba(140,200,170,.12)" strokeWidth="9" />
+                        <circle
+                          cx="50" cy="50" r="41" fill="none" stroke="url(#grTasaStats)" strokeWidth="9"
+                          strokeLinecap="round" strokeDasharray="258"
+                          strokeDashoffset={258 * (1 - rate / 100)}
+                          transform="rotate(-90 50 50)"
+                        />
+                        <defs>
+                          <linearGradient id="grTasaStats" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0%" stopColor="#34d399" />
+                            <stop offset="100%" stopColor="#14b8a6" />
+                          </linearGradient>
+                        </defs>
+                      </svg>
+                      <div className="absolute inset-0 flex items-center justify-center font-bold text-[19px]" style={{ ...GROTESK, color: "#eaf3ee" }}>
+                        {rate}%
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-xs leading-relaxed" style={{ color: "#5f7a6d" }}>
+                        del total facturado<br />en el período
+                      </div>
+                      <div className="mt-1.5 text-[11.5px] font-semibold" style={{ color: "#6ee7b7" }}>
+                        {formatCurrency(kpis.cobrado)} cobrado
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        </div>
 
         {/* Fila inteligente: proyección, demora de cobro y vencidos */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-1">
-                <Target className="h-4 w-4 text-primary" />
-                <p className="text-xs text-muted-foreground">Proyección de este mes</p>
-              </div>
-              <p className="text-xl sm:text-2xl font-bold">{formatCurrency(monthProjection.total)}</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {formatCurrency(monthProjection.cobrado)} cobrado + {formatCurrency(monthProjection.porCobrar)} por cobrar
+          <div className="rounded-[18px] p-5" style={CARD_BG}>
+            <div
+              className="flex items-center gap-2 uppercase mb-2 text-[10.5px] font-semibold"
+              style={{ ...GROTESK, letterSpacing: "0.15em", color: "#5f7a6d" }}
+            >
+              <Target className="h-[13px] w-[13px]" style={{ color: "#34d399" }} />
+              Proyección de este mes
+            </div>
+            <p className="font-bold text-2xl" style={{ ...GROTESK, color: "#eaf3ee" }}>{formatCurrency(monthProjection.total)}</p>
+            <p className="text-xs mt-1" style={{ color: "#7e988b" }}>
+              {formatCurrency(monthProjection.cobrado)} cobrado + {formatCurrency(monthProjection.porCobrar)} por cobrar
+            </p>
+          </div>
+          <div className="rounded-[18px] p-5" style={CARD_BG}>
+            <div
+              className="flex items-center gap-2 uppercase mb-2 text-[10.5px] font-semibold"
+              style={{ ...GROTESK, letterSpacing: "0.15em", color: "#5f7a6d" }}
+            >
+              <Timer className="h-[13px] w-[13px]" style={{ color: "#a9ccf5" }} />
+              Demora promedio de cobro
+            </div>
+            <p className="font-bold text-2xl" style={{ ...GROTESK, color: "#eaf3ee" }}>
+              {collectionDelay === null ? "—" : collectionDelay === 0 ? "Al día" : `${collectionDelay} días`}
+            </p>
+            <p className="text-xs mt-1" style={{ color: "#7e988b" }}>
+              entre el vencimiento y el pago efectivo
+            </p>
+          </div>
+          <div
+            className="rounded-[18px] p-5"
+            style={{
+              background: "linear-gradient(180deg,#101a14,#0b130e)",
+              border: overdueInfo.count === 0 ? "1px solid rgba(52,211,153,0.16)" : "1px solid rgba(251,113,133,0.22)",
+            }}
+          >
+            <div
+              className="flex items-center gap-2 uppercase mb-2 text-[10.5px] font-semibold"
+              style={{ ...GROTESK, letterSpacing: "0.15em", color: "#5f7a6d" }}
+            >
+              {overdueInfo.count === 0 ? (
+                <CalendarCheck className="h-[13px] w-[13px]" style={{ color: "#34d399" }} />
+              ) : (
+                <AlertTriangle className="h-[13px] w-[13px]" style={{ color: "#fda4af" }} />
+              )}
+              Pagos vencidos
+            </div>
+            <p className="font-bold text-2xl" style={{ ...GROTESK, color: overdueInfo.count === 0 ? "#6ee7b7" : "#fda4af" }}>
+              {formatCurrency(overdueInfo.total)}
+            </p>
+            <div className="flex items-center justify-between gap-2 mt-1">
+              <p className="text-xs" style={{ color: overdueInfo.count === 0 ? "#7e988b" : "#a06570" }}>
+                {overdueInfo.count === 0
+                  ? "nadie te debe, todo al día ✓"
+                  : `${overdueInfo.count} pago${overdueInfo.count === 1 ? "" : "s"} sin cobrar`}
               </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-1">
-                <Timer className="h-4 w-4 text-primary" />
-                <p className="text-xs text-muted-foreground">Demora promedio de cobro</p>
-              </div>
-              <p className="text-xl sm:text-2xl font-bold">
-                {collectionDelay === null ? "—" : collectionDelay === 0 ? "Al día" : `${collectionDelay} días`}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                entre el vencimiento y el pago efectivo
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-1">
-                <AlertTriangle className="h-4 w-4 text-destructive" />
-                <p className="text-xs text-muted-foreground">Pagos vencidos</p>
-              </div>
-              <p className="text-xl sm:text-2xl font-bold text-destructive">{formatCurrency(overdueInfo.total)}</p>
-              <div className="flex items-center justify-between gap-2 mt-1">
-                <p className="text-xs text-muted-foreground">
-                  {overdueInfo.count === 0
-                    ? "nadie te debe, todo al día"
-                    : `${overdueInfo.count} pago${overdueInfo.count === 1 ? "" : "s"} sin cobrar`}
-                </p>
-                {overdueInfo.count > 0 && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 text-xs shrink-0"
-                    onClick={() => navigate("/pagos?status=overdue")}
-                  >
-                    Ver quién te debe
-                  </Button>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+              {overdueInfo.count > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs shrink-0 rounded-lg border-0"
+                  style={{ background: "rgba(251,113,133,0.1)", border: "1px solid rgba(251,113,133,0.25)", color: "#fda4af" }}
+                  onClick={() => navigate("/pagos?status=overdue")}
+                >
+                  Ver quién te debe
+                </Button>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Revenue */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              <DollarSign className="h-5 w-5 text-primary" />
+        <div className="rounded-[20px] p-5 sm:p-7" style={CARD_BG}>
+          <div className="flex items-center gap-2.5 sm:gap-3 mb-5 flex-wrap">
+            <span
+              className="flex h-8 w-8 items-center justify-center rounded-[10px] shrink-0"
+              style={{ background: "rgba(52,211,153,0.12)", color: "#34d399" }}
+            >
+              <DollarSign className="h-[15px] w-[15px]" />
+            </span>
+            <span className="font-semibold text-base flex-1 inline-flex items-center gap-2" style={{ ...GROTESK, color: "#eaf3ee" }}>
               Ingresos por mes
               <HelpTooltip id="statsRevenue" />
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {revenueData.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-8 text-center">No hay pagos en el período</p>
-            ) : (
-              <div className="h-72 lg:h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={revenueData}>
-                    <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                    <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                    <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
-                    <Tooltip
-                      formatter={(value: number) => formatCurrency(value)}
-                      contentStyle={{ borderRadius: 8, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))" }}
+            </span>
+            <div className="flex gap-3.5 text-xs font-medium" style={{ color: "#7e988b" }}>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-[3px]" style={{ background: "linear-gradient(135deg,#34d399,#14b8a6)" }} />
+                Cobrado
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-[3px]" style={{ background: "linear-gradient(135deg,#fcd34d,#f59e0b)" }} />
+                Pendiente
+              </span>
+            </div>
+          </div>
+          {revenueData.length === 0 ? (
+            <p className="text-sm py-8 text-center" style={{ color: "#7e988b" }}>No hay pagos en el período</p>
+          ) : (
+            <div className="h-72 lg:h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={revenueData} margin={{ top: 20, right: 8, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="gradCobrado" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#34d399" />
+                      <stop offset="100%" stopColor="#14b8a6" />
+                    </linearGradient>
+                    <linearGradient id="gradPendiente" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#fcd34d" />
+                      <stop offset="100%" stopColor="#f59e0b" />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid stroke="rgba(140,200,170,0.08)" vertical={false} />
+                  <XAxis
+                    dataKey="month"
+                    tick={{ fontSize: 11.5, fill: "#7e988b", fontFamily: "'Space Grotesk', sans-serif" }}
+                    axisLine={{ stroke: "rgba(140,200,170,0.1)" }}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 10.5, fill: "#5f7a6d", fontFamily: "'Space Grotesk', sans-serif" }}
+                    tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
+                    axisLine={{ stroke: "rgba(140,200,170,0.1)" }}
+                    tickLine={false}
+                  />
+                  <Tooltip
+                    formatter={(value: number) => formatCurrency(value)}
+                    cursor={{ fill: "rgba(140,200,170,0.05)" }}
+                    contentStyle={{
+                      borderRadius: 12,
+                      border: "1px solid rgba(140,200,170,0.2)",
+                      background: "#101a14",
+                      color: "#eaf3ee",
+                    }}
+                    labelStyle={{ color: "#eaf3ee", fontWeight: 600 }}
+                  />
+                  <Bar dataKey="cobrado" name="Cobrado" fill="url(#gradCobrado)" radius={[8, 8, 3, 3]}>
+                    <LabelList
+                      dataKey="cobrado"
+                      position="top"
+                      formatter={(v: number) => (v > 0 ? `$${v >= 1000 ? `${Math.round(v / 100) / 10}k` : v}` : "")}
+                      style={{ fill: "#6ee7b7", fontSize: 10.5, fontWeight: 600, fontFamily: "'Space Grotesk', sans-serif" }}
                     />
-                    <Legend wrapperStyle={{ fontSize: 12 }} />
-                    <Bar dataKey="cobrado" name="Cobrado" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="pendiente" name="Pendiente" fill="hsl(var(--warning))" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                  </Bar>
+                  <Bar dataKey="pendiente" name="Pendiente" fill="url(#gradPendiente)" radius={[8, 8, 3, 3]}>
+                    <LabelList
+                      dataKey="pendiente"
+                      position="top"
+                      formatter={(v: number) => (v > 0 ? `$${v >= 1000 ? `${Math.round(v / 100) / 10}k` : v}` : "")}
+                      style={{ fill: "#fcd34d", fontSize: 10.5, fontWeight: 600, fontFamily: "'Space Grotesk', sans-serif" }}
+                    />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </div>
         </TabsContent>
 
         {/* ══════════ ACTIVIDAD: tu agenda en números ══════════ */}
@@ -1233,11 +1410,14 @@ const TrendBadge = ({
   const Icon = isUp ? ArrowUpRight : ArrowDownRight;
   return (
     <span
-      className={`inline-flex items-center gap-0.5 text-xs font-semibold ${
-        good ? "text-emerald-500" : "text-destructive"
-      } ${className}`}
+      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${className}`}
+      style={
+        good
+          ? { background: "rgba(52,211,153,0.1)", border: "1px solid rgba(52,211,153,0.25)", color: "#6ee7b7" }
+          : { background: "rgba(251,113,133,0.1)", border: "1px solid rgba(251,113,133,0.25)", color: "#fda4af" }
+      }
     >
-      <Icon className="h-3.5 w-3.5" />
+      <Icon className="h-3 w-3" />
       {isUp ? "+" : ""}
       {value}
       {suffix}
