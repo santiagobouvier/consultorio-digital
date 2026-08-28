@@ -243,7 +243,7 @@ const Configuracion = () => {
         </div>
 
         {/* Tiles */}
-        <div className="flex flex-col gap-3">
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3">
           {tiles.map((tile) => {
             const tintHsl = `hsl(${tile.tint})`;
             const tintHsla = (alpha: number) => `hsla(${tile.tint}, ${alpha})`;
