@@ -442,8 +442,9 @@ export const CalendarSyncButton = ({ mobile = false }: { mobile?: boolean }) => 
                     </span>
                   </p>
                   <p className="mt-0.5 text-[12.5px] leading-snug text-muted-foreground">
-                    ⚠️ Al agendar un paciente, te aviso si esa hora choca con algo de tu
-                    calendario ("Dentista 15:00").
+                    Ejemplo: tenés "Dentista 15:00" en tu Google → acá esa hora se ve gris 📅
+                    y, si vas a poner un paciente ahí, te aviso antes. Nada más: no crea
+                    citas ni toca tu Google — solo lee.
                   </p>
                 </div>
                 <ChevronRight
