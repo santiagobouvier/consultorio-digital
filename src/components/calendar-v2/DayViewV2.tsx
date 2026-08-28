@@ -6,6 +6,7 @@ import { DayTimeGrid } from "./DayTimeGrid";
 import { DayMiniTimeline } from "./DayMiniTimeline";
 import { useDashboardBranding } from "@/contexts/DashboardBrandingContext";
 import type { FreeSlot, WeekSlotSummary } from "@/hooks/use-free-slots";
+import { fetchExternalBusyDay, type ExternalBusyBlock } from "@/hooks/use-external-busy";
 import type { DayBirthday } from "./BirthdaysStrip";
 import { openWhatsApp } from "@/lib/whatsapp";
 import { CalendarDays, Plus, Clock, AlertTriangle, CreditCard, Check, X, CircleDashed, Sparkles, ChevronRight, CalendarCheck, MessageCircle, ClipboardList } from "lucide-react";
@@ -146,6 +147,23 @@ export const DayViewV2 = ({
 
   // Pop-up con la ficha del día (resumen clínico de la jornada)
   const [fichaOpen, setFichaOpen] = useState(false);
+
+  // Eventos del calendario personal conectado (Google/iPhone): se pintan
+  // como bloques grises en la grilla. Sin conexión, vuelve vacío al toque.
+  const [externalBusy, setExternalBusy] = useState<ExternalBusyBlock[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    setExternalBusy([]);
+    const y = currentDate.getFullYear();
+    const m = String(currentDate.getMonth() + 1).padStart(2, "0");
+    const d = String(currentDate.getDate()).padStart(2, "0");
+    void fetchExternalBusyDay(`${y}-${m}-${d}`).then((b) => {
+      if (!cancelled) setExternalBusy(b);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentDate]);
 
   // Reloj para la línea de "ahora" y el estado EN CURSO (se mueve solo)
   const [nowTick, setNowTick] = useState(() => Date.now());
@@ -566,6 +584,7 @@ export const DayViewV2 = ({
                 onSlotTap={onSlotTap}
                 freeSlots={freedSlotsOnly}
                 onFreeSlotClick={onFreeSlotClick}
+                externalBusy={externalBusy}
               />
             </div>
 

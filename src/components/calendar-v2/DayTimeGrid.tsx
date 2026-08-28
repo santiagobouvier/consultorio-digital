@@ -13,6 +13,7 @@ import {
   getEventHexColor,
 } from "./types";
 import type { FreeSlot } from "@/hooks/use-free-slots";
+import type { ExternalBusyBlock } from "@/hooks/use-external-busy";
 
 const HOUR_H = 64;
 
@@ -34,6 +35,9 @@ interface DayTimeGridProps {
   /** Cupos que la reserva online está ofreciendo: se dibujan punteados. */
   freeSlots?: FreeSlot[];
   onFreeSlotClick?: (slot: FreeSlot) => void;
+  /** Eventos del calendario personal conectado (Google/iPhone): se dibujan
+   *  como bloques grises de fondo — informan, no se tocan. */
+  externalBusy?: ExternalBusyBlock[];
 }
 
 const timeToMin = (hhmm: string) => {
@@ -50,6 +54,7 @@ export const DayTimeGrid = ({
   onSlotTap,
   freeSlots = [],
   onFreeSlotClick,
+  externalBusy = [],
 }: DayTimeGridProps) => {
   const nowRef = useRef<HTMLDivElement>(null);
 
@@ -67,8 +72,12 @@ export const DayTimeGrid = ({
       s = Math.min(s, Math.floor(timeToMin(slot.start) / 60));
       e = Math.max(e, Math.ceil(timeToMin(slot.end) / 60));
     }
+    for (const b of externalBusy) {
+      s = Math.min(s, Math.floor(b.start / 60));
+      e = Math.max(e, Math.ceil(b.end / 60));
+    }
     return { startHour: s, endHour: Math.min(e, 24) };
-  }, [appointments, freeSlots]);
+  }, [appointments, freeSlots, externalBusy]);
 
   const hours = useMemo(() => {
     const out: number[] = [];
@@ -216,6 +225,28 @@ export const DayTimeGrid = ({
                 </span>
               </div>
             </button>
+          );
+        })}
+
+        {/* Tu calendario personal (Google/iPhone): bloques grises de fondo.
+            Informan que esa hora es tuya — no se tocan ni bloquean nada. */}
+        {externalBusy.map((b, i) => {
+          const top = (b.start / 60 - startHour) * HOUR_H;
+          const height = Math.max(((b.end - b.start) / 60) * HOUR_H - 3, 24);
+          const compact = height < 44;
+          return (
+            <div
+              key={`ext-${i}-${b.start}`}
+              className="absolute left-[3px] right-[3px] rounded-[10px] border border-dashed border-muted-foreground/40 bg-muted/50 pointer-events-none overflow-hidden"
+              style={{ top, height }}
+            >
+              <div className={cn("flex items-center gap-1.5 min-w-0", compact ? "px-2 py-0.5" : "px-2.5 py-1.5")}>
+                <span className={cn("shrink-0", compact ? "text-[10px]" : "text-[11px]")}>📅</span>
+                <span className={cn("font-medium text-muted-foreground truncate", compact ? "text-[10px]" : "text-[11px]")}>
+                  {b.label}
+                </span>
+              </div>
+            </div>
           );
         })}
 
