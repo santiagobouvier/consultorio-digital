@@ -346,7 +346,7 @@ const Patients = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="mx-auto w-full max-w-[1500px] px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-5">
+      <div className="w-full px-4 sm:px-6 py-6 sm:py-7 space-y-5">
 
         {/* Encabezado: título + pulso de la cartera */}
         <div className="flex items-center justify-between gap-3">
@@ -356,7 +356,7 @@ const Patients = () => {
               <HelpTooltip id="patients" />
             </h1>
             <p className="text-[13px] text-muted-foreground mt-0.5">
-              {counts.active} en tratamiento
+              <span className="font-bold text-foreground">{counts.active}</span> en tratamiento
               {counts.no_next > 0 && (
                 <>
                   {" "}· <span className="text-amber-600 dark:text-amber-400 font-medium">{counts.no_next} sin próxima cita</span>
@@ -375,8 +375,9 @@ const Patients = () => {
           </Button>
         </div>
 
-        {/* Búsqueda */}
-        <div className="relative">
+        {/* Búsqueda + segmentos: en escritorio conviven en una sola fila */}
+        <div className="space-y-4 lg:space-y-0 lg:flex lg:items-center lg:gap-3">
+        <div className="relative lg:flex-1 lg:min-w-0">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Buscar por nombre, teléfono o email..."
@@ -388,7 +389,7 @@ const Patients = () => {
 
         {/* Segmentos que responden preguntas reales. El riel deja CLARO que
             sigue: degradado en los bordes + flechitas que scrollean. */}
-        <div className="relative -mx-4 sm:mx-0">
+        <div className="relative -mx-4 sm:mx-0 lg:mx-0 lg:shrink-0 lg:max-w-[62%]">
           <div
             ref={segmentRailRef}
             onScroll={updateRailHints}
@@ -402,10 +403,10 @@ const Patients = () => {
                   data-selected={selected || undefined}
                   onClick={() => pickSegment(s.id)}
                   className={cn(
-                    "shrink-0 snap-center inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12.5px] font-semibold transition-all",
+                    "shrink-0 snap-center inline-flex items-center gap-1.5 rounded-xl border px-3 py-2 text-[12.5px] font-semibold transition-all",
                     selected
-                      ? "bg-foreground text-background shadow-sm"
-                      : "bg-muted/60 text-muted-foreground hover:text-foreground"
+                      ? "bg-foreground text-background border-transparent shadow-sm"
+                      : "bg-card border-border/60 text-muted-foreground hover:text-foreground hover:border-border"
                   )}
                 >
                   {s.label}
@@ -455,6 +456,7 @@ const Patients = () => {
               </button>
             </div>
           )}
+        </div>
         </div>
 
         {/* Contenido */}
@@ -546,12 +548,12 @@ const Patients = () => {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/30 hover:bg-muted/30">
-                      <TableHead className="font-semibold">Paciente</TableHead>
-                      <TableHead className="font-semibold">Contacto</TableHead>
-                      <TableHead className="font-semibold">Próxima cita</TableHead>
-                      <TableHead className="font-semibold">Última consulta</TableHead>
-                      <TableHead className="font-semibold">Deuda</TableHead>
-                      <TableHead className="font-semibold text-center">
+                      <TableHead className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-muted-foreground/80">Paciente</TableHead>
+                      <TableHead className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-muted-foreground/80">Contacto</TableHead>
+                      <TableHead className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-muted-foreground/80">Próxima cita</TableHead>
+                      <TableHead className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-muted-foreground/80">Última consulta</TableHead>
+                      <TableHead className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-muted-foreground/80 text-right">Deuda</TableHead>
+                      <TableHead className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-muted-foreground/80 text-center">
                         <span className="inline-flex items-center gap-1 justify-center">
                           Portal
                           <HelpTooltip id="patientsPortalColumn" />
@@ -578,13 +580,15 @@ const Patients = () => {
                                 {getInitials(patient.full_name) || <UserIcon className="h-4 w-4" />}
                               </AvatarFallback>
                             </Avatar>
-                            <div>
-                              <span className="font-medium">{patient.full_name}</span>
-                              <span className="ml-1.5 text-xs text-muted-foreground">
-                                {patient.age !== null ? `${patient.age} años` : ""}
-                              </span>
-                              {!patient.is_active && (
-                                <Badge variant="secondary" className="ml-2 text-[10px] rounded-full px-2">Inactivo</Badge>
+                            <div className="min-w-0">
+                              <p className="font-semibold leading-tight truncate">
+                                {patient.full_name}
+                                {!patient.is_active && (
+                                  <Badge variant="secondary" className="ml-2 text-[10px] rounded-full px-2 align-middle">Inactivo</Badge>
+                                )}
+                              </p>
+                              {patient.age !== null && (
+                                <p className="text-xs text-muted-foreground mt-0.5">{patient.age} años</p>
                               )}
                             </div>
                           </div>
@@ -599,14 +603,14 @@ const Patients = () => {
                         </TableCell>
                         <TableCell>
                           {patient.next_appointment ? (
-                            <span className="inline-flex items-center gap-1.5 text-sm text-primary font-medium capitalize">
-                              <CalendarClock className="h-3.5 w-3.5" />
+                            <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 text-primary px-2.5 py-1 text-xs font-semibold capitalize">
+                              <CalendarClock className="h-3 w-3" />
                               {format(new Date(patient.next_appointment), "EEE d/M · HH:mm", { locale: es })}
                             </span>
                           ) : patient.lapsed ? (
                             <span className="inline-flex items-center gap-2">
-                              <span className="inline-flex items-center gap-1 text-sm text-amber-600 dark:text-amber-400 font-medium">
-                                <AlertTriangle className="h-3.5 w-3.5" />
+                              <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/35 bg-amber-500/10 text-amber-600 dark:text-amber-400 px-2.5 py-1 text-xs font-semibold">
+                                <AlertTriangle className="h-3 w-3" />
                                 {patient.daysSinceLast! >= 14
                                   ? `${Math.floor(patient.daysSinceLast! / 7)} sem sin venir`
                                   : "Sin próxima"}
@@ -625,17 +629,17 @@ const Patients = () => {
                               )}
                             </span>
                           ) : (
-                            <span className="text-muted-foreground/40 text-sm">—</span>
+                            <span className="text-muted-foreground/50 text-sm">Sin agendar</span>
                           )}
                         </TableCell>
-                        <TableCell className="text-sm">
+                        <TableCell className="text-sm tabular-nums">
                           {patient.last_appointment
                             ? format(new Date(patient.last_appointment), "d/M/yyyy")
                             : "—"}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="text-right">
                           {patient.debt && patient.debt.total > 0 ? (
-                            <span className="text-sm font-semibold text-rose-600 dark:text-rose-400">
+                            <span className="text-sm font-bold tabular-nums text-rose-600 dark:text-rose-400">
                               {formatCurrency(patient.debt.total, patient.debt.currency)}
                             </span>
                           ) : (
@@ -659,21 +663,21 @@ const Patients = () => {
               </Card>
             </div>
 
-            {/* Pagination */}
-            <ListPagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={setCurrentPage}
-              totalItems={filteredPatients.length}
-              pageSize={ITEMS_PER_PAGE}
-            />
-
-            {/* Export discreto al pie */}
-            <div className="flex justify-end">
+            {/* Pie: paginación + export en la misma fila, como el mockup */}
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex-1 min-w-0">
+                <ListPagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                  totalItems={filteredPatients.length}
+                  pageSize={ITEMS_PER_PAGE}
+                />
+              </div>
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
-                className="text-muted-foreground gap-2 rounded-full"
+                className="gap-2 rounded-xl h-10 shrink-0"
                 onClick={() => {
                   const headers = ["Nombre", "Email", "Teléfono", "Próxima cita", "Última consulta", "Fecha de alta"];
                   const rows = filteredPatients.map((p) => [
