@@ -15,6 +15,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { GoogleLinkTutorial } from "./GoogleLinkTutorial";
 
 // La perillita de la agenda: conectar Google Calendar / iPhone sin salir
 // del módulo. Un puntito verde dice "conectado"; el pop-up explica qué hace
@@ -59,6 +60,7 @@ export const CalendarSyncButton = ({ mobile = false }: { mobile?: boolean }) => 
   const [extUrl, setExtUrl] = useState("");
   const [extWorking, setExtWorking] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [tutorialOpen, setTutorialOpen] = useState(false);
 
   const markConnected = (which: "google" | "apple" = "google") => {
     try {
@@ -503,25 +505,14 @@ export const CalendarSyncButton = ({ mobile = false }: { mobile?: boolean }) => 
                   </button>
                   {showHelp && (
                     <div className="rounded-xl bg-muted/40 p-3 text-[12.5px] leading-relaxed text-muted-foreground space-y-2.5">
-                      <div className="space-y-1">
+                      <div className="space-y-1.5">
                         <p className="font-medium text-foreground">Google Calendar (desde la compu):</p>
-                        <p>1. Tocá el botón de acá abajo (se abre la configuración de Google).</p>
-                        <p>2. A la izquierda, en "Configuración de mis calendarios", tocá el calendario con TU nombre.</p>
-                        <p>3. Bajá hasta la sección "Integrar el calendario".</p>
-                        <p>4. Copiá la <span className="font-medium text-foreground">"Dirección secreta en formato iCal"</span> (la última, la que dice secreta) y pegala acá arriba.</p>
                         <Button
-                          asChild
-                          variant="outline"
                           size="sm"
-                          className="mt-1 rounded-xl h-9"
+                          className="rounded-xl h-10 w-full font-semibold"
+                          onClick={() => setTutorialOpen(true)}
                         >
-                          <a
-                            href="https://calendar.google.com/calendar/u/0/r/settings"
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            Abrir la configuración de Google Calendar
-                          </a>
+                          📷 Ver el paso a paso con capturas
                         </Button>
                       </div>
                       <div className="space-y-1 border-t border-border/50 pt-2.5">
@@ -543,6 +534,9 @@ export const CalendarSyncButton = ({ mobile = false }: { mobile?: boolean }) => 
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Tutorial con "capturas" paso a paso, encima del pop-up */}
+      <GoogleLinkTutorial open={tutorialOpen} onClose={() => setTutorialOpen(false)} />
     </>
   );
 };
