@@ -267,13 +267,17 @@ export const DayTimeGrid = ({
                 >
                   <GoogleG className={compact ? "h-2.5 w-2.5" : "h-3.5 w-3.5"} />
                 </span>
-                <span className="flex items-baseline gap-1.5 min-w-0 whitespace-nowrap overflow-hidden">
-                  <span className={cn("font-semibold text-foreground/85 truncate", compact ? "text-[10.5px]" : "text-[12px]")}>
+                <span
+                  className={cn(
+                    "min-w-0 truncate whitespace-nowrap text-muted-foreground",
+                    compact ? "text-[10px]" : "text-[11.5px]"
+                  )}
+                >
+                  <span className={cn("font-semibold text-foreground/85", compact ? "text-[10.5px]" : "text-[12px]")}>
                     «{b.title}»
                   </span>
-                  <span className={cn("text-muted-foreground truncate shrink-0", compact ? "text-[9.5px]" : "text-[11px]")}>
-                    {b.source} Calendar · {minToHHMM(b.start)} – {minToHHMM(b.end)}
-                  </span>
+                  {" · "}
+                  {b.source} Calendar · {minToHHMM(b.start)} – {minToHHMM(b.end)}
                 </span>
               </div>
             </div>
