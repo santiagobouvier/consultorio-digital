@@ -333,41 +333,63 @@ const Payments = () => {
 
   if (!businessId && businessLoading) return <RouteSkeleton />;
 
+  // Familia visual del mockup: bosque oscuro + Space Grotesk para números
+  const GROTESK = { fontFamily: "'Space Grotesk', sans-serif" } as const;
+  const CARD_BG = {
+    background: "linear-gradient(180deg,#101a14,#0b130e)",
+    border: "1px solid rgba(140,200,170,0.1)",
+  } as const;
+
   return (
-    <div className="min-h-screen bg-background">
-      <div className="mx-auto w-full max-w-[1500px] px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
+    <div
+      className="dark min-h-screen"
+      style={{ background: "#070d0a", fontFamily: "'Instrument Sans', 'Plus Jakarta Sans', sans-serif" }}
+    >
+      <div className="w-full px-4 sm:px-6 py-6 space-y-4">
 
         {/* Encabezado de página */}
         <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-3 min-w-0">
-            <span className="h-11 w-11 rounded-2xl flex items-center justify-center shrink-0" style={{ background: "hsla(152, 70%, 45%, 0.14)" }}>
-              <Receipt className="h-5 w-5" style={{ color: "hsl(152 70% 45%)" }} />
+          <div className="flex items-center gap-3.5 min-w-0">
+            <span
+              className="h-[46px] w-[46px] rounded-2xl flex items-center justify-center shrink-0"
+              style={{ background: "rgba(52,211,153,0.12)", border: "1px solid rgba(52,211,153,0.25)" }}
+            >
+              <Receipt className="h-5 w-5" style={{ color: "#34d399" }} />
             </span>
             <div className="min-w-0">
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight inline-flex items-center gap-2">
+              <h1 className="text-2xl sm:text-[28px] font-bold tracking-tight inline-flex items-center gap-2" style={GROTESK}>
                 Pagos
                 <HelpTooltip id="payments" />
               </h1>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-[13px]" style={{ color: "#7e988b" }}>
                 {filteredPayments.length} pago{filteredPayments.length !== 1 ? "s" : ""} en la vista
               </p>
             </div>
           </div>
-          <Button onClick={() => setShowNewPayment(true)} className="hidden sm:inline-flex gap-2 rounded-xl h-11 px-5 font-semibold shadow-md shadow-primary/20">
+          <Button
+            onClick={() => setShowNewPayment(true)}
+            className="hidden sm:inline-flex gap-2 rounded-[13px] h-11 px-5 font-semibold border-0"
+            style={{
+              background: "linear-gradient(135deg,#34d399,#14b8a6)",
+              color: "#04150d",
+              boxShadow: "0 8px 24px rgba(52,211,153,0.25)",
+            }}
+          >
             <Plus className="h-4 w-4" />
             Registrar pago
           </Button>
         </div>
 
-        {/* Stats Row: cada tarjeta también FILTRA la lista */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {/* KPI tabs: cada tarjeta también FILTRA la lista (borde encendido
+            en su color cuando está activa, como el mockup) */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
           {[
             {
               label: rangeActive ? "Facturado (período)" : "Facturado (mes)",
               value: formatCurrency(stats.totalAmount, "UYU"),
               icon: DollarSign,
-              color: "text-primary",
-              bg: "bg-primary/10",
+              hex: "#34d399",
+              bg: "rgba(52,211,153,0.12)",
               helpId: "paymentsTotalBilled" as const,
               filter: "all",
             },
@@ -375,8 +397,8 @@ const Payments = () => {
               label: rangeActive ? "Cobrado (período)" : "Cobrado (mes)",
               value: formatCurrency(stats.paidAmount, "UYU"),
               icon: CheckCircle2,
-              color: "text-emerald-600",
-              bg: "bg-emerald-500/10",
+              hex: "#6ee7b7",
+              bg: "rgba(52,211,153,0.12)",
               helpId: "paymentsTotalCollected" as const,
               filter: "paid",
             },
@@ -384,8 +406,8 @@ const Payments = () => {
               label: "Vencidos",
               value: stats.overdueCount.toString(),
               icon: AlertTriangle,
-              color: "text-destructive",
-              bg: "bg-destructive/10",
+              hex: "#fda4af",
+              bg: "rgba(251,113,133,0.13)",
               helpId: "paymentsOverdueCount" as const,
               filter: "overdue",
             },
@@ -393,37 +415,45 @@ const Payments = () => {
               label: "Pendientes",
               value: stats.pendingCount.toString(),
               icon: Clock,
-              color: "text-amber-600",
-              bg: "bg-amber-500/10",
+              hex: "#fcd34d",
+              bg: "rgba(251,191,36,0.13)",
               helpId: "paymentsPendingCount" as const,
               filter: "pending",
             },
-          ].map((stat, i) => (
-            <Card
-              key={stat.label}
-              onClick={() => setStatusFilter(stat.filter)}
-              className={cn(
-                "border-border/50 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer animate-fade-in",
-                statusFilter === stat.filter && "ring-2 ring-primary/40 border-primary/30"
-              )}
-              style={{ animationDelay: `${i * 80}ms` }}
-            >
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className={cn("p-2.5 rounded-xl", stat.bg)}>
-                  <stat.icon className={cn("h-5 w-5", stat.color)} />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-lg sm:text-xl font-bold text-foreground leading-none truncate">
+          ].map((stat) => {
+            const activo = statusFilter === stat.filter;
+            return (
+              <button
+                key={stat.label}
+                onClick={() => setStatusFilter(stat.filter)}
+                className="flex items-center gap-3 rounded-2xl px-4 py-3.5 text-left cursor-pointer transition-all"
+                style={{
+                  ...CARD_BG,
+                  border: activo ? `1px solid ${stat.hex}` : (CARD_BG.border as string),
+                  boxShadow: activo ? `0 0 0 1px ${stat.hex}, 0 8px 20px rgba(0,0,0,0.3)` : undefined,
+                }}
+              >
+                <span
+                  className="flex h-9 w-9 items-center justify-center rounded-xl shrink-0"
+                  style={{ background: stat.bg, color: stat.hex }}
+                >
+                  <stat.icon className="h-4 w-4" />
+                </span>
+                <span className="flex flex-col items-start gap-0.5 min-w-0">
+                  <span
+                    className="font-bold text-[17px] sm:text-[19px] whitespace-nowrap leading-none"
+                    style={{ ...GROTESK, color: activo ? stat.hex : "#eaf3ee" }}
+                  >
                     {stat.value}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-0.5 inline-flex items-center gap-1">
+                  </span>
+                  <span className="text-[11px] font-medium whitespace-nowrap inline-flex items-center gap-1" style={{ color: "#7e988b" }}>
                     {stat.label}
                     <HelpTooltip id={stat.helpId} />
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
         </div>
 
         {/* Search + Filters */}
@@ -434,14 +464,18 @@ const Payments = () => {
               placeholder="Buscar paciente..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-11 h-12 rounded-2xl text-base bg-card border-border/50 shadow-sm focus-visible:ring-primary/30 focus-visible:border-primary/50"
+              className="pl-11 h-11 rounded-[13px] text-sm border-0 focus-visible:ring-emerald-500/30"
+              style={{ background: "rgba(140,200,170,0.05)", border: "1px solid rgba(140,200,170,0.12)", color: "#eaf3ee" }}
             />
           </div>
           {/* En mobile: grilla 2x2 compacta; en escritorio se disuelve (sm:contents)
               y los controles quedan en la misma fila que el buscador */}
           <div className="grid grid-cols-2 gap-2 sm:contents">
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-full sm:w-[180px] h-12 rounded-2xl border-border/50 shadow-sm bg-card">
+            <SelectTrigger
+              className="w-full sm:w-[180px] h-11 rounded-[13px] border-0 text-[13px] font-medium"
+              style={{ background: "rgba(140,200,170,0.05)", border: "1px solid rgba(140,200,170,0.12)", color: "#a9c4b7" }}
+            >
               <SelectValue placeholder="Estado" />
             </SelectTrigger>
             <SelectContent>
@@ -454,7 +488,10 @@ const Payments = () => {
             </SelectContent>
           </Select>
           <Select value={periodFilter} onValueChange={setPeriodFilter}>
-            <SelectTrigger className="w-full sm:w-[180px] h-12 rounded-2xl border-border/50 shadow-sm bg-card">
+            <SelectTrigger
+              className="w-full sm:w-[180px] h-11 rounded-[13px] border-0 text-[13px] font-medium"
+              style={{ background: "rgba(140,200,170,0.05)", border: "1px solid rgba(140,200,170,0.12)", color: "#a9c4b7" }}
+            >
               <SelectValue placeholder="Período" />
             </SelectTrigger>
             <SelectContent>
@@ -467,7 +504,10 @@ const Payments = () => {
             </SelectContent>
           </Select>
           <Select value={patientFilter} onValueChange={setPatientFilter}>
-            <SelectTrigger className="w-full sm:w-[180px] h-12 rounded-2xl border-border/50 shadow-sm bg-card">
+            <SelectTrigger
+              className="w-full sm:w-[180px] h-11 rounded-[13px] border-0 text-[13px] font-medium"
+              style={{ background: "rgba(140,200,170,0.05)", border: "1px solid rgba(140,200,170,0.12)", color: "#a9c4b7" }}
+            >
               <SelectValue placeholder="Paciente" />
             </SelectTrigger>
             <SelectContent>
@@ -481,7 +521,8 @@ const Payments = () => {
           </Select>
           <Button
             variant="outline"
-            className="h-12 rounded-2xl border-border/50 shadow-sm bg-card gap-2"
+            className="h-11 rounded-[13px] border-0 gap-2 text-[13px] font-medium"
+            style={{ background: "rgba(140,200,170,0.05)", border: "1px solid rgba(140,200,170,0.12)", color: "#a9c4b7" }}
             onClick={() => {
               const headers = ["Paciente", "Monto (UYU)", "Fecha de vencimiento", "Fecha de pago", "Estado", "Método de pago", "Tipo de recurrencia"];
               const rows = filteredPayments.map((p) => [
@@ -507,23 +548,25 @@ const Payments = () => {
         {periodFilter === "custom" && (
           <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
             <div className="flex items-center gap-2 flex-1">
-              <span className="text-sm text-muted-foreground w-14 shrink-0">Desde</span>
+              <span className="text-sm w-14 shrink-0" style={{ color: "#7e988b" }}>Desde</span>
               <Input
                 type="date"
                 value={customFrom}
                 max={customTo || undefined}
                 onChange={(e) => setCustomFrom(e.target.value)}
-                className="h-11 rounded-2xl border-border/50 bg-card"
+                className="h-11 rounded-[13px] border-0"
+                style={{ background: "rgba(140,200,170,0.05)", border: "1px solid rgba(140,200,170,0.12)", color: "#eaf3ee" }}
               />
             </div>
             <div className="flex items-center gap-2 flex-1">
-              <span className="text-sm text-muted-foreground w-14 shrink-0">Hasta</span>
+              <span className="text-sm w-14 shrink-0" style={{ color: "#7e988b" }}>Hasta</span>
               <Input
                 type="date"
                 value={customTo}
                 min={customFrom || undefined}
                 onChange={(e) => setCustomTo(e.target.value)}
-                className="h-11 rounded-2xl border-border/50 bg-card"
+                className="h-11 rounded-[13px] border-0"
+                style={{ background: "rgba(140,200,170,0.05)", border: "1px solid rgba(140,200,170,0.12)", color: "#eaf3ee" }}
               />
             </div>
           </div>
@@ -534,97 +577,123 @@ const Payments = () => {
         <div className="space-y-4 lg:order-2">
         {/* Deudores: siempre a la vista, el que más debe primero */}
         {debtors.length > 0 && statusFilter !== "paid" && statusFilter !== "cancelled" && (
-          <Card className="border-destructive/30 bg-destructive/5">
-            <CardContent className="p-4 space-y-3">
-              <div className="flex items-center justify-between gap-2 flex-wrap">
-                <p className="font-semibold text-sm inline-flex items-center gap-2 text-destructive">
-                  <AlertTriangle className="h-4 w-4" />
-                  Te deben {formatCurrency(debtors.reduce((s, d) => s + d.total, 0), "UYU")}
+          <div
+            className="rounded-[20px] p-5 space-y-3"
+            style={{
+              background: "linear-gradient(180deg,#1a1013,#130b0d)",
+              border: "1px solid rgba(251,113,133,0.22)",
+            }}
+          >
+            <div className="flex items-center gap-3">
+              <div
+                className="w-8 h-8 rounded-[10px] flex items-center justify-center shrink-0"
+                style={{ background: "rgba(251,113,133,0.13)", color: "#fda4af" }}
+              >
+                <AlertTriangle className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[15px] font-bold leading-tight" style={{ ...GROTESK, color: "#eaf3ee" }}>
+                  Te deben <span style={{ color: "#fda4af" }}>{formatCurrency(debtors.reduce((s, d) => s + d.total, 0), "UYU")}</span>
                 </p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-[11.5px]" style={{ color: "#a06570" }}>
                   {debtors.length} paciente{debtors.length !== 1 ? "s" : ""} con pagos vencidos
                 </p>
               </div>
-              <div className="space-y-1.5">
-                {debtors.slice(0, 5).map((d) => (
-                  <div
-                    key={d.patientId}
-                    className="flex items-center justify-between gap-3 rounded-lg bg-background/60 border border-border/50 px-3 py-2"
-                  >
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPatientFilter(d.patientId);
-                        setStatusFilter("overdue");
-                      }}
-                      className="text-sm font-medium text-left truncate hover:text-primary transition-colors"
-                      title="Ver sus pagos vencidos"
-                    >
-                      {d.name}
-                      <span className="text-xs text-muted-foreground font-normal ml-2">
-                        {d.count} pago{d.count !== 1 ? "s" : ""}
-                      </span>
-                    </button>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="font-bold text-sm text-destructive">
-                        {formatCurrency(d.total, "UYU")}
-                      </span>
-                      <PaymentLinkMenu
-                        compact
-                        patientPhone={d.phone}
-                        patientName={d.name}
-                        getPaymentLink={mpConnected && d.ids.length > 0 ? () => ensurePaymentLink(d.ids) : undefined}
-                      />
-                    </div>
-                  </div>
-                ))}
-                {debtors.length > 5 && (
+            </div>
+            <div className="space-y-1.5">
+              {debtors.slice(0, 5).map((d) => (
+                <div
+                  key={d.patientId}
+                  className="flex items-center justify-between gap-3 rounded-xl px-3 py-2"
+                  style={{ background: "rgba(251,113,133,0.05)", border: "1px solid rgba(251,113,133,0.14)" }}
+                >
                   <button
                     type="button"
-                    onClick={() => setStatusFilter("overdue")}
-                    className="text-xs text-muted-foreground hover:text-foreground px-1"
+                    onClick={() => {
+                      setPatientFilter(d.patientId);
+                      setStatusFilter("overdue");
+                    }}
+                    className="text-[13px] font-semibold text-left truncate transition-opacity hover:opacity-80"
+                    style={{ color: "#eaf3ee" }}
+                    title="Ver sus pagos vencidos"
                   >
-                    Ver los {debtors.length - 5} restantes…
+                    {d.name}
+                    <span className="text-[11px] font-normal ml-2" style={{ color: "#a06570" }}>
+                      {d.count} pago{d.count !== 1 ? "s" : ""}
+                    </span>
                   </button>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-[13px] font-bold" style={{ ...GROTESK, color: "#fda4af" }}>
+                      {formatCurrency(d.total, "UYU")}
+                    </span>
+                    <PaymentLinkMenu
+                      compact
+                      patientPhone={d.phone}
+                      patientName={d.name}
+                      getPaymentLink={mpConnected && d.ids.length > 0 ? () => ensurePaymentLink(d.ids) : undefined}
+                    />
+                  </div>
+                </div>
+              ))}
+              {debtors.length > 5 && (
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter("overdue")}
+                  className="text-xs px-1 transition-opacity hover:opacity-80"
+                  style={{ color: "#a06570" }}
+                >
+                  Ver los {debtors.length - 5} restantes…
+                </button>
+              )}
+            </div>
+          </div>
         )}
 
         {/* Tasa de cobranza del período */}
         {(stats.totalAmount > 0 || stats.paidAmount > 0) && (
-          <Card className="hidden lg:block border-border/50">
-            <CardContent className="p-4 space-y-3">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Tasa de cobranza {rangeActive ? "del período" : "del mes"}
-              </p>
-              {(() => {
-                const rate = stats.totalAmount > 0
-                  ? Math.min(100, Math.round((stats.paidAmount / stats.totalAmount) * 100))
-                  : 100;
-                return (
-                  <>
-                    <div className="flex items-end justify-between">
-                      <span className="text-3xl font-bold text-foreground tabular-nums leading-none">{rate}<span className="text-base text-muted-foreground font-medium">%</span></span>
-                      <span className="text-xs text-muted-foreground">
-                        {formatCurrency(stats.paidAmount, "UYU")} de {formatCurrency(stats.totalAmount, "UYU")}
-                      </span>
-                    </div>
-                    <div className="h-2 rounded-full bg-muted overflow-hidden">
-                      <div
-                        className={cn(
-                          "h-full rounded-full transition-all duration-700",
-                          rate >= 80 ? "bg-emerald-500" : rate >= 50 ? "bg-amber-500" : "bg-destructive"
-                        )}
-                        style={{ width: `${rate}%` }}
-                      />
-                    </div>
-                  </>
-                );
-              })()}
-            </CardContent>
-          </Card>
+          <div className="hidden lg:block rounded-[20px] p-5 space-y-3" style={CARD_BG}>
+            <p
+              className="text-[10.5px] font-semibold uppercase"
+              style={{ ...GROTESK, letterSpacing: "0.16em", color: "#5f7a6d" }}
+            >
+              Tasa de cobranza {rangeActive ? "del período" : "del mes"}
+            </p>
+            {(() => {
+              const rate = stats.totalAmount > 0
+                ? Math.min(100, Math.round((stats.paidAmount / stats.totalAmount) * 100))
+                : 100;
+              const rateColor = rate >= 80 ? "#34d399" : rate >= 50 ? "#fcd34d" : "#fda4af";
+              return (
+                <>
+                  <div className="flex items-end justify-between">
+                    <span
+                      className="text-[34px] font-bold tabular-nums leading-none"
+                      style={{ ...GROTESK, color: rateColor }}
+                    >
+                      {rate}<span className="text-base font-medium" style={{ color: "#7e988b" }}>%</span>
+                    </span>
+                    <span className="text-xs" style={{ color: "#7e988b" }}>
+                      {formatCurrency(stats.paidAmount, "UYU")} de {formatCurrency(stats.totalAmount, "UYU")}
+                    </span>
+                  </div>
+                  <div className="h-[7px] rounded-full overflow-hidden" style={{ background: "rgba(140,200,170,0.1)" }}>
+                    <div
+                      className="h-full rounded-full transition-all duration-700"
+                      style={{
+                        width: `${rate}%`,
+                        background: `linear-gradient(90deg, ${rateColor}, ${rateColor}cc)`,
+                      }}
+                    />
+                  </div>
+                  {rate < 100 && (
+                    <p className="text-[11.5px]" style={{ color: "#5f7a6d" }}>
+                      Reclamá los vencidos para acercarte al 100%.
+                    </p>
+                  )}
+                </>
+              );
+            })()}
+          </div>
         )}
         </div>
 
@@ -650,53 +719,66 @@ const Payments = () => {
             </CardContent>
           </Card>
         ) : paymentsLoading ? (
-          <Card className="border-border/50">
-            <CardContent className="py-16 text-center">
-              <p className="text-sm text-muted-foreground">Cargando pagos...</p>
-            </CardContent>
-          </Card>
+          <div className="rounded-[20px] py-16 text-center" style={CARD_BG}>
+            <p className="text-sm" style={{ color: "#7e988b" }}>Cargando pagos...</p>
+          </div>
         ) : filteredPayments.length === 0 ? (
-          <Card className="border-dashed border-2 border-border/50">
-            <CardContent className="py-16 text-center space-y-3">
-              <div className="mx-auto w-16 h-16 rounded-2xl bg-muted flex items-center justify-center">
-                <Receipt className="h-8 w-8 text-muted-foreground" />
-              </div>
-              <p className="text-lg font-medium text-muted-foreground">No se encontraron pagos</p>
-              <p className="text-sm text-muted-foreground/70">Ajustá los filtros o registrá un nuevo pago</p>
-            </CardContent>
-          </Card>
+          <div
+            className="rounded-[20px] py-16 text-center space-y-3"
+            style={{ background: "linear-gradient(180deg,#101a14,#0b130e)", border: "1px dashed rgba(140,200,170,0.2)" }}
+          >
+            <div
+              className="mx-auto w-16 h-16 rounded-2xl flex items-center justify-center"
+              style={{ background: "rgba(140,200,170,0.08)" }}
+            >
+              <Receipt className="h-8 w-8" style={{ color: "#7e988b" }} />
+            </div>
+            <p className="text-lg font-medium" style={{ ...GROTESK, color: "#a9c4b7" }}>No se encontraron pagos</p>
+            <p className="text-sm" style={{ color: "#5f7a6d" }}>Ajustá los filtros o registrá un nuevo pago</p>
+          </div>
         ) : (
-          <div className="space-y-2">
-            {pagePayments.map((payment, index) => (
-              <Card
+          <div className="rounded-[20px] overflow-hidden" style={CARD_BG}>
+            {pagePayments.map((payment) => (
+              <div
                 key={payment.id}
+                role="button"
                 onClick={() => setSelectedPayment(payment)}
-                className="group cursor-pointer border-border/50 shadow-sm hover:shadow-md hover:-translate-y-0.5 active:scale-[0.99] transition-all duration-200 animate-fade-in"
-                style={{ animationDelay: `${index * 50}ms` }}
+                className="group cursor-pointer transition-colors hover:bg-white/[0.02]"
+                style={{ borderBottom: "1px solid rgba(140,200,170,0.06)" }}
               >
-                <CardContent className="p-4">
+                <div className="px-4 sm:px-5 py-3.5">
                   <div className="flex items-center gap-3 sm:gap-4">
-                    {/* Status Indicator */}
-                    <div
-                      className={cn(
-                        "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
-                        payment.status === "paid"
-                          ? "bg-emerald-500/10"
-                          : payment.status === "overdue"
-                          ? "bg-destructive/10"
-                          : payment.status === "due_soon"
-                          ? "bg-amber-500/10"
-                          : "bg-muted"
-                      )}
+                    {/* Avatar con la inicial, teñido por estado (mockup) */}
+                    <span
+                      className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-[12.5px] font-semibold"
+                      style={{
+                        ...GROTESK,
+                        background:
+                          payment.status === "paid"
+                            ? "rgba(52,211,153,0.12)"
+                            : payment.status === "overdue"
+                              ? "rgba(251,113,133,0.12)"
+                              : payment.status === "due_soon"
+                                ? "rgba(251,191,36,0.13)"
+                                : "rgba(140,200,170,0.1)",
+                        color:
+                          payment.status === "paid"
+                            ? "#6ee7b7"
+                            : payment.status === "overdue"
+                              ? "#fda4af"
+                              : payment.status === "due_soon"
+                                ? "#fcd34d"
+                                : "#a9c4b7",
+                      }}
                     >
-                      {payment.status === "paid" ? (
-                        <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-                      ) : payment.status === "overdue" ? (
-                        <AlertTriangle className="h-5 w-5 text-destructive" />
-                      ) : (
-                        <Clock className="h-5 w-5 text-muted-foreground" />
-                      )}
-                    </div>
+                      {(payment.patients?.full_name || "?")
+                        .trim()
+                        .split(/\s+/)
+                        .map((w: string) => w[0])
+                        .slice(0, 2)
+                        .join("")
+                        .toUpperCase()}
+                    </span>
 
                     {/* Info */}
                     <div className="flex-1 min-w-0">
@@ -705,13 +787,18 @@ const Payments = () => {
                           e.stopPropagation();
                           navigate(`/patients/${payment.patient_id}`);
                         }}
-                        className="font-semibold text-sm text-foreground hover:text-primary transition-colors text-left truncate block w-full"
+                        className="font-semibold text-[13.5px] text-left truncate block w-full transition-colors"
+                        style={{ color: "#eaf3ee" }}
                       >
                         {payment.patients?.full_name || "Paciente desconocido"}
                       </button>
                       <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                        <p className="text-xs text-muted-foreground">
-                          Vence: {format(new Date(payment.due_date), "d MMM yyyy", { locale: es })}
+                        <p
+                          className="text-[11.5px]"
+                          style={{ color: payment.status === "overdue" ? "#a06570" : "#7e988b" }}
+                        >
+                          {payment.status === "overdue" ? "Venció el" : payment.status === "paid" ? "Pagado · vencía el" : "Vence el"}{" "}
+                          {format(new Date(payment.due_date), "d MMM yyyy", { locale: es })}
                         </p>
                         {payment.recurrence_type !== "one_time" && (
                           <Badge variant="outline" className="rounded-full text-[10px] gap-0.5 h-5">
@@ -722,14 +809,28 @@ const Payments = () => {
                       </div>
                     </div>
 
-                    {/* Monto + estado: columna derecha, respira en cualquier ancho */}
-                    <div className="text-right shrink-0">
-                      <p className="font-bold text-[15px] text-foreground leading-tight">
+                    {/* Monto + chip de estado */}
+                    <div className="flex items-center gap-2.5 shrink-0">
+                      <p className="font-bold text-[15px] leading-tight text-right min-w-[70px]" style={{ ...GROTESK, color: "#eaf3ee" }}>
                         {formatCurrency(payment.amount, payment.currency)}
                       </p>
-                      <Badge className={`${getPaymentStatusColor(payment.status)} rounded-full text-[11px] mt-1`}>
+                      <span
+                        className="px-2.5 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap"
+                        style={
+                          payment.status === "paid"
+                            ? { background: "rgba(52,211,153,0.12)", border: "1px solid rgba(52,211,153,0.3)", color: "#6ee7b7" }
+                            : payment.status === "overdue"
+                              ? { background: "rgba(251,113,133,0.12)", border: "1px solid rgba(251,113,133,0.3)", color: "#fda4af" }
+                              : payment.status === "due_soon"
+                                ? { background: "rgba(251,191,36,0.12)", border: "1px solid rgba(251,191,36,0.3)", color: "#fcd34d" }
+                                : { background: "rgba(140,200,170,0.08)", border: "1px solid rgba(140,200,170,0.18)", color: "#a9c4b7" }
+                        }
+                      >
                         {getPaymentStatusLabel(payment.status)}
-                      </Badge>
+                      </span>
+                    </div>
+                    {/* Estado del link de cobro online (solo pantallas anchas) */}
+                    <div className="hidden xl:block text-right shrink-0 max-w-[150px]">
                       {/* Estado del link de cobro online */}
                       {payment.status !== "paid" && payment.status !== "cancelled" && payment.mp_link_status === "rejected" && (
                         <p className="text-[10px] text-destructive mt-0.5 font-medium">Intentó pagar · rechazado</p>
@@ -745,7 +846,8 @@ const Payments = () => {
                     {/* Acciones inline: solo escritorio. Cobro online, aviso y
                         cobrar manual visibles; editar/eliminar guardados en ⋯ */}
                     <div
-                      className="hidden sm:flex items-center gap-1.5 shrink-0 pl-2 ml-1 border-l border-border/40"
+                      className="hidden sm:flex items-center gap-1.5 shrink-0 pl-2.5 ml-1"
+                      style={{ borderLeft: "1px solid rgba(140,200,170,0.1)" }}
                       onClick={(e) => e.stopPropagation()}
                     >
                       {payment.status !== "paid" && payment.status !== "cancelled" && (
@@ -773,7 +875,11 @@ const Payments = () => {
                                 patientName: payment.patients?.full_name || "Paciente",
                               })
                             }
-                            className="rounded-lg h-8 gap-1.5"
+                            className="rounded-[10px] h-8 gap-1.5 border-0 font-semibold"
+                            style={{
+                              background: "linear-gradient(135deg,#34d399,#14b8a6)",
+                              color: "#04150d",
+                            }}
                             title="Marcar como pagado"
                           >
                             <CheckCircle2 className="h-3.5 w-3.5" />
@@ -812,7 +918,8 @@ const Payments = () => {
                   {/* Acciones mobile: barra cómoda abajo, solo si hay algo por cobrar */}
                   {payment.status !== "paid" && payment.status !== "cancelled" && (
                     <div
-                      className="flex sm:hidden items-center gap-2 mt-3 pt-3 border-t border-border/40"
+                      className="flex sm:hidden items-center gap-2 mt-3 pt-3"
+                      style={{ borderTop: "1px solid rgba(140,200,170,0.08)" }}
                       onClick={(e) => e.stopPropagation()}
                     >
                       <PaymentLinkMenu
@@ -844,8 +951,8 @@ const Payments = () => {
                       </Button>
                     </div>
                   )}
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             ))}
           </div>
         )}
@@ -864,9 +971,11 @@ const Payments = () => {
       {/* FAB - New Payment (solo mobile; en desktop está en el encabezado) */}
       <button
         onClick={() => setShowNewPayment(true)}
-        className="sm:hidden fixed bottom-6 right-6 z-40 w-14 h-14 rounded-2xl bg-primary text-primary-foreground shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:scale-95 transition-all duration-200 flex items-center justify-center"
+        className="sm:hidden fixed bottom-6 right-6 z-40 w-14 h-14 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:scale-95 transition-all duration-200 flex items-center justify-center"
         style={{
-          boxShadow: "0 8px 25px -5px hsl(var(--primary) / 0.4)",
+          background: "linear-gradient(135deg,#34d399,#14b8a6)",
+          color: "#04150d",
+          boxShadow: "0 8px 25px -5px rgba(52,211,153,0.4)",
         }}
       >
         <Plus className="h-6 w-6" />
