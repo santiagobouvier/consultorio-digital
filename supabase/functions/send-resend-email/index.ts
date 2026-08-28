@@ -253,7 +253,7 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         from: FROM_EMAIL,
-        to: [to],
+        to: [recipient],
         subject,
         html,
       }),
