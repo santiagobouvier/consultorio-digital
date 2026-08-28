@@ -215,7 +215,7 @@ const Configuracion = () => {
 
   return (
     <div className="min-h-screen bg-background pb-16">
-      <div className="mx-auto w-full max-w-[860px] px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+      <div className="mx-auto w-full max-w-[860px] lg:max-w-none px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
         {/* Encabezado de página */}
         <div className="flex items-center gap-3">
           <button
