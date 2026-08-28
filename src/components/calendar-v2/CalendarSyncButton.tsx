@@ -5,6 +5,8 @@ import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
+import { useDashboardBranding } from "@/contexts/DashboardBrandingContext";
 import {
   CalendarHeart,
   Check,
@@ -26,6 +28,7 @@ type ExternalCal = { id: string; label: string; host: string };
 
 export const CalendarSyncButton = ({ mobile = false }: { mobile?: boolean }) => {
   const { businessId } = useBusinessId(false);
+  const { primaryColor } = useDashboardBranding();
   const [open, setOpen] = useState(false);
   const [connected, setConnected] = useState<boolean>(() => {
     try {
@@ -54,6 +57,27 @@ export const CalendarSyncButton = ({ mobile = false }: { mobile?: boolean }) => 
       /* sin localStorage no pasa nada: el puntito queda gris */
     }
     setConnected(true);
+  };
+
+  // La perillita: encendido = ya lo conectaste en tu calendario. Apagarla
+  // solo apaga el estado acá (el calendario suscrito se borra desde Google
+  // o el iPhone, eso no lo podemos hacer nosotros).
+  const handleToggle = (checked: boolean) => {
+    if (checked) {
+      markConnected();
+      return;
+    }
+    try {
+      localStorage.removeItem(LS_KEY);
+    } catch {
+      /* nada */
+    }
+    setConnected(false);
+    toast({
+      title: "Marcada como apagada",
+      description:
+        "Si además querés sacar tus citas de tu calendario, borrá el calendario suscrito desde tu Google o iPhone.",
+    });
   };
 
   // Al abrir el pop-up: buscar (o crear) el token del feed + calendarios
@@ -186,64 +210,110 @@ export const CalendarSyncButton = ({ mobile = false }: { mobile?: boolean }) => 
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden max-h-[88dvh] flex flex-col">
-          <div className="px-5 pt-5 pb-4 border-b border-border/60">
-            <DialogTitle className="text-lg font-bold flex items-center gap-2">
-              <CalendarHeart className="h-5 w-5 text-primary" />
-              Tu calendario de siempre
-            </DialogTitle>
-            <p
-              className={cn(
-                "mt-1.5 inline-flex items-center gap-1.5 text-xs font-semibold rounded-full px-2.5 py-1",
-                connected
-                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                  : "bg-muted text-muted-foreground"
-              )}
-            >
-              <span className={cn("w-1.5 h-1.5 rounded-full", connected ? "bg-emerald-500" : "bg-muted-foreground/50")} />
-              {connected ? "Conectado" : "Sin conectar"}
-            </p>
+          {/* Encabezado con el gradiente de marca, como toda la agenda */}
+          <div
+            className="px-5 pt-5 pb-4 border-b border-border/60"
+            style={{
+              background: `linear-gradient(135deg, hsla(${primaryColor}, 0.16) 0%, hsla(${primaryColor}, 0.05) 55%, transparent 90%)`,
+            }}
+          >
+            <div className="flex items-center gap-3">
+              <span
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl"
+                style={{
+                  background: `hsla(${primaryColor}, 0.15)`,
+                  boxShadow: `inset 0 0 0 1px hsla(${primaryColor}, 0.3)`,
+                }}
+              >
+                <CalendarHeart className="h-5 w-5 text-primary" strokeWidth={2} />
+              </span>
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">
+                  Integración
+                </p>
+                <DialogTitle className="text-lg font-bold leading-tight">
+                  Tu calendario de siempre
+                </DialogTitle>
+              </div>
+            </div>
+
+            {/* La perillita: encendido / apagado */}
+            <div className="mt-3.5 flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-background/70 px-3.5 py-2.5">
+              <span className="flex items-center gap-2.5 text-sm font-semibold">
+                <span
+                  className={cn(
+                    "w-2 h-2 rounded-full",
+                    connected ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" : "bg-muted-foreground/40"
+                  )}
+                />
+                {connected ? "Conectado" : "Apagado"}
+              </span>
+              <Switch checked={connected} onCheckedChange={handleToggle} className="scale-110" />
+            </div>
           </div>
 
-          <div className="overflow-y-auto flex-1 px-5 py-4 space-y-4">
-            {/* Qué hace, en fácil */}
-            <div className="rounded-xl bg-muted/40 p-3.5 text-[13px] leading-relaxed space-y-1.5">
-              <p>📲 <span className="font-medium">Tus citas aparecen solas</span> en tu Google Calendar o en el calendario del iPhone.</p>
-              <p>🔄 Agendás o cambiás algo acá → allá se actualiza solo.</p>
-              <p>🛒 Ejemplo: estás en el súper, abrís el calendario de tu celu como siempre… y ahí está: "Viernes 17:00 — Agustina".</p>
-              <p>🔒 Nada clínico viaja: solo nombre, tipo de sesión y hora.</p>
+          <div className="overflow-y-auto flex-1 px-4 py-4 space-y-4">
+            {/* Qué hace, en fácil: filas con su emoji en chip */}
+            <div className="rounded-2xl border border-border/60 bg-card divide-y divide-border/50 overflow-hidden">
+              {[
+                { e: "📲", t: <><span className="font-semibold">Tus citas aparecen solas</span> en tu Google Calendar o en el calendario del iPhone.</> },
+                { e: "🔄", t: <>Agendás o cambiás algo acá → <span className="font-semibold">allá se actualiza solo</span>.</> },
+                { e: "🛒", t: <>Estás en el súper, abrís el calendario del celu como siempre… y ahí está: <span className="font-semibold">"Viernes 17:00 — Agustina"</span>.</> },
+                { e: "🔒", t: <>Nada clínico viaja: <span className="font-semibold">solo nombre, tipo de sesión y hora</span>.</> },
+              ].map((row, i) => (
+                <div key={i} className="flex items-center gap-3 px-3.5 py-2.5">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-[17px]">
+                    {row.e}
+                  </span>
+                  <p className="text-[13px] leading-snug text-foreground/90">{row.t}</p>
+                </div>
+              ))}
             </div>
 
             {loading || !feedUrl ? (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
                 <Loader2 className="h-4 w-4 animate-spin" /> Preparando tu conexión...
               </div>
             ) : (
               <div className="space-y-2">
-                <Button asChild className="w-full h-12 rounded-xl text-[15px] font-semibold" onClick={markConnected}>
+                <Button
+                  asChild
+                  className="w-full h-12 rounded-xl text-[15px] font-semibold"
+                  style={{ boxShadow: `0 10px 24px -10px hsla(${primaryColor}, 0.65)` }}
+                  onClick={markConnected}
+                >
                   <a href={googleAddUrl!} target="_blank" rel="noreferrer">
                     Conectar Google Calendar
                   </a>
                 </Button>
-                <Button asChild variant="secondary" className="w-full h-12 rounded-xl text-[15px] font-semibold" onClick={markConnected}>
+                <Button
+                  asChild
+                  variant="outline"
+                  className="w-full h-12 rounded-xl text-[15px] font-semibold border-2"
+                  onClick={markConnected}
+                >
                   <a href={webcalUrl!}>Conectar iPhone / Mac</a>
                 </Button>
-                <p className="text-[12px] leading-snug text-muted-foreground">
-                  Un toque, confirmás en tu calendario y listo para siempre. (Google puede
-                  tardar unas horas en refrescar.)
+                <p className="text-[12px] leading-snug text-muted-foreground text-center">
+                  Un toque, confirmás en tu calendario y listo para siempre.
+                  <br />
+                  (Google puede tardar unas horas en refrescar.)
                 </p>
-                <Button variant="ghost" size="sm" className="text-muted-foreground -ml-2" onClick={handleCopy}>
-                  {copied ? <Check className="h-3.5 w-3.5 mr-2 text-emerald-500" /> : <Copy className="h-3.5 w-3.5 mr-2" />}
-                  Copiar link (para agregarlo a mano)
-                </Button>
+                <div className="flex justify-center">
+                  <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={handleCopy}>
+                    {copied ? <Check className="h-3.5 w-3.5 mr-2 text-emerald-500" /> : <Copy className="h-3.5 w-3.5 mr-2" />}
+                    Copiar link (para agregarlo a mano)
+                  </Button>
+                </div>
               </div>
             )}
 
             {/* Opcional: que la agenda LEA su calendario y avise choques */}
-            <div className="border-t border-border/60 pt-3.5">
+            <div className="rounded-2xl border border-border/60 bg-card px-3.5 py-1.5">
               <button
                 type="button"
                 onClick={() => setExtOpen((v) => !v)}
-                className="w-full flex items-center justify-between gap-3 text-left min-h-[44px]"
+                className="w-full flex items-center justify-between gap-3 text-left min-h-[48px] py-1.5"
               >
                 <div className="min-w-0">
                   <p className="text-sm font-semibold leading-tight">
@@ -266,7 +336,7 @@ export const CalendarSyncButton = ({ mobile = false }: { mobile?: boolean }) => 
               </button>
 
               {extOpen && (
-                <div className="mt-2.5 space-y-2.5">
+                <div className="pt-1 pb-2.5 space-y-2.5">
                   {cals.map((c) => (
                     <div
                       key={c.id}
