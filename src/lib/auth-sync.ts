@@ -76,7 +76,6 @@ const PRO_ROUTE_PREFIXES = [
   "/centro-control",
   "/recordatorios-pendientes",
   "/mi-consultorio",
-  "/horarios-disponibles",
   "/solicitudes",
   "/pagos",
   "/personalizar-portal",

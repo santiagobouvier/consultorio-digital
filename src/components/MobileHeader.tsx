@@ -63,7 +63,6 @@ const MODULE_GROUPS: ModuleGroup[] = [
 // también cuando estás en cualquiera de sus subpáginas.
 const CONFIG_ROUTES = [
   "/configuracion",
-  "/horarios-disponibles",
   "/recordatorios-pendientes",
   "/mi-consultorio",
   "/personalizar-portal",

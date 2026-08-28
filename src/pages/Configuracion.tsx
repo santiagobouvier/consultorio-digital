@@ -12,7 +12,6 @@ import { getSubdomainUrl } from "@/hooks/use-hostname-business";
 import { buildShareUrl } from "@/config/app";
 import {
   ArrowLeft,
-  AlarmClock,
   Clock,
   Settings,
   Palette,
@@ -32,14 +31,6 @@ type ConfigTile = {
 };
 
 const TILES: ConfigTile[] = [
-  {
-    key: "horarios",
-    title: "Horarios y sesiones",
-    description: "Tus días y horas de atención, y los tipos de sesión que ofrecés.",
-    url: "/horarios-disponibles",
-    icon: AlarmClock,
-    tint: "262 80% 66%",
-  },
   {
     key: "recordatorios",
     title: "Recordatorios",

@@ -7,7 +7,6 @@ import {
   Settings,
   Palette,
   Clock,
-  AlarmClock,
   FileText,
   LogOut,
   Shield,
@@ -38,7 +37,6 @@ const dashboardItems = [
 
 const agendaItems = [
   { title: "Agenda", url: "/agenda", icon: CalendarDays },
-  { title: "Horarios y sesiones", url: "/horarios-disponibles", icon: AlarmClock },
   { title: "Solicitudes", url: "/solicitudes", icon: FileText },
 ];
 

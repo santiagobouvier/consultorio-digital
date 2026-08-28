@@ -34,7 +34,6 @@ const Appointments = lazy(() => import("./pages/Appointments"));
 const Agenda = lazy(() => import("./pages/CalendarV2"));
 const PendingReminders = lazy(() => import("./pages/PendingReminders"));
 const ClinicSettings = lazy(() => import("./pages/ClinicSettings"));
-const AvailableSlots = lazy(() => import("./pages/AvailableSlots"));
 const PublicClinic = lazy(() => import("./pages/PublicClinic"));
 const PublicBooking = lazy(() => import("./pages/PublicBooking"));
 const AppointmentRequests = lazy(() => import("./pages/AppointmentRequests"));
@@ -168,7 +167,6 @@ const PROTECTED_ROUTE_PREFIXES = [
   "/centro-control",
   "/recordatorios-pendientes",
   "/mi-consultorio",
-  "/horarios-disponibles",
   "/solicitudes",
   "/pagos",
   "/personalizar-portal",
@@ -296,7 +294,6 @@ const App = () => {
                 <Route path="/centro-control" element={<Protected><CommandCenter /></Protected>} />
                 <Route path="/recordatorios-pendientes" element={<Protected><PendingReminders /></Protected>} />
                 <Route path="/mi-consultorio" element={<Protected><ClinicSettings /></Protected>} />
-                <Route path="/horarios-disponibles" element={<Protected><AvailableSlots /></Protected>} />
                 <Route path="/solicitudes" element={<Protected><AppointmentRequests /></Protected>} />
                 <Route path="/pagos" element={<Protected><Payments /></Protected>} />
                 <Route path="/personalizar-portal" element={<Protected><PortalCustomization /></Protected>} />

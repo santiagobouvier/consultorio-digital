@@ -14,7 +14,7 @@ import { getPanelBrand } from "@/lib/panel-brand-cache";
 const CLINIC_PREFIXES = ["/portal/", "/consultorio/", "/portal-paciente"];
 const PANEL_PREFIXES = [
   "/dashboard", "/agenda", "/patients", "/pagos", "/solicitudes",
-  "/recordatorios-pendientes", "/mi-consultorio", "/horarios-disponibles",
+  "/recordatorios-pendientes", "/mi-consultorio",
   "/personalizar-portal", "/billing", "/estadisticas", "/centro-control",
   "/appointments", "/ayuda", "/configuracion",
 ];
