@@ -316,25 +316,29 @@ const Patients = () => {
   const PatientChips = ({ p, compact = false }: { p: Insight; compact?: boolean }) => (
     <div className={cn("flex flex-wrap items-center gap-1.5", compact && "gap-1")}>
       {p.next_appointment ? (
-        <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary px-2 py-0.5 text-[11px] font-semibold capitalize">
+        <span className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 text-primary px-2 py-0.5 text-[11px] font-semibold capitalize">
           <CalendarClock className="h-3 w-3" />
           {format(new Date(p.next_appointment), "EEE d/M · HH:mm", { locale: es })}
         </span>
       ) : p.lapsed ? (
-        <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/12 text-amber-600 dark:text-amber-400 px-2 py-0.5 text-[11px] font-semibold">
+        <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/35 bg-amber-500/10 text-amber-600 dark:text-amber-400 px-2 py-0.5 text-[11px] font-semibold">
           <AlertTriangle className="h-3 w-3" />
           {p.daysSinceLast! >= 14
             ? `${Math.floor(p.daysSinceLast! / 7)} sem sin venir`
             : "Sin próxima cita"}
         </span>
-      ) : null}
+      ) : (
+        <span className="inline-flex items-center rounded-full border border-border/60 bg-muted/40 text-muted-foreground px-2 py-0.5 text-[11px] font-medium">
+          Sin agendar
+        </span>
+      )}
       {p.debt && p.debt.total > 0 && (
-        <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/12 text-rose-600 dark:text-rose-400 px-2 py-0.5 text-[11px] font-semibold">
+        <span className="inline-flex items-center gap-1 rounded-full border border-rose-500/35 bg-rose-500/10 text-rose-600 dark:text-rose-400 px-2 py-0.5 text-[11px] font-semibold">
           Debe {formatCurrency(p.debt.total, p.debt.currency)}
         </span>
       )}
       {p.agreed_frequency && AGREED_FREQUENCY_LABELS[p.agreed_frequency as AgreedFrequency] && (
-        <span className="inline-flex items-center rounded-full bg-muted/70 text-muted-foreground px-2 py-0.5 text-[11px] font-medium">
+        <span className="inline-flex items-center rounded-full border border-border/60 bg-muted/40 text-muted-foreground px-2 py-0.5 text-[11px] font-medium">
           {AGREED_FREQUENCY_LABELS[p.agreed_frequency as AgreedFrequency]}
         </span>
       )}
@@ -387,9 +391,42 @@ const Patients = () => {
           />
         </div>
 
-        {/* Segmentos que responden preguntas reales. El riel deja CLARO que
-            sigue: degradado en los bordes + flechitas que scrollean. */}
-        <div className="relative -mx-4 sm:mx-0 lg:mx-0 lg:shrink-0 lg:max-w-[62%]">
+        {/* Mobile: los segmentos como grilla de tarjetitas (número grande +
+            etiqueta), con la activa resaltada en borde de marca */}
+        <div className="grid grid-cols-3 gap-2 lg:hidden">
+          {SEGMENTS.map((s) => {
+            const selected = segment === s.id;
+            const accent =
+              s.id === "debt" && s.count > 0
+                ? "text-rose-500"
+                : s.id === "no_next" && s.count > 0
+                  ? "text-amber-500"
+                  : selected
+                    ? "text-primary"
+                    : "text-foreground";
+            return (
+              <button
+                key={s.id}
+                onClick={() => pickSegment(s.id)}
+                className={cn(
+                  "rounded-2xl border px-3 py-2.5 text-left transition-all active:scale-[0.97]",
+                  selected
+                    ? "border-primary/60 bg-primary/[0.06] shadow-[0_10px_24px_-14px_hsl(var(--primary)/0.5)]"
+                    : "border-border/60 bg-card"
+                )}
+              >
+                <p className={cn("text-xl font-bold tabular-nums leading-none", accent)}>{s.count}</p>
+                <p className="text-[11px] text-muted-foreground mt-1 truncate">
+                  {s.id === "no_next" ? "Sin próx. cita" : s.label}
+                </p>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Escritorio: los segmentos como chips en fila junto al buscador.
+            El riel deja CLARO que sigue: degradado + flechitas. */}
+        <div className="relative hidden lg:block lg:mx-0 lg:shrink-0 lg:max-w-[62%]">
           <div
             ref={segmentRailRef}
             onScroll={updateRailHints}
@@ -493,27 +530,32 @@ const Patients = () => {
                   style={{ animationDelay: `${Math.min(i * 30, 250)}ms`, animationDuration: "300ms", animationFillMode: "both" }}
                   onClick={() => navigate(`/patients/${patient.id}`)}
                 >
-                  <CardContent className="p-3.5 flex items-center gap-3">
-                    <Avatar className={cn(
-                      "shrink-0 h-11 w-11 rounded-full",
-                      patient.is_active ? "ring-2 ring-primary/15" : "opacity-60"
-                    )}>
+                  <CardContent className="p-4 flex items-center gap-3.5">
+                    {/* Avatar sólido: el color cuenta el estado de un vistazo
+                        (verde = con próxima, ámbar = hace semanas sin venir) */}
+                    <Avatar className={cn("shrink-0 h-12 w-12 rounded-full", !patient.is_active && "opacity-60")}>
                       {patient.avatar_url && <AvatarImage src={patient.avatar_url} alt={patient.full_name} className="object-cover" />}
-                      <AvatarFallback className={cn(
-                        "rounded-full text-sm font-bold",
-                        patient.is_active ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
-                      )}>
+                      <AvatarFallback
+                        className={cn(
+                          "rounded-full text-sm font-bold",
+                          patient.next_appointment
+                            ? "bg-emerald-400 text-emerald-950"
+                            : patient.lapsed
+                              ? "bg-amber-400 text-amber-950"
+                              : "bg-muted text-muted-foreground"
+                        )}
+                      >
                         {getInitials(patient.full_name) || <UserIcon className="h-5 w-5" />}
                       </AvatarFallback>
                     </Avatar>
 
-                    <div className="min-w-0 flex-1 space-y-1">
+                    <div className="min-w-0 flex-1 space-y-1.5">
                       <div className="flex items-center gap-1.5">
-                        <p className="text-[15px] font-semibold text-foreground truncate">
+                        <p className="text-[16px] font-bold text-foreground truncate">
                           {patient.full_name}
                         </p>
                         {patient.age !== null && (
-                          <span className="text-[11px] text-muted-foreground shrink-0">{patient.age}</span>
+                          <span className="text-xs text-muted-foreground shrink-0">{patient.age}</span>
                         )}
                         {patient.auth_user_id && (
                           <Smartphone className="h-3 w-3 text-primary/70 shrink-0" />
