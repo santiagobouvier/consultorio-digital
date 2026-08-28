@@ -215,7 +215,7 @@ const Configuracion = () => {
 
   return (
     <div className="min-h-screen bg-background pb-16">
-      <div className="mx-auto w-full max-w-[860px] px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+      <div className="mx-auto w-full max-w-[860px] lg:max-w-none px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
         {/* Encabezado de página */}
         <div className="flex items-center gap-3">
           <button
@@ -243,7 +243,7 @@ const Configuracion = () => {
         </div>
 
         {/* Tiles */}
-        <div className="flex flex-col gap-3">
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3">
           {tiles.map((tile) => {
             const tintHsl = `hsl(${tile.tint})`;
             const tintHsla = (alpha: number) => `hsla(${tile.tint}, ${alpha})`;
@@ -253,7 +253,7 @@ const Configuracion = () => {
               <button
                 key={tile.url}
                 onClick={() => navigate(tile.url)}
-                className="group flex items-start gap-4 rounded-2xl border border-border/70 bg-card p-4 sm:p-5 text-left transition-all duration-200 hover:border-border hover:shadow-md active:scale-[0.99]"
+                className="group flex h-full items-start gap-4 rounded-2xl border border-border/70 bg-card p-4 sm:p-5 text-left transition-all duration-200 hover:border-border hover:shadow-md active:scale-[0.99]"
               >
                 <span
                   className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl transition-transform duration-200 group-hover:scale-[1.06]"
