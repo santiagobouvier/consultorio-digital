@@ -15,11 +15,19 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "@/hooks/use-toast";
 import { useBusinessId } from "@/hooks/use-business-id";
 import { useProfessionals } from "@/hooks/use-professionals";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { fetchExternalBusyDay, type ExternalBusyBlock } from "@/hooks/use-external-busy";
+import { fetchExternalBusyDay, clearExternalBusyCache, type ExternalBusyBlock } from "@/hooks/use-external-busy";
 import { notifyPatient } from "@/lib/push-notifications";
 import { addWeeks, addMonths, format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -156,6 +164,9 @@ export function CreateAppointmentModal({
   const [busyLoading, setBusyLoading] = useState(false);
   // Calendario personal conectado (Google/iPhone): avisa choques, no bloquea
   const [extBusy, setExtBusy] = useState<ExternalBusyBlock[]>([]);
+  // Choque concreto al elegir hora: diálogo con opciones (no un toast al aire)
+  const [clashDialog, setClashDialog] = useState<{ slotMin: number; ext: ExternalBusyBlock } | null>(null);
+  const [clashWorking, setClashWorking] = useState(false);
   // Elegir un día lejano (más allá de la tira de 2 semanas)
   const [farDateOpen, setFarDateOpen] = useState(false);
 
@@ -339,15 +350,50 @@ export function CreateAppointmentModal({
     extBusy.find((b) => b.start < slotMin + 30 && b.end > slotMin) ?? null;
 
   const pickTime = (slotMin: number) => {
-    setTime(minToHHMM(slotMin));
     const ext = extClashAt(slotMin);
     if (ext) {
-      toast({
-        title: "Ojo: chocás con tu calendario",
-        description: `A esa hora ya tenés ${ext.label}, ${minToHHMM(ext.start)}–${minToHHMM(ext.end)}. Podés agendar igual.`,
-      });
+      // Choque con su calendario personal: decisión concreta, dos botones
+      setClashDialog({ slotMin, ext });
+      return;
     }
+    setTime(minToHHMM(slotMin));
     setStep("service");
+  };
+
+  /** "Agendar igual acá": sigue con la hora elegida, el evento queda. */
+  const clashKeepBoth = () => {
+    if (!clashDialog) return;
+    setTime(minToHHMM(clashDialog.slotMin));
+    setClashDialog(null);
+    setStep("service");
+  };
+
+  /** "Borrar ese evento de Google y agendar": lo saca de su Google de
+   *  verdad (solo eventos de la cuenta conectada) y sigue. */
+  const clashDeleteAndBook = async () => {
+    if (!clashDialog?.ext.eventId) return;
+    setClashWorking(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("google-calendar-sync", {
+        body: { action: "delete-event", eventId: clashDialog.ext.eventId },
+      });
+      if (error || (data as any)?.error) {
+        toast({
+          title: "No se pudo borrar",
+          description: "El evento sigue en tu Google. Podés agendar igual si querés.",
+          variant: "destructive",
+        });
+        return;
+      }
+      clearExternalBusyCache(date);
+      setExtBusy((prev) => prev.filter((b) => b !== clashDialog.ext));
+      toast({ title: "Evento borrado de tu Google", description: "Listo, el lugar quedó libre." });
+      setTime(minToHHMM(clashDialog.slotMin));
+      setClashDialog(null);
+      setStep("service");
+    } finally {
+      setClashWorking(false);
+    }
   };
 
   // ── Elegir tipo de sesión ──
@@ -1454,35 +1500,83 @@ export function CreateAppointmentModal({
     </>
   );
 
-  // Celular: bottom-sheet grande, cómodo para el pulgar.
+  // Choque con el calendario personal: decisión concreta con dos caminos
+  const clashDialogEl = clashDialog && (
+    <AlertDialog open onOpenChange={(o) => !o && !clashWorking && setClashDialog(null)}>
+      <AlertDialogContent className="max-w-md">
+        <AlertDialogHeader>
+          <AlertDialogTitle>A esa hora tenés algo tuyo 📅</AlertDialogTitle>
+          <AlertDialogDescription>
+            {clashDialog.ext.label}, de {minToHHMM(clashDialog.ext.start)} a{" "}
+            {minToHHMM(clashDialog.ext.end)}. ¿Qué hacemos?
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter className="flex-col sm:flex-col gap-2">
+          {clashDialog.ext.eventId && (
+            <Button
+              onClick={clashDeleteAndBook}
+              disabled={clashWorking}
+              className="w-full h-11 rounded-xl font-semibold"
+            >
+              {clashWorking && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Borrar ese evento de Google y agendar acá
+            </Button>
+          )}
+          <Button
+            variant="secondary"
+            onClick={clashKeepBoth}
+            disabled={clashWorking}
+            className="w-full h-11 rounded-xl font-semibold"
+          >
+            Agendar igual (quedan los dos)
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={() => setClashDialog(null)}
+            disabled={clashWorking}
+            className="w-full h-10 rounded-xl text-muted-foreground"
+          >
+            Elegir otra hora
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+
   if (isMobile) {
     return (
-      <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerContent className="max-h-[94dvh]">
-          <DrawerTitle className="sr-only">Nueva cita</DrawerTitle>
-          <div
-            className="overflow-y-auto px-4 pt-2"
-            style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 1.5rem)" }}
-          >
-            {body}
-          </div>
-        </DrawerContent>
-      </Drawer>
+      <>
+        <Drawer open={open} onOpenChange={onOpenChange}>
+          <DrawerContent className="max-h-[94dvh]">
+            <DrawerTitle className="sr-only">Nueva cita</DrawerTitle>
+            <div
+              className="overflow-y-auto px-4 pt-2"
+              style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 1.5rem)" }}
+            >
+              {body}
+            </div>
+          </DrawerContent>
+        </Drawer>
+        {clashDialogEl}
+      </>
     );
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className={cn(
-          "max-h-[85vh] overflow-y-auto sm:max-w-lg",
-          // El paso de día y horario respira en desktop
-          step === "schedule" && scheduleMode === "slots" && "lg:max-w-3xl"
-        )}
-      >
-        <DialogTitle className="sr-only">Nueva cita</DialogTitle>
-        {body}
-      </DialogContent>
-    </Dialog>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent
+          className={cn(
+            "max-h-[85vh] overflow-y-auto sm:max-w-lg",
+            // El paso de día y horario respira en desktop
+            step === "schedule" && scheduleMode === "slots" && "lg:max-w-3xl"
+          )}
+        >
+          <DialogTitle className="sr-only">Nueva cita</DialogTitle>
+          {body}
+        </DialogContent>
+      </Dialog>
+      {clashDialogEl}
+    </>
   );
 }

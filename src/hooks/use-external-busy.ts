@@ -6,12 +6,20 @@ export interface ExternalBusyBlock {
   start: number;
   end: number;
   label: string;
+  /** id del evento en Google (solo con OAuth): permite "borrar y agendar". */
+  eventId?: string;
 }
 
 // Cache cortito por día: la función va a buscar el .ics remoto, no tiene
 // sentido repetir el viaje si el usuario va y vuelve entre días.
 const cache = new Map<string, { at: number; data: ExternalBusyBlock[] }>();
 const TTL_MS = 2 * 60 * 1000;
+
+/** Invalida el cache (ej: después de borrar un evento de Google). */
+export const clearExternalBusyCache = (dayStr?: string) => {
+  if (dayStr) cache.delete(dayStr);
+  else cache.clear();
+};
 
 /** Bloques ocupados del calendario personal para un día (YYYY-MM-DD).
  *  Junta las dos fuentes: el link iCal pegado (external-calendar) y la
@@ -28,7 +36,7 @@ export const fetchExternalBusyDay = async (dayStr: string): Promise<ExternalBusy
       supabase.functions.invoke("external-calendar", { body }).catch(() => ({ data: null, error: true })),
       supabase.functions.invoke("google-calendar-sync", { body }).catch(() => ({ data: null, error: true })),
     ]);
-    const raw: { start: string; end: string; title: string; calendar: string }[] = [];
+    const raw: { start: string; end: string; title: string; calendar: string; eventId?: string }[] = [];
     for (const res of [icsRes, oauthRes]) {
       const d = (res as { data: unknown }).data as { busy?: unknown } | null;
       if (Array.isArray(d?.busy)) raw.push(...(d!.busy as typeof raw));
@@ -43,6 +51,7 @@ export const fetchExternalBusyDay = async (dayStr: string): Promise<ExternalBusy
           start: cs.getHours() * 60 + cs.getMinutes(),
           end: ce.getHours() * 60 + ce.getMinutes(),
           label: `«${b.title}» · ${b.calendar}`,
+          eventId: b.eventId,
         };
       })
       .filter((b) => b.end > b.start)

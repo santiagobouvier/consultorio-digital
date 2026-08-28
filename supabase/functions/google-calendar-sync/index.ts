@@ -132,8 +132,25 @@ Deno.serve(async (req) => {
           end: e.end.dateTime,
           title: e.summary || "Evento",
           calendar: "Google",
+          // Con OAuth podemos borrar el evento desde acá ("borrar y agendar")
+          eventId: e.id,
         }));
       return json({ busy, connected: true });
+    }
+
+    // Borra UN evento del Google del profesional (lo usa "borrar y agendar"
+    // cuando una cita nueva choca con algo suyo)
+    if (action === "delete-event") {
+      const eventId = String(body?.eventId ?? "");
+      if (!eventId) return json({ error: "eventId requerido" }, 400);
+      const res = await fetch(
+        `https://www.googleapis.com/calendar/v3/calendars/${calId}/events/${encodeURIComponent(eventId)}`,
+        { method: "DELETE", headers: gHeaders }
+      );
+      if (!res.ok && res.status !== 404 && res.status !== 410) {
+        return json({ error: "No se pudo borrar el evento" }, 500);
+      }
+      return json({ ok: true });
     }
 
     if (action === "sync") {
