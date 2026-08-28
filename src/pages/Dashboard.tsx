@@ -648,7 +648,7 @@ const Dashboard = () => {
                         const d = new Date(nowTick);
                         const h = d.getHours();
                         const saludo = h < 12 ? "Buenos días" : h < 19 ? "Buenas tardes" : "Buenas noches";
-                        return `${saludo} · ${d.toLocaleDateString("es-UY", { weekday: "long", day: "numeric", month: "long" })}`;
+                        return `${saludo} · ${d.toLocaleDateString("es-UY", { weekday: "long", day: "numeric", month: "short" })}`;
                       })()}
                     </p>
                     <h1 className="text-lg font-bold truncate mt-0.5" style={{ color: "#eef6f0" }}>
@@ -672,7 +672,20 @@ const Dashboard = () => {
                     className="text-[44px] font-bold tabular-nums tracking-tight leading-none"
                     style={{ ...GROTESK, color: "#eef6f0" }}
                   >
-                    {new Date(nowTick).toLocaleTimeString("es-UY", { hour: "2-digit", minute: "2-digit" })}
+                    {(() => {
+                      const d = new Date(nowTick);
+                      const h = d.getHours();
+                      const hh = String(h % 12 || 12).padStart(2, "0");
+                      const mm = String(d.getMinutes()).padStart(2, "0");
+                      return (
+                        <>
+                          {hh}:{mm}
+                          <span className="text-lg font-semibold ml-1.5 align-baseline" style={{ color: "rgba(217, 232, 223, 0.55)" }}>
+                            {h < 12 ? "a.m." : "p.m."}
+                          </span>
+                        </>
+                      );
+                    })()}
                   </p>
                   <p className="text-xs mt-2" style={{ color: "rgba(217, 232, 223, 0.6)" }}>
                     {activeH.length === 0
@@ -701,23 +714,39 @@ const Dashboard = () => {
               {/* Mini-métricas de vidrio: lectura del día en un vistazo */}
               <div className="relative grid grid-cols-3 gap-2 mt-4">
                 {[
-                  { label: "Hoy", value: String(activeH.length), to: "/agenda" },
-                  { label: "Activos", value: String(activePatientsCount), to: "/patients" },
-                  { label: "Por cobrar", value: String(overduePayments + dueSoonPayments), to: "/pagos" },
+                  { label: "Hoy", value: String(activeH.length), to: "/agenda", warn: false },
+                  { label: "Activos", value: String(activePatientsCount), to: "/patients", warn: false },
+                  {
+                    label: "Por cobrar",
+                    value: String(overduePayments + dueSoonPayments),
+                    to: "/pagos",
+                    // Si hay plata por cobrar, la tarjetita grita en ámbar
+                    warn: overduePayments + dueSoonPayments > 0,
+                  },
                 ].map((s) => (
                   <button
                     key={s.label}
                     onClick={() => navigate(s.to)}
                     className="rounded-2xl px-3 py-2.5 text-left active:scale-[0.97] transition-transform"
-                    style={{ background: "rgba(140, 200, 170, 0.07)", border: "1px solid rgba(140, 200, 170, 0.12)" }}
+                    style={{
+                      background: s.warn ? "rgba(245, 158, 11, 0.09)" : "rgba(140, 200, 170, 0.07)",
+                      border: s.warn ? "1px solid rgba(245, 158, 11, 0.4)" : "1px solid rgba(140, 200, 170, 0.12)",
+                    }}
                   >
                     <span
                       className="block text-[9px] uppercase"
-                      style={{ ...GROTESK, letterSpacing: "0.16em", color: "rgba(217, 232, 223, 0.55)" }}
+                      style={{
+                        ...GROTESK,
+                        letterSpacing: "0.16em",
+                        color: s.warn ? "rgba(251, 191, 36, 0.85)" : "rgba(217, 232, 223, 0.55)",
+                      }}
                     >
                       {s.label}
                     </span>
-                    <span className="block text-xl font-bold tabular-nums mt-0.5" style={{ ...GROTESK, color: "#eef6f0" }}>
+                    <span
+                      className="block text-xl font-bold tabular-nums mt-0.5"
+                      style={{ ...GROTESK, color: s.warn ? "#fbbf24" : "#eef6f0" }}
+                    >
                       {s.value}
                     </span>
                   </button>
@@ -782,7 +811,11 @@ const Dashboard = () => {
             return (
               <Card
                 className="shadow-md"
-                style={{ background: "linear-gradient(180deg, #101a14, #0b130e)", border: "1px solid rgba(140, 200, 170, 0.12)" }}
+                style={{
+                  background: "linear-gradient(180deg, #101a14, #0b130e)",
+                  border: "1px solid rgba(52, 211, 153, 0.28)",
+                  boxShadow: "0 14px 34px -18px rgba(52, 211, 153, 0.45)",
+                }}
               >
                 <CardContent className="p-5 space-y-4">
                   {inSession && (
@@ -792,19 +825,43 @@ const Dashboard = () => {
                     </div>
                   )}
                   <div>
-                    <p
-                      className="text-[10px] uppercase"
-                      style={{ ...GROTESK, letterSpacing: "0.22em", color: "#34d399" }}
-                    >
-                      {inSession ? "Después" : "Tu próxima sesión"}
-                    </p>
-                    <div className="flex items-end justify-between gap-3 mt-1.5">
-                      <p className="text-[42px] font-bold tracking-tight leading-none" style={{ ...GROTESK, color: "#eef6f0" }}>
-                        {formatTime(nextAppt.start_at)}
+                    {/* Cabecera: etiqueta + cuenta regresiva como chip */}
+                    <div className="flex items-center justify-between gap-3">
+                      <p
+                        className="text-[10px] uppercase"
+                        style={{ ...GROTESK, letterSpacing: "0.22em", color: "#34d399" }}
+                      >
+                        {inSession ? "Después" : "Tu próxima sesión"}
                       </p>
-                      <span className="text-sm font-semibold text-[#34d399]">{countdownLabel(nextAppt.start_at)}</span>
+                      <span
+                        className="inline-flex items-center rounded-full px-3 py-1 text-xs font-bold shrink-0"
+                        style={{ background: "rgba(52, 211, 153, 0.14)", color: "#34d399", border: "1px solid rgba(52, 211, 153, 0.3)" }}
+                      >
+                        {countdownLabel(nextAppt.start_at)}
+                      </span>
                     </div>
-                    <div className="flex items-center gap-2 mt-2 flex-wrap">
+                    <p className="text-[42px] font-bold tracking-tight leading-none mt-2" style={{ ...GROTESK, color: "#eef6f0" }}>
+                      {(() => {
+                        const d = new Date(nextAppt.start_at);
+                        const h = d.getHours();
+                        return (
+                          <>
+                            {String(h % 12 || 12).padStart(2, "0")}:{String(d.getMinutes()).padStart(2, "0")}
+                            <span className="text-lg font-semibold ml-1.5" style={{ color: "rgba(217, 232, 223, 0.55)" }}>
+                              {h < 12 ? "a.m." : "p.m."}
+                            </span>
+                          </>
+                        );
+                      })()}
+                    </p>
+                    <div className="flex items-center gap-2.5 mt-3 flex-wrap">
+                      {/* Avatar con la inicial del paciente, como el mockup */}
+                      <span
+                        className="flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold shrink-0"
+                        style={{ background: "rgba(52, 211, 153, 0.16)", color: "#34d399", border: "1px solid rgba(52, 211, 153, 0.3)" }}
+                      >
+                        {name.trim()[0]?.toUpperCase() || "P"}
+                      </span>
                       <p className="text-base font-semibold text-foreground truncate">{name}</p>
                       <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                         {nextAppt.modality === "online" ? <Video className="h-3 w-3" /> : <MapPin className="h-3 w-3" />}
@@ -818,24 +875,24 @@ const Dashboard = () => {
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    {phone && (
-                      <button
-                        className="flex-1 h-11 rounded-xl text-sm font-semibold inline-flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
-                        style={ghostBtnStyle}
-                        onClick={() => openWhatsApp(phone, "")}
-                      >
-                        <MessageCircle className="h-4 w-4" />
-                        WhatsApp
-                      </button>
-                    )}
                     {nextAppt.patient_id && (
                       <button
-                        className="flex-1 h-11 rounded-xl text-sm font-bold inline-flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
+                        className="flex-1 h-12 rounded-2xl text-sm font-bold inline-flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
                         style={ctaStyle}
                         onClick={() => navigate(`/patients/${nextAppt.patient_id}`)}
                       >
                         <User className="h-4 w-4" />
                         Ver ficha
+                      </button>
+                    )}
+                    {phone && (
+                      <button
+                        className="h-12 w-12 rounded-2xl inline-flex items-center justify-center shrink-0 active:scale-[0.95] transition-transform"
+                        style={ghostBtnStyle}
+                        onClick={() => openWhatsApp(phone, "")}
+                        aria-label="WhatsApp"
+                      >
+                        <MessageCircle className="h-5 w-5" />
                       </button>
                     )}
                   </div>
@@ -971,6 +1028,24 @@ const Dashboard = () => {
                   </button>
                 ))
               )}
+
+              {/* Tu día: acceso directo a la agenda, siempre presente */}
+              <div className="w-full flex items-center gap-3 rounded-xl border border-border/60 px-4 py-2.5" style={{ background: "rgba(255,255,255,0.03)" }}>
+                <CalendarDays className="h-4 w-4 shrink-0" style={{ color: "#34d399" }} />
+                <span className="flex-1 min-w-0 text-sm font-semibold text-foreground">
+                  Tu día{" "}
+                  <span className="text-muted-foreground font-normal">
+                    ({todayAppointments.filter((a) => !["cancelled", "cancelled_by_patient", "no_show"].includes(a.status)).length})
+                  </span>
+                </span>
+                <button
+                  onClick={() => navigate("/agenda")}
+                  className="h-9 px-4 rounded-xl text-xs font-semibold shrink-0 active:scale-[0.96] transition-transform"
+                  style={ghostBtnStyle}
+                >
+                  Ver agenda
+                </button>
+              </div>
             </div>
           );
         })()}
