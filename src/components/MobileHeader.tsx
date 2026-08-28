@@ -166,30 +166,46 @@ export function MobileHeader() {
           )}
         </button>
 
-        {/* Centro: nombre del consultorio */}
-        <p className="absolute left-1/2 -translate-x-1/2 max-w-[45%] truncate text-[13px] font-semibold text-white/85 tracking-tight pointer-events-none">
+        {/* Centro: nombre del consultorio, protagonista */}
+        <p className="absolute left-1/2 -translate-x-1/2 max-w-[48%] truncate text-[15px] font-bold text-white tracking-tight pointer-events-none">
           {displayName || ""}
         </p>
 
-        {/* Right: theme toggle + clinic logo */}
+        {/* Right: theme toggle + logo del consultorio como avatar circular */}
         <div className="flex items-center gap-2">
-        <ThemeToggle />
-        {logoUrl ? (
-          <img
-            src={logoUrl}
-            alt="Logo"
-            loading="lazy"
-            decoding="async"
-            className="w-9 h-9 rounded-xl object-cover"
-            style={{ boxShadow: `0 0 0 2px ${brandHsla(0.35)}, 0 6px 18px -4px ${brandHsla(0.5)}` }}
-          />
-        ) : (
-          <img
-            src={consultorioLogo}
-            alt="Consultorio Digital"
-            className="h-11 w-11 object-contain"
-          />
-        )}
+          <ThemeToggle />
+          {logoUrl ? (
+            <img
+              src={logoUrl}
+              alt="Logo"
+              loading="lazy"
+              decoding="async"
+              className="w-9 h-9 rounded-full object-cover"
+              style={{ boxShadow: `0 0 0 2px ${brandHsla(0.45)}, 0 6px 18px -4px ${brandHsla(0.5)}` }}
+            />
+          ) : displayName ? (
+            <span
+              className="w-9 h-9 rounded-full flex items-center justify-center text-[12px] font-bold text-white"
+              style={{
+                background: brandHsla(0.25),
+                boxShadow: `0 0 0 2px ${brandHsla(0.45)}`,
+              }}
+            >
+              {displayName
+                .trim()
+                .split(/\s+/)
+                .map((w) => w[0])
+                .slice(0, 2)
+                .join("")
+                .toUpperCase()}
+            </span>
+          ) : (
+            <img
+              src={consultorioLogo}
+              alt="Consultorio Digital"
+              className="h-9 w-9 object-contain"
+            />
+          )}
         </div>
       </header>
 

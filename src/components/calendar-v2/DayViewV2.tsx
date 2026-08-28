@@ -251,19 +251,14 @@ export const DayViewV2 = ({
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <div
-              className={cn(
-                "w-14 h-14 rounded-2xl flex flex-col items-center justify-center shrink-0",
-                !isCurrentDay && "bg-card border border-border/70"
-              )}
-              style={
-                isCurrentDay
-                  ? {
-                      background: `hsl(${primaryColor})`,
-                      color: "#fff",
-                      boxShadow: `0 10px 24px -10px hsla(${primaryColor}, 0.65)`,
-                    }
-                  : undefined
-              }
+              className="w-14 h-14 rounded-2xl flex flex-col items-center justify-center shrink-0 bg-background border"
+              style={{
+                borderColor: `hsla(${primaryColor}, 0.35)`,
+                color: `hsl(${primaryColor})`,
+                boxShadow: isCurrentDay
+                  ? `0 10px 24px -10px hsla(${primaryColor}, 0.65)`
+                  : undefined,
+              }}
             >
               <span className="text-[10px] font-bold uppercase tracking-wide leading-none opacity-80">
                 {format(currentDate, "EEE", { locale: es })}
@@ -287,13 +282,27 @@ export const DayViewV2 = ({
               </p>
             </div>
           </div>
-          <div className="text-right shrink-0">
-            <span className="text-3xl font-extrabold text-primary tabular-nums leading-none">
-              {dayStats.activeCount}
-            </span>
-            <span className="block text-[11px] text-muted-foreground mt-0.5">
-              sesion{dayStats.activeCount !== 1 ? "es" : ""}
-            </span>
+          <div className="flex items-center gap-3 shrink-0">
+            {/* En escritorio los chips principales suben acá, como el mockup */}
+            {dayStats.first && dayStats.last && (
+              <span className="hidden lg:inline-flex items-center gap-1.5 text-xs text-muted-foreground bg-background/60 border border-border/50 rounded-full px-3 py-1.5 tabular-nums">
+                <Clock className="h-3 w-3" />
+                {dayStats.first} → {dayStats.last}
+              </span>
+            )}
+            {dayStats.occupiedMin > 0 && (
+              <span className="hidden lg:inline-flex items-center gap-1.5 text-xs font-semibold text-primary bg-primary/10 border border-primary/25 rounded-full px-3 py-1.5 tabular-nums">
+                {formatOccupied(dayStats.occupiedMin)} de atención
+              </span>
+            )}
+            <div className="text-right">
+              <span className="text-3xl font-extrabold text-primary tabular-nums leading-none">
+                {dayStats.activeCount}
+              </span>
+              <span className="block text-[11px] text-muted-foreground mt-0.5">
+                sesion{dayStats.activeCount !== 1 ? "es" : ""}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -314,13 +323,13 @@ export const DayViewV2 = ({
               </span>
             )}
             {dayStats.first && dayStats.last && (
-              <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground bg-background/60 border border-border/50 rounded-full px-2.5 py-1 tabular-nums">
+              <span className="lg:hidden inline-flex items-center gap-1.5 text-xs text-muted-foreground bg-background/60 border border-border/50 rounded-full px-2.5 py-1 tabular-nums">
                 <Clock className="h-3 w-3" />
                 {dayStats.first} → {dayStats.last}
               </span>
             )}
             {dayStats.occupiedMin > 0 && (
-              <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground bg-background/60 border border-border/50 rounded-full px-2.5 py-1 tabular-nums">
+              <span className="lg:hidden inline-flex items-center gap-1.5 text-xs font-semibold text-primary bg-primary/10 border border-primary/25 rounded-full px-2.5 py-1 tabular-nums">
                 {formatOccupied(dayStats.occupiedMin)} de atención
               </span>
             )}
@@ -345,17 +354,33 @@ export const DayViewV2 = ({
           En mobile todo sigue apilado en el mismo orden de siempre. */}
       <div className="space-y-4 lg:space-y-0 lg:grid lg:grid-cols-[minmax(0,1fr),380px] lg:gap-5 lg:items-start">
 
-      {/* Ficha del día: siempre presente en el panel derecho de escritorio,
-          abre el pop-up con el resumen clínico de la jornada. Compacta: el
-          detalle ya está en la cabecera y en el pop-up, acá no se repite. */}
-      <div className="hidden lg:flex lg:col-start-2 items-center justify-between gap-3 rounded-2xl border border-border/60 bg-card p-4">
+      {/* Ficha del día: panel derecho de escritorio con los datos clave de
+          la jornada y el botón al resumen completo (estilo mockup). */}
+      <div className="hidden lg:block lg:col-start-2 rounded-2xl border border-border/60 bg-card p-4 space-y-3">
         <p className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] text-primary">
-          <ClipboardList className="h-3.5 w-3.5" />
+          <span
+            className="flex h-7 w-7 items-center justify-center rounded-lg shrink-0"
+            style={{ background: `hsla(${primaryColor}, 0.14)` }}
+          >
+            <ClipboardList className="h-3.5 w-3.5" />
+          </span>
           Ficha del día
         </p>
+        <div className="space-y-2">
+          {[
+            { k: "Sesiones", v: String(dayStats.activeCount) },
+            { k: "Tiempo de atención", v: dayStats.occupiedMin > 0 ? formatOccupied(dayStats.occupiedMin) : "—" },
+            { k: "Primer paciente", v: dayStats.first ?? "—" },
+          ].map((row) => (
+            <div key={row.k} className="flex items-center justify-between gap-3">
+              <span className="text-sm text-muted-foreground">{row.k}</span>
+              <span className="text-sm font-bold tabular-nums">{row.v}</span>
+            </div>
+          ))}
+        </div>
         <Button
           variant="secondary"
-          className="h-10 rounded-xl font-semibold px-4"
+          className="w-full h-10 rounded-xl font-semibold"
           onClick={() => setFichaOpen(true)}
         >
           Ver resumen
