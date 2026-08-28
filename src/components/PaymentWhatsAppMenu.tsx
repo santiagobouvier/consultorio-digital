@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "@/hooks/use-toast";
 import { openWhatsApp } from "@/lib/whatsapp";
+import { cn } from "@/lib/utils";
 
 interface BankAccount {
   id: string;
@@ -40,6 +41,8 @@ interface PaymentWhatsAppMenuProps {
   /** Monto del pago: si está, el mensaje de transferencia lo menciona. */
   amount?: number;
   currency?: string;
+  /** Clases extra para el botón disparador (permite adaptarlo a cada layout). */
+  className?: string;
 }
 
 const WHATSAPP_MESSAGES = {
@@ -80,6 +83,7 @@ export function PaymentWhatsAppMenu({
   businessId,
   amount,
   currency,
+  className,
 }: PaymentWhatsAppMenuProps) {
   const [busy, setBusy] = useState(false);
   const [accounts, setAccounts] = useState<BankAccount[] | null>(null);
@@ -151,7 +155,7 @@ export function PaymentWhatsAppMenu({
         <Button
           variant="outline"
           size="sm"
-          className="h-8 gap-1 px-2.5 rounded-lg text-xs font-medium"
+          className={cn("h-8 gap-1 px-2.5 rounded-lg text-xs font-medium", className)}
           title="Enviar aviso de vencimiento por WhatsApp"
           disabled={busy}
         >
