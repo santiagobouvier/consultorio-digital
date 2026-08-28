@@ -19,6 +19,33 @@ All colors MUST be HSL.
 
 @layer base {
 :root {
+    /* ═══ Tema oscuro de las páginas nuevas (Pagos, Estadísticas, Dashboard,
+       Ficha): TODA la paleta se deriva del MATIZ del color de marca elegido
+       en Personalizar portal (--brand-primary-h). Si el consultorio elige
+       azul, el tema entero vira a azul manteniendo el mismo diseño. ═══ */
+    --cd-hue: var(--brand-primary-h, 160);
+    --cd-bg: hsl(var(--cd-hue) 30% 4%);
+    --cd-bg-deep: hsl(var(--cd-hue) 29% 5%);
+    --cd-card1: hsl(var(--cd-hue) 24% 8%);
+    --cd-card2: hsl(var(--cd-hue) 25% 6%);
+    --cd-hero1: hsl(var(--cd-hue) 35% 8%);
+    --cd-hero2: hsl(var(--cd-hue) 33% 6%);
+    --cd-hero3: hsl(var(--cd-hue) 24% 5%);
+    --cd-text: hsl(var(--cd-hue) 27% 94%);
+    --cd-text-bright: hsl(var(--cd-hue) 25% 95%);
+    --cd-soft-88: hsl(var(--cd-hue) 25% 88%);
+    --cd-soft-82: hsl(var(--cd-hue) 21% 82%);
+    --cd-text-soft: hsl(var(--cd-hue) 16% 72%);
+    --cd-muted: hsl(var(--cd-hue) 11% 55%);
+    --cd-dim: hsl(var(--cd-hue) 12% 42%);
+    --cd-accent-hsl: var(--cd-hue) 64% 52%;
+    --cd-accent: hsl(var(--cd-accent-hsl));
+    --cd-accent-soft: hsl(var(--cd-hue) 72% 67%);
+    --cd-deep-hsl: calc(var(--cd-hue) + 15) 80% 40%;
+    --cd-accent-deep: hsl(var(--cd-deep-hsl));
+    --cd-accent-ink: hsl(var(--cd-hue) 68% 5%);
+    --cd-tint-hsl: var(--cd-hue) 35% 67%;
+
     --background: 180 15% 98%;
     --foreground: 180 10% 15%;
 

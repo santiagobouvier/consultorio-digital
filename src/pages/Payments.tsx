@@ -338,8 +338,8 @@ const Payments = () => {
   // Familia visual del mockup: bosque oscuro + Space Grotesk para números
   const GROTESK = { fontFamily: "'Space Grotesk', sans-serif" } as const;
   const CARD_BG = {
-    background: "linear-gradient(180deg,#101a14,#0b130e)",
-    border: "1px solid rgba(140,200,170,0.1)",
+    background: "linear-gradient(180deg,var(--cd-card1),var(--cd-card2))",
+    border: "1px solid hsl(var(--cd-tint-hsl)/0.1)",
   } as const;
 
   const handleExportCSV = () => {
@@ -359,7 +359,7 @@ const Payments = () => {
   return (
     <div
       className="dark min-h-screen"
-      style={{ background: "#070d0a", fontFamily: "'Instrument Sans', 'Plus Jakarta Sans', sans-serif" }}
+      style={{ background: "var(--cd-bg)", fontFamily: "'Instrument Sans', 'Plus Jakarta Sans', sans-serif" }}
     >
       <div className="w-full px-4 sm:px-6 py-6 space-y-4">
 
@@ -368,16 +368,16 @@ const Payments = () => {
           <div className="flex items-center gap-3.5 min-w-0">
             <span
               className="h-[42px] w-[42px] sm:h-[46px] sm:w-[46px] rounded-[13px] sm:rounded-2xl flex items-center justify-center shrink-0"
-              style={{ background: "rgba(52,211,153,0.12)", border: "1px solid rgba(52,211,153,0.25)" }}
+              style={{ background: "hsl(var(--cd-accent-hsl)/0.12)", border: "1px solid hsl(var(--cd-accent-hsl)/0.25)" }}
             >
-              <Receipt className="h-5 w-5" style={{ color: "#34d399" }} />
+              <Receipt className="h-5 w-5" style={{ color: "var(--cd-accent)" }} />
             </span>
             <div className="min-w-0">
               <h1 className="text-[22px] sm:text-[28px] font-bold tracking-tight inline-flex items-center gap-2" style={GROTESK}>
                 Pagos
                 <HelpTooltip id="payments" />
               </h1>
-              <p className="text-[13px]" style={{ color: "#7e988b" }}>
+              <p className="text-[13px]" style={{ color: "var(--cd-muted)" }}>
                 {filteredPayments.length} pago{filteredPayments.length !== 1 ? "s" : ""} en la vista
               </p>
             </div>
@@ -386,9 +386,9 @@ const Payments = () => {
             onClick={() => setShowNewPayment(true)}
             className="hidden sm:inline-flex gap-2 rounded-[13px] h-11 px-5 font-semibold border-0"
             style={{
-              background: "linear-gradient(135deg,#34d399,#14b8a6)",
-              color: "#04150d",
-              boxShadow: "0 8px 24px rgba(52,211,153,0.25)",
+              background: "linear-gradient(135deg,var(--cd-accent),var(--cd-accent-deep))",
+              color: "var(--cd-accent-ink)",
+              boxShadow: "0 8px 24px hsl(var(--cd-accent-hsl)/0.25)",
             }}
           >
             <Plus className="h-4 w-4" />
@@ -404,8 +404,8 @@ const Payments = () => {
               label: rangeActive ? "Facturado (período)" : "Facturado (mes)",
               value: formatCurrency(stats.totalAmount, "UYU"),
               icon: DollarSign,
-              hex: "#34d399",
-              bg: "rgba(52,211,153,0.12)",
+              hex: "var(--cd-accent)",
+              bg: "hsl(var(--cd-accent-hsl)/0.12)",
               helpId: "paymentsTotalBilled" as const,
               filter: "all",
             },
@@ -413,8 +413,8 @@ const Payments = () => {
               label: rangeActive ? "Cobrado (período)" : "Cobrado (mes)",
               value: formatCurrency(stats.paidAmount, "UYU"),
               icon: CheckCircle2,
-              hex: "#6ee7b7",
-              bg: "rgba(52,211,153,0.12)",
+              hex: "var(--cd-accent-soft)",
+              bg: "hsl(var(--cd-accent-hsl)/0.12)",
               helpId: "paymentsTotalCollected" as const,
               filter: "paid",
             },
@@ -458,11 +458,11 @@ const Payments = () => {
                 <span className="flex flex-col items-start gap-0.5 min-w-0">
                   <span
                     className="font-bold text-[17px] sm:text-[19px] whitespace-nowrap leading-none"
-                    style={{ ...GROTESK, color: activo ? stat.hex : "#eaf3ee" }}
+                    style={{ ...GROTESK, color: activo ? stat.hex : "var(--cd-text)" }}
                   >
                     {stat.value}
                   </span>
-                  <span className="text-[11px] font-medium whitespace-nowrap inline-flex items-center gap-1" style={{ color: "#7e988b" }}>
+                  <span className="text-[11px] font-medium whitespace-nowrap inline-flex items-center gap-1" style={{ color: "var(--cd-muted)" }}>
                     {stat.label}
                     <HelpTooltip id={stat.helpId} />
                   </span>
@@ -477,13 +477,13 @@ const Payments = () => {
           const rate = stats.totalAmount > 0
             ? Math.min(100, Math.round((stats.paidAmount / stats.totalAmount) * 100))
             : 100;
-          const rateColor = rate >= 80 ? "#34d399" : rate >= 50 ? "#fcd34d" : "#fda4af";
+          const rateColor = rate >= 80 ? "var(--cd-accent)" : rate >= 50 ? "#fcd34d" : "#fda4af";
           return (
             <div className="lg:hidden rounded-2xl px-4 py-3.5" style={CARD_BG}>
               <div className="flex items-baseline gap-2.5 mb-2">
                 <span
                   className="text-[10px] font-semibold uppercase"
-                  style={{ ...GROTESK, letterSpacing: "0.15em", color: "#5f7a6d" }}
+                  style={{ ...GROTESK, letterSpacing: "0.15em", color: "var(--cd-dim)" }}
                 >
                   Cobranza {rangeActive ? "del período" : "del mes"}
                 </span>
@@ -491,13 +491,13 @@ const Payments = () => {
                   {rate}%
                 </span>
               </div>
-              <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(140,200,170,0.12)" }}>
+              <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "hsl(var(--cd-tint-hsl)/0.12)" }}>
                 <div
                   className="h-full rounded-full transition-all duration-700"
                   style={{ width: `${rate}%`, background: `linear-gradient(90deg, ${rateColor}, ${rateColor}cc)` }}
                 />
               </div>
-              <p className="mt-1.5 text-[11px]" style={{ color: "#5f7a6d" }}>
+              <p className="mt-1.5 text-[11px]" style={{ color: "var(--cd-dim)" }}>
                 {formatCurrency(stats.paidAmount, "UYU")} de {formatCurrency(stats.totalAmount, "UYU")}
               </p>
             </div>
@@ -516,21 +516,21 @@ const Payments = () => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-11 h-11 rounded-[13px] text-sm border-0 focus-visible:ring-emerald-500/30"
-                style={{ background: "rgba(140,200,170,0.05)", border: "1px solid rgba(140,200,170,0.12)", color: "#eaf3ee" }}
+                style={{ background: "hsl(var(--cd-tint-hsl)/0.05)", border: "1px solid hsl(var(--cd-tint-hsl)/0.12)", color: "var(--cd-text)" }}
               />
             </div>
             <button
               type="button"
               onClick={() => setMobileFiltersOpen((v) => !v)}
               className="sm:hidden relative flex h-11 w-11 items-center justify-center rounded-[13px] shrink-0"
-              style={{ background: "rgba(140,200,170,0.05)", border: "1px solid rgba(140,200,170,0.12)", color: "#a9c4b7" }}
+              style={{ background: "hsl(var(--cd-tint-hsl)/0.05)", border: "1px solid hsl(var(--cd-tint-hsl)/0.12)", color: "var(--cd-text-soft)" }}
               title="Filtros"
             >
               <Filter className="h-4 w-4" />
               {(statusFilter !== "all" || periodFilter !== "all" || patientFilter !== "all") && (
                 <span
                   className="absolute top-[9px] right-[9px] w-[7px] h-[7px] rounded-full"
-                  style={{ background: "#34d399", border: "2px solid #0b130e", boxSizing: "content-box" }}
+                  style={{ background: "var(--cd-accent)", border: "2px solid var(--cd-card2)", boxSizing: "content-box" }}
                 />
               )}
             </button>
@@ -538,7 +538,7 @@ const Payments = () => {
               type="button"
               onClick={handleExportCSV}
               className="sm:hidden flex h-11 w-11 items-center justify-center rounded-[13px] shrink-0"
-              style={{ background: "rgba(140,200,170,0.05)", border: "1px solid rgba(140,200,170,0.12)", color: "#a9c4b7" }}
+              style={{ background: "hsl(var(--cd-tint-hsl)/0.05)", border: "1px solid hsl(var(--cd-tint-hsl)/0.12)", color: "var(--cd-text-soft)" }}
               title="Exportar CSV"
             >
               <Download className="h-4 w-4" />
@@ -550,7 +550,7 @@ const Payments = () => {
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger
               className="w-full sm:w-[180px] h-11 rounded-[13px] border-0 text-[13px] font-medium"
-              style={{ background: "rgba(140,200,170,0.05)", border: "1px solid rgba(140,200,170,0.12)", color: "#a9c4b7" }}
+              style={{ background: "hsl(var(--cd-tint-hsl)/0.05)", border: "1px solid hsl(var(--cd-tint-hsl)/0.12)", color: "var(--cd-text-soft)" }}
             >
               <SelectValue placeholder="Estado" />
             </SelectTrigger>
@@ -566,7 +566,7 @@ const Payments = () => {
           <Select value={periodFilter} onValueChange={setPeriodFilter}>
             <SelectTrigger
               className="w-full sm:w-[180px] h-11 rounded-[13px] border-0 text-[13px] font-medium"
-              style={{ background: "rgba(140,200,170,0.05)", border: "1px solid rgba(140,200,170,0.12)", color: "#a9c4b7" }}
+              style={{ background: "hsl(var(--cd-tint-hsl)/0.05)", border: "1px solid hsl(var(--cd-tint-hsl)/0.12)", color: "var(--cd-text-soft)" }}
             >
               <SelectValue placeholder="Período" />
             </SelectTrigger>
@@ -582,7 +582,7 @@ const Payments = () => {
           <Select value={patientFilter} onValueChange={setPatientFilter}>
             <SelectTrigger
               className="w-full sm:w-[180px] h-11 rounded-[13px] border-0 text-[13px] font-medium"
-              style={{ background: "rgba(140,200,170,0.05)", border: "1px solid rgba(140,200,170,0.12)", color: "#a9c4b7" }}
+              style={{ background: "hsl(var(--cd-tint-hsl)/0.05)", border: "1px solid hsl(var(--cd-tint-hsl)/0.12)", color: "var(--cd-text-soft)" }}
             >
               <SelectValue placeholder="Paciente" />
             </SelectTrigger>
@@ -598,7 +598,7 @@ const Payments = () => {
           <Button
             variant="outline"
             className="hidden sm:inline-flex h-11 rounded-[13px] border-0 gap-2 text-[13px] font-medium"
-            style={{ background: "rgba(140,200,170,0.05)", border: "1px solid rgba(140,200,170,0.12)", color: "#a9c4b7" }}
+            style={{ background: "hsl(var(--cd-tint-hsl)/0.05)", border: "1px solid hsl(var(--cd-tint-hsl)/0.12)", color: "var(--cd-text-soft)" }}
             onClick={handleExportCSV}
           >
             <Download className="h-4 w-4" />
@@ -611,25 +611,25 @@ const Payments = () => {
         {periodFilter === "custom" && (
           <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
             <div className="flex items-center gap-2 flex-1">
-              <span className="text-sm w-14 shrink-0" style={{ color: "#7e988b" }}>Desde</span>
+              <span className="text-sm w-14 shrink-0" style={{ color: "var(--cd-muted)" }}>Desde</span>
               <Input
                 type="date"
                 value={customFrom}
                 max={customTo || undefined}
                 onChange={(e) => setCustomFrom(e.target.value)}
                 className="h-11 rounded-[13px] border-0"
-                style={{ background: "rgba(140,200,170,0.05)", border: "1px solid rgba(140,200,170,0.12)", color: "#eaf3ee" }}
+                style={{ background: "hsl(var(--cd-tint-hsl)/0.05)", border: "1px solid hsl(var(--cd-tint-hsl)/0.12)", color: "var(--cd-text)" }}
               />
             </div>
             <div className="flex items-center gap-2 flex-1">
-              <span className="text-sm w-14 shrink-0" style={{ color: "#7e988b" }}>Hasta</span>
+              <span className="text-sm w-14 shrink-0" style={{ color: "var(--cd-muted)" }}>Hasta</span>
               <Input
                 type="date"
                 value={customTo}
                 min={customFrom || undefined}
                 onChange={(e) => setCustomTo(e.target.value)}
                 className="h-11 rounded-[13px] border-0"
-                style={{ background: "rgba(140,200,170,0.05)", border: "1px solid rgba(140,200,170,0.12)", color: "#eaf3ee" }}
+                style={{ background: "hsl(var(--cd-tint-hsl)/0.05)", border: "1px solid hsl(var(--cd-tint-hsl)/0.12)", color: "var(--cd-text)" }}
               />
             </div>
           </div>
@@ -655,7 +655,7 @@ const Payments = () => {
                 <AlertTriangle className="h-4 w-4" />
               </div>
               <div className="min-w-0">
-                <p className="text-[15px] font-bold leading-tight" style={{ ...GROTESK, color: "#eaf3ee" }}>
+                <p className="text-[15px] font-bold leading-tight" style={{ ...GROTESK, color: "var(--cd-text)" }}>
                   Te deben <span style={{ color: "#fda4af" }}>{formatCurrency(debtors.reduce((s, d) => s + d.total, 0), "UYU")}</span>
                 </p>
                 <p className="text-[11.5px]" style={{ color: "#a06570" }}>
@@ -683,7 +683,7 @@ const Payments = () => {
                       setStatusFilter("overdue");
                     }}
                     className="flex-1 min-w-0 text-[13px] font-semibold text-left truncate transition-opacity hover:opacity-80"
-                    style={{ color: "#eaf3ee" }}
+                    style={{ color: "var(--cd-text)" }}
                     title="Ver sus pagos vencidos"
                   >
                     {d.name}
@@ -723,7 +723,7 @@ const Payments = () => {
           <div className="hidden lg:block rounded-[20px] p-5 space-y-3" style={CARD_BG}>
             <p
               className="text-[10.5px] font-semibold uppercase"
-              style={{ ...GROTESK, letterSpacing: "0.16em", color: "#5f7a6d" }}
+              style={{ ...GROTESK, letterSpacing: "0.16em", color: "var(--cd-dim)" }}
             >
               Tasa de cobranza {rangeActive ? "del período" : "del mes"}
             </p>
@@ -731,7 +731,7 @@ const Payments = () => {
               const rate = stats.totalAmount > 0
                 ? Math.min(100, Math.round((stats.paidAmount / stats.totalAmount) * 100))
                 : 100;
-              const rateColor = rate >= 80 ? "#34d399" : rate >= 50 ? "#fcd34d" : "#fda4af";
+              const rateColor = rate >= 80 ? "var(--cd-accent)" : rate >= 50 ? "#fcd34d" : "#fda4af";
               return (
                 <>
                   <div className="flex items-end justify-between">
@@ -739,13 +739,13 @@ const Payments = () => {
                       className="text-[34px] font-bold tabular-nums leading-none"
                       style={{ ...GROTESK, color: rateColor }}
                     >
-                      {rate}<span className="text-base font-medium" style={{ color: "#7e988b" }}>%</span>
+                      {rate}<span className="text-base font-medium" style={{ color: "var(--cd-muted)" }}>%</span>
                     </span>
-                    <span className="text-xs" style={{ color: "#7e988b" }}>
+                    <span className="text-xs" style={{ color: "var(--cd-muted)" }}>
                       {formatCurrency(stats.paidAmount, "UYU")} de {formatCurrency(stats.totalAmount, "UYU")}
                     </span>
                   </div>
-                  <div className="h-[7px] rounded-full overflow-hidden" style={{ background: "rgba(140,200,170,0.1)" }}>
+                  <div className="h-[7px] rounded-full overflow-hidden" style={{ background: "hsl(var(--cd-tint-hsl)/0.1)" }}>
                     <div
                       className="h-full rounded-full transition-all duration-700"
                       style={{
@@ -755,7 +755,7 @@ const Payments = () => {
                     />
                   </div>
                   {rate < 100 && (
-                    <p className="text-[11.5px]" style={{ color: "#5f7a6d" }}>
+                    <p className="text-[11.5px]" style={{ color: "var(--cd-dim)" }}>
                       Reclamá los vencidos para acercarte al 100%.
                     </p>
                   )}
@@ -789,30 +789,30 @@ const Payments = () => {
           </Card>
         ) : paymentsLoading ? (
           <div className="rounded-[20px] py-16 text-center" style={CARD_BG}>
-            <p className="text-sm" style={{ color: "#7e988b" }}>Cargando pagos...</p>
+            <p className="text-sm" style={{ color: "var(--cd-muted)" }}>Cargando pagos...</p>
           </div>
         ) : filteredPayments.length === 0 ? (
           <div
             className="rounded-[20px] py-16 text-center space-y-3"
-            style={{ background: "linear-gradient(180deg,#101a14,#0b130e)", border: "1px dashed rgba(140,200,170,0.2)" }}
+            style={{ background: "linear-gradient(180deg,var(--cd-card1),var(--cd-card2))", border: "1px dashed hsl(var(--cd-tint-hsl)/0.2)" }}
           >
             <div
               className="mx-auto w-16 h-16 rounded-2xl flex items-center justify-center"
-              style={{ background: "rgba(140,200,170,0.08)" }}
+              style={{ background: "hsl(var(--cd-tint-hsl)/0.08)" }}
             >
-              <Receipt className="h-8 w-8" style={{ color: "#7e988b" }} />
+              <Receipt className="h-8 w-8" style={{ color: "var(--cd-muted)" }} />
             </div>
-            <p className="text-lg font-medium" style={{ ...GROTESK, color: "#a9c4b7" }}>No se encontraron pagos</p>
-            <p className="text-sm" style={{ color: "#5f7a6d" }}>Ajustá los filtros o registrá un nuevo pago</p>
+            <p className="text-lg font-medium" style={{ ...GROTESK, color: "var(--cd-text-soft)" }}>No se encontraron pagos</p>
+            <p className="text-sm" style={{ color: "var(--cd-dim)" }}>Ajustá los filtros o registrá un nuevo pago</p>
           </div>
         ) : (
-          <div className="flex flex-col gap-2.5 sm:block sm:rounded-[20px] sm:overflow-hidden sm:bg-[linear-gradient(180deg,#101a14,#0b130e)] sm:border sm:border-[rgba(140,200,170,0.1)]">
+          <div className="flex flex-col gap-2.5 sm:block sm:rounded-[20px] sm:overflow-hidden sm:bg-[linear-gradient(180deg,var(--cd-card1),var(--cd-card2))] sm:border sm:border-[hsl(var(--cd-tint-hsl)/0.1)]">
             {pagePayments.map((payment) => (
               <div
                 key={payment.id}
                 role="button"
                 onClick={() => setSelectedPayment(payment)}
-                className="group cursor-pointer transition-colors hover:bg-white/[0.02] rounded-[17px] bg-[linear-gradient(180deg,#101a14,#0b130e)] border border-[rgba(140,200,170,0.1)] sm:rounded-none sm:bg-none sm:border-0 sm:border-b sm:border-b-[rgba(140,200,170,0.06)]"
+                className="group cursor-pointer transition-colors hover:bg-white/[0.02] rounded-[17px] bg-[linear-gradient(180deg,var(--cd-card1),var(--cd-card2))] border border-[hsl(var(--cd-tint-hsl)/0.1)] sm:rounded-none sm:bg-none sm:border-0 sm:border-b sm:border-b-[hsl(var(--cd-tint-hsl)/0.06)]"
               >
                 <div className="px-4 sm:px-5 py-3.5">
                   <div className="flex items-center gap-3 sm:gap-4">
@@ -823,20 +823,20 @@ const Payments = () => {
                         ...GROTESK,
                         background:
                           payment.status === "paid"
-                            ? "rgba(52,211,153,0.12)"
+                            ? "hsl(var(--cd-accent-hsl)/0.12)"
                             : payment.status === "overdue"
                               ? "rgba(251,113,133,0.12)"
                               : payment.status === "due_soon"
                                 ? "rgba(251,191,36,0.13)"
-                                : "rgba(140,200,170,0.1)",
+                                : "hsl(var(--cd-tint-hsl)/0.1)",
                         color:
                           payment.status === "paid"
-                            ? "#6ee7b7"
+                            ? "var(--cd-accent-soft)"
                             : payment.status === "overdue"
                               ? "#fda4af"
                               : payment.status === "due_soon"
                                 ? "#fcd34d"
-                                : "#a9c4b7",
+                                : "var(--cd-text-soft)",
                       }}
                     >
                       {(payment.patients?.full_name || "?")
@@ -856,14 +856,14 @@ const Payments = () => {
                           navigate(`/patients/${payment.patient_id}`);
                         }}
                         className="font-semibold text-[14.5px] sm:text-[13.5px] text-left truncate block w-full transition-colors"
-                        style={{ color: "#eaf3ee" }}
+                        style={{ color: "var(--cd-text)" }}
                       >
                         {payment.patients?.full_name || "Paciente desconocido"}
                       </button>
                       <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                         <p
                           className="text-[11.5px]"
-                          style={{ color: payment.status === "overdue" ? "#a06570" : "#7e988b" }}
+                          style={{ color: payment.status === "overdue" ? "#a06570" : "var(--cd-muted)" }}
                         >
                           {payment.status === "overdue" ? "Venció el" : payment.status === "paid" ? "Pagado · vencía el" : "Vence el"}{" "}
                           {format(new Date(payment.due_date), "d MMM yyyy", { locale: es })}
@@ -879,19 +879,19 @@ const Payments = () => {
 
                     {/* Monto + chip de estado */}
                     <div className="flex flex-col items-end gap-1 sm:flex-row sm:items-center sm:gap-2.5 shrink-0">
-                      <p className="font-bold text-[17px] sm:text-[15px] leading-tight text-right sm:min-w-[70px]" style={{ ...GROTESK, color: "#eaf3ee" }}>
+                      <p className="font-bold text-[17px] sm:text-[15px] leading-tight text-right sm:min-w-[70px]" style={{ ...GROTESK, color: "var(--cd-text)" }}>
                         {formatCurrency(payment.amount, payment.currency)}
                       </p>
                       <span
                         className="px-2.5 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap"
                         style={
                           payment.status === "paid"
-                            ? { background: "rgba(52,211,153,0.12)", border: "1px solid rgba(52,211,153,0.3)", color: "#6ee7b7" }
+                            ? { background: "hsl(var(--cd-accent-hsl)/0.12)", border: "1px solid hsl(var(--cd-accent-hsl)/0.3)", color: "var(--cd-accent-soft)" }
                             : payment.status === "overdue"
                               ? { background: "rgba(251,113,133,0.12)", border: "1px solid rgba(251,113,133,0.3)", color: "#fda4af" }
                               : payment.status === "due_soon"
                                 ? { background: "rgba(251,191,36,0.12)", border: "1px solid rgba(251,191,36,0.3)", color: "#fcd34d" }
-                                : { background: "rgba(140,200,170,0.08)", border: "1px solid rgba(140,200,170,0.18)", color: "#a9c4b7" }
+                                : { background: "hsl(var(--cd-tint-hsl)/0.08)", border: "1px solid hsl(var(--cd-tint-hsl)/0.18)", color: "var(--cd-text-soft)" }
                         }
                       >
                         {getPaymentStatusLabel(payment.status)}
@@ -915,7 +915,7 @@ const Payments = () => {
                         cobrar manual visibles; editar/eliminar guardados en ⋯ */}
                     <div
                       className="hidden sm:flex items-center gap-1.5 shrink-0 pl-2.5 ml-1"
-                      style={{ borderLeft: "1px solid rgba(140,200,170,0.1)" }}
+                      style={{ borderLeft: "1px solid hsl(var(--cd-tint-hsl)/0.1)" }}
                       onClick={(e) => e.stopPropagation()}
                     >
                       {payment.status !== "paid" && payment.status !== "cancelled" && (
@@ -945,8 +945,8 @@ const Payments = () => {
                             }
                             className="rounded-[10px] h-8 gap-1.5 border-0 font-semibold"
                             style={{
-                              background: "linear-gradient(135deg,#34d399,#14b8a6)",
-                              color: "#04150d",
+                              background: "linear-gradient(135deg,var(--cd-accent),var(--cd-accent-deep))",
+                              color: "var(--cd-accent-ink)",
                             }}
                             title="Marcar como pagado"
                           >
@@ -993,7 +993,7 @@ const Payments = () => {
                         patientPhone={payment.patients?.whatsapp_phone || null}
                         patientName={payment.patients?.full_name || ""}
                         getPaymentLink={mpConnected ? () => ensurePaymentLink([payment.id]) : undefined}
-                        className="w-full h-10 px-0 justify-center rounded-[11px] text-xs font-semibold border-[rgba(140,200,170,0.14)] bg-[rgba(140,200,170,0.06)] text-[#a9c4b7] hover:bg-[rgba(140,200,170,0.12)] hover:text-[#6ee7b7]"
+                        className="w-full h-10 px-0 justify-center rounded-[11px] text-xs font-semibold border-[hsl(var(--cd-tint-hsl)/0.14)] bg-[hsl(var(--cd-tint-hsl)/0.06)] text-[color:var(--cd-text-soft)] hover:bg-[hsl(var(--cd-tint-hsl)/0.12)] hover:text-[color:var(--cd-accent-soft)]"
                       />
                       <PaymentWhatsAppMenu
                         patientPhone={payment.patients?.whatsapp_phone || null}
@@ -1002,7 +1002,7 @@ const Payments = () => {
                         businessId={businessId || undefined}
                         amount={payment.amount}
                         currency={payment.currency}
-                        className="w-full h-10 px-0 justify-center rounded-[11px] text-xs font-semibold border-[rgba(140,200,170,0.14)] bg-[rgba(140,200,170,0.06)] text-[#a9c4b7] hover:bg-[rgba(140,200,170,0.12)] hover:text-[#eaf3ee]"
+                        className="w-full h-10 px-0 justify-center rounded-[11px] text-xs font-semibold border-[hsl(var(--cd-tint-hsl)/0.14)] bg-[hsl(var(--cd-tint-hsl)/0.06)] text-[color:var(--cd-text-soft)] hover:bg-[hsl(var(--cd-tint-hsl)/0.12)] hover:text-[color:var(--cd-text)]"
                       />
                       <button
                         type="button"
@@ -1014,7 +1014,7 @@ const Payments = () => {
                           })
                         }
                         className="flex h-10 items-center justify-center gap-1.5 rounded-[11px] text-xs font-semibold"
-                        style={{ background: "linear-gradient(135deg,#34d399,#14b8a6)", color: "#04150d", border: "none" }}
+                        style={{ background: "linear-gradient(135deg,var(--cd-accent),var(--cd-accent-deep))", color: "var(--cd-accent-ink)", border: "none" }}
                       >
                         <CheckCircle2 className="h-3.5 w-3.5" />
                         Cobrar
@@ -1024,7 +1024,7 @@ const Payments = () => {
                           <button
                             type="button"
                             className="flex h-10 w-10 items-center justify-center rounded-[11px]"
-                            style={{ background: "transparent", border: "1px solid rgba(140,200,170,0.1)", color: "#5f7a6d" }}
+                            style={{ background: "transparent", border: "1px solid hsl(var(--cd-tint-hsl)/0.1)", color: "var(--cd-dim)" }}
                             title="Más acciones"
                           >
                             <MoreVertical className="h-4 w-4" />
@@ -1068,9 +1068,9 @@ const Payments = () => {
         onClick={() => setShowNewPayment(true)}
         className="sm:hidden fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:scale-95 transition-all duration-200 flex items-center justify-center"
         style={{
-          background: "linear-gradient(135deg,#34d399,#14b8a6)",
-          color: "#04150d",
-          boxShadow: "0 12px 32px rgba(52,211,153,0.35)",
+          background: "linear-gradient(135deg,var(--cd-accent),var(--cd-accent-deep))",
+          color: "var(--cd-accent-ink)",
+          boxShadow: "0 12px 32px hsl(var(--cd-accent-hsl)/0.35)",
         }}
       >
         <Plus className="h-6 w-6" />

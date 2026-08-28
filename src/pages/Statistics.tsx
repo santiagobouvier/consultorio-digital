@@ -624,19 +624,19 @@ const Statistics = () => {
 
   const GROTESK = { fontFamily: "'Space Grotesk', sans-serif" } as const;
   const CARD_BG = {
-    background: "linear-gradient(180deg,#101a14,#0b130e)",
-    border: "1px solid rgba(140,200,170,0.1)",
+    background: "linear-gradient(180deg,var(--cd-card1),var(--cd-card2))",
+    border: "1px solid hsl(var(--cd-tint-hsl)/0.1)",
   } as const;
   const PILL = {
-    background: "rgba(140,200,170,0.05)",
-    border: "1px solid rgba(140,200,170,0.12)",
-    color: "#a9c4b7",
+    background: "hsl(var(--cd-tint-hsl)/0.05)",
+    border: "1px solid hsl(var(--cd-tint-hsl)/0.12)",
+    color: "var(--cd-text-soft)",
   } as const;
 
   return (
     <div
       className="dark min-h-screen"
-      style={{ background: "#070d0a", fontFamily: "'Instrument Sans', 'Plus Jakarta Sans', sans-serif" }}
+      style={{ background: "var(--cd-bg)", fontFamily: "'Instrument Sans', 'Plus Jakarta Sans', sans-serif" }}
     >
       <div className="w-full px-4 sm:px-6 py-6 space-y-4">
         {/* Encabezado de página */}
@@ -644,22 +644,22 @@ const Statistics = () => {
           <div className="flex items-center gap-3.5 min-w-0">
             <span
               className="h-[46px] w-[46px] rounded-[14px] flex items-center justify-center shrink-0"
-              style={{ background: "rgba(52,211,153,0.12)", border: "1px solid rgba(52,211,153,0.25)" }}
+              style={{ background: "hsl(var(--cd-accent-hsl)/0.12)", border: "1px solid hsl(var(--cd-accent-hsl)/0.25)" }}
             >
-              <BarChart3 className="h-5 w-5" style={{ color: "#34d399" }} />
+              <BarChart3 className="h-5 w-5" style={{ color: "var(--cd-accent)" }} />
             </span>
             <div className="min-w-0">
               <h1 className="text-[22px] sm:text-[28px] font-bold tracking-tight inline-flex items-center gap-2" style={GROTESK}>
                 Estadísticas
                 <HelpTooltip id="statistics" />
               </h1>
-              <p className="text-[13px] truncate" style={{ color: "#7e988b" }}>{PERIOD_LABELS[period]}</p>
+              <p className="text-[13px] truncate" style={{ color: "var(--cd-muted)" }}>{PERIOD_LABELS[period]}</p>
             </div>
           </div>
           <div className="flex items-center gap-2.5 flex-wrap">
             <div
               className="flex gap-[3px] p-1 rounded-[13px]"
-              style={{ background: "rgba(140,200,170,0.06)", border: "1px solid rgba(140,200,170,0.12)" }}
+              style={{ background: "hsl(var(--cd-tint-hsl)/0.06)", border: "1px solid hsl(var(--cd-tint-hsl)/0.12)" }}
             >
               {([["30d", "30d"], ["90d", "90d"], ["year", "Año"], ["all", "Todo"]] as const).map(([key, label]) => (
                 <button
@@ -669,8 +669,8 @@ const Statistics = () => {
                   className="px-[15px] py-2 rounded-[10px] text-[12.5px] transition-colors"
                   style={
                     period === key
-                      ? { background: "#eaf3ee", color: "#0a120e", fontWeight: 600 }
-                      : { background: "transparent", color: "#7e988b", fontWeight: 500 }
+                      ? { background: "var(--cd-text)", color: "var(--cd-bg-deep)", fontWeight: 600 }
+                      : { background: "transparent", color: "var(--cd-muted)", fontWeight: 500 }
                   }
                 >
                   {label}
@@ -705,23 +705,23 @@ const Statistics = () => {
         <Tabs value={view} onValueChange={(v) => setView(v as typeof view)} className="space-y-4">
           <TabsList
             className="grid w-full grid-cols-3 sm:w-auto sm:inline-grid h-auto p-1 gap-1 rounded-[14px] bg-transparent"
-            style={{ background: "rgba(140,200,170,0.05)", border: "1px solid rgba(140,200,170,0.1)" }}
+            style={{ background: "hsl(var(--cd-tint-hsl)/0.05)", border: "1px solid hsl(var(--cd-tint-hsl)/0.1)" }}
           >
             <TabsTrigger
               value="finanzas"
-              className="gap-1.5 sm:px-[18px] py-[9px] rounded-[11px] text-[13px] font-medium text-[#7e988b] data-[state=active]:bg-[#eaf3ee] data-[state=active]:text-[#0a120e] data-[state=active]:font-semibold data-[state=active]:shadow-none"
+              className="gap-1.5 sm:px-[18px] py-[9px] rounded-[11px] text-[13px] font-medium text-[color:var(--cd-muted)] data-[state=active]:bg-[color:var(--cd-text)] data-[state=active]:text-[color:var(--cd-bg-deep)] data-[state=active]:font-semibold data-[state=active]:shadow-none"
             >
               <DollarSign className="h-[13px] w-[13px]" /> Finanzas
             </TabsTrigger>
             <TabsTrigger
               value="actividad"
-              className="gap-1.5 sm:px-[18px] py-[9px] rounded-[11px] text-[13px] font-medium text-[#7e988b] data-[state=active]:bg-[#eaf3ee] data-[state=active]:text-[#0a120e] data-[state=active]:font-semibold data-[state=active]:shadow-none"
+              className="gap-1.5 sm:px-[18px] py-[9px] rounded-[11px] text-[13px] font-medium text-[color:var(--cd-muted)] data-[state=active]:bg-[color:var(--cd-text)] data-[state=active]:text-[color:var(--cd-bg-deep)] data-[state=active]:font-semibold data-[state=active]:shadow-none"
             >
               <Activity className="h-[13px] w-[13px]" /> Actividad
             </TabsTrigger>
             <TabsTrigger
               value="pacientes"
-              className="gap-1.5 sm:px-[18px] py-[9px] rounded-[11px] text-[13px] font-medium text-[#7e988b] data-[state=active]:bg-[#eaf3ee] data-[state=active]:text-[#0a120e] data-[state=active]:font-semibold data-[state=active]:shadow-none"
+              className="gap-1.5 sm:px-[18px] py-[9px] rounded-[11px] text-[13px] font-medium text-[color:var(--cd-muted)] data-[state=active]:bg-[color:var(--cd-text)] data-[state=active]:text-[color:var(--cd-bg-deep)] data-[state=active]:font-semibold data-[state=active]:shadow-none"
             >
               <Users className="h-[13px] w-[13px]" /> Pacientes
             </TabsTrigger>
@@ -733,15 +733,15 @@ const Statistics = () => {
         <div
           className="relative overflow-hidden rounded-[22px]"
           style={{
-            border: "1px solid rgba(140,200,170,0.14)",
-            background: "linear-gradient(160deg,#0e1d15 0%,#0a1410 60%,#081009 100%)",
+            border: "1px solid hsl(var(--cd-tint-hsl)/0.14)",
+            background: "linear-gradient(160deg,var(--cd-hero1) 0%,var(--cd-hero2) 60%,var(--cd-hero3) 100%)",
           }}
         >
           <div
             className="absolute pointer-events-none"
             style={{
               top: -100, right: -50, width: 320, height: 320, borderRadius: "50%",
-              background: "radial-gradient(circle,rgba(52,211,153,.15) 0%,rgba(52,211,153,0) 65%)",
+              background: "radial-gradient(circle,hsl(var(--cd-accent-hsl)/.15) 0%,hsl(var(--cd-accent-hsl)/0) 65%)",
               filter: "blur(10px)",
             }}
             aria-hidden
@@ -750,7 +750,7 @@ const Statistics = () => {
             <div className="px-6 lg:px-7 py-6">
               <div
                 className="flex items-center gap-2 uppercase mb-2.5 text-[11px] font-semibold"
-                style={{ ...GROTESK, letterSpacing: "0.16em", color: "#34d399" }}
+                style={{ ...GROTESK, letterSpacing: "0.16em", color: "var(--cd-accent)" }}
               >
                 <DollarSign className="h-[13px] w-[13px]" />
                 Cobrado en el período
@@ -758,15 +758,15 @@ const Statistics = () => {
               <div className="flex items-baseline gap-2.5 flex-wrap">
                 <span
                   className="font-bold leading-none tracking-tight text-[28px] lg:text-[38px]"
-                  style={{ ...GROTESK, color: "#6ee7b7" }}
+                  style={{ ...GROTESK, color: "var(--cd-accent-soft)" }}
                 >
                   {formatCurrency(kpis.cobrado)}
                 </span>
                 <TrendBadge value={trends?.cobrado ?? null} />
               </div>
-              <div className="mt-2 text-xs" style={{ color: "#5f7a6d" }}>vs. período anterior</div>
+              <div className="mt-2 text-xs" style={{ color: "var(--cd-dim)" }}>vs. período anterior</div>
             </div>
-            <div className="px-6 lg:px-7 py-6 sm:border-l sm:border-l-[rgba(140,200,170,0.08)]">
+            <div className="px-6 lg:px-7 py-6 sm:border-l sm:border-l-[hsl(var(--cd-tint-hsl)/0.08)]">
               <div
                 className="flex items-center gap-2 uppercase mb-2.5 text-[11px] font-semibold"
                 style={{ ...GROTESK, letterSpacing: "0.16em", color: "#a08657" }}
@@ -780,12 +780,12 @@ const Statistics = () => {
               >
                 {formatCurrency(kpis.pendiente)}
               </div>
-              <div className="mt-2 text-xs" style={{ color: "#5f7a6d" }}>en pagos aún no realizados</div>
+              <div className="mt-2 text-xs" style={{ color: "var(--cd-dim)" }}>en pagos aún no realizados</div>
             </div>
-            <div className="px-6 lg:px-7 py-6 sm:border-l sm:border-l-[rgba(140,200,170,0.08)]">
+            <div className="px-6 lg:px-7 py-6 sm:border-l sm:border-l-[hsl(var(--cd-tint-hsl)/0.08)]">
               <div
                 className="flex items-center gap-2 uppercase mb-2.5 text-[11px] font-semibold"
-                style={{ ...GROTESK, letterSpacing: "0.16em", color: "#7e988b" }}
+                style={{ ...GROTESK, letterSpacing: "0.16em", color: "var(--cd-muted)" }}
               >
                 <Percent className="h-[13px] w-[13px]" />
                 Tasa de cobranza
@@ -797,7 +797,7 @@ const Statistics = () => {
                   <div className="flex items-center gap-4">
                     <div className="relative shrink-0" style={{ width: 76, height: 76 }}>
                       <svg width="76" height="76" viewBox="0 0 100 100">
-                        <circle cx="50" cy="50" r="41" fill="none" stroke="rgba(140,200,170,.12)" strokeWidth="9" />
+                        <circle cx="50" cy="50" r="41" fill="none" stroke="hsl(var(--cd-tint-hsl)/.12)" strokeWidth="9" />
                         <circle
                           cx="50" cy="50" r="41" fill="none" stroke="url(#grTasaStats)" strokeWidth="9"
                           strokeLinecap="round" strokeDasharray="258"
@@ -806,20 +806,20 @@ const Statistics = () => {
                         />
                         <defs>
                           <linearGradient id="grTasaStats" x1="0" y1="0" x2="1" y2="1">
-                            <stop offset="0%" stopColor="#34d399" />
-                            <stop offset="100%" stopColor="#14b8a6" />
+                            <stop offset="0%" style={{ stopColor: "var(--cd-accent)" }} />
+                            <stop offset="100%" style={{ stopColor: "var(--cd-accent-deep)" }} />
                           </linearGradient>
                         </defs>
                       </svg>
-                      <div className="absolute inset-0 flex items-center justify-center font-bold text-[19px]" style={{ ...GROTESK, color: "#eaf3ee" }}>
+                      <div className="absolute inset-0 flex items-center justify-center font-bold text-[19px]" style={{ ...GROTESK, color: "var(--cd-text)" }}>
                         {rate}%
                       </div>
                     </div>
                     <div>
-                      <div className="text-xs leading-relaxed" style={{ color: "#5f7a6d" }}>
+                      <div className="text-xs leading-relaxed" style={{ color: "var(--cd-dim)" }}>
                         del total facturado<br />en el período
                       </div>
-                      <div className="mt-1.5 text-[11.5px] font-semibold" style={{ color: "#6ee7b7" }}>
+                      <div className="mt-1.5 text-[11.5px] font-semibold" style={{ color: "var(--cd-accent-soft)" }}>
                         {formatCurrency(kpis.cobrado)} cobrado
                       </div>
                     </div>
@@ -835,54 +835,54 @@ const Statistics = () => {
           <div className="rounded-[18px] p-5" style={CARD_BG}>
             <div
               className="flex items-center gap-2 uppercase mb-2 text-[10.5px] font-semibold"
-              style={{ ...GROTESK, letterSpacing: "0.15em", color: "#5f7a6d" }}
+              style={{ ...GROTESK, letterSpacing: "0.15em", color: "var(--cd-dim)" }}
             >
-              <Target className="h-[13px] w-[13px]" style={{ color: "#34d399" }} />
+              <Target className="h-[13px] w-[13px]" style={{ color: "var(--cd-accent)" }} />
               Proyección de este mes
             </div>
-            <p className="font-bold text-2xl" style={{ ...GROTESK, color: "#eaf3ee" }}>{formatCurrency(monthProjection.total)}</p>
-            <p className="text-xs mt-1" style={{ color: "#7e988b" }}>
+            <p className="font-bold text-2xl" style={{ ...GROTESK, color: "var(--cd-text)" }}>{formatCurrency(monthProjection.total)}</p>
+            <p className="text-xs mt-1" style={{ color: "var(--cd-muted)" }}>
               {formatCurrency(monthProjection.cobrado)} cobrado + {formatCurrency(monthProjection.porCobrar)} por cobrar
             </p>
           </div>
           <div className="rounded-[18px] p-5" style={CARD_BG}>
             <div
               className="flex items-center gap-2 uppercase mb-2 text-[10.5px] font-semibold"
-              style={{ ...GROTESK, letterSpacing: "0.15em", color: "#5f7a6d" }}
+              style={{ ...GROTESK, letterSpacing: "0.15em", color: "var(--cd-dim)" }}
             >
               <Timer className="h-[13px] w-[13px]" style={{ color: "#a9ccf5" }} />
               Demora promedio de cobro
             </div>
-            <p className="font-bold text-2xl" style={{ ...GROTESK, color: "#eaf3ee" }}>
+            <p className="font-bold text-2xl" style={{ ...GROTESK, color: "var(--cd-text)" }}>
               {collectionDelay === null ? "—" : collectionDelay === 0 ? "Al día" : `${collectionDelay} días`}
             </p>
-            <p className="text-xs mt-1" style={{ color: "#7e988b" }}>
+            <p className="text-xs mt-1" style={{ color: "var(--cd-muted)" }}>
               entre el vencimiento y el pago efectivo
             </p>
           </div>
           <div
             className="rounded-[18px] p-5"
             style={{
-              background: "linear-gradient(180deg,#101a14,#0b130e)",
-              border: overdueInfo.count === 0 ? "1px solid rgba(52,211,153,0.16)" : "1px solid rgba(251,113,133,0.22)",
+              background: "linear-gradient(180deg,var(--cd-card1),var(--cd-card2))",
+              border: overdueInfo.count === 0 ? "1px solid hsl(var(--cd-accent-hsl)/0.16)" : "1px solid rgba(251,113,133,0.22)",
             }}
           >
             <div
               className="flex items-center gap-2 uppercase mb-2 text-[10.5px] font-semibold"
-              style={{ ...GROTESK, letterSpacing: "0.15em", color: "#5f7a6d" }}
+              style={{ ...GROTESK, letterSpacing: "0.15em", color: "var(--cd-dim)" }}
             >
               {overdueInfo.count === 0 ? (
-                <CalendarCheck className="h-[13px] w-[13px]" style={{ color: "#34d399" }} />
+                <CalendarCheck className="h-[13px] w-[13px]" style={{ color: "var(--cd-accent)" }} />
               ) : (
                 <AlertTriangle className="h-[13px] w-[13px]" style={{ color: "#fda4af" }} />
               )}
               Pagos vencidos
             </div>
-            <p className="font-bold text-2xl" style={{ ...GROTESK, color: overdueInfo.count === 0 ? "#6ee7b7" : "#fda4af" }}>
+            <p className="font-bold text-2xl" style={{ ...GROTESK, color: overdueInfo.count === 0 ? "var(--cd-accent-soft)" : "#fda4af" }}>
               {formatCurrency(overdueInfo.total)}
             </p>
             <div className="flex items-center justify-between gap-2 mt-1">
-              <p className="text-xs" style={{ color: overdueInfo.count === 0 ? "#7e988b" : "#a06570" }}>
+              <p className="text-xs" style={{ color: overdueInfo.count === 0 ? "var(--cd-muted)" : "#a06570" }}>
                 {overdueInfo.count === 0
                   ? "nadie te debe, todo al día ✓"
                   : `${overdueInfo.count} pago${overdueInfo.count === 1 ? "" : "s"} sin cobrar`}
@@ -907,17 +907,17 @@ const Statistics = () => {
           <div className="flex items-center gap-2.5 sm:gap-3 mb-5 flex-wrap">
             <span
               className="flex h-8 w-8 items-center justify-center rounded-[10px] shrink-0"
-              style={{ background: "rgba(52,211,153,0.12)", color: "#34d399" }}
+              style={{ background: "hsl(var(--cd-accent-hsl)/0.12)", color: "var(--cd-accent)" }}
             >
               <DollarSign className="h-[15px] w-[15px]" />
             </span>
-            <span className="font-semibold text-base flex-1 inline-flex items-center gap-2" style={{ ...GROTESK, color: "#eaf3ee" }}>
+            <span className="font-semibold text-base flex-1 inline-flex items-center gap-2" style={{ ...GROTESK, color: "var(--cd-text)" }}>
               Ingresos por mes
               <HelpTooltip id="statsRevenue" />
             </span>
-            <div className="flex gap-3.5 text-xs font-medium" style={{ color: "#7e988b" }}>
+            <div className="flex gap-3.5 text-xs font-medium" style={{ color: "var(--cd-muted)" }}>
               <span className="inline-flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-[3px]" style={{ background: "linear-gradient(135deg,#34d399,#14b8a6)" }} />
+                <span className="w-2.5 h-2.5 rounded-[3px]" style={{ background: "linear-gradient(135deg,var(--cd-accent),var(--cd-accent-deep))" }} />
                 Cobrado
               </span>
               <span className="inline-flex items-center gap-1.5">
@@ -927,51 +927,51 @@ const Statistics = () => {
             </div>
           </div>
           {revenueData.length === 0 ? (
-            <p className="text-sm py-8 text-center" style={{ color: "#7e988b" }}>No hay pagos en el período</p>
+            <p className="text-sm py-8 text-center" style={{ color: "var(--cd-muted)" }}>No hay pagos en el período</p>
           ) : (
             <div className="h-72 lg:h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={revenueData} margin={{ top: 20, right: 8, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="gradCobrado" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#34d399" />
-                      <stop offset="100%" stopColor="#14b8a6" />
+                      <stop offset="0%" style={{ stopColor: "var(--cd-accent)" }} />
+                      <stop offset="100%" style={{ stopColor: "var(--cd-accent-deep)" }} />
                     </linearGradient>
                     <linearGradient id="gradPendiente" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%" stopColor="#fcd34d" />
                       <stop offset="100%" stopColor="#f59e0b" />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid stroke="rgba(140,200,170,0.08)" vertical={false} />
+                  <CartesianGrid stroke="hsl(var(--cd-tint-hsl)/0.08)" vertical={false} />
                   <XAxis
                     dataKey="month"
-                    tick={{ fontSize: 11.5, fill: "#7e988b", fontFamily: "'Space Grotesk', sans-serif" }}
-                    axisLine={{ stroke: "rgba(140,200,170,0.1)" }}
+                    tick={{ fontSize: 11.5, fill: "var(--cd-muted)", fontFamily: "'Space Grotesk', sans-serif" }}
+                    axisLine={{ stroke: "hsl(var(--cd-tint-hsl)/0.1)" }}
                     tickLine={false}
                   />
                   <YAxis
-                    tick={{ fontSize: 10.5, fill: "#5f7a6d", fontFamily: "'Space Grotesk', sans-serif" }}
+                    tick={{ fontSize: 10.5, fill: "var(--cd-dim)", fontFamily: "'Space Grotesk', sans-serif" }}
                     tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
-                    axisLine={{ stroke: "rgba(140,200,170,0.1)" }}
+                    axisLine={{ stroke: "hsl(var(--cd-tint-hsl)/0.1)" }}
                     tickLine={false}
                   />
                   <Tooltip
                     formatter={(value: number) => formatCurrency(value)}
-                    cursor={{ fill: "rgba(140,200,170,0.05)" }}
+                    cursor={{ fill: "hsl(var(--cd-tint-hsl)/0.05)" }}
                     contentStyle={{
                       borderRadius: 12,
-                      border: "1px solid rgba(140,200,170,0.2)",
-                      background: "#101a14",
-                      color: "#eaf3ee",
+                      border: "1px solid hsl(var(--cd-tint-hsl)/0.2)",
+                      background: "var(--cd-card1)",
+                      color: "var(--cd-text)",
                     }}
-                    labelStyle={{ color: "#eaf3ee", fontWeight: 600 }}
+                    labelStyle={{ color: "var(--cd-text)", fontWeight: 600 }}
                   />
                   <Bar dataKey="cobrado" name="Cobrado" fill="url(#gradCobrado)" radius={[8, 8, 3, 3]}>
                     <LabelList
                       dataKey="cobrado"
                       position="top"
                       formatter={(v: number) => (v > 0 ? `$${v >= 1000 ? `${Math.round(v / 100) / 10}k` : v}` : "")}
-                      style={{ fill: "#6ee7b7", fontSize: 10.5, fontWeight: 600, fontFamily: "'Space Grotesk', sans-serif" }}
+                      style={{ fill: "var(--cd-accent-soft)", fontSize: 10.5, fontWeight: 600, fontFamily: "'Space Grotesk', sans-serif" }}
                     />
                   </Bar>
                   <Bar dataKey="pendiente" name="Pendiente" fill="url(#gradPendiente)" radius={[8, 8, 3, 3]}>
@@ -1413,7 +1413,7 @@ const TrendBadge = ({
       className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${className}`}
       style={
         good
-          ? { background: "rgba(52,211,153,0.1)", border: "1px solid rgba(52,211,153,0.25)", color: "#6ee7b7" }
+          ? { background: "hsl(var(--cd-accent-hsl)/0.1)", border: "1px solid hsl(var(--cd-accent-hsl)/0.25)", color: "var(--cd-accent-soft)" }
           : { background: "rgba(251,113,133,0.1)", border: "1px solid rgba(251,113,133,0.25)", color: "#fda4af" }
       }
     >

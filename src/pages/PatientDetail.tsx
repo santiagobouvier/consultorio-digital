@@ -538,8 +538,8 @@ const PatientDetail = () => {
     if (treatmentStatus === "abandono")
       return { label: "Abandono", bg: "rgba(251,113,133,0.1)", border: "rgba(251,113,133,0.25)", color: "#fda4af" };
     if (treatmentStatus === "activo" || patient.is_active)
-      return { label: treatmentStatus === "activo" ? "En tratamiento" : "Activo", bg: "rgba(52,211,153,0.13)", border: "rgba(52,211,153,0.3)", color: "#6ee7b7" };
-    return { label: "Inactivo", bg: "rgba(140,200,170,0.08)", border: "rgba(140,200,170,0.14)", color: "#a9c4b7" };
+      return { label: treatmentStatus === "activo" ? "En tratamiento" : "Activo", bg: "hsl(var(--cd-accent-hsl)/0.13)", border: "hsl(var(--cd-accent-hsl)/0.3)", color: "var(--cd-accent-soft)" };
+    return { label: "Inactivo", bg: "hsl(var(--cd-tint-hsl)/0.08)", border: "hsl(var(--cd-tint-hsl)/0.14)", color: "var(--cd-text-soft)" };
   })();
 
   const money = (n: number) => (modoPrivado ? "$ ••••" : formatCurrency(n, "UYU"));
@@ -548,15 +548,15 @@ const PatientDetail = () => {
     100
   );
   const ghostBtn =
-    "inline-flex items-center justify-center gap-2 rounded-[14px] border text-[14px] font-semibold transition-colors hover:bg-[rgba(140,200,170,0.15)] active:scale-[0.98] disabled:opacity-40 disabled:pointer-events-none";
+    "inline-flex items-center justify-center gap-2 rounded-[14px] border text-[14px] font-semibold transition-colors hover:bg-[hsl(var(--cd-tint-hsl)/0.15)] active:scale-[0.98] disabled:opacity-40 disabled:pointer-events-none";
   const ghostBtnStyle = {
-    background: "rgba(140,200,170,0.08)",
-    borderColor: "rgba(140,200,170,0.16)",
-    color: "#c8dbd1",
+    background: "hsl(var(--cd-tint-hsl)/0.08)",
+    borderColor: "hsl(var(--cd-tint-hsl)/0.16)",
+    color: "var(--cd-soft-82)",
   } as const;
 
   return (
-    <div className="dark min-h-screen" style={{ background: "#070d0a", fontFamily: "'Instrument Sans', 'Plus Jakarta Sans', sans-serif" }}>
+    <div className="dark min-h-screen" style={{ background: "var(--cd-bg)", fontFamily: "'Instrument Sans', 'Plus Jakarta Sans', sans-serif" }}>
       <style>{`
         @keyframes fichaDrift {
           0%, 100% { transform: translate(0, 0) scale(1); }
@@ -573,24 +573,24 @@ const PatientDetail = () => {
         <div className="flex flex-wrap items-center gap-3">
           <button
             onClick={() => navigate("/patients")}
-            className="flex h-[38px] w-[38px] items-center justify-center rounded-xl border transition-colors hover:bg-[rgba(140,200,170,0.14)]"
-            style={{ background: "rgba(140,200,170,0.07)", borderColor: "rgba(140,200,170,0.12)", color: "#a9c4b7" }}
+            className="flex h-[38px] w-[38px] items-center justify-center rounded-xl border transition-colors hover:bg-[hsl(var(--cd-tint-hsl)/0.14)]"
+            style={{ background: "hsl(var(--cd-tint-hsl)/0.07)", borderColor: "hsl(var(--cd-tint-hsl)/0.12)", color: "var(--cd-text-soft)" }}
             aria-label="Volver a pacientes"
           >
             <ArrowLeft className="h-4 w-4" />
           </button>
-          <p className="text-[13px] min-w-0 truncate" style={{ color: "#5f7a6d" }}>
+          <p className="text-[13px] min-w-0 truncate" style={{ color: "var(--cd-dim)" }}>
             Pacientes <span className="mx-1 opacity-60">/</span>
-            <span style={{ color: "#a9c4b7" }}>{patient.full_name}</span>
+            <span style={{ color: "var(--cd-text-soft)" }}>{patient.full_name}</span>
           </p>
           <div className="ml-auto flex items-center gap-2">
             <button
               onClick={() => setModoPrivado((v) => !v)}
-              className="flex h-[38px] w-[38px] items-center justify-center rounded-xl border transition-colors hover:bg-[rgba(140,200,170,0.14)]"
+              className="flex h-[38px] w-[38px] items-center justify-center rounded-xl border transition-colors hover:bg-[hsl(var(--cd-tint-hsl)/0.14)]"
               style={{
-                background: modoPrivado ? "rgba(52,211,153,0.13)" : "rgba(140,200,170,0.07)",
-                borderColor: modoPrivado ? "rgba(52,211,153,0.3)" : "rgba(140,200,170,0.12)",
-                color: modoPrivado ? "#6ee7b7" : "#a9c4b7",
+                background: modoPrivado ? "hsl(var(--cd-accent-hsl)/0.13)" : "hsl(var(--cd-tint-hsl)/0.07)",
+                borderColor: modoPrivado ? "hsl(var(--cd-accent-hsl)/0.3)" : "hsl(var(--cd-tint-hsl)/0.12)",
+                color: modoPrivado ? "var(--cd-accent-soft)" : "var(--cd-text-soft)",
               }}
               aria-label={modoPrivado ? "Mostrar montos" : "Ocultar montos (modo privado)"}
               title={modoPrivado ? "Mostrar montos" : "Modo privado: oculta los montos"}
@@ -599,8 +599,8 @@ const PatientDetail = () => {
             </button>
             <button
               onClick={() => setShowEditPatient(true)}
-              className="flex h-[38px] items-center gap-2 rounded-xl border px-3.5 text-[13px] font-semibold transition-colors hover:bg-[rgba(140,200,170,0.14)]"
-              style={{ background: "rgba(140,200,170,0.07)", borderColor: "rgba(140,200,170,0.12)", color: "#c8dbd1" }}
+              className="flex h-[38px] items-center gap-2 rounded-xl border px-3.5 text-[13px] font-semibold transition-colors hover:bg-[hsl(var(--cd-tint-hsl)/0.14)]"
+              style={{ background: "hsl(var(--cd-tint-hsl)/0.07)", borderColor: "hsl(var(--cd-tint-hsl)/0.12)", color: "var(--cd-soft-82)" }}
             >
               <Pencil className="h-3.5 w-3.5" />
               Editar
@@ -608,8 +608,8 @@ const PatientDetail = () => {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
-                  className="flex h-[38px] w-[38px] items-center justify-center rounded-xl border transition-colors hover:bg-[rgba(140,200,170,0.14)]"
-                  style={{ background: "rgba(140,200,170,0.07)", borderColor: "rgba(140,200,170,0.12)", color: "#a9c4b7" }}
+                  className="flex h-[38px] w-[38px] items-center justify-center rounded-xl border transition-colors hover:bg-[hsl(var(--cd-tint-hsl)/0.14)]"
+                  style={{ background: "hsl(var(--cd-tint-hsl)/0.07)", borderColor: "hsl(var(--cd-tint-hsl)/0.12)", color: "var(--cd-text-soft)" }}
                   aria-label="Más acciones"
                 >
                   <MoreHorizontal className="h-4 w-4" />
@@ -638,14 +638,14 @@ const PatientDetail = () => {
           className="relative overflow-hidden"
           style={{
             borderRadius: 26,
-            border: "1px solid rgba(140,200,170,0.14)",
-            background: "linear-gradient(160deg, #0e1d15, #0a1410 55%, #081009)",
+            border: "1px solid hsl(var(--cd-tint-hsl)/0.14)",
+            background: "linear-gradient(160deg, var(--cd-hero1), var(--cd-hero2) 55%, var(--cd-hero3))",
           }}
         >
           <div
             className="ficha-glow pointer-events-none absolute -top-24 -left-12 h-72 w-72 rounded-full"
             style={{
-              background: "radial-gradient(circle, rgba(52,211,153,0.22), transparent 70%)",
+              background: "radial-gradient(circle, hsl(var(--cd-accent-hsl)/0.22), transparent 70%)",
               filter: "blur(10px)",
               animation: "fichaDrift 14s ease-in-out infinite",
             }}
@@ -654,7 +654,7 @@ const PatientDetail = () => {
           <div
             className="ficha-glow pointer-events-none absolute -bottom-28 -right-16 h-80 w-80 rounded-full"
             style={{
-              background: "radial-gradient(circle, rgba(20,184,166,0.14), transparent 70%)",
+              background: "radial-gradient(circle, hsl(var(--cd-deep-hsl)/0.14), transparent 70%)",
               filter: "blur(10px)",
               animation: "fichaDrift 18s ease-in-out infinite reverse",
             }}
@@ -666,15 +666,15 @@ const PatientDetail = () => {
             <div className="relative shrink-0">
               <div
                 className="rounded-full"
-                style={{ padding: 3, background: "linear-gradient(135deg, #34d399, #14b8a6 60%, transparent)" }}
+                style={{ padding: 3, background: "linear-gradient(135deg, var(--cd-accent), var(--cd-accent-deep) 60%, transparent)" }}
               >
-                <Avatar className="h-[106px] w-[106px] rounded-full" style={{ border: "3px solid #0a1410" }}>
+                <Avatar className="h-[106px] w-[106px] rounded-full" style={{ border: "3px solid var(--cd-hero2)" }}>
                   {patient.avatar_url && (
                     <AvatarImage src={patient.avatar_url} alt={patient.full_name} className="object-cover" />
                   )}
                   <AvatarFallback
                     className="rounded-full text-3xl font-bold"
-                    style={{ background: "rgba(52,211,153,0.13)", color: "#6ee7b7", fontFamily: "'Space Grotesk', sans-serif" }}
+                    style={{ background: "hsl(var(--cd-accent-hsl)/0.13)", color: "var(--cd-accent-soft)", fontFamily: "'Space Grotesk', sans-serif" }}
                   >
                     {initials || <UserIcon className="h-8 w-8" />}
                   </AvatarFallback>
@@ -682,7 +682,7 @@ const PatientDetail = () => {
               </div>
               <span
                 className="absolute bottom-1 right-1 h-[18px] w-[18px] rounded-full"
-                style={{ background: patient.is_active ? "#34d399" : "#5f7a6d", border: "3px solid #0a1410" }}
+                style={{ background: patient.is_active ? "var(--cd-accent)" : "var(--cd-dim)", border: "3px solid var(--cd-hero2)" }}
                 aria-hidden
               />
             </div>
@@ -691,7 +691,7 @@ const PatientDetail = () => {
             <div className="min-w-0" style={{ flex: "1 1 260px" }}>
               <p
                 className="uppercase"
-                style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 600, fontSize: 11, letterSpacing: "0.22em", color: "#34d399" }}
+                style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 600, fontSize: 11, letterSpacing: "0.22em", color: "var(--cd-accent)" }}
               >
                 Paciente · Ficha clínica
               </p>
@@ -703,7 +703,7 @@ const PatientDetail = () => {
                   fontSize: "clamp(30px, 5vw, 46px)",
                   lineHeight: 1.05,
                   letterSpacing: "-0.02em",
-                  color: "#eaf3ee",
+                  color: "var(--cd-text)",
                 }}
               >
                 {patient.full_name}
@@ -730,7 +730,7 @@ const PatientDetail = () => {
                 {computeAge(patient.birth_date) !== null && (
                   <span
                     className="inline-flex items-center rounded-full px-3 py-[5px] text-[12px] font-semibold border"
-                    style={{ background: "rgba(140,200,170,0.08)", borderColor: "rgba(140,200,170,0.14)", color: "#a9c4b7" }}
+                    style={{ background: "hsl(var(--cd-tint-hsl)/0.08)", borderColor: "hsl(var(--cd-tint-hsl)/0.14)", color: "var(--cd-text-soft)" }}
                   >
                     {computeAge(patient.birth_date)} años
                   </span>
@@ -746,7 +746,7 @@ const PatientDetail = () => {
                 {hasPortal && (
                   <span
                     className="inline-flex items-center gap-1 rounded-full px-3 py-[5px] text-[12px] font-semibold border"
-                    style={{ background: "rgba(140,200,170,0.08)", borderColor: "rgba(140,200,170,0.14)", color: "#a9c4b7" }}
+                    style={{ background: "hsl(var(--cd-tint-hsl)/0.08)", borderColor: "hsl(var(--cd-tint-hsl)/0.14)", color: "var(--cd-text-soft)" }}
                   >
                     <Check className="h-3 w-3" />
                     Portal activo
@@ -755,7 +755,7 @@ const PatientDetail = () => {
               </div>
 
               {/* Meta */}
-              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[13px]" style={{ color: "#7e988b" }}>
+              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[13px]" style={{ color: "var(--cd-muted)" }}>
                 {patient.email && (
                   <span className="inline-flex items-center gap-1.5 min-w-0">
                     <Mail className="h-[13px] w-[13px] shrink-0" />
@@ -763,7 +763,7 @@ const PatientDetail = () => {
                   </span>
                 )}
                 {patient.whatsapp_phone && (
-                  <button onClick={openWhatsApp} className="inline-flex items-center gap-1.5 hover:underline" style={{ color: "#7e988b" }}>
+                  <button onClick={openWhatsApp} className="inline-flex items-center gap-1.5 hover:underline" style={{ color: "var(--cd-muted)" }}>
                     <Phone className="h-[13px] w-[13px]" />
                     {patient.whatsapp_phone}
                   </button>
@@ -781,13 +781,13 @@ const PatientDetail = () => {
                 onClick={() => setShowCreateAppointment(true)}
                 className="col-span-2 inline-flex items-center justify-center gap-2 transition hover:brightness-110 active:scale-[0.98]"
                 style={{
-                  background: "linear-gradient(135deg, #34d399, #14b8a6)",
-                  color: "#04150d",
+                  background: "linear-gradient(135deg, var(--cd-accent), var(--cd-accent-deep))",
+                  color: "var(--cd-accent-ink)",
                   borderRadius: 14,
                   padding: "13px 18px",
                   fontWeight: 600,
                   fontSize: 14,
-                  boxShadow: "0 8px 24px rgba(52,211,153,0.25)",
+                  boxShadow: "0 8px 24px hsl(var(--cd-accent-hsl)/0.25)",
                 }}
               >
                 <CalendarPlus className="h-4 w-4" />
@@ -829,18 +829,18 @@ const PatientDetail = () => {
         <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(165px, 1fr))" }}>
           {/* Próxima cita */}
           <div
-            style={{ borderRadius: 18, padding: "18px 20px", background: "linear-gradient(180deg, #101a14, #0b130e)", border: "1px solid rgba(140,200,170,0.1)" }}
+            style={{ borderRadius: 18, padding: "18px 20px", background: "linear-gradient(180deg, var(--cd-card1), var(--cd-card2))", border: "1px solid hsl(var(--cd-tint-hsl)/0.1)" }}
           >
-            <p className="uppercase" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 600, fontSize: 10.5, letterSpacing: "0.14em", color: "#5f7a6d" }}>
+            <p className="uppercase" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 600, fontSize: 10.5, letterSpacing: "0.14em", color: "var(--cd-dim)" }}>
               Próxima cita
             </p>
             {nextAppointment ? (
-              <p className="mt-2 capitalize" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 600, fontSize: 19, color: "#eaf3ee" }}>
+              <p className="mt-2 capitalize" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 600, fontSize: 19, color: "var(--cd-text)" }}>
                 {format(new Date(nextAppointment.start_at), "EEE d MMM · HH:mm", { locale: es })}
               </p>
             ) : (
               <>
-                <p className="mt-2" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 600, fontSize: 19, color: "#eaf3ee" }}>
+                <p className="mt-2" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 600, fontSize: 19, color: "var(--cd-text)" }}>
                   Sin agendar
                 </p>
                 <p className="mt-1 text-[12px]" style={{ color: "#f0a9b2" }}>Requiere acción</p>
@@ -850,18 +850,18 @@ const PatientDetail = () => {
 
           {/* Sesiones */}
           <div
-            style={{ borderRadius: 18, padding: "18px 20px", background: "linear-gradient(180deg, #101a14, #0b130e)", border: "1px solid rgba(140,200,170,0.1)" }}
+            style={{ borderRadius: 18, padding: "18px 20px", background: "linear-gradient(180deg, var(--cd-card1), var(--cd-card2))", border: "1px solid hsl(var(--cd-tint-hsl)/0.1)" }}
           >
-            <p className="uppercase" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 600, fontSize: 10.5, letterSpacing: "0.14em", color: "#5f7a6d" }}>
+            <p className="uppercase" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 600, fontSize: 10.5, letterSpacing: "0.14em", color: "var(--cd-dim)" }}>
               Sesiones
             </p>
-            <p className="mt-2" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 600, fontSize: 19, color: "#eaf3ee" }}>
+            <p className="mt-2" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 600, fontSize: 19, color: "var(--cd-text)" }}>
               {pastSessions.length} realizada{pastSessions.length !== 1 ? "s" : ""}
             </p>
-            <div className="mt-2.5 h-1 w-full rounded-full overflow-hidden" style={{ background: "rgba(140,200,170,0.12)" }}>
+            <div className="mt-2.5 h-1 w-full rounded-full overflow-hidden" style={{ background: "hsl(var(--cd-tint-hsl)/0.12)" }}>
               <div
                 className="h-full rounded-full transition-all duration-700"
-                style={{ width: `${sessionsPct}%`, background: "linear-gradient(90deg, #34d399, #14b8a6)" }}
+                style={{ width: `${sessionsPct}%`, background: "linear-gradient(90deg, var(--cd-accent), var(--cd-accent-deep))" }}
               />
             </div>
           </div>
@@ -871,18 +871,18 @@ const PatientDetail = () => {
             style={{
               borderRadius: 18,
               padding: "18px 20px",
-              background: debt > 0 ? "linear-gradient(180deg, #1a1410, #130e0b)" : "linear-gradient(180deg, #101a14, #0b130e)",
-              border: debt > 0 ? "1px solid rgba(251,191,36,0.18)" : "1px solid rgba(140,200,170,0.1)",
+              background: debt > 0 ? "linear-gradient(180deg, #1a1410, #130e0b)" : "linear-gradient(180deg, var(--cd-card1), var(--cd-card2))",
+              border: debt > 0 ? "1px solid rgba(251,191,36,0.18)" : "1px solid hsl(var(--cd-tint-hsl)/0.1)",
             }}
           >
-            <p className="uppercase" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 600, fontSize: 10.5, letterSpacing: "0.14em", color: debt > 0 ? "#a08657" : "#5f7a6d" }}>
+            <p className="uppercase" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 600, fontSize: 10.5, letterSpacing: "0.14em", color: debt > 0 ? "#a08657" : "var(--cd-dim)" }}>
               Pendiente de pago
             </p>
-            <p className="mt-2" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 26, color: paymentsError ? "#7e988b" : debt > 0 ? "#fcd34d" : "#6ee7b7" }}>
+            <p className="mt-2" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 26, color: paymentsError ? "var(--cd-muted)" : debt > 0 ? "#fcd34d" : "var(--cd-accent-soft)" }}>
               {paymentsError ? "—" : debt > 0 ? money(debt) : "$ 0"}
             </p>
             {!paymentsError && (
-              <p className="mt-0.5 text-[12px]" style={{ color: hasOverdue ? "#f0a9b2" : "#7e988b" }}>
+              <p className="mt-0.5 text-[12px]" style={{ color: hasOverdue ? "#f0a9b2" : "var(--cd-muted)" }}>
                 {hasOverdue ? "Tiene vencidos" : debt > 0 ? "Por cobrar" : "Al día"}
               </p>
             )}
@@ -890,16 +890,16 @@ const PatientDetail = () => {
 
           {/* Última sesión */}
           <div
-            style={{ borderRadius: 18, padding: "18px 20px", background: "linear-gradient(180deg, #101a14, #0b130e)", border: "1px solid rgba(140,200,170,0.1)" }}
+            style={{ borderRadius: 18, padding: "18px 20px", background: "linear-gradient(180deg, var(--cd-card1), var(--cd-card2))", border: "1px solid hsl(var(--cd-tint-hsl)/0.1)" }}
           >
-            <p className="uppercase" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 600, fontSize: 10.5, letterSpacing: "0.14em", color: "#5f7a6d" }}>
+            <p className="uppercase" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 600, fontSize: 10.5, letterSpacing: "0.14em", color: "var(--cd-dim)" }}>
               Última sesión
             </p>
-            <p className="mt-2" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 600, fontSize: 19, color: "#eaf3ee" }}>
+            <p className="mt-2" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 600, fontSize: 19, color: "var(--cd-text)" }}>
               {lastSession ? formatDate(lastSession.start_at) : "—"}
             </p>
             {lastSession && (
-              <p className="mt-1 text-[12px]" style={{ color: "#7e988b" }}>
+              <p className="mt-1 text-[12px]" style={{ color: "var(--cd-muted)" }}>
                 hace {differenceInDays(new Date(), new Date(lastSession.start_at))} días
                 {patient.agreed_frequency && AGREED_FREQUENCY_LABELS[patient.agreed_frequency as AgreedFrequency]
                   ? ` · ${AGREED_FREQUENCY_LABELS[patient.agreed_frequency as AgreedFrequency].toLowerCase()}`
@@ -912,28 +912,28 @@ const PatientDetail = () => {
           {/* Pestañas píldora (handoff): scrollables en móvil, activa clara */}
           <TabsList
             className="flex w-full h-auto justify-start gap-1.5 rounded-2xl p-[5px] overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-            style={{ background: "rgba(140,200,170,0.05)", border: "1px solid rgba(140,200,170,0.1)" }}
+            style={{ background: "hsl(var(--cd-tint-hsl)/0.05)", border: "1px solid hsl(var(--cd-tint-hsl)/0.1)" }}
           >
-            <TabsTrigger value="resumen" className="shrink-0 rounded-xl px-5 py-2.5 text-[13.5px] font-medium text-[#7e988b] gap-1.5 data-[state=active]:bg-[#eaf3ee] data-[state=active]:text-[#0a120e] data-[state=active]:font-semibold data-[state=active]:shadow-none">
+            <TabsTrigger value="resumen" className="shrink-0 rounded-xl px-5 py-2.5 text-[13.5px] font-medium text-[color:var(--cd-muted)] gap-1.5 data-[state=active]:bg-[color:var(--cd-text)] data-[state=active]:text-[color:var(--cd-bg-deep)] data-[state=active]:font-semibold data-[state=active]:shadow-none">
               <UserIcon className="h-4 w-4 shrink-0 hidden sm:block" />
               Resumen
             </TabsTrigger>
-            <TabsTrigger value="notes" className="shrink-0 rounded-xl px-5 py-2.5 text-[13.5px] font-medium text-[#7e988b] gap-1.5 data-[state=active]:bg-[#eaf3ee] data-[state=active]:text-[#0a120e] data-[state=active]:font-semibold data-[state=active]:shadow-none">
+            <TabsTrigger value="notes" className="shrink-0 rounded-xl px-5 py-2.5 text-[13.5px] font-medium text-[color:var(--cd-muted)] gap-1.5 data-[state=active]:bg-[color:var(--cd-text)] data-[state=active]:text-[color:var(--cd-bg-deep)] data-[state=active]:font-semibold data-[state=active]:shadow-none">
               <FileText className="h-4 w-4 shrink-0 hidden sm:block" />
               Expediente
             </TabsTrigger>
-            <TabsTrigger value="payments" className="shrink-0 rounded-xl px-5 py-2.5 text-[13.5px] font-medium text-[#7e988b] gap-1.5 data-[state=active]:bg-[#eaf3ee] data-[state=active]:text-[#0a120e] data-[state=active]:font-semibold data-[state=active]:shadow-none">
+            <TabsTrigger value="payments" className="shrink-0 rounded-xl px-5 py-2.5 text-[13.5px] font-medium text-[color:var(--cd-muted)] gap-1.5 data-[state=active]:bg-[color:var(--cd-text)] data-[state=active]:text-[color:var(--cd-bg-deep)] data-[state=active]:font-semibold data-[state=active]:shadow-none">
               <CreditCard className="h-4 w-4 shrink-0 hidden sm:block" />
               Pagos
               {unpaid.length > 0 && (
                 <span className="h-1.5 w-1.5 rounded-full shrink-0 animate-pulse" style={{ background: "#fb7185" }} />
               )}
             </TabsTrigger>
-            <TabsTrigger value="appointments" className="shrink-0 rounded-xl px-5 py-2.5 text-[13.5px] font-medium text-[#7e988b] gap-1.5 data-[state=active]:bg-[#eaf3ee] data-[state=active]:text-[#0a120e] data-[state=active]:font-semibold data-[state=active]:shadow-none">
+            <TabsTrigger value="appointments" className="shrink-0 rounded-xl px-5 py-2.5 text-[13.5px] font-medium text-[color:var(--cd-muted)] gap-1.5 data-[state=active]:bg-[color:var(--cd-text)] data-[state=active]:text-[color:var(--cd-bg-deep)] data-[state=active]:font-semibold data-[state=active]:shadow-none">
               <Calendar className="h-4 w-4 shrink-0 hidden sm:block" />
               Citas
             </TabsTrigger>
-            <TabsTrigger value="docs" className="shrink-0 rounded-xl px-5 py-2.5 text-[13.5px] font-medium text-[#7e988b] gap-1.5 data-[state=active]:bg-[#eaf3ee] data-[state=active]:text-[#0a120e] data-[state=active]:font-semibold data-[state=active]:shadow-none">
+            <TabsTrigger value="docs" className="shrink-0 rounded-xl px-5 py-2.5 text-[13.5px] font-medium text-[color:var(--cd-muted)] gap-1.5 data-[state=active]:bg-[color:var(--cd-text)] data-[state=active]:text-[color:var(--cd-bg-deep)] data-[state=active]:font-semibold data-[state=active]:shadow-none">
               <Paperclip className="h-4 w-4 shrink-0 hidden sm:block" />
               Docs
             </TabsTrigger>

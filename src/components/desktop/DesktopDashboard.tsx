@@ -423,7 +423,7 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
           <circle cx="36" cy="36" r={r} fill="none" strokeWidth="5.5" className={onDark ? "stroke-white/15" : "stroke-muted"} />
           <circle
             cx="36" cy="36" r={r} fill="none" strokeWidth="5.5" strokeLinecap="round"
-            className={onDark ? "stroke-[#34d399] transition-[stroke-dashoffset] duration-700" : "stroke-primary transition-[stroke-dashoffset] duration-700"}
+            className={onDark ? "stroke-[var(--cd-accent)] transition-[stroke-dashoffset] duration-700" : "stroke-primary transition-[stroke-dashoffset] duration-700"}
             strokeDasharray={c} strokeDashoffset={c * (1 - pct)}
           />
         </svg>
@@ -534,7 +534,7 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
 
   if (loading) {
     return (
-      <div className="dark min-h-screen p-10" style={{ background: "#070d0a" }}>
+      <div className="dark min-h-screen p-10" style={{ background: "var(--cd-bg)" }}>
         <div className="max-w-screen-2xl mx-auto space-y-8">
           <Skeleton className="h-20 w-full rounded-2xl" />
           <div className="grid grid-cols-[1fr_400px] gap-6">
@@ -555,7 +555,7 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
   return (
     <div
       className="dark min-h-screen"
-      style={{ background: "#070d0a", fontFamily: "'Instrument Sans', 'Plus Jakarta Sans', sans-serif" }}
+      style={{ background: "var(--cd-bg)", fontFamily: "'Instrument Sans', 'Plus Jakarta Sans', sans-serif" }}
     >
       <style>{`
         @keyframes dashDrift {
@@ -576,7 +576,7 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
                 <img src={brandLogoUrl} alt="Logo" className="h-12 w-12 rounded-xl object-cover ring-2 ring-white/20" />
               ) : (
                 <div className="h-12 w-12 rounded-xl bg-white/10 ring-2 ring-white/15 flex items-center justify-center">
-                  <Building2 className="h-6 w-6 text-[#34d399]" />
+                  <Building2 className="h-6 w-6 text-[color:var(--cd-accent)]" />
                 </div>
               )}
               <div className="min-w-0">
@@ -619,9 +619,9 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
               <button
                 className="h-10 px-5 inline-flex items-center gap-2 rounded-xl font-semibold text-sm transition hover:brightness-110 active:scale-[0.98]"
                 style={{
-                  background: "linear-gradient(135deg, #34d399, #14b8a6)",
-                  color: "#04150d",
-                  boxShadow: "0 8px 24px rgba(52,211,153,0.25)",
+                  background: "linear-gradient(135deg, var(--cd-accent), var(--cd-accent-deep))",
+                  color: "var(--cd-accent-ink)",
+                  boxShadow: "0 8px 24px hsl(var(--cd-accent-hsl)/0.25)",
                 }}
                 onClick={() => navigate("/agenda")}
               >
@@ -636,15 +636,15 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
           <div
             className="relative overflow-hidden rounded-3xl mt-6"
             style={{
-              background: "linear-gradient(160deg, #0e1d15, #0a1410 55%, #081009)",
-              border: "1px solid rgba(52,211,153,0.22)",
-              boxShadow: "0 24px 60px -30px rgba(52,211,153,0.35)",
+              background: "linear-gradient(160deg, var(--cd-hero1), var(--cd-hero2) 55%, var(--cd-hero3))",
+              border: "1px solid hsl(var(--cd-accent-hsl)/0.22)",
+              boxShadow: "0 24px 60px -30px hsl(var(--cd-accent-hsl)/0.35)",
             }}
           >
             <div
               className="dash-glow absolute -top-32 right-[8%] w-[560px] h-[420px] pointer-events-none rounded-full"
               style={{
-                background: "radial-gradient(ellipse at center, rgba(52,211,153,0.22), transparent 65%)",
+                background: "radial-gradient(ellipse at center, hsl(var(--cd-accent-hsl)/0.22), transparent 65%)",
                 filter: "blur(10px)",
                 animation: "dashDrift 14s ease-in-out infinite",
               }}
@@ -655,10 +655,10 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
                 <>
                   <div className="flex items-center gap-2.5 mb-3">
                     <span className="relative flex h-3 w-3">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#34d399] opacity-60" />
-                      <span className="relative inline-flex rounded-full h-3 w-3 bg-[#34d399]" />
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[color:var(--cd-accent)] opacity-60" />
+                      <span className="relative inline-flex rounded-full h-3 w-3 bg-[color:var(--cd-accent)]" />
                     </span>
-                    <span className="text-xs font-bold tracking-[0.22em] text-[#34d399]">EN SESIÓN</span>
+                    <span className="text-xs font-bold tracking-[0.22em] text-[color:var(--cd-accent)]">EN SESIÓN</span>
                     <span className="text-xs text-white/50">
                       hasta las {format(new Date(endOf(currentSession)), "HH:mm")} hs
                     </span>
@@ -680,14 +680,14 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
                 </>
               ) : nextSession ? (
                 <>
-                  <p className="text-xs font-bold tracking-[0.22em] text-[#34d399] mb-3">PRÓXIMA SESIÓN</p>
+                  <p className="text-xs font-bold tracking-[0.22em] text-[color:var(--cd-accent)] mb-3">PRÓXIMA SESIÓN</p>
                   <div className="flex items-center gap-4 flex-wrap">
                     <span className="text-[52px] leading-none font-extrabold tabular-nums tracking-tight" style={GROTESK}>
                       {format(new Date(nextSession.start_at), "HH:mm")}
                     </span>
                     <span
                       className="inline-flex items-center rounded-full px-3.5 py-1.5 text-sm font-bold"
-                      style={{ background: "rgba(52,211,153,0.14)", color: "#34d399", border: "1px solid rgba(52,211,153,0.3)" }}
+                      style={{ background: "hsl(var(--cd-accent-hsl)/0.14)", color: "var(--cd-accent)", border: "1px solid hsl(var(--cd-accent-hsl)/0.3)" }}
                     >
                       {formatCountdown(new Date(nextSession.start_at).getTime() - nowTick)}
                     </span>
@@ -695,7 +695,7 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
                   <div className="flex items-center gap-2.5 mt-4 flex-wrap">
                     <span
                       className="flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold shrink-0"
-                      style={{ background: "rgba(52,211,153,0.16)", color: "#34d399", border: "1px solid rgba(52,211,153,0.3)" }}
+                      style={{ background: "hsl(var(--cd-accent-hsl)/0.16)", color: "var(--cd-accent)", border: "1px solid hsl(var(--cd-accent-hsl)/0.3)" }}
                     >
                       {(nextSession.patients?.full_name || "P").trim()[0]?.toUpperCase()}
                     </span>
@@ -711,7 +711,7 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
                 </>
               ) : activeToday.length > 0 ? (
                 <>
-                  <p className="text-xs font-bold tracking-[0.22em] text-[#34d399] mb-3 flex items-center gap-2">
+                  <p className="text-xs font-bold tracking-[0.22em] text-[color:var(--cd-accent)] mb-3 flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4" /> DÍA COMPLETADO
                   </p>
                   <div className="flex items-baseline gap-3 flex-wrap">
@@ -738,7 +738,7 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
                 </>
               ) : (
                 <>
-                  <p className="text-xs font-bold tracking-[0.22em] text-[#34d399] mb-3" style={GROTESK}>
+                  <p className="text-xs font-bold tracking-[0.22em] text-[color:var(--cd-accent)] mb-3" style={GROTESK}>
                     HOY LIBRE
                   </p>
                   <h2 className="text-[36px] leading-tight font-extrabold tracking-tight" style={GROTESK}>

@@ -458,15 +458,15 @@ const Dashboard = () => {
   const GROTESK = { fontFamily: "'Space Grotesk', sans-serif" } as const;
   // Botón fantasma de la familia de diseño
   const ghostBtnStyle = {
-    background: "rgba(140, 200, 170, 0.08)",
-    border: "1px solid rgba(140, 200, 170, 0.14)",
-    color: "#d9e8df",
+    background: "hsl(var(--cd-tint-hsl)/0.08)",
+    border: "1px solid hsl(var(--cd-tint-hsl)/0.14)",
+    color: "var(--cd-soft-88)",
   } as const;
   // CTA con gradiente de marca
   const ctaStyle = {
-    background: "linear-gradient(135deg, #34d399, #14b8a6)",
-    color: "#04150d",
-    boxShadow: "0 8px 24px rgba(52, 211, 153, 0.25)",
+    background: "linear-gradient(135deg, var(--cd-accent), var(--cd-accent-deep))",
+    color: "var(--cd-accent-ink)",
+    boxShadow: "0 8px 24px hsl(var(--cd-accent-hsl)/0.25)",
   } as const;
 
   // Compartir el link de reservas: lo más directo para llenar la agenda
@@ -507,11 +507,11 @@ const Dashboard = () => {
 
   // Mobile: lo urgente arriba (solicitudes, hoy, deuda), lo de sistema abajo.
   // El wrapper `.dark` fuerza los tokens oscuros: misma familia visual que la
-  // ficha del paciente y el dashboard de escritorio (fondo #070d0a).
+  // ficha del paciente y el dashboard de escritorio (fondo var(--cd-bg)).
   return (
       <div
         className="dark min-h-screen"
-        style={{ background: "#070d0a", fontFamily: "'Instrument Sans', 'Plus Jakarta Sans', sans-serif" }}
+        style={{ background: "var(--cd-bg)", fontFamily: "'Instrument Sans', 'Plus Jakarta Sans', sans-serif" }}
       >
       <style>{`
         @keyframes mDashDrift {
@@ -584,14 +584,14 @@ const Dashboard = () => {
             <div
               className="relative overflow-hidden text-white -mx-4 sm:-mx-6 -mt-4 sm:-mt-6 px-4 sm:px-6 pt-5 pb-6 rounded-b-3xl"
               style={{
-                background: "linear-gradient(160deg, #0e1d15, #0a1410 55%, #081009)",
-                borderBottom: "1px solid rgba(140, 200, 170, 0.12)",
+                background: "linear-gradient(160deg, var(--cd-hero1), var(--cd-hero2) 55%, var(--cd-hero3))",
+                borderBottom: "1px solid hsl(var(--cd-tint-hsl)/0.12)",
               }}
             >
               <div
                 className="m-dash-glow absolute -top-24 -right-16 w-[300px] h-[240px] rounded-full pointer-events-none"
                 style={{
-                  background: "radial-gradient(ellipse at center, rgba(52, 211, 153, 0.22), transparent 65%)",
+                  background: "radial-gradient(ellipse at center, hsl(var(--cd-accent-hsl)/0.22), transparent 65%)",
                   filter: "blur(10px)",
                   animation: "mDashDrift 14s ease-in-out infinite",
                 }}
@@ -599,7 +599,7 @@ const Dashboard = () => {
               <div
                 className="m-dash-glow absolute -bottom-24 -left-20 w-[260px] h-[200px] rounded-full pointer-events-none"
                 style={{
-                  background: "radial-gradient(ellipse at center, rgba(20, 184, 166, 0.14), transparent 65%)",
+                  background: "radial-gradient(ellipse at center, hsl(var(--cd-deep-hsl)/0.14), transparent 65%)",
                   filter: "blur(10px)",
                   animation: "mDashDrift 18s ease-in-out infinite reverse",
                 }}
@@ -616,14 +616,14 @@ const Dashboard = () => {
                     />
                     <div
                       className="rounded-full"
-                      style={{ padding: 2, background: "linear-gradient(135deg, #34d399, #14b8a6, transparent)" }}
+                      style={{ padding: 2, background: "linear-gradient(135deg, var(--cd-accent), var(--cd-accent-deep), transparent)" }}
                     >
                       <Avatar
                         className="h-12 w-12 cursor-pointer"
                         onClick={handleAvatarClick}
                       >
                         <AvatarImage src={avatarUrl || undefined} alt={userName} />
-                        <AvatarFallback className="bg-[#101a14] text-[#34d399] font-semibold">
+                        <AvatarFallback className="bg-[color:var(--cd-card1)] text-[color:var(--cd-accent)] font-semibold">
                           {getInitials(userName)}
                         </AvatarFallback>
                       </Avatar>
@@ -642,7 +642,7 @@ const Dashboard = () => {
                   <div className="min-w-0">
                     <p
                       className="text-[10px] uppercase truncate"
-                      style={{ ...GROTESK, letterSpacing: "0.22em", color: "#34d399" }}
+                      style={{ ...GROTESK, letterSpacing: "0.22em", color: "var(--cd-accent)" }}
                     >
                       {(() => {
                         const d = new Date(nowTick);
@@ -651,7 +651,7 @@ const Dashboard = () => {
                         return `${saludo} · ${d.toLocaleDateString("es-UY", { weekday: "long", day: "numeric", month: "short" })}`;
                       })()}
                     </p>
-                    <h1 className="text-lg font-bold truncate mt-0.5" style={{ color: "#eef6f0" }}>
+                    <h1 className="text-lg font-bold truncate mt-0.5" style={{ color: "var(--cd-text-bright)" }}>
                       Hola, {userName.split(" ")[0]} 👋
                     </h1>
                   </div>
@@ -670,7 +670,7 @@ const Dashboard = () => {
                 <div>
                   <p
                     className="text-[44px] font-bold tabular-nums tracking-tight leading-none"
-                    style={{ ...GROTESK, color: "#eef6f0" }}
+                    style={{ ...GROTESK, color: "var(--cd-text-bright)" }}
                   >
                     {(() => {
                       const d = new Date(nowTick);
@@ -696,10 +696,10 @@ const Dashboard = () => {
                 {activeH.length > 0 && (
                   <div className="relative h-[72px] w-[72px] shrink-0">
                     <svg viewBox="0 0 72 72" className="h-[72px] w-[72px] -rotate-90">
-                      <circle cx="36" cy="36" r={r} fill="none" strokeWidth="6" stroke="rgba(140, 200, 170, 0.15)" />
+                      <circle cx="36" cy="36" r={r} fill="none" strokeWidth="6" stroke="hsl(var(--cd-tint-hsl)/0.15)" />
                       <circle
                         cx="36" cy="36" r={r} fill="none" strokeWidth="6" strokeLinecap="round"
-                        className="stroke-[#34d399] transition-[stroke-dashoffset] duration-700"
+                        className="stroke-[var(--cd-accent)] transition-[stroke-dashoffset] duration-700"
                         strokeDasharray={c} strokeDashoffset={c * (1 - pct)}
                       />
                     </svg>
@@ -729,8 +729,8 @@ const Dashboard = () => {
                     onClick={() => navigate(s.to)}
                     className="rounded-2xl px-3 py-2.5 text-left active:scale-[0.97] transition-transform"
                     style={{
-                      background: s.warn ? "rgba(245, 158, 11, 0.09)" : "rgba(140, 200, 170, 0.07)",
-                      border: s.warn ? "1px solid rgba(245, 158, 11, 0.4)" : "1px solid rgba(140, 200, 170, 0.12)",
+                      background: s.warn ? "rgba(245, 158, 11, 0.09)" : "hsl(var(--cd-tint-hsl)/0.07)",
+                      border: s.warn ? "1px solid rgba(245, 158, 11, 0.4)" : "1px solid hsl(var(--cd-tint-hsl)/0.12)",
                     }}
                   >
                     <span
@@ -745,7 +745,7 @@ const Dashboard = () => {
                     </span>
                     <span
                       className="block text-xl font-bold tabular-nums mt-0.5"
-                      style={{ ...GROTESK, color: s.warn ? "#fbbf24" : "#eef6f0" }}
+                      style={{ ...GROTESK, color: s.warn ? "#fbbf24" : "var(--cd-text-bright)" }}
                     >
                       {s.value}
                     </span>
@@ -812,15 +812,15 @@ const Dashboard = () => {
               <Card
                 className="shadow-md"
                 style={{
-                  background: "linear-gradient(180deg, #101a14, #0b130e)",
-                  border: "1px solid rgba(52, 211, 153, 0.28)",
-                  boxShadow: "0 14px 34px -18px rgba(52, 211, 153, 0.45)",
+                  background: "linear-gradient(180deg, var(--cd-card1), var(--cd-card2))",
+                  border: "1px solid hsl(var(--cd-accent-hsl)/0.28)",
+                  boxShadow: "0 14px 34px -18px hsl(var(--cd-accent-hsl)/0.45)",
                 }}
               >
                 <CardContent className="p-5 space-y-4">
                   {inSession && (
-                    <div className="flex items-center gap-2 text-xs font-medium text-[#34d399]">
-                      <span className="h-2 w-2 rounded-full bg-[#34d399] animate-pulse" />
+                    <div className="flex items-center gap-2 text-xs font-medium text-[color:var(--cd-accent)]">
+                      <span className="h-2 w-2 rounded-full bg-[color:var(--cd-accent)] animate-pulse" />
                       En sesión con {inSession.patients?.full_name?.split(" ")[0] || "un paciente"} hasta {inSession.end_at ? formatTime(inSession.end_at) : ""}
                     </div>
                   )}
@@ -829,18 +829,18 @@ const Dashboard = () => {
                     <div className="flex items-center justify-between gap-3">
                       <p
                         className="text-[10px] uppercase"
-                        style={{ ...GROTESK, letterSpacing: "0.22em", color: "#34d399" }}
+                        style={{ ...GROTESK, letterSpacing: "0.22em", color: "var(--cd-accent)" }}
                       >
                         {inSession ? "Después" : "Tu próxima sesión"}
                       </p>
                       <span
                         className="inline-flex items-center rounded-full px-3 py-1 text-xs font-bold shrink-0"
-                        style={{ background: "rgba(52, 211, 153, 0.14)", color: "#34d399", border: "1px solid rgba(52, 211, 153, 0.3)" }}
+                        style={{ background: "hsl(var(--cd-accent-hsl)/0.14)", color: "var(--cd-accent)", border: "1px solid hsl(var(--cd-accent-hsl)/0.3)" }}
                       >
                         {countdownLabel(nextAppt.start_at)}
                       </span>
                     </div>
-                    <p className="text-[42px] font-bold tracking-tight leading-none mt-2" style={{ ...GROTESK, color: "#eef6f0" }}>
+                    <p className="text-[42px] font-bold tracking-tight leading-none mt-2" style={{ ...GROTESK, color: "var(--cd-text-bright)" }}>
                       {(() => {
                         const d = new Date(nextAppt.start_at);
                         const h = d.getHours();
@@ -858,7 +858,7 @@ const Dashboard = () => {
                       {/* Avatar con la inicial del paciente, como el mockup */}
                       <span
                         className="flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold shrink-0"
-                        style={{ background: "rgba(52, 211, 153, 0.16)", color: "#34d399", border: "1px solid rgba(52, 211, 153, 0.3)" }}
+                        style={{ background: "hsl(var(--cd-accent-hsl)/0.16)", color: "var(--cd-accent)", border: "1px solid hsl(var(--cd-accent-hsl)/0.3)" }}
                       >
                         {name.trim()[0]?.toUpperCase() || "P"}
                       </span>
@@ -904,10 +904,10 @@ const Dashboard = () => {
           // Variante: en sesión y no hay más después
           if (inSession) {
             return (
-              <Card style={{ background: "linear-gradient(180deg, #101a14, #0b130e)", border: "1px solid rgba(140, 200, 170, 0.12)" }}>
+              <Card style={{ background: "linear-gradient(180deg, var(--cd-card1), var(--cd-card2))", border: "1px solid hsl(var(--cd-tint-hsl)/0.12)" }}>
                 <CardContent className="p-5 space-y-1.5">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-[#34d399]">
-                    <span className="h-2 w-2 rounded-full bg-[#34d399] animate-pulse" />
+                  <div className="flex items-center gap-2 text-sm font-semibold text-[color:var(--cd-accent)]">
+                    <span className="h-2 w-2 rounded-full bg-[color:var(--cd-accent)] animate-pulse" />
                     En sesión con {inSession.patients?.full_name || "un paciente"}
                   </div>
                   <p className="text-sm text-muted-foreground">
@@ -921,7 +921,7 @@ const Dashboard = () => {
 
           // Variante: día terminado o día libre
           return (
-            <Card style={{ background: "linear-gradient(180deg, #101a14, #0b130e)", border: "1px solid rgba(140, 200, 170, 0.1)" }}>
+            <Card style={{ background: "linear-gradient(180deg, var(--cd-card1), var(--cd-card2))", border: "1px solid hsl(var(--cd-tint-hsl)/0.1)" }}>
               <CardContent className="p-5 space-y-2">
                 <p className="text-base font-semibold text-foreground">
                   {active.length > 0
@@ -1031,7 +1031,7 @@ const Dashboard = () => {
 
               {/* Tu día: acceso directo a la agenda, siempre presente */}
               <div className="w-full flex items-center gap-3 rounded-xl border border-border/60 px-4 py-2.5" style={{ background: "rgba(255,255,255,0.03)" }}>
-                <CalendarDays className="h-4 w-4 shrink-0" style={{ color: "#34d399" }} />
+                <CalendarDays className="h-4 w-4 shrink-0" style={{ color: "var(--cd-accent)" }} />
                 <span className="flex-1 min-w-0 text-sm font-semibold text-foreground">
                   Tu día{" "}
                   <span className="text-muted-foreground font-normal">
@@ -1053,7 +1053,7 @@ const Dashboard = () => {
         {/* ══════════ 3) TU DÍA: la tira compacta de hoy ══════════ */}
         <Card
           className="mobile-card"
-          style={{ background: "linear-gradient(180deg, #101a14, #0b130e)", border: "1px solid rgba(140, 200, 170, 0.1)" }}
+          style={{ background: "linear-gradient(180deg, var(--cd-card1), var(--cd-card2))", border: "1px solid hsl(var(--cd-tint-hsl)/0.1)" }}
         >
           <CardHeader className="pb-3 px-0 pt-0 sm:px-6 sm:pt-6">
             <div className="flex items-center justify-between">
@@ -1119,7 +1119,7 @@ const Dashboard = () => {
             ) : (
               <div
                 className="rounded-2xl py-6 px-4 text-center space-y-3"
-                style={{ border: "1px dashed rgba(140, 200, 170, 0.2)" }}
+                style={{ border: "1px dashed hsl(var(--cd-tint-hsl)/0.2)" }}
               >
                 <p className="text-sm text-muted-foreground">Día libre en la agenda</p>
                 <div className="flex flex-col sm:flex-row gap-2 justify-center">
@@ -1173,17 +1173,17 @@ const Dashboard = () => {
               onClick={() => navigate("/pagos?status=paid&period=this_month")}
               className="rounded-2xl px-4 py-3.5 text-left active:scale-[0.98] transition-transform"
               style={{
-                background: "linear-gradient(180deg, #101a14, #0b130e)",
-                border: "1px solid rgba(52, 211, 153, 0.25)",
+                background: "linear-gradient(180deg, var(--cd-card1), var(--cd-card2))",
+                border: "1px solid hsl(var(--cd-accent-hsl)/0.25)",
               }}
             >
               <p
                 className="text-[9px] uppercase inline-flex items-center gap-1.5"
                 style={{ ...GROTESK, letterSpacing: "0.16em", color: "rgba(217, 232, 223, 0.55)" }}
               >
-                <CreditCard className="h-3 w-3 text-[#34d399]" /> Cobrado
+                <CreditCard className="h-3 w-3 text-[color:var(--cd-accent)]" /> Cobrado
               </p>
-              <p className="text-xl font-bold mt-1 truncate text-[#34d399]" style={GROTESK}>
+              <p className="text-xl font-bold mt-1 truncate text-[color:var(--cd-accent)]" style={GROTESK}>
                 {privacyMode ? "$ ••••" : formatCurrency(monthlyIncome, "UYU")}
               </p>
             </button>
@@ -1191,8 +1191,8 @@ const Dashboard = () => {
               onClick={() => navigate(overduePayments > 0 ? "/pagos?status=overdue" : "/pagos")}
               className="rounded-2xl px-4 py-3.5 text-left active:scale-[0.98] transition-transform"
               style={{
-                background: overduePayments > 0 ? "#1a1013" : "linear-gradient(180deg, #101a14, #0b130e)",
-                border: overduePayments > 0 ? "1px solid rgba(251, 113, 133, 0.3)" : "1px solid rgba(140, 200, 170, 0.1)",
+                background: overduePayments > 0 ? "#1a1013" : "linear-gradient(180deg, var(--cd-card1), var(--cd-card2))",
+                border: overduePayments > 0 ? "1px solid rgba(251, 113, 133, 0.3)" : "1px solid hsl(var(--cd-tint-hsl)/0.1)",
               }}
             >
               <p
@@ -1228,7 +1228,7 @@ const Dashboard = () => {
               style={ghostBtnStyle}
               onClick={() => setShowAppointmentModal(true)}
             >
-              <CalendarPlus className="h-5 w-5 text-[#34d399] shrink-0" />
+              <CalendarPlus className="h-5 w-5 text-[color:var(--cd-accent)] shrink-0" />
               <span className="text-sm font-semibold">Nueva cita</span>
             </Button>
             <Button
@@ -1237,7 +1237,7 @@ const Dashboard = () => {
               style={ghostBtnStyle}
               onClick={() => setShowPaymentForm(true)}
             >
-              <CreditCard className="h-5 w-5 text-[#34d399] shrink-0" />
+              <CreditCard className="h-5 w-5 text-[color:var(--cd-accent)] shrink-0" />
               <span className="text-sm font-semibold">Registrar pago</span>
             </Button>
             <Button
@@ -1246,16 +1246,16 @@ const Dashboard = () => {
               style={ghostBtnStyle}
               onClick={() => setShowPatientForm(true)}
             >
-              <UserPlus className="h-5 w-5 text-[#34d399] shrink-0" />
+              <UserPlus className="h-5 w-5 text-[color:var(--cd-accent)] shrink-0" />
               <span className="text-sm font-semibold">Nuevo paciente</span>
             </Button>
             <Button
               variant="outline"
               className="h-14 flex items-center justify-start gap-2.5 rounded-xl px-3.5"
-              style={{ background: "rgba(52, 211, 153, 0.09)", border: "1px solid rgba(52, 211, 153, 0.3)", color: "#d9e8df" }}
+              style={{ background: "hsl(var(--cd-accent-hsl)/0.09)", border: "1px solid hsl(var(--cd-accent-hsl)/0.3)", color: "var(--cd-soft-88)" }}
               onClick={() => navigate("/personalizar-portal")}
             >
-              <Smartphone className="h-5 w-5 text-[#34d399] shrink-0" />
+              <Smartphone className="h-5 w-5 text-[color:var(--cd-accent)] shrink-0" />
               <span className="min-w-0 text-left">
                 <span className="block text-sm font-semibold leading-tight">Mi portal</span>
                 <span className="block text-[10px] text-muted-foreground leading-tight">{portalPatientsCount} paciente{portalPatientsCount !== 1 ? "s" : ""} con acceso</span>
