@@ -17,6 +17,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { BusinessIdProvider } from "@/contexts/BusinessIdContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { PWAInstalledCelebrationModal } from "@/components/PWAInstalledCelebrationModal";
+import { PwaUpdatePrompt } from "@/components/PwaUpdatePrompt";
 import LoadingPage from "@/components/LoadingPage";
 import { useAuthSync } from "@/hooks/use-auth-sync";
 
@@ -239,6 +240,7 @@ const App = () => {
       <TooltipProvider>
         <Toaster />
         <Sonner />
+        <PwaUpdatePrompt />
         <SessionExpiredDialog />
         <PWAInstalledCelebrationModal />
         <BrowserRouter>
