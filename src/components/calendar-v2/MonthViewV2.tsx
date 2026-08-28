@@ -361,7 +361,7 @@ export const MonthViewV2 = ({
                             style={{ color: c }}
                           >
                             {apt.isPersonal
-                              ? apt.personalEvent?.title || "Personal"
+                              ? `${apt.personalEvent?.icon ? `${apt.personalEvent.icon} ` : ""}${apt.personalEvent?.title || "Personal"}`
                               : (apt.patients?.full_name || "Cita").split(" ")[0]}
                           </span>
                         </div>
@@ -419,6 +419,7 @@ export const MonthViewV2 = ({
                               {format(new Date(apt.start_at), "HH:mm")}
                             </span>
                             <span className="text-foreground/80 overflow-hidden">
+                              {apt.isPersonal && apt.personalEvent?.icon ? `${apt.personalEvent.icon} ` : ""}
                               {label}
                             </span>
                           </div>
