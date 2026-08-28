@@ -1491,121 +1491,260 @@ const Statistics = () => {
         <TabsContent value="pacientes" className="space-y-6 mt-0">
 
         {/* KPIs de pacientes */}
-        <div className="grid grid-cols-2 gap-3">
-          <KpiCard icon={Users} label="Pacientes activos" value={String(kpis.activePatients)} color="text-primary" />
-          <KpiCard icon={UserX} label="Sin próxima cita" value={String(inactivePatients.length)} color="text-[hsl(var(--warning))]" />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
+          <div className="rounded-[18px] px-5 py-4" style={CARD_BG}>
+            <div
+              className="flex items-center gap-1.5 uppercase mb-1.5 text-[10px] font-semibold"
+              style={{ ...GROTESK, letterSpacing: "0.14em", color: "var(--cd-dim)" }}
+            >
+              <Users className="h-3 w-3 shrink-0" style={{ color: "var(--cd-accent)" }} />
+              Pacientes activos
+            </div>
+            <span className="font-bold text-2xl leading-none" style={{ ...GROTESK, color: "var(--cd-text)" }}>
+              {kpis.activePatients}
+            </span>
+            <p className="text-xs mt-1.5" style={{ color: "var(--cd-muted)" }}>en tratamiento</p>
+          </div>
+          <div
+            className="rounded-[18px] px-5 py-4"
+            style={{ background: "linear-gradient(180deg,#1a1410,#130e0b)", border: "1px solid rgba(251,191,36,0.22)" }}
+          >
+            <div
+              className="flex items-center gap-1.5 uppercase mb-1.5 text-[10px] font-semibold"
+              style={{ ...GROTESK, letterSpacing: "0.14em", color: "#a08657" }}
+            >
+              <UserX className="h-3 w-3 shrink-0" />
+              Sin próxima cita
+            </div>
+            <span className="font-bold text-2xl leading-none" style={{ ...GROTESK, color: "#fcd34d" }}>
+              {inactivePatients.length}
+            </span>
+            <p className="text-xs mt-1.5" style={{ color: "#a08657" }}>requieren seguimiento</p>
+          </div>
+          <div className="rounded-[18px] px-5 py-4" style={{ background: "linear-gradient(180deg,var(--cd-card1),var(--cd-card2))", border: "1px solid hsl(var(--cd-accent-hsl)/0.16)" }}>
+            <div
+              className="flex items-center gap-1.5 uppercase mb-1.5 text-[10px] font-semibold"
+              style={{ ...GROTESK, letterSpacing: "0.14em", color: "var(--cd-accent)" }}
+            >
+              <Users className="h-3 w-3 shrink-0" />
+              Nuevos en el período
+            </div>
+            <span className="font-bold text-2xl leading-none" style={{ ...GROTESK, color: "var(--cd-accent-soft)" }}>
+              {retentionData.reduce((s, r) => s + r.nuevos, 0)}
+            </span>
+            <p className="text-xs mt-1.5" style={{ color: "var(--cd-muted)" }}>
+              primera consulta en {PERIOD_LABELS[period].toLowerCase()}
+            </p>
+          </div>
         </div>
 
         {/* New vs returning */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Users className="h-5 w-5 text-primary" />
+        <div className="rounded-[20px] p-5" style={CARD_BG}>
+          <div className="flex items-center gap-2.5 mb-4 flex-wrap">
+            <span
+              className="flex h-8 w-8 items-center justify-center rounded-[10px] shrink-0"
+              style={{ background: "hsl(var(--cd-accent-hsl)/0.12)", color: "var(--cd-accent)" }}
+            >
+              <Users className="h-[15px] w-[15px]" />
+            </span>
+            <span className="font-semibold text-base flex-1 inline-flex items-center gap-2" style={{ ...GROTESK, color: "var(--cd-text)" }}>
               Pacientes nuevos vs recurrentes
               <HelpTooltip id="statsRetention" />
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {retentionData.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-8 text-center">Sin datos de pagos en el período</p>
-            ) : (
-              <div className="h-64">
+            </span>
+            <div className="flex gap-3.5 text-xs font-medium" style={{ color: "var(--cd-muted)" }}>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-[3px]" style={{ background: "linear-gradient(135deg,var(--cd-accent),var(--cd-accent-deep))" }} />
+                Nuevos
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-[3px]" style={{ background: "hsl(var(--cd-tint-hsl)/0.45)" }} />
+                Recurrentes
+              </span>
+            </div>
+          </div>
+          {retentionData.length === 0 ? (
+            <p className="text-sm py-8 text-center" style={{ color: "var(--cd-muted)" }}>Sin datos de pagos en el período</p>
+          ) : (
+            <>
+              <div className="h-60 sm:h-64">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={retentionData}>
-                    <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                    <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                    <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
-                    <Tooltip
-                      contentStyle={{ borderRadius: 8, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))" }}
+                  <BarChart data={retentionData} margin={{ top: 18, right: 8, left: -22, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="gradNuevosStats" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" style={{ stopColor: "var(--cd-accent)" }} />
+                        <stop offset="100%" style={{ stopColor: "var(--cd-accent-deep)" }} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid stroke="hsl(var(--cd-tint-hsl)/0.08)" vertical={false} />
+                    <XAxis
+                      dataKey="month"
+                      tick={{ fontSize: 10.5, fill: "var(--cd-dim)", fontFamily: "'Space Grotesk', sans-serif" }}
+                      axisLine={{ stroke: "hsl(var(--cd-tint-hsl)/0.1)" }}
+                      tickLine={false}
                     />
-                    <Legend wrapperStyle={{ fontSize: 12 }} />
-                    <Bar dataKey="nuevos" name="Nuevos" stackId="a" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="recurrentes" name="Recurrentes" stackId="a" fill="hsl(var(--muted-foreground) / 0.5)" radius={[4, 4, 0, 0]} />
+                    <YAxis
+                      allowDecimals={false}
+                      tick={{ fontSize: 10.5, fill: "var(--cd-dim)", fontFamily: "'Space Grotesk', sans-serif" }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <Tooltip
+                      cursor={{ fill: "hsl(var(--cd-tint-hsl)/0.05)" }}
+                      contentStyle={{
+                        borderRadius: 12,
+                        border: "1px solid hsl(var(--cd-tint-hsl)/0.2)",
+                        background: "var(--cd-card1)",
+                        color: "var(--cd-text)",
+                      }}
+                      labelStyle={{ color: "var(--cd-text)", fontWeight: 600 }}
+                    />
+                    <Bar dataKey="nuevos" name="Nuevos" fill="url(#gradNuevosStats)" radius={[6, 6, 2, 2]}>
+                      <LabelList
+                        dataKey="nuevos"
+                        position="top"
+                        formatter={(v: number) => (v > 0 ? String(v) : "")}
+                        style={{ fill: "var(--cd-accent-soft)", fontSize: 10.5, fontWeight: 600, fontFamily: "'Space Grotesk', sans-serif" }}
+                      />
+                    </Bar>
+                    <Bar dataKey="recurrentes" name="Recurrentes" fill="hsl(var(--cd-tint-hsl)/0.45)" radius={[6, 6, 2, 2]}>
+                      <LabelList
+                        dataKey="recurrentes"
+                        position="top"
+                        formatter={(v: number) => (v > 0 ? String(v) : "")}
+                        style={{ fill: "var(--cd-muted)", fontSize: 10.5, fontWeight: 600, fontFamily: "'Space Grotesk', sans-serif" }}
+                      />
+                    </Bar>
                   </BarChart>
                 </ResponsiveContainer>
               </div>
-            )}
-          </CardContent>
-        </Card>
+              {(() => {
+                const last = [...retentionData].reverse().find((r) => r.recurrentes > 0);
+                if (!last) return null;
+                return (
+                  <div
+                    className="mt-4 rounded-xl px-4 py-2.5 text-[12.5px]"
+                    style={{
+                      background: "hsl(var(--cd-accent-hsl)/0.06)",
+                      border: "1px solid hsl(var(--cd-accent-hsl)/0.16)",
+                      color: "var(--cd-text-soft)",
+                    }}
+                  >
+                    Tu base recurrente crece: {last.recurrentes} paciente{last.recurrentes !== 1 ? "s" : ""} volvieron en {last.month}.
+                  </div>
+                );
+              })()}
+            </>
+          )}
+        </div>
 
-        {/* Inactive patients */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2 flex-wrap">
-              <UserX className="h-5 w-5 text-orange-500" />
+        {/* Inactive patients (mockup: tarjeta ámbar de seguimiento) */}
+        <div
+          className="rounded-[20px] p-5"
+          style={{ background: "linear-gradient(180deg,#1a1410,#130e0b)", border: "1px solid rgba(251,191,36,0.22)" }}
+        >
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <span
+              className="flex h-8 w-8 items-center justify-center rounded-[10px] shrink-0"
+              style={{ background: "rgba(251,191,36,0.13)", color: "#fcd34d" }}
+            >
+              <UserX className="h-[15px] w-[15px]" />
+            </span>
+            <span className="font-semibold text-base flex-1 inline-flex items-center gap-2 min-w-0" style={{ ...GROTESK, color: "var(--cd-text)" }}>
               Pacientes en riesgo · sin próxima cita
               <HelpTooltip id="statsInactivePatients" />
-              {inactivePatients.length > 0 && (
-                <span className="text-sm font-normal text-muted-foreground">({inactivePatients.length})</span>
-              )}
-            </CardTitle>
-            <p className="text-xs text-muted-foreground">
-              Pacientes activos que no tienen ninguna cita agendada a futuro. Tocá para abrir su ficha, o escribiles directo.
+            </span>
+            {inactivePatients.length > 0 && (
+              <span
+                className="px-2.5 py-1 rounded-full text-[11.5px] font-bold shrink-0"
+                style={{ ...GROTESK, background: "rgba(251,191,36,0.13)", border: "1px solid rgba(251,191,36,0.3)", color: "#fcd34d" }}
+              >
+                {inactivePatients.length}
+              </span>
+            )}
+          </div>
+          <p className="text-xs mt-1.5 mb-4" style={{ color: "#a08657" }}>
+            Activos sin ninguna cita agendada a futuro. Tocá para abrir su ficha, o escribiles directo.
+          </p>
+          {inactivePatients.length === 0 ? (
+            <p className="text-sm py-8 text-center" style={{ color: "var(--cd-muted)" }}>
+              🎉 Todos tus pacientes activos tienen su próxima cita agendada
             </p>
-          </CardHeader>
-          <CardContent>
-            {inactivePatients.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-8 text-center">
-                🎉 Todos tus pacientes activos tienen su próxima cita agendada
-              </p>
-            ) : (
-              <div className="space-y-2">
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-2">
-                {pageInactive.map((p) => {
-                  const phone = allPatients.find((x) => x.id === p.id)?.whatsapp_phone || null;
-                  return (
-                    <div
-                      key={p.id}
-                      className="flex items-center justify-between gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors"
+          ) : (
+            <div className="space-y-2">
+              {inactivePatients.slice(0, 5).map((p) => {
+                const phone = allPatients.find((x) => x.id === p.id)?.whatsapp_phone || null;
+                return (
+                  <div
+                    key={p.id}
+                    className="flex items-center gap-3 rounded-xl px-3.5 py-3 flex-wrap sm:flex-nowrap"
+                    style={{ background: "rgba(251,191,36,0.05)", border: "1px solid rgba(251,191,36,0.14)" }}
+                  >
+                    <span
+                      className="flex w-9 h-9 rounded-full items-center justify-center shrink-0 text-[12px] font-semibold"
+                      style={{ ...GROTESK, background: "rgba(251,191,36,0.13)", color: "#fcd34d" }}
                     >
-                      <div
-                        className="min-w-0 flex-1 cursor-pointer"
-                        onClick={() => navigate(`/patients/${p.id}`)}
-                      >
-                        <p className="font-medium text-sm truncate">{p.full_name}</p>
-                        <p className="text-xs text-muted-foreground">{p.email || "Sin email"}</p>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <p className="text-sm font-semibold text-[hsl(var(--warning))]">
-                          {p.daysSinceLast >= 9999 ? "Sin sesiones" : `hace ${p.daysSinceLast} días`}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {p.lastAppointment
-                            ? `Última: ${new Date(p.lastAppointment).toLocaleDateString("es-UY", { day: "2-digit", month: "2-digit", year: "2-digit" })}`
-                            : "Nunca tuvo cita"}
-                        </p>
-                      </div>
-                      {phone ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="shrink-0 gap-1.5 h-8"
+                      {p.full_name.trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase()}
+                    </span>
+                    <div
+                      className="min-w-0 flex-1 cursor-pointer"
+                      onClick={() => navigate(`/patients/${p.id}`)}
+                    >
+                      <p className="text-[13.5px] leading-tight">
+                        <span className="font-semibold" style={{ color: "var(--cd-text)" }}>{p.full_name}</span>
+                        <span className="ml-2 text-[11.5px] font-semibold whitespace-nowrap" style={{ ...GROTESK, color: "#fcd34d" }}>
+                          {p.daysSinceLast >= 9999 ? "sin sesiones" : `hace ${Math.max(1, Math.round(p.daysSinceLast / 7))} sem`}
+                        </span>
+                      </p>
+                      <p className="text-[11.5px] mt-0.5" style={{ color: "var(--cd-muted)" }}>
+                        {p.lastAppointment
+                          ? `Última consulta: ${new Date(p.lastAppointment).toLocaleDateString("es-UY", { day: "numeric", month: "numeric", year: "numeric" })}`
+                          : "Nunca tuvo cita"}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0 ml-auto">
+                      {phone && (
+                        <button
+                          type="button"
+                          className="flex h-9 items-center gap-1.5 px-3 rounded-[10px] text-xs font-semibold transition-opacity hover:opacity-80"
+                          style={{ background: "hsl(var(--cd-tint-hsl)/0.07)", border: "1px solid hsl(var(--cd-tint-hsl)/0.14)", color: "var(--cd-text-soft)" }}
                           onClick={(e) => {
                             e.stopPropagation();
                             sendWhatsAppToInactive({ ...p, whatsapp_phone: phone });
                           }}
                         >
                           <MessageCircle className="h-3.5 w-3.5" />
-                          <span className="hidden sm:inline">WhatsApp</span>
-                        </Button>
-                      ) : (
-                        <span className="text-xs text-muted-foreground shrink-0 hidden sm:inline">Sin teléfono</span>
+                          Escribir
+                        </button>
                       )}
+                      <button
+                        type="button"
+                        className="flex h-9 items-center gap-1.5 px-3 rounded-[10px] text-xs font-semibold transition-opacity hover:opacity-90"
+                        style={{ background: "linear-gradient(135deg,var(--cd-accent),var(--cd-accent-deep))", color: "var(--cd-accent-ink)", border: "none" }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate("/agenda");
+                        }}
+                      >
+                        <CalendarCheck className="h-3.5 w-3.5" />
+                        Agendar
+                      </button>
                     </div>
-                  );
-                })}
-                </div>
-                <ListPagination
-                  currentPage={inactivePage}
-                  totalPages={inactiveTotalPages}
-                  onPageChange={setInactivePage}
-                  totalItems={inactivePatients.length}
-                  pageSize={ITEMS_PER_PAGE}
-                />
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                  </div>
+                );
+              })}
+              {inactivePatients.length > 5 && (
+                <button
+                  type="button"
+                  onClick={() => navigate("/patients")}
+                  className="w-full text-center text-[12.5px] font-semibold py-2 transition-opacity hover:opacity-80"
+                  style={{ color: "var(--cd-accent-soft)" }}
+                >
+                  Ver los {inactivePatients.length} pacientes en riesgo →
+                </button>
+              )}
+            </div>
+          )}
+        </div>
         </TabsContent>
 
         </Tabs>
