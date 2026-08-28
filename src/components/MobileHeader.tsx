@@ -45,9 +45,9 @@ const MODULE_GROUPS: ModuleGroup[] = [
     label: "Tu día a día",
     items: [
       { title: "Agenda", url: "/agenda", icon: CalendarDays, tint: null },
-      { title: "Solicitudes", url: "/solicitudes", icon: FileText, tint: "38 92% 55%", highlight: true },
       { title: "Pacientes", url: "/patients", icon: Users, tint: "210 90% 60%" },
       { title: "Pagos", url: "/pagos", icon: Receipt, tint: "152 70% 45%" },
+      { title: "Solicitudes", url: "/solicitudes", icon: FileText, tint: "38 92% 55%", highlight: true },
     ],
   },
   {
