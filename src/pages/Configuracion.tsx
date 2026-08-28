@@ -204,82 +204,100 @@ const Configuracion = () => {
 
   const tiles = isSuperAdmin ? TILES.filter((t) => t.url !== "/billing") : TILES;
 
+  const GROTESK = { fontFamily: "'Space Grotesk', sans-serif" } as const;
+  const CARD_BG = {
+    background: "linear-gradient(180deg,var(--cd-card1),var(--cd-card2))",
+    border: "1px solid hsl(var(--cd-tint-hsl)/0.1)",
+  } as const;
+
   return (
-    <div className="min-h-screen bg-background pb-16">
-      <div className="mx-auto w-full max-w-[860px] lg:max-w-none px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
+    <div
+      className="dark min-h-screen pb-16"
+      style={{ "--primary": "var(--brand-primary, 176 85% 42%)", background: "var(--cd-bg)", fontFamily: "'Instrument Sans', 'Plus Jakarta Sans', sans-serif" } as React.CSSProperties}
+    >
+      <div className="w-full px-4 sm:px-6 py-6 space-y-4">
         {/* Encabezado de página */}
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate("/dashboard")}
             aria-label="Volver al inicio"
-            className="h-11 w-11 shrink-0 rounded-2xl border border-border/70 bg-card flex items-center justify-center text-muted-foreground transition-colors hover:text-foreground hover:border-border"
+            className="flex h-[38px] w-[38px] items-center justify-center rounded-xl shrink-0 transition-opacity hover:opacity-80"
+            style={{ background: "hsl(var(--cd-tint-hsl)/0.07)", border: "1px solid hsl(var(--cd-tint-hsl)/0.12)", color: "var(--cd-text-soft)" }}
           >
-            <ArrowLeft className="h-[18px] w-[18px]" />
+            <ArrowLeft className="h-4 w-4" />
           </button>
           <span
-            className="h-11 w-11 rounded-2xl flex items-center justify-center shrink-0"
-            style={{
-              background: `hsla(${brandColor}, 0.16)`,
-              boxShadow: `inset 0 0 0 1px hsla(${brandColor}, 0.32)`,
-            }}
+            className="flex h-[42px] w-[42px] items-center justify-center rounded-[13px] shrink-0"
+            style={{ background: "hsl(var(--cd-accent-hsl)/0.12)", border: "1px solid hsl(var(--cd-accent-hsl)/0.25)", color: "var(--cd-accent)" }}
           >
-            <Settings className="h-5 w-5" style={{ color: `hsl(${brandColor})` }} />
+            <Settings className="h-[18px] w-[18px]" />
           </span>
           <div className="min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight leading-none">Configuración</h1>
-            <p className="text-sm text-muted-foreground mt-1.5 truncate">
+            <h1 className="text-[22px] sm:text-[28px] font-bold tracking-tight leading-tight" style={{ ...GROTESK, color: "var(--cd-text)" }}>
+              Configuración
+            </h1>
+            <p className="text-[12.5px] truncate" style={{ color: "var(--cd-muted)" }}>
               Todo lo que se ajusta una vez y trabaja solo.
             </p>
           </div>
         </div>
 
-        {/* Tiles */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3">
+        {/* Tiles (mockup): tarjetas oscuras con estado real por módulo, todo
+            con un ÚNICO color: el de la marca del portal. El ámbar queda solo
+            para el globito de recordatorios pendientes (semántico). */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2.5 sm:gap-3">
           {tiles.map((tile) => {
-            const tintHsl = `hsl(${tile.tint})`;
-            const tintHsla = (alpha: number) => `hsla(${tile.tint}, ${alpha})`;
             const metaText = tile.key === "plan" ? (planName ? `Plan ${planName}` : null) : meta[tile.key];
             const badge = tile.key === "recordatorios" && remindersCount > 0 ? remindersCount : null;
             return (
               <button
                 key={tile.url}
                 onClick={() => navigate(tile.url)}
-                className="group flex h-full items-start gap-4 rounded-2xl border border-border/70 bg-card p-4 sm:p-5 text-left transition-all duration-200 hover:border-border hover:shadow-md active:scale-[0.99]"
+                className="group flex h-full items-start gap-3.5 rounded-[17px] p-4 text-left transition-all duration-200 hover:-translate-y-0.5 active:scale-[0.985]"
+                style={CARD_BG}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLElement).style.border = "1px solid hsl(var(--cd-accent-hsl)/0.4)";
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLElement).style.border = CARD_BG.border as string;
+                }}
               >
                 <span
-                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl transition-transform duration-200 group-hover:scale-[1.06]"
-                  style={{
-                    background: tintHsla(0.14),
-                    boxShadow: `inset 0 0 0 1px ${tintHsla(0.25)}`,
-                  }}
+                  className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-[13px] transition-transform duration-300 ease-out group-hover:scale-110"
+                  style={{ background: "hsl(var(--cd-accent-hsl)/0.12)", color: "var(--cd-accent)" }}
                 >
-                  <tile.icon className="h-[22px] w-[22px]" style={{ color: tintHsl }} strokeWidth={2} />
+                  <tile.icon className="h-[19px] w-[19px]" strokeWidth={2} />
                 </span>
-                <span className="min-w-0 flex-1">
+                <span className="min-w-0 flex-1 flex flex-col gap-[3px]">
                   <span className="flex items-center gap-2">
-                    <span className="text-[17px] font-bold text-foreground leading-tight">{tile.title}</span>
+                    <span className="text-[15px] font-semibold leading-tight" style={{ ...GROTESK, color: "var(--cd-text)" }}>
+                      {tile.title}
+                    </span>
                     {badge !== null && (
                       <span
-                        className="inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-bold"
-                        style={{ background: tintHsla(0.18), color: tintHsl }}
+                        className="inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-semibold"
+                        style={{ background: "rgba(251,191,36,0.12)", border: "1px solid rgba(251,191,36,0.3)", color: "#fcd34d" }}
                       >
                         {badge}
                       </span>
                     )}
                   </span>
-                  <span className="mt-1 block text-[13.5px] leading-snug text-muted-foreground">
+                  <span className="text-xs leading-relaxed" style={{ color: "var(--cd-muted)" }}>
                     {tile.description}
                   </span>
                   {metaText && (
                     <span
-                      className="mt-2 block text-[12.5px] font-semibold leading-snug break-all"
-                      style={{ color: tintHsl }}
+                      className="mt-px block text-[11.5px] font-semibold leading-snug break-all"
+                      style={{ color: tile.key === "recordatorios" && remindersCount > 0 ? "#fcd34d" : "var(--cd-accent-soft)" }}
                     >
                       {metaText}
                     </span>
                   )}
                 </span>
-                <ChevronRight className="h-4 w-4 shrink-0 self-center text-muted-foreground/50 transition-transform duration-200 group-hover:translate-x-0.5" />
+                <ChevronRight
+                  className="h-[15px] w-[15px] shrink-0 self-center transition-transform duration-200 group-hover:translate-x-0.5"
+                  style={{ color: "var(--cd-dim)" }}
+                />
               </button>
             );
           })}
