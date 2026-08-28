@@ -121,8 +121,11 @@ Deno.serve(async (req) => {
       const data = await res.json();
       if (!res.ok) return json({ busy: [], connected: true });
       const busy = (data.items ?? [])
-        // Los eventos que creamos NOSOTROS no son "choques": son las citas
-        .filter((e: any) => !e?.extendedProperties?.private?.cd_appointment_id)
+        // Lo que creamos NOSOTROS no es "choque": citas y eventos del sistema
+        .filter((e: any) => {
+          const p = e?.extendedProperties?.private;
+          return !p?.cd_appointment_id && !p?.cd_personal_event_id && !p?.cd_origin;
+        })
         .filter((e: any) => e?.start?.dateTime && e?.end?.dateTime && e?.status !== "cancelled")
         .map((e: any) => ({
           start: e.start.dateTime,
@@ -181,7 +184,7 @@ Deno.serve(async (req) => {
             description: "Cita agendada en Consultorio Digital",
             start: { dateTime: new Date(a.start_at).toISOString() },
             end: { dateTime: new Date(a.end_at).toISOString() },
-            extendedProperties: { private: { cd_appointment_id: a.id } },
+            extendedProperties: { private: { cd_appointment_id: a.id, cd_origin: "consultorio" } },
           };
 
           let eventId = a.google_event_id as string | null;
@@ -211,6 +214,106 @@ Deno.serve(async (req) => {
           console.error("push failed for", a.id, e);
         }
       }
+      // ── Eventos personales: mismo espejo, con repetición si tienen ──
+      const { data: pevts } = await admin
+        .from("personal_events")
+        .select("id, title, start_at, end_at, recurrence, recurrence_until, updated_at, google_event_id, google_synced_at")
+        .eq("professional_user_id", user.id)
+        .lte("start_at", to.toISOString())
+        .or(`start_at.gte.${from.toISOString()},recurrence.neq.none`);
+
+      const RECUR_FREQ: Record<string, string> = { daily: "DAILY", weekly: "WEEKLY", monthly: "MONTHLY" };
+      const pendingPersonal = (pevts ?? [])
+        .filter((ev: any) =>
+          !ev.google_synced_at ||
+          (ev.updated_at && new Date(ev.updated_at) > new Date(ev.google_synced_at))
+        )
+        .slice(0, MAX_PUSH_PER_RUN);
+
+      for (const ev of pendingPersonal) {
+        try {
+          const freq = RECUR_FREQ[ev.recurrence];
+          let recurrence: string[] | undefined;
+          if (freq) {
+            const until = ev.recurrence_until
+              ? `;UNTIL=${String(ev.recurrence_until).slice(0, 10).replace(/-/g, "")}T235959Z`
+              : "";
+            recurrence = [`RRULE:FREQ=${freq}${until}`];
+          }
+          const event: Record<string, unknown> = {
+            summary: ev.title || "Evento personal",
+            description: "Evento personal de Consultorio Digital",
+            start: { dateTime: new Date(ev.start_at).toISOString(), timeZone: "America/Montevideo" },
+            end: { dateTime: new Date(ev.end_at).toISOString(), timeZone: "America/Montevideo" },
+            extendedProperties: { private: { cd_personal_event_id: ev.id, cd_origin: "consultorio" } },
+          };
+          if (recurrence) event.recurrence = recurrence;
+
+          let eventId = ev.google_event_id as string | null;
+          if (eventId) {
+            const res = await fetch(
+              `https://www.googleapis.com/calendar/v3/calendars/${calId}/events/${encodeURIComponent(eventId)}`,
+              { method: "PATCH", headers: gHeaders, body: JSON.stringify(event) }
+            );
+            if (res.status === 404 || res.status === 410) eventId = null;
+            else if (!res.ok) continue;
+          }
+          if (!eventId) {
+            const res = await fetch(
+              `https://www.googleapis.com/calendar/v3/calendars/${calId}/events`,
+              { method: "POST", headers: gHeaders, body: JSON.stringify(event) }
+            );
+            if (!res.ok) continue;
+            eventId = (await res.json()).id;
+          }
+          await admin
+            .from("personal_events")
+            .update({ google_event_id: eventId, google_synced_at: new Date().toISOString() })
+            .eq("id", ev.id);
+          pushed++;
+        } catch (e) {
+          console.error("push personal failed for", ev.id, e);
+        }
+      }
+
+      // ── Reconciliación: lo que se borró acá, se borra allá también ──
+      // Se listan los eventos con nuestra marca (cd_origin) y se elimina
+      // todo el que ya no exista en el sistema (citas o eventos borrados).
+      try {
+        const aptIds = new Set((apts ?? []).map((a: any) => a.id));
+        const perIds = new Set((pevts ?? []).map((p: any) => p.id));
+        const listParams = new URLSearchParams({
+          timeMin: from.toISOString(),
+          timeMax: to.toISOString(),
+          singleEvents: "true",
+          maxResults: "250",
+          privateExtendedProperty: "cd_origin=consultorio",
+        });
+        const listRes = await fetch(
+          `https://www.googleapis.com/calendar/v3/calendars/${calId}/events?${listParams.toString()}`,
+          { headers: gHeaders }
+        );
+        if (listRes.ok) {
+          const listData = await listRes.json();
+          const toDelete = new Set<string>();
+          for (const e of listData.items ?? []) {
+            const p = e?.extendedProperties?.private ?? {};
+            const target = e.recurringEventId ?? e.id; // instancia → su serie
+            if (p.cd_personal_event_id && !perIds.has(p.cd_personal_event_id)) toDelete.add(target);
+            if (p.cd_appointment_id && !aptIds.has(p.cd_appointment_id)) toDelete.add(target);
+          }
+          for (const id of toDelete) {
+            await fetch(
+              `https://www.googleapis.com/calendar/v3/calendars/${calId}/events/${encodeURIComponent(id)}`,
+              { method: "DELETE", headers: gHeaders }
+            );
+            pushed++;
+          }
+        }
+      } catch (e) {
+        console.error("reconcile failed:", e);
+      }
+
       return json({ pushed, connected: true });
     }
 
