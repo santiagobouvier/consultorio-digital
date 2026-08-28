@@ -656,9 +656,9 @@ const Statistics = () => {
               <p className="text-[13px] truncate" style={{ color: "var(--cd-muted)" }}>{PERIOD_LABELS[period]}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2.5 flex-wrap">
+          <div className="flex items-center gap-2 sm:gap-2.5 w-full lg:w-auto">
             <div
-              className="flex gap-[3px] p-1 rounded-[13px]"
+              className="flex flex-1 lg:flex-none gap-[3px] p-1 rounded-[13px]"
               style={{ background: "hsl(var(--cd-tint-hsl)/0.06)", border: "1px solid hsl(var(--cd-tint-hsl)/0.12)" }}
             >
               {([["30d", "30d"], ["90d", "90d"], ["year", "Año"], ["all", "Todo"]] as const).map(([key, label]) => (
@@ -666,7 +666,7 @@ const Statistics = () => {
                   key={key}
                   type="button"
                   onClick={() => setPeriod(key)}
-                  className="px-[15px] py-2 rounded-[10px] text-[12.5px] transition-colors"
+                  className="flex-1 lg:flex-none px-2 lg:px-[15px] py-2 rounded-[10px] text-[12.5px] transition-colors"
                   style={
                     period === key
                       ? { background: "var(--cd-text)", color: "var(--cd-bg-deep)", fontWeight: 600 }
@@ -677,24 +677,30 @@ const Statistics = () => {
                 </button>
               ))}
             </div>
-            <Button variant="outline" size="sm" onClick={handleExport} className="gap-2 h-10 px-4 rounded-xl border-0 text-[13px] font-medium" style={PILL}>
-              <Download className="h-[13px] w-[13px]" />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExport}
+              className="gap-2 h-11 w-11 p-0 sm:h-10 sm:w-auto sm:px-4 rounded-xl border-0 text-[13px] font-medium shrink-0"
+              style={PILL}
+              title="Exportar CSV"
+            >
+              <Download className="h-4 w-4 sm:h-[13px] sm:w-[13px]" />
               <span className="hidden sm:inline">Exportar CSV</span>
-              <span className="sm:hidden">CSV</span>
             </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={handleExportPDF}
               disabled={exportingPDF}
-              className="gap-2 h-10 px-4 rounded-xl border-0 text-[13px] font-medium"
+              className="gap-2 h-11 w-11 p-0 sm:h-10 sm:w-auto sm:px-4 rounded-xl border-0 text-[13px] font-medium shrink-0"
               style={PILL}
+              title="Exportar PDF"
             >
-              <FileDown className="h-[13px] w-[13px]" />
+              <FileDown className="h-4 w-4 sm:h-[13px] sm:w-[13px]" />
               <span className="hidden sm:inline">
                 {exportingPDF ? "Generando..." : "Exportar PDF"}
               </span>
-              <span className="sm:hidden">{exportingPDF ? "..." : "PDF"}</span>
             </Button>
           </div>
         </div>
@@ -728,7 +734,7 @@ const Statistics = () => {
           </TabsList>
 
         {/* ══════════ FINANZAS: la historia de tu plata ══════════ */}
-        <TabsContent value="finanzas" className="space-y-6 mt-0">
+        <TabsContent value="finanzas" className="space-y-3 sm:space-y-6 mt-0">
         {/* Hero de cobros (mockup): tres celdas sobre gradiente con glow */}
         <div
           className="relative overflow-hidden rounded-[22px]"
@@ -746,7 +752,78 @@ const Statistics = () => {
             }}
             aria-hidden
           />
-          <div className="relative grid gap-0.5" style={{ gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))" }}>
+
+          {/* Versión mobile (mockup): cobrado + donut en una fila, y el
+              pendiente como fila interna con borde ámbar */}
+          <div className="relative sm:hidden p-5">
+            {(() => {
+              const total = kpis.cobrado + kpis.pendiente;
+              const rate = total > 0 ? Math.round((kpis.cobrado / total) * 100) : 0;
+              return (
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div
+                      className="flex items-center gap-2 uppercase mb-2.5 text-[11px] font-semibold"
+                      style={{ ...GROTESK, letterSpacing: "0.16em", color: "var(--cd-accent)" }}
+                    >
+                      <DollarSign className="h-[13px] w-[13px] shrink-0" />
+                      Cobrado en el período
+                    </div>
+                    <div className="flex items-baseline gap-2 flex-wrap">
+                      <span
+                        className="font-bold leading-none tracking-tight text-[30px]"
+                        style={{ ...GROTESK, color: "var(--cd-accent-soft)" }}
+                      >
+                        {formatCurrency(kpis.cobrado)}
+                      </span>
+                      <TrendBadge value={trends?.cobrado ?? null} />
+                    </div>
+                    <div className="mt-2 text-xs" style={{ color: "var(--cd-dim)" }}>vs. período anterior</div>
+                  </div>
+                  <div className="relative shrink-0" style={{ width: 84, height: 84 }}>
+                    <svg width="84" height="84" viewBox="0 0 100 100">
+                      <circle cx="50" cy="50" r="41" fill="none" stroke="hsl(var(--cd-tint-hsl)/.12)" strokeWidth="9" />
+                      <circle
+                        cx="50" cy="50" r="41" fill="none" stroke="url(#grTasaStatsM)" strokeWidth="9"
+                        strokeLinecap="round" strokeDasharray="258"
+                        strokeDashoffset={258 * (1 - rate / 100)}
+                        transform="rotate(-90 50 50)"
+                      />
+                      <defs>
+                        <linearGradient id="grTasaStatsM" x1="0" y1="0" x2="1" y2="1">
+                          <stop offset="0%" style={{ stopColor: "var(--cd-accent)" }} />
+                          <stop offset="100%" style={{ stopColor: "var(--cd-accent-deep)" }} />
+                        </linearGradient>
+                      </defs>
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <span className="font-bold text-[19px] leading-none" style={{ ...GROTESK, color: "var(--cd-text)" }}>
+                        {rate}%
+                      </span>
+                      <span className="text-[9px] mt-0.5" style={{ color: "var(--cd-dim)" }}>cobranza</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+            <div
+              className="mt-4 rounded-[14px] px-4 py-3 flex items-center justify-between gap-3"
+              style={{ border: "1px solid rgba(251,191,36,0.25)", background: "rgba(251,191,36,0.04)" }}
+            >
+              <span
+                className="flex items-center gap-2 uppercase text-[10.5px] font-semibold"
+                style={{ ...GROTESK, letterSpacing: "0.14em", color: "#a08657" }}
+              >
+                <TrendingUp className="h-[13px] w-[13px] shrink-0" />
+                Pendiente de cobro
+              </span>
+              <span className="font-bold text-[17px] whitespace-nowrap" style={{ ...GROTESK, color: "#fcd34d" }}>
+                {formatCurrency(kpis.pendiente)}
+              </span>
+            </div>
+          </div>
+
+          <div className="relative hidden sm:grid gap-0.5" style={{ gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))" }}>
             <div className="px-6 lg:px-7 py-6">
               <div
                 className="flex items-center gap-2 uppercase mb-2.5 text-[11px] font-semibold"
@@ -830,19 +907,29 @@ const Statistics = () => {
           </div>
         </div>
 
-        {/* Fila inteligente: proyección, demora de cobro y vencidos */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div className="rounded-[18px] p-5" style={CARD_BG}>
-            <div
-              className="flex items-center gap-2 uppercase mb-2 text-[10.5px] font-semibold"
-              style={{ ...GROTESK, letterSpacing: "0.15em", color: "var(--cd-dim)" }}
-            >
-              <Target className="h-[13px] w-[13px]" style={{ color: "var(--cd-accent)" }} />
-              Proyección de este mes
+        {/* Fila inteligente: proyección, demora de cobro y vencidos.
+            En mobile (mockup): proyección a lo ancho con el monto a la
+            derecha, y abajo demora + vencidos lado a lado. */}
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          <div className="rounded-[18px] p-5 col-span-2 md:col-span-1 flex items-center justify-between gap-3 md:block" style={CARD_BG}>
+            <div className="min-w-0">
+              <div
+                className="flex items-center gap-2 uppercase mb-2 text-[10.5px] font-semibold"
+                style={{ ...GROTESK, letterSpacing: "0.15em", color: "var(--cd-dim)" }}
+              >
+                <Target className="h-[13px] w-[13px] shrink-0" style={{ color: "var(--cd-accent)" }} />
+                Proyección de este mes
+              </div>
+              <p className="md:hidden text-xs" style={{ color: "var(--cd-muted)" }}>
+                {formatCurrency(monthProjection.cobrado)} cobrado + {formatCurrency(monthProjection.porCobrar)} por cobrar
+              </p>
+              <p className="hidden md:block font-bold text-2xl" style={{ ...GROTESK, color: "var(--cd-text)" }}>{formatCurrency(monthProjection.total)}</p>
+              <p className="hidden md:block text-xs mt-1" style={{ color: "var(--cd-muted)" }}>
+                {formatCurrency(monthProjection.cobrado)} cobrado + {formatCurrency(monthProjection.porCobrar)} por cobrar
+              </p>
             </div>
-            <p className="font-bold text-2xl" style={{ ...GROTESK, color: "var(--cd-text)" }}>{formatCurrency(monthProjection.total)}</p>
-            <p className="text-xs mt-1" style={{ color: "var(--cd-muted)" }}>
-              {formatCurrency(monthProjection.cobrado)} cobrado + {formatCurrency(monthProjection.porCobrar)} por cobrar
+            <p className="md:hidden font-bold text-[22px] whitespace-nowrap shrink-0" style={{ ...GROTESK, color: "var(--cd-text)" }}>
+              {formatCurrency(monthProjection.total)}
             </p>
           </div>
           <div className="rounded-[18px] p-5" style={CARD_BG}>
@@ -850,14 +937,16 @@ const Statistics = () => {
               className="flex items-center gap-2 uppercase mb-2 text-[10.5px] font-semibold"
               style={{ ...GROTESK, letterSpacing: "0.15em", color: "var(--cd-dim)" }}
             >
-              <Timer className="h-[13px] w-[13px]" style={{ color: "#a9ccf5" }} />
-              Demora promedio de cobro
+              <Timer className="h-[13px] w-[13px] shrink-0" style={{ color: "#a9ccf5" }} />
+              <span className="md:hidden">Demora de cobro</span>
+              <span className="hidden md:inline">Demora promedio de cobro</span>
             </div>
             <p className="font-bold text-2xl" style={{ ...GROTESK, color: "var(--cd-text)" }}>
               {collectionDelay === null ? "—" : collectionDelay === 0 ? "Al día" : `${collectionDelay} días`}
             </p>
             <p className="text-xs mt-1" style={{ color: "var(--cd-muted)" }}>
-              entre el vencimiento y el pago efectivo
+              <span className="md:hidden">promedio hasta el pago</span>
+              <span className="hidden md:inline">entre el vencimiento y el pago efectivo</span>
             </p>
           </div>
           <div
@@ -883,9 +972,14 @@ const Statistics = () => {
             </p>
             <div className="flex items-center justify-between gap-2 mt-1">
               <p className="text-xs" style={{ color: overdueInfo.count === 0 ? "var(--cd-muted)" : "#a06570" }}>
-                {overdueInfo.count === 0
-                  ? "nadie te debe, todo al día ✓"
-                  : `${overdueInfo.count} pago${overdueInfo.count === 1 ? "" : "s"} sin cobrar`}
+                {overdueInfo.count === 0 ? (
+                  <>
+                    <span className="md:hidden">todo al día ✓</span>
+                    <span className="hidden md:inline">nadie te debe, todo al día ✓</span>
+                  </>
+                ) : (
+                  `${overdueInfo.count} pago${overdueInfo.count === 1 ? "" : "s"} sin cobrar`
+                )}
               </p>
               {overdueInfo.count > 0 && (
                 <Button
