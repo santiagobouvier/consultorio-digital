@@ -1508,11 +1508,14 @@ export function CreateAppointmentModal({
           <AlertDialogTitle>A esa hora tenés algo tuyo 📅</AlertDialogTitle>
           <AlertDialogDescription>
             {clashDialog.ext.label}, de {minToHHMM(clashDialog.ext.start)} a{" "}
-            {minToHHMM(clashDialog.ext.end)}. ¿Qué hacemos?
+            {minToHHMM(clashDialog.ext.end)}.{" "}
+            {clashDialog.ext.eventId
+              ? "Una cosa reemplaza a la otra: si agendás acá, ese evento se borra de tu Google."
+              : "Ese evento viene de un calendario de solo lectura (conectado por link): no lo podemos borrar desde acá."}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter className="flex-col sm:flex-col gap-2">
-          {clashDialog.ext.eventId && (
+          {clashDialog.ext.eventId ? (
             <Button
               onClick={clashDeleteAndBook}
               disabled={clashWorking}
@@ -1521,15 +1524,16 @@ export function CreateAppointmentModal({
               {clashWorking && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Borrar ese evento de Google y agendar acá
             </Button>
+          ) : (
+            <Button
+              variant="secondary"
+              onClick={clashKeepBoth}
+              disabled={clashWorking}
+              className="w-full h-11 rounded-xl font-semibold"
+            >
+              Agendar igual acá
+            </Button>
           )}
-          <Button
-            variant="secondary"
-            onClick={clashKeepBoth}
-            disabled={clashWorking}
-            className="w-full h-11 rounded-xl font-semibold"
-          >
-            Agendar igual (quedan los dos)
-          </Button>
           <Button
             variant="ghost"
             onClick={() => setClashDialog(null)}
