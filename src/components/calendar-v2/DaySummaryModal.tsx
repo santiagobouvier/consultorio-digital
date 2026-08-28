@@ -136,7 +136,7 @@ export const DaySummaryModal = ({
                     <span className="flex-1 min-w-0">
                       <span className="block text-sm font-medium truncate">
                         {isPersonal
-                          ? apt.personalEvent?.title || "Evento personal"
+                          ? `${apt.personalEvent?.icon ? `${apt.personalEvent.icon} ` : ""}${apt.personalEvent?.title || "Evento personal"}`
                           : apt.patients?.full_name || "Sin paciente"}
                       </span>
                       <span className="block text-xs text-muted-foreground truncate">
