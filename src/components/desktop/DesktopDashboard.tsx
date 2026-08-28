@@ -567,29 +567,8 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
         }
       `}</style>
       {/* ══════════ BANDA HERO: el cockpit del día ══════════ */}
-      <section className="relative overflow-hidden text-white" style={{ borderBottom: "1px solid rgba(140,200,170,0.12)" }}>
-        <div
-          className="absolute inset-0"
-          style={{ background: "linear-gradient(160deg, #0e1d15, #0a1410 55%, #081009)" }}
-        />
-        <div
-          className="dash-glow absolute -top-32 right-[8%] w-[560px] h-[420px] pointer-events-none rounded-full"
-          style={{
-            background: "radial-gradient(ellipse at center, rgba(52,211,153,0.22), transparent 65%)",
-            filter: "blur(10px)",
-            animation: "dashDrift 14s ease-in-out infinite",
-          }}
-        />
-        <div
-          className="dash-glow absolute -bottom-40 -left-24 w-[440px] h-[360px] pointer-events-none rounded-full"
-          style={{
-            background: "radial-gradient(ellipse at center, rgba(20,184,166,0.14), transparent 65%)",
-            filter: "blur(10px)",
-            animation: "dashDrift 18s ease-in-out infinite reverse",
-          }}
-        />
-
-        <div className="relative max-w-screen-2xl mx-auto px-10 pt-7 pb-16">
+      <section className="relative text-white">
+        <div className="relative max-w-screen-2xl mx-auto px-10 pt-6">
           {/* Fila superior: marca · fecha/reloj · acciones */}
           <div className="flex items-center justify-between gap-6">
             <div className="flex items-center gap-4 min-w-0">
@@ -652,8 +631,25 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
             </div>
           </div>
 
-          {/* Marquesina: el estado del día, en grande */}
-          <div className="mt-9 flex items-end justify-between gap-10 flex-wrap">
+          {/* Tarjeta hero: la marquesina del día adentro de una tarjeta con
+              borde y glow esmeralda, como el mockup */}
+          <div
+            className="relative overflow-hidden rounded-3xl mt-6"
+            style={{
+              background: "linear-gradient(160deg, #0e1d15, #0a1410 55%, #081009)",
+              border: "1px solid rgba(52,211,153,0.22)",
+              boxShadow: "0 24px 60px -30px rgba(52,211,153,0.35)",
+            }}
+          >
+            <div
+              className="dash-glow absolute -top-32 right-[8%] w-[560px] h-[420px] pointer-events-none rounded-full"
+              style={{
+                background: "radial-gradient(ellipse at center, rgba(52,211,153,0.22), transparent 65%)",
+                filter: "blur(10px)",
+                animation: "dashDrift 14s ease-in-out infinite",
+              }}
+            />
+            <div className="relative px-9 py-8 flex items-end justify-between gap-10 flex-wrap">
             <div className="min-w-0 flex-1">
               {currentSession ? (
                 <>
@@ -685,19 +681,30 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
               ) : nextSession ? (
                 <>
                   <p className="text-xs font-bold tracking-[0.22em] text-[#34d399] mb-3">PRÓXIMA SESIÓN</p>
-                  <div className="flex items-baseline gap-4 flex-wrap">
+                  <div className="flex items-center gap-4 flex-wrap">
                     <span className="text-[52px] leading-none font-extrabold tabular-nums tracking-tight" style={GROTESK}>
                       {format(new Date(nextSession.start_at), "HH:mm")}
                     </span>
-                    <span className="text-xl font-semibold text-[#34d399]">
+                    <span
+                      className="inline-flex items-center rounded-full px-3.5 py-1.5 text-sm font-bold"
+                      style={{ background: "rgba(52,211,153,0.14)", color: "#34d399", border: "1px solid rgba(52,211,153,0.3)" }}
+                    >
                       {formatCountdown(new Date(nextSession.start_at).getTime() - nowTick)}
                     </span>
                   </div>
-                  <p className="text-xl font-bold mt-3 truncate">{nextSession.patients?.full_name || "Sin paciente"}</p>
-                  <p className="text-sm text-white/60 mt-1 flex items-center gap-2 flex-wrap">
-                    {nextSession.services?.name || "Sesión"}
-                    {modalityChip(nextSession.modality) && <>· {modalityChip(nextSession.modality)}</>}
-                  </p>
+                  <div className="flex items-center gap-2.5 mt-4 flex-wrap">
+                    <span
+                      className="flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold shrink-0"
+                      style={{ background: "rgba(52,211,153,0.16)", color: "#34d399", border: "1px solid rgba(52,211,153,0.3)" }}
+                    >
+                      {(nextSession.patients?.full_name || "P").trim()[0]?.toUpperCase()}
+                    </span>
+                    <p className="text-xl font-bold truncate">{nextSession.patients?.full_name || "Sin paciente"}</p>
+                    <span className="text-sm text-white/60 flex items-center gap-2 flex-wrap">
+                      {nextSession.services?.name || "Sesión"}
+                      {modalityChip(nextSession.modality) && <>· {modalityChip(nextSession.modality)}</>}
+                    </span>
+                  </div>
                   <div className="mt-5">
                     <SessionActions apt={nextSession} onDark />
                   </div>
@@ -767,23 +774,38 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
               <DayRing done={doneCount} total={Math.max(activeToday.length, 1)} size={104} onDark />
               <div className="space-y-2.5">
                 {[
-                  { label: "Cobrado hoy", value: formatCurrency(collectedToday) },
-                  { label: "Pendientes", value: String(pendingCount) },
-                  { label: "Citas esta semana", value: String(weekApptsCount) },
+                  { label: "Cobrado hoy", value: formatCurrency(collectedToday), warn: false },
+                  { label: "Pendientes", value: String(pendingCount), warn: pendingCount > 0 },
+                  { label: "Citas esta semana", value: String(weekApptsCount), warn: false },
                 ].map((c) => (
-                  <div key={c.label} className="rounded-xl border border-white/10 bg-white/[0.06] backdrop-blur-sm px-4 py-2 min-w-[170px]">
-                    <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-white/45" style={GROTESK}>{c.label}</p>
-                    <p className="text-base font-bold tabular-nums" style={GROTESK}>{c.value}</p>
+                  <div
+                    key={c.label}
+                    className="flex items-center justify-between gap-6 rounded-xl px-4 py-2.5 min-w-[220px] backdrop-blur-sm"
+                    style={{
+                      background: c.warn ? "rgba(245,158,11,0.08)" : "rgba(255,255,255,0.06)",
+                      border: c.warn ? "1px solid rgba(245,158,11,0.45)" : "1px solid rgba(255,255,255,0.10)",
+                    }}
+                  >
+                    <p
+                      className="text-[9px] font-semibold uppercase tracking-[0.14em]"
+                      style={{ ...GROTESK, color: c.warn ? "rgba(251,191,36,0.85)" : "rgba(255,255,255,0.45)" }}
+                    >
+                      {c.label}
+                    </p>
+                    <p className="text-base font-bold tabular-nums" style={{ ...GROTESK, color: c.warn ? "#fbbf24" : "#fff" }}>
+                      {c.value}
+                    </p>
                   </div>
                 ))}
               </div>
+            </div>
             </div>
           </div>
         </div>
       </section>
 
       {/* ══════════ CUERPO: tarjetas montadas sobre la banda ══════════ */}
-      <main className="relative z-10 max-w-screen-2xl mx-auto px-10 -mt-7 pb-10 space-y-6">
+      <main className="relative z-10 max-w-screen-2xl mx-auto px-10 mt-6 pb-10 space-y-6">
         <ActivationChecklist
           businessId={businessId}
           onAllDone={() => {
@@ -945,6 +967,40 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
                 </Card>
               ))}
             </div>
+
+            {/* Mañana, de reojo (columna principal, como el mockup) */}
+            {(() => {
+              const tomorrowList = upcomingAppointments.filter((a) => isTomorrow(new Date(a.start_at)));
+              if (tomorrowList.length === 0) return null;
+              return (
+                <Card className="rounded-2xl">
+                  <CardContent className="p-5">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-1.5">
+                      <CalendarClock className="h-3.5 w-3.5" /> Mañana · {tomorrowList.length}{" "}
+                      {tomorrowList.length === 1 ? "sesión" : "sesiones"}
+                    </p>
+                    <div className="space-y-1.5">
+                      {tomorrowList.slice(0, 4).map((a) => (
+                        <div
+                          key={a.id}
+                          role="button"
+                          onClick={() => setSelectedApt(a)}
+                          className="flex items-center gap-3 text-sm rounded-xl border border-border/50 px-3.5 py-2.5 cursor-pointer hover:bg-muted/50 transition-colors"
+                        >
+                          <span className="font-bold tabular-nums text-muted-foreground w-11">
+                            {format(new Date(a.start_at), "HH:mm")}
+                          </span>
+                          <span className="truncate font-medium">{a.patients?.full_name || "Sin paciente"}</span>
+                        </div>
+                      ))}
+                      {tomorrowList.length > 4 && (
+                        <p className="text-[11px] text-muted-foreground pl-14">y {tomorrowList.length - 4} más</p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })()}
           </div>
 
           {/* ── Columna derecha: PARA HOY ── */}
@@ -1083,40 +1139,6 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
                 )}
               </CardContent>
             </Card>
-
-            {/* Mañana, de reojo */}
-            {(() => {
-              const tomorrowList = upcomingAppointments.filter((a) => isTomorrow(new Date(a.start_at)));
-              if (tomorrowList.length === 0) return null;
-              return (
-                <Card className="rounded-2xl">
-                  <CardContent className="p-5">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-1.5">
-                      <CalendarClock className="h-3.5 w-3.5" /> Mañana · {tomorrowList.length}{" "}
-                      {tomorrowList.length === 1 ? "sesión" : "sesiones"}
-                    </p>
-                    <div className="space-y-2">
-                      {tomorrowList.slice(0, 3).map((a) => (
-                        <div
-                          key={a.id}
-                          role="button"
-                          onClick={() => setSelectedApt(a)}
-                          className="flex items-center gap-3 text-sm rounded-lg px-1 py-0.5 -mx-1 cursor-pointer hover:bg-muted/50 transition-colors"
-                        >
-                          <span className="font-bold tabular-nums text-muted-foreground w-11">
-                            {format(new Date(a.start_at), "HH:mm")}
-                          </span>
-                          <span className="truncate">{a.patients?.full_name || "Sin paciente"}</span>
-                        </div>
-                      ))}
-                      {tomorrowList.length > 3 && (
-                        <p className="text-[11px] text-muted-foreground pl-14">y {tomorrowList.length - 3} más</p>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })()}
 
             {/* Pacientes activos, chiquito */}
             <Card onClick={() => navigate("/patients")} className="rounded-2xl cursor-pointer hover:shadow-md transition-all">
