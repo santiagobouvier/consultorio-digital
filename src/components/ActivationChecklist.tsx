@@ -304,7 +304,7 @@ export const ActivationChecklist = ({ businessId, onAllDone }: Props) => {
       className="flex items-center gap-3 rounded-xl border border-border/60 bg-background/70 hover:bg-muted/40 transition-colors px-3.5 py-2.5"
     >
       {it.done ? (
-        <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0" />
+        <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />
       ) : (
         <Circle className="h-5 w-5 text-muted-foreground shrink-0" />
       )}

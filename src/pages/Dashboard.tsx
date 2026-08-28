@@ -511,7 +511,7 @@ const Dashboard = () => {
   return (
       <div
         className="dark min-h-screen"
-        style={{ background: "var(--cd-bg)", fontFamily: "'Instrument Sans', 'Plus Jakarta Sans', sans-serif" }}
+        style={{ "--primary": "var(--brand-primary, 176 85% 42%)", background: "var(--cd-bg)", fontFamily: "'Instrument Sans', 'Plus Jakarta Sans', sans-serif" } as React.CSSProperties}
       >
       <style>{`
         @keyframes mDashDrift {
@@ -1008,8 +1008,8 @@ const Dashboard = () => {
                 Necesitan de vos
               </h3>
               {items.length === 0 ? (
-                <div className="flex items-center gap-2.5 rounded-xl border border-emerald-500/25 bg-emerald-500/[0.06] px-4 py-3">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                <div className="flex items-center gap-2.5 rounded-xl border border-primary/25 bg-primary/[0.06] px-4 py-3">
+                  <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
                   <p className="text-sm font-medium text-foreground">Todo en orden — nada pendiente</p>
                 </div>
               ) : (
@@ -1100,7 +1100,7 @@ const Dashboard = () => {
                             : current
                             ? "bg-primary animate-pulse"
                             : done
-                            ? "bg-emerald-500"
+                            ? "bg-primary"
                             : "border-2 border-primary/50 bg-transparent"
                         }`}
                       />
@@ -1110,7 +1110,7 @@ const Dashboard = () => {
                       <span className={`text-sm truncate flex-1 ${cancelled ? "line-through" : "text-foreground"}`}>
                         {appointment.patients?.full_name || appointment.contact_name}
                       </span>
-                      {done && !cancelled && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />}
+                      {done && !cancelled && <CheckCircle2 className="h-3.5 w-3.5 text-primary shrink-0" />}
                       {current && <span className="text-[10px] font-semibold text-primary shrink-0">AHORA</span>}
                     </div>
                   );

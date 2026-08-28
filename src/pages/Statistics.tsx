@@ -636,7 +636,7 @@ const Statistics = () => {
   return (
     <div
       className="dark min-h-screen"
-      style={{ background: "var(--cd-bg)", fontFamily: "'Instrument Sans', 'Plus Jakarta Sans', sans-serif" }}
+      style={{ "--primary": "var(--brand-primary, 176 85% 42%)", background: "var(--cd-bg)", fontFamily: "'Instrument Sans', 'Plus Jakarta Sans', sans-serif" } as React.CSSProperties}
     >
       <div className="w-full px-4 sm:px-6 py-6 space-y-4">
         {/* Encabezado de página */}

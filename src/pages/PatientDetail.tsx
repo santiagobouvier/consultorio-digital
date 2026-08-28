@@ -556,7 +556,7 @@ const PatientDetail = () => {
   } as const;
 
   return (
-    <div className="dark min-h-screen" style={{ background: "var(--cd-bg)", fontFamily: "'Instrument Sans', 'Plus Jakarta Sans', sans-serif" }}>
+    <div className="dark min-h-screen" style={{ "--primary": "var(--brand-primary, 176 85% 42%)", background: "var(--cd-bg)", fontFamily: "'Instrument Sans', 'Plus Jakarta Sans', sans-serif" } as React.CSSProperties}>
       <style>{`
         @keyframes fichaDrift {
           0%, 100% { transform: translate(0, 0) scale(1); }

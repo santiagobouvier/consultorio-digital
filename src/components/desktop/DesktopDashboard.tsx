@@ -534,7 +534,7 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
 
   if (loading) {
     return (
-      <div className="dark min-h-screen p-10" style={{ background: "var(--cd-bg)" }}>
+      <div className="dark min-h-screen p-10" style={{ "--primary": "var(--brand-primary, 176 85% 42%)", background: "var(--cd-bg)" } as React.CSSProperties}>
         <div className="max-w-screen-2xl mx-auto space-y-8">
           <Skeleton className="h-20 w-full rounded-2xl" />
           <div className="grid grid-cols-[1fr_400px] gap-6">
@@ -555,7 +555,7 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
   return (
     <div
       className="dark min-h-screen"
-      style={{ background: "var(--cd-bg)", fontFamily: "'Instrument Sans', 'Plus Jakarta Sans', sans-serif" }}
+      style={{ "--primary": "var(--brand-primary, 176 85% 42%)", background: "var(--cd-bg)", fontFamily: "'Instrument Sans', 'Plus Jakarta Sans', sans-serif" } as React.CSSProperties}
     >
       <style>{`
         @keyframes dashDrift {
@@ -868,7 +868,7 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
                             <span
                               className={`absolute left-[2px] top-1/2 -translate-y-1/2 w-[11px] h-[11px] rounded-full ring-4 ring-background ${
                                 row.state === "done"
-                                  ? "bg-emerald-500"
+                                  ? "bg-primary"
                                   : row.state === "now"
                                   ? "bg-primary"
                                   : row.state === "cancelled"
@@ -899,7 +899,7 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
                               </div>
                               <div className="shrink-0">
                                 {row.state === "done" && (
-                                  <Badge className="text-[10px] bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/15">
+                                  <Badge className="text-[10px] bg-primary/15 text-primary border border-primary/30 hover:bg-primary/15">
                                     Realizada
                                   </Badge>
                                 )}
@@ -930,7 +930,7 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
               {[
                 {
                   icon: Wallet, label: "Cobrado hoy", value: formatCurrency(collectedToday), to: "/pagos",
-                  cls: "text-emerald-600 dark:text-emerald-400", spark: null as number[] | null, accent: "from-emerald-500/50 via-emerald-500 to-emerald-500/50",
+                  cls: "text-primary", spark: null as number[] | null, accent: "from-primary/50 via-primary to-primary/50",
                 },
                 {
                   icon: Wallet, label: "Cobrado este mes", value: formatCurrency(collectedThisMonth), to: "/pagos",
