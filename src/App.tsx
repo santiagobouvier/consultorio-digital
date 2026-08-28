@@ -168,7 +168,6 @@ const PROTECTED_ROUTE_PREFIXES = [
   "/centro-control",
   "/recordatorios-pendientes",
   "/mi-consultorio",
-  "/horarios-disponibles",
   "/solicitudes",
   "/pagos",
   "/personalizar-portal",
@@ -296,7 +295,6 @@ const App = () => {
                 <Route path="/centro-control" element={<Protected><CommandCenter /></Protected>} />
                 <Route path="/recordatorios-pendientes" element={<Protected><PendingReminders /></Protected>} />
                 <Route path="/mi-consultorio" element={<Protected><ClinicSettings /></Protected>} />
-                <Route path="/horarios-disponibles" element={<Protected><AvailableSlots /></Protected>} />
                 <Route path="/solicitudes" element={<Protected><AppointmentRequests /></Protected>} />
                 <Route path="/pagos" element={<Protected><Payments /></Protected>} />
                 <Route path="/personalizar-portal" element={<Protected><PortalCustomization /></Protected>} />

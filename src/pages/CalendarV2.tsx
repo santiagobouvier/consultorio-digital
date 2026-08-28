@@ -996,11 +996,7 @@ const CalendarV2 = () => {
             onOpenChange={setShowScheduleSheet}
             businessId={businessId}
             professionalUserId={currentUserId}
-            onSaved={() => {
-              invalidateAppointmentData(queryClient);
-              queryClient.invalidateQueries({ queryKey: ["free_slots"] });
-              queryClient.invalidateQueries({ queryKey: ["week_slot_summary"] });
-            }}
+            onSaved={() => invalidateAppointmentData(queryClient)}
           />
         )}
 

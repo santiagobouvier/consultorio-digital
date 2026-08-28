@@ -73,7 +73,6 @@ const CONFIG_ITEM: NavItem = { title: "Configuración", url: "/configuracion", i
 // también cuando estás en cualquiera de sus subpáginas.
 export const CONFIG_ROUTES = [
   "/configuracion",
-  "/horarios-disponibles",
   "/recordatorios-pendientes",
   "/mi-consultorio",
   "/personalizar-portal",

@@ -201,11 +201,11 @@ export const ActivationChecklist = ({ businessId, onAllDone }: Props) => {
     {
       key: "services",
       done: state.services,
-      to: "/horarios-disponibles",
+      to: "/agenda",
       title: "Creá tus tipos de sesión",
       desc: "Nombre, duración y precio de lo que ofrecés (ej: Sesión individual, 60 min).",
       action: (
-        <Button size="sm" variant="outline" onClick={() => navigate("/horarios-disponibles")}>
+        <Button size="sm" variant="outline" onClick={() => navigate("/agenda")}>
           Configurar <ArrowRight className="h-4 w-4 ml-1" />
         </Button>
       ),
@@ -213,11 +213,11 @@ export const ActivationChecklist = ({ businessId, onAllDone }: Props) => {
     {
       key: "template",
       done: state.template,
-      to: "/horarios-disponibles",
+      to: "/agenda",
       title: "Definí tu semana tipo",
       desc: "Marcá tus días y horarios; la disponibilidad se calcula sola.",
       action: (
-        <Button size="sm" variant="outline" onClick={() => navigate("/horarios-disponibles")}>
+        <Button size="sm" variant="outline" onClick={() => navigate("/agenda")}>
           Configurar <ArrowRight className="h-4 w-4 ml-1" />
         </Button>
       ),
