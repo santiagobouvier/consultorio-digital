@@ -38,6 +38,7 @@ import { birthdaysOn, type DayBirthday } from "@/components/calendar-v2/Birthday
 import { QuickBlockDialog } from "@/components/calendar-v2/QuickBlockDialog";
 import { SlotActionSheet } from "@/components/calendar-v2/SlotActionSheet";
 import { SlotCreateChooser } from "@/components/calendar-v2/SlotCreateChooser";
+import { AgendaScheduleSheet } from "@/components/calendar-v2/AgendaScheduleSheet";
 import { useDayFreeSlots, useWeekSlotSummary, type FreeSlot } from "@/hooks/use-free-slots";
 import {
   useTodayPulse,
@@ -165,6 +166,8 @@ const CalendarV2 = () => {
   // Imprevisto: bloquear mañana/tarde/día en un toque (con fecha propia
   // cuando se abre desde el panel de un día concreto)
   const [showQuickBlock, setShowQuickBlock] = useState(false);
+  // "Horarios y sesiones": semana tipo, tipos de sesión y alcance del link
+  const [showScheduleSheet, setShowScheduleSheet] = useState(false);
   const [quickBlockDate, setQuickBlockDate] = useState<Date | null>(null);
   const openQuickBlock = useCallback((date?: Date) => {
     setQuickBlockDate(date ?? null);
@@ -729,6 +732,7 @@ const CalendarV2 = () => {
           }}
           onAddPersonal={() => openCreatePersonal()}
           onQuickBlock={() => openQuickBlock()}
+          onOpenSchedule={() => setShowScheduleSheet(true)}
           onPickDate={(d) => setCurrentDate(d)}
           extraActions={
             <AgendaLegend
@@ -984,6 +988,21 @@ const CalendarV2 = () => {
             if (slotChooserTime) openCreatePersonal(currentDate, slotChooserTime);
           }}
         />
+
+        {/* Horarios y sesiones: semana tipo, tipos de sesión y link de reserva */}
+        {businessId && (
+          <AgendaScheduleSheet
+            open={showScheduleSheet}
+            onOpenChange={setShowScheduleSheet}
+            businessId={businessId}
+            professionalUserId={currentUserId}
+            onSaved={() => {
+              invalidateAppointmentData(queryClient);
+              queryClient.invalidateQueries({ queryKey: ["free_slots"] });
+              queryClient.invalidateQueries({ queryKey: ["week_slot_summary"] });
+            }}
+          />
+        )}
 
         {/* Imprevisto: bloquear mañana/tarde/día del día que se está mirando */}
         <QuickBlockDialog
