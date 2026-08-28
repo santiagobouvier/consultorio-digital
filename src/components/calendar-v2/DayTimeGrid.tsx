@@ -250,10 +250,14 @@ export const DayTimeGrid = ({
           return (
             <div
               key={`ext-${i}-${b.start}`}
-              className="absolute left-[3px] right-[3px] rounded-[10px] border border-dashed border-muted-foreground/40 bg-muted/50 pointer-events-none overflow-hidden"
+              className="absolute left-[3px] right-[3px] rounded-[10px] border border-dashed border-muted-foreground/40 pointer-events-none overflow-hidden"
               style={{
                 top,
                 height,
+                // Fondo OPACO: si queda un cupo libre debajo, su texto no
+                // debe transparentarse (las letras se pisaban).
+                background:
+                  "linear-gradient(0deg, hsl(var(--muted) / 0.5), hsl(var(--muted) / 0.5)), hsl(var(--background))",
                 // Barrita con el color real del evento en Google
                 boxShadow: b.color ? `inset 4px 0 0 ${b.color}` : undefined,
               }}
