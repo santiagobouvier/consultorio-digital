@@ -8,6 +8,8 @@ export interface ExternalBusyBlock {
   label: string;
   /** id del evento en Google (solo con OAuth): permite "borrar y agendar". */
   eventId?: string;
+  /** Color real del evento en Google, para pintarlo igual en la grilla. */
+  color?: string | null;
 }
 
 // Cache cortito por día: la función va a buscar el .ics remoto, no tiene
@@ -36,7 +38,7 @@ export const fetchExternalBusyDay = async (dayStr: string): Promise<ExternalBusy
       supabase.functions.invoke("external-calendar", { body }).catch(() => ({ data: null, error: true })),
       supabase.functions.invoke("google-calendar-sync", { body }).catch(() => ({ data: null, error: true })),
     ]);
-    const raw: { start: string; end: string; title: string; calendar: string; eventId?: string }[] = [];
+    const raw: { start: string; end: string; title: string; calendar: string; eventId?: string; color?: string | null }[] = [];
     for (const res of [icsRes, oauthRes]) {
       const d = (res as { data: unknown }).data as { busy?: unknown } | null;
       if (Array.isArray(d?.busy)) raw.push(...(d!.busy as typeof raw));
@@ -52,6 +54,7 @@ export const fetchExternalBusyDay = async (dayStr: string): Promise<ExternalBusy
           end: ce.getHours() * 60 + ce.getMinutes(),
           label: `«${b.title}» · ${b.calendar}`,
           eventId: b.eventId,
+          color: b.color ?? null,
         };
       })
       .filter((b) => b.end > b.start)

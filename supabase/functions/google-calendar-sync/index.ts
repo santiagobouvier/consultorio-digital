@@ -22,6 +22,42 @@ const json = (body: unknown, status = 200) =>
   });
 
 const ACTIVE_EXCLUDED = ["cancelled", "cancelled_by_patient"];
+
+// Paleta de colores de eventos de Google (id → hex)
+const EVENT_COLORS: Record<string, string> = {
+  "1": "#7986cb", "2": "#33b679", "3": "#8e24aa", "4": "#e67c73",
+  "5": "#f6bf26", "6": "#f4511e", "7": "#039be5", "8": "#616161",
+  "9": "#3f51b5", "10": "#0b8043", "11": "#d50000",
+};
+
+// Colores de las etiquetas fijas legadas de eventos personales
+const CATEGORY_COLORS: Record<string, string> = {
+  personal: "#64748b", salud: "#f43f5e", familia: "#f59e0b", tramite: "#8b5cf6",
+  ejercicio: "#22c55e", estudio: "#3b82f6", descanso: "#06b6d4",
+};
+
+// El color de la etiqueta → el color de evento de Google más parecido
+const nearestColorId = (hex: string | null | undefined): string | null => {
+  if (!hex) return null;
+  const m = hex.replace("#", "");
+  if (m.length !== 6) return null;
+  const r = parseInt(m.slice(0, 2), 16);
+  const g = parseInt(m.slice(2, 4), 16);
+  const b = parseInt(m.slice(4, 6), 16);
+  let best: string | null = null;
+  let bestDist = Infinity;
+  for (const [id, c] of Object.entries(EVENT_COLORS)) {
+    const cr = parseInt(c.slice(1, 3), 16);
+    const cg = parseInt(c.slice(3, 5), 16);
+    const cb = parseInt(c.slice(5, 7), 16);
+    const d = (r - cr) ** 2 + (g - cg) ** 2 + (b - cb) ** 2;
+    if (d < bestDist) {
+      bestDist = d;
+      best = id;
+    }
+  }
+  return best;
+};
 const SYNC_DAYS_BACK = 1;
 const SYNC_DAYS_FORWARD = 120;
 const MAX_PUSH_PER_RUN = 50;
@@ -134,6 +170,8 @@ Deno.serve(async (req) => {
           calendar: "Google",
           // Con OAuth podemos borrar el evento desde acá ("borrar y agendar")
           eventId: e.id,
+          // Color real del evento en Google, para pintarlo igual en la grilla
+          color: EVENT_COLORS[e.colorId as string] ?? null,
         }));
       return json({ busy, connected: true });
     }
@@ -202,6 +240,8 @@ Deno.serve(async (req) => {
             description: "Cita agendada en Consultorio Digital",
             start: { dateTime: new Date(a.start_at).toISOString() },
             end: { dateTime: new Date(a.end_at).toISOString() },
+            // Peacock: las citas del consultorio se distinguen de un vistazo
+            colorId: "7",
             extendedProperties: { private: { cd_appointment_id: a.id, cd_origin: "consultorio" } },
           };
 
@@ -237,7 +277,7 @@ Deno.serve(async (req) => {
       // ── Eventos personales: mismo espejo, con repetición si tienen ──
       const { data: pevts } = await admin
         .from("personal_events")
-        .select("id, title, start_at, end_at, recurrence, recurrence_until, updated_at, google_event_id, google_synced_at")
+        .select("id, title, start_at, end_at, recurrence, recurrence_until, updated_at, google_event_id, google_synced_at, category, personal_event_labels ( color )")
         .eq("professional_user_id", user.id)
         .lte("start_at", to.toISOString())
         .or(`start_at.gte.${from.toISOString()},recurrence.neq.none`);
@@ -268,6 +308,13 @@ Deno.serve(async (req) => {
             extendedProperties: { private: { cd_personal_event_id: ev.id, cd_origin: "consultorio" } },
           };
           if (recurrence) event.recurrence = recurrence;
+          // El color de la etiqueta viaja a Google (el más parecido de su paleta)
+          const labelHex =
+            (ev as any).personal_event_labels?.color ??
+            CATEGORY_COLORS[(ev as any).category as string] ??
+            null;
+          const colorId = nearestColorId(labelHex);
+          if (colorId) event.colorId = colorId;
 
           let eventId = ev.google_event_id as string | null;
           if (eventId) {

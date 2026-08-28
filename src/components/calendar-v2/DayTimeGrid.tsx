@@ -238,7 +238,12 @@ export const DayTimeGrid = ({
             <div
               key={`ext-${i}-${b.start}`}
               className="absolute left-[3px] right-[3px] rounded-[10px] border border-dashed border-muted-foreground/40 bg-muted/50 pointer-events-none overflow-hidden"
-              style={{ top, height }}
+              style={{
+                top,
+                height,
+                // Barrita con el color real del evento en Google
+                boxShadow: b.color ? `inset 4px 0 0 ${b.color}` : undefined,
+              }}
             >
               <div className={cn("flex items-center gap-1.5 min-w-0 overflow-hidden", compact ? "px-2 py-0.5" : "px-2.5 py-1.5")}>
                 <span className={cn("shrink-0", compact ? "text-[10px]" : "text-[11px]")}>📅</span>
