@@ -348,7 +348,17 @@ export const DayTimeGrid = ({
                 <div className="flex items-center gap-1.5 min-w-0">
                   {apt.isPersonal &&
                     (apt.personalEvent?.icon ? (
-                      <span className="text-[13px] leading-none shrink-0">{apt.personalEvent.icon}</span>
+                      /* Réplica del badge de Google: circulito blanco con
+                         sombra, mismo tamaño, con el emoji del evento. */
+                      <span
+                        className={cn(
+                          "flex items-center justify-center rounded-full bg-white shadow-sm shrink-0",
+                          compact ? "h-[18px] w-[18px] text-[10px]" : "h-6 w-6 text-[13px]"
+                        )}
+                        style={{ lineHeight: 1 }}
+                      >
+                        {apt.personalEvent.icon}
+                      </span>
                     ) : (
                       <Coffee className="h-3 w-3 shrink-0 opacity-90" />
                     ))}
