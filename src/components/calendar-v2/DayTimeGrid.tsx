@@ -99,26 +99,90 @@ export const DayTimeGrid = ({
   }, [startHour, endHour]);
   const bodyHeight = hours.length * HOUR_H;
 
-  // Solapados lado a lado (mismo algoritmo que la semana desktop)
+  // ═══ REGLA DE ORO: nada se dibuja encima de otra cosa. ═══
+  // Citas Y eventos del calendario conectado (Google/iPhone) entran juntos
+  // al mismo reparto de columnas por "clusters" de solape (como Google
+  // Calendar): lo que se pisa en horario se pone lado a lado, y lo que no
+  // se pisa ocupa todo el ancho.
+  type PlacedApt = { kind: "apt"; apt: CalendarAppointment; sMin: number; eMin: number; col: number; cols: number };
+  type PlacedExt = { kind: "ext"; ext: ExternalBusyBlock; extIdx: number; sMin: number; eMin: number; col: number; cols: number };
   const placed = useMemo(() => {
-    const sorted = [...appointments].sort(
-      (a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime()
-    );
-    const colEnds: number[] = [];
-    const out = sorted.map((apt) => {
-      const sMs = new Date(apt.start_at).getTime();
-      const eMs = new Date(apt.end_at).getTime();
-      let col = colEnds.findIndex((end) => end <= sMs);
+    type Raw =
+      | { kind: "apt"; apt: CalendarAppointment; sMin: number; eMin: number }
+      | { kind: "ext"; ext: ExternalBusyBlock; extIdx: number; sMin: number; eMin: number };
+    const raw: Raw[] = [];
+    for (const apt of appointments) {
+      const s = new Date(apt.start_at);
+      const e = new Date(apt.end_at);
+      const sMin = s.getHours() * 60 + s.getMinutes();
+      raw.push({ kind: "apt", apt, sMin, eMin: sMin + Math.max(1, (e.getTime() - s.getTime()) / 60000) });
+    }
+    externalBusy.forEach((ext, extIdx) => {
+      raw.push({ kind: "ext", ext, extIdx, sMin: ext.start, eMin: Math.max(ext.end, ext.start + 1) });
+    });
+    raw.sort((a, b) => a.sMin - b.sMin || b.eMin - a.eMin);
+
+    const items: Array<PlacedApt | PlacedExt> = [];
+    let cluster: Array<Raw & { col: number }> = [];
+    let clusterEnd = -Infinity;
+    let colEnds: number[] = [];
+    const flush = () => {
+      const cols = Math.max(colEnds.length, 1);
+      for (const it of cluster) items.push({ ...it, cols } as PlacedApt | PlacedExt);
+      cluster = [];
+      colEnds = [];
+      clusterEnd = -Infinity;
+    };
+    for (const it of raw) {
+      if (cluster.length > 0 && it.sMin >= clusterEnd) flush();
+      let col = colEnds.findIndex((end) => end <= it.sMin);
       if (col === -1) {
         col = colEnds.length;
-        colEnds.push(eMs);
+        colEnds.push(it.eMin);
       } else {
-        colEnds[col] = eMs;
+        colEnds[col] = it.eMin;
       }
-      return { apt, col };
-    });
-    return { items: out, cols: Math.max(colEnds.length, 1) };
-  }, [appointments]);
+      cluster.push({ ...it, col });
+      clusterEnd = Math.max(clusterEnd, it.eMin);
+    }
+    flush();
+    return items;
+  }, [appointments, externalBusy]);
+
+  // Cupos libres: se les RESTA todo lo ocupado (citas + calendario conectado).
+  // Si a un cupo lo tapa un evento, se recorta al hueco que queda de verdad;
+  // si no queda hueco útil (≥20 min), no se dibuja. Nunca se superponen.
+  const visibleFreeSlots = useMemo(() => {
+    const busy: Array<[number, number]> = [];
+    for (const apt of appointments) {
+      const s = new Date(apt.start_at);
+      const e = new Date(apt.end_at);
+      const sMin = s.getHours() * 60 + s.getMinutes();
+      busy.push([sMin, sMin + Math.max(1, (e.getTime() - s.getTime()) / 60000)]);
+    }
+    for (const b of externalBusy) busy.push([b.start, Math.max(b.end, b.start + 1)]);
+
+    const out: Array<{ slot: FreeSlot; sMin: number; eMin: number }> = [];
+    for (const slot of freeSlots) {
+      let segs: Array<[number, number]> = [[timeToMin(slot.start), timeToMin(slot.end)]];
+      for (const [bs, be] of busy) {
+        const next: Array<[number, number]> = [];
+        for (const [s, e] of segs) {
+          if (be <= s || bs >= e) {
+            next.push([s, e]);
+            continue;
+          }
+          if (bs > s) next.push([s, bs]);
+          if (be < e) next.push([be, e]);
+        }
+        segs = next;
+      }
+      for (const [s, e] of segs) {
+        if (e - s >= 20) out.push({ slot, sMin: s, eMin: e });
+      }
+    }
+    return out;
+  }, [freeSlots, appointments, externalBusy]);
 
   const nowDate = new Date(nowTick);
   const nowTop = ((nowDate.getHours() * 60 + nowDate.getMinutes()) / 60 - startHour) * HOUR_H;
@@ -191,18 +255,16 @@ export const DayTimeGrid = ({
         {/* Cupos libres: lo que la reserva online está ofreciendo ahora.
             Se dibujan punteados detrás de las citas; tocarlos abre acciones
             (agendar, cerrar el cupo, compartirlo por WhatsApp). */}
-        {freeSlots.map((slot) => {
-          const sMin = timeToMin(slot.start);
-          const eMin = timeToMin(slot.end);
+        {visibleFreeSlots.map(({ slot, sMin, eMin }) => {
           const top = (sMin / 60 - startHour) * HOUR_H;
           const height = Math.max(((eMin - sMin) / 60) * HOUR_H - 3, 24);
           const compact = height < 44;
           return (
             <button
-              key={`free-${slot.start}`}
+              key={`free-${sMin}-${eMin}`}
               onClick={(e) => {
                 e.stopPropagation();
-                onFreeSlotClick?.(slot);
+                onFreeSlotClick?.({ ...slot, start: minToHHMM(sMin), end: minToHHMM(eMin) });
               }}
               className={cn(
                 "absolute left-[3px] right-[3px] rounded-[10px] border-2 border-dashed text-left transition-colors",
@@ -223,7 +285,7 @@ export const DayTimeGrid = ({
                       : "text-emerald-600 dark:text-emerald-400"
                   )}
                 >
-                  {slot.start}
+                  {minToHHMM(sMin)}
                 </span>
                 <span
                   className={cn(
@@ -243,17 +305,21 @@ export const DayTimeGrid = ({
 
         {/* Tu calendario personal (Google/iPhone): bloques grises de fondo.
             Informan que esa hora es tuya — no se tocan ni bloquean nada. */}
-        {externalBusy.map((b, i) => {
-          const top = (b.start / 60 - startHour) * HOUR_H;
-          const height = Math.max(((b.end - b.start) / 60) * HOUR_H - 3, 24);
+        {placed.filter((it): it is PlacedExt => it.kind === "ext").map((it) => {
+          const b = it.ext;
+          const top = (it.sMin / 60 - startHour) * HOUR_H;
+          const height = Math.max(((it.eMin - it.sMin) / 60) * HOUR_H - 3, 24);
           const compact = height < 44;
+          const widthPct = 100 / it.cols;
           return (
             <div
-              key={`ext-${i}-${b.start}`}
-              className="absolute left-[3px] right-[3px] rounded-[10px] border border-dashed border-muted-foreground/40 pointer-events-none overflow-hidden"
+              key={`ext-${it.extIdx}-${it.sMin}`}
+              className="absolute rounded-[10px] border border-dashed border-muted-foreground/40 pointer-events-none overflow-hidden"
               style={{
                 top,
                 height,
+                left: `calc(${it.col * widthPct}% + 3px)`,
+                width: `calc(${widthPct}% - 6px)`,
                 // Fondo OPACO: si queda un cupo libre debajo, su texto no
                 // debe transparentarse (las letras se pisaban).
                 background:
@@ -289,13 +355,13 @@ export const DayTimeGrid = ({
         })}
 
         {/* Bloques */}
-        {placed.items.map(({ apt, col }, idx) => {
+        {placed.filter((it): it is PlacedApt => it.kind === "apt").map(({ apt, col, cols, sMin, eMin }, idx) => {
           const sD = new Date(apt.start_at);
           const eD = new Date(apt.end_at);
-          const top = ((sD.getHours() * 60 + sD.getMinutes()) / 60 - startHour) * HOUR_H;
-          const height = Math.max(((eD.getTime() - sD.getTime()) / 3600000) * HOUR_H - 3, 28);
+          const top = (sMin / 60 - startHour) * HOUR_H;
+          const height = Math.max(((eMin - sMin) / 60) * HOUR_H - 3, 28);
           const compact = height < 48;
-          const widthPct = 100 / placed.cols;
+          const widthPct = 100 / cols;
 
           const cat = apt.isPersonal ? getPersonalLabel(apt.personalEvent) : null;
           const color = getEventHexColor(apt, showProfessionalColors);
