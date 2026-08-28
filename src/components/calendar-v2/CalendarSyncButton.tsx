@@ -45,8 +45,11 @@ export const CalendarSyncButton = ({ mobile = false }: { mobile?: boolean }) => 
   });
   const connected = dest.google || dest.apple;
 
-  // Link privado del feed (se crea solo la primera vez que se abre el pop-up)
-  const [token, setToken] = useState<string | null>(null);
+  // Un link privado POR DESTINO (Google / Apple): así se puede desconectar
+  // uno sin tocar el otro. Si la columna destination todavía no existe en la
+  // base, se cae al modo de link único compartido (singleMode).
+  const [tokens, setTokens] = useState<{ google?: string; apple?: string }>({});
+  const [singleMode, setSingleMode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -66,69 +69,108 @@ export const CalendarSyncButton = ({ mobile = false }: { mobile?: boolean }) => 
     setDest((d) => ({ ...d, [which]: true }));
   };
 
-  // Desconectar DE VERDAD: borra el token → el link viejo muere y Google /
-  // iPhone dejan de recibir citas. Enseguida se crea un link nuevo (limpio)
-  // por si quiere volver a conectar.
-  const [disconnecting, setDisconnecting] = useState(false);
-  const handleDisconnect = async () => {
+  // Carga (o crea) los links. Con la columna destination: un link por
+  // destino. Sin ella (SQL viejo): un único link compartido para los dos.
+  const loadTokens = async (): Promise<void> => {
     if (!businessId) return;
-    setDisconnecting(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const table = () => (supabase as any).from("calendar_feed_tokens");
+
+    const loadSingle = async () => {
+      const { data: row } = await table()
+        .select("token")
+        .eq("business_id", businessId)
+        .eq("professional_user_id", user.id)
+        .limit(1)
+        .maybeSingle();
+      let t: string | null = row?.token ?? null;
+      if (!t) {
+        const { data: created } = await table()
+          .insert({ business_id: businessId, professional_user_id: user.id })
+          .select("token")
+          .single();
+        t = created?.token ?? null;
+      }
+      setSingleMode(true);
+      setTokens({ google: t ?? undefined, apple: t ?? undefined });
+    };
+
+    const { data: rows, error } = await table()
+      .select("token, destination")
+      .eq("business_id", businessId)
+      .eq("professional_user_id", user.id);
+    if (error) {
+      await loadSingle();
+      return;
+    }
+    const map: Record<string, string> = {};
+    for (const r of rows ?? []) map[r.destination ?? "any"] = r.token;
+    try {
+      for (const d of ["google", "apple"] as const) {
+        if (map[d]) continue;
+        const { data: created, error: e2 } = await table()
+          .insert({ business_id: businessId, professional_user_id: user.id, destination: d })
+          .select("token")
+          .single();
+        if (e2) throw e2;
+        map[d] = created?.token;
+      }
+      setSingleMode(false);
+      setTokens({ google: map.google, apple: map.apple });
+    } catch {
+      // Constraint o columna viejos: modo link único con lo que haya
+      await loadSingle();
+    }
+  };
+
+  // Desconectar DE VERDAD: borra ese token → ese link muere y ese calendario
+  // deja de recibir citas. Después se genera uno nuevo limpio para reconectar.
+  const [disconnecting, setDisconnecting] = useState<"google" | "apple" | null>(null);
+  const handleDisconnect = async (which: "google" | "apple") => {
+    if (!businessId) return;
+    setDisconnecting(which);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      await (supabase as any)
+      const del = (supabase as any)
         .from("calendar_feed_tokens")
         .delete()
         .eq("business_id", businessId)
         .eq("professional_user_id", user.id);
-      const { data: created } = await (supabase as any)
-        .from("calendar_feed_tokens")
-        .insert({ business_id: businessId, professional_user_id: user.id })
-        .select("token")
-        .single();
-      setToken(created?.token ?? null);
-      try {
-        localStorage.removeItem(LS_G);
-        localStorage.removeItem(LS_A);
-      } catch {
-        /* nada */
+      if (singleMode) {
+        await del;
+        try {
+          localStorage.removeItem(LS_G);
+          localStorage.removeItem(LS_A);
+        } catch { /* nada */ }
+        setDest({ google: false, apple: false });
+      } else {
+        await del.eq("destination", which);
+        try {
+          localStorage.removeItem(which === "google" ? LS_G : LS_A);
+        } catch { /* nada */ }
+        setDest((d) => ({ ...d, [which]: false }));
       }
-      setDest({ google: false, apple: false });
+      await loadTokens();
       toast({
         title: "Desconectado",
-        description:
-          "El link dejó de funcionar: tu calendario ya no recibe citas nuevas. Para limpiar del todo, borrá el calendario suscrito en tu Google o iPhone.",
+        description: singleMode
+          ? "El link compartido dejó de funcionar (Google y iPhone). Para limpiar del todo, borrá el calendario suscrito en la app."
+          : `Ese link dejó de funcionar: ${which === "google" ? "Google Calendar" : "el iPhone/Mac"} ya no recibe citas. Para limpiar del todo, borrá el calendario suscrito en la app.`,
       });
     } finally {
-      setDisconnecting(false);
+      setDisconnecting(null);
     }
   };
 
-  // Al abrir el pop-up: buscar (o crear) el token del feed + calendarios
+  // Al abrir el pop-up: preparar links + calendarios personales
   useEffect(() => {
     if (!open || !businessId) return;
     let cancelled = false;
     setLoading(true);
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user || cancelled) return;
-      const { data } = await (supabase as any)
-        .from("calendar_feed_tokens")
-        .select("token")
-        .eq("business_id", businessId)
-        .eq("professional_user_id", user.id)
-        .maybeSingle();
-      if (cancelled) return;
-      if (data?.token) {
-        setToken(data.token);
-      } else {
-        const { data: created } = await (supabase as any)
-          .from("calendar_feed_tokens")
-          .insert({ business_id: businessId, professional_user_id: user.id })
-          .select("token")
-          .single();
-        if (!cancelled) setToken(created?.token ?? null);
-      }
+      await loadTokens();
       if (!cancelled) setLoading(false);
       // Calendarios personales, en paralelo silencioso
       const { data: res, error } = await supabase.functions.invoke("external-calendar", {
@@ -142,24 +184,27 @@ export const CalendarSyncButton = ({ mobile = false }: { mobile?: boolean }) => 
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, businessId]);
 
-  const feedUrl = token
-    ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/calendar-feed?token=${token}`
+  const mkUrl = (t?: string) =>
+    t ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/calendar-feed?token=${t}` : null;
+  const googleHttps = mkUrl(tokens.google);
+  const googleWebcal = googleHttps ? googleHttps.replace(/^https:\/\//, "webcal://") : null;
+  const googleAddUrl = googleWebcal
+    ? `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(googleWebcal)}`
     : null;
-  const webcalUrl = feedUrl ? feedUrl.replace(/^https:\/\//, "webcal://") : null;
-  const googleAddUrl = webcalUrl
-    ? `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(webcalUrl)}`
-    : null;
+  const appleWebcal = mkUrl(tokens.apple)?.replace(/^https:\/\//, "webcal://") ?? null;
+  const copyUrl = googleHttps ?? mkUrl(tokens.apple);
 
   const handleCopy = async () => {
-    if (!feedUrl) return;
+    if (!copyUrl) return;
     try {
-      await navigator.clipboard.writeText(feedUrl);
+      await navigator.clipboard.writeText(copyUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      toast({ title: "No se pudo copiar", description: feedUrl });
+      toast({ title: "No se pudo copiar", description: copyUrl });
     }
   };
 
@@ -293,19 +338,33 @@ export const CalendarSyncButton = ({ mobile = false }: { mobile?: boolean }) => 
               ))}
             </div>
 
-            {loading || !feedUrl ? (
+            {loading || !googleAddUrl || !appleWebcal ? (
               <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
                 <Loader2 className="h-4 w-4 animate-spin" /> Preparando tu conexión...
               </div>
             ) : (
               <div className="space-y-2">
-                {/* Google: botón para conectar, fila verde cuando ya está */}
+                {/* Google: botón para conectar; fila verde con su propio
+                    Desconectar cuando ya está */}
                 {dest.google ? (
-                  <div className="flex items-center justify-between gap-3 h-12 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3.5">
-                    <span className="flex items-center gap-2 text-sm font-semibold text-emerald-600 dark:text-emerald-400">
-                      <Check className="h-4 w-4" />
+                  <div className="flex items-center justify-between gap-2 h-12 rounded-xl border border-emerald-500/30 bg-emerald-500/10 pl-3.5 pr-1.5">
+                    <span className="flex items-center gap-2 text-sm font-semibold text-emerald-600 dark:text-emerald-400 min-w-0 truncate">
+                      <Check className="h-4 w-4 shrink-0" />
                       Google Calendar conectado
                     </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-9 rounded-lg text-muted-foreground hover:text-destructive shrink-0"
+                      onClick={() => handleDisconnect("google")}
+                      disabled={disconnecting !== null}
+                    >
+                      {disconnecting === "google" ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        "Desconectar"
+                      )}
+                    </Button>
                   </div>
                 ) : (
                   <Button
@@ -314,7 +373,7 @@ export const CalendarSyncButton = ({ mobile = false }: { mobile?: boolean }) => 
                     style={{ boxShadow: `0 10px 24px -10px hsla(${primaryColor}, 0.65)` }}
                     onClick={() => markConnected("google")}
                   >
-                    <a href={googleAddUrl!} target="_blank" rel="noreferrer">
+                    <a href={googleAddUrl} target="_blank" rel="noreferrer">
                       Conectar Google Calendar
                     </a>
                   </Button>
@@ -322,11 +381,24 @@ export const CalendarSyncButton = ({ mobile = false }: { mobile?: boolean }) => 
 
                 {/* iPhone / Mac: ídem */}
                 {dest.apple ? (
-                  <div className="flex items-center justify-between gap-3 h-12 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3.5">
-                    <span className="flex items-center gap-2 text-sm font-semibold text-emerald-600 dark:text-emerald-400">
-                      <Check className="h-4 w-4" />
+                  <div className="flex items-center justify-between gap-2 h-12 rounded-xl border border-emerald-500/30 bg-emerald-500/10 pl-3.5 pr-1.5">
+                    <span className="flex items-center gap-2 text-sm font-semibold text-emerald-600 dark:text-emerald-400 min-w-0 truncate">
+                      <Check className="h-4 w-4 shrink-0" />
                       iPhone / Mac conectado
                     </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-9 rounded-lg text-muted-foreground hover:text-destructive shrink-0"
+                      onClick={() => handleDisconnect("apple")}
+                      disabled={disconnecting !== null}
+                    >
+                      {disconnecting === "apple" ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        "Desconectar"
+                      )}
+                    </Button>
                   </div>
                 ) : (
                   <Button
@@ -335,7 +407,7 @@ export const CalendarSyncButton = ({ mobile = false }: { mobile?: boolean }) => 
                     className="w-full h-12 rounded-xl text-[15px] font-semibold border-2"
                     onClick={() => markConnected("apple")}
                   >
-                    <a href={webcalUrl!}>Conectar iPhone / Mac</a>
+                    <a href={appleWebcal}>Conectar iPhone / Mac</a>
                   </Button>
                 )}
 
@@ -344,27 +416,11 @@ export const CalendarSyncButton = ({ mobile = false }: { mobile?: boolean }) => 
                   <br />
                   (Google puede tardar unas horas en refrescar.)
                 </p>
-                <div className="flex items-center justify-center gap-1 flex-wrap">
+                <div className="flex justify-center">
                   <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={handleCopy}>
                     {copied ? <Check className="h-3.5 w-3.5 mr-2 text-emerald-500" /> : <Copy className="h-3.5 w-3.5 mr-2" />}
                     Copiar link
                   </Button>
-                  {connected && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-muted-foreground hover:text-destructive"
-                      onClick={handleDisconnect}
-                      disabled={disconnecting}
-                    >
-                      {disconnecting ? (
-                        <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
-                      ) : (
-                        <Trash2 className="h-3.5 w-3.5 mr-2" />
-                      )}
-                      Desconectar
-                    </Button>
-                  )}
                 </div>
               </div>
             )}
