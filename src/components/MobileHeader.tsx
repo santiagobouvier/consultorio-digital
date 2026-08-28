@@ -45,16 +45,16 @@ const MODULE_GROUPS: ModuleGroup[] = [
     label: "Tu día a día",
     items: [
       { title: "Agenda", url: "/agenda", icon: CalendarDays, tint: null },
-      { title: "Pacientes", url: "/patients", icon: Users, tint: "210 90% 60%" },
-      { title: "Pagos", url: "/pagos", icon: Receipt, tint: "152 70% 45%" },
-      { title: "Solicitudes", url: "/solicitudes", icon: FileText, tint: "38 92% 55%", highlight: true },
+      { title: "Pacientes", url: "/patients", icon: Users, tint: null },
+      { title: "Pagos", url: "/pagos", icon: Receipt, tint: null },
+      { title: "Solicitudes", url: "/solicitudes", icon: FileText, tint: null, highlight: true },
     ],
   },
   {
     label: "Tu negocio",
     items: [
-      { title: "Estadísticas", url: "/estadisticas", icon: BarChart3, tint: "190 85% 50%" },
-      { title: "Configuración", url: "/configuracion", icon: Settings, tint: "215 15% 65%" },
+      { title: "Estadísticas", url: "/estadisticas", icon: BarChart3, tint: null },
+      { title: "Configuración", url: "/configuracion", icon: Settings, tint: null },
     ],
   },
 ];
@@ -317,7 +317,7 @@ export function MobileHeader() {
                         key={item.url}
                         onClick={() => handleNav(item.url)}
                         className={cn(
-                          "relative flex flex-col items-center justify-center gap-2 rounded-2xl py-4 transition-all duration-200 active:scale-[0.95]",
+                          "group relative flex flex-col items-center justify-center gap-2.5 rounded-2xl py-5 transition-all duration-200 active:scale-[0.94]",
                           open && "animate-in fade-in slide-in-from-bottom-3"
                         )}
                         style={{
@@ -329,15 +329,15 @@ export function MobileHeader() {
                           boxShadow: active ? `0 8px 24px -10px ${tintHsla(0.55)}` : undefined,
                         }}
                       >
-                        <span
-                          className="w-11 h-11 rounded-2xl flex items-center justify-center"
+                        {/* Ícono grande, minimalista, siempre del color de marca */}
+                        <item.icon
+                          className="h-7 w-7 transition-transform duration-300 ease-out group-active:scale-90"
                           style={{
-                            background: tintHsla(0.16),
-                            boxShadow: `inset 0 0 0 1px ${tintHsla(0.22)}`,
+                            color: tintHsl,
+                            filter: active ? `drop-shadow(0 0 10px ${tintHsla(0.55)})` : undefined,
                           }}
-                        >
-                          <item.icon className="h-5 w-5" style={{ color: tintHsl }} strokeWidth={2} />
-                        </span>
+                          strokeWidth={1.8}
+                        />
                         <span className={cn("text-[12.5px] font-medium tracking-tight", active ? "text-white" : "text-white/75")}>
                           {item.title}
                         </span>

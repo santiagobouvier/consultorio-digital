@@ -53,21 +53,21 @@ const MODULE_GROUPS: { label: string | null; items: NavItem[] }[] = [
     label: "Tu día a día",
     items: [
       { title: "Agenda", url: "/agenda", icon: CalendarDays, tint: null },
-      { title: "Pacientes", url: "/patients", icon: Users, tint: "210 90% 60%" },
-      { title: "Pagos", url: "/pagos", icon: Receipt, tint: "152 70% 45%" },
-      { title: "Solicitudes", url: "/solicitudes", icon: FileText, tint: "38 92% 55%", highlight: true },
+      { title: "Pacientes", url: "/patients", icon: Users, tint: null },
+      { title: "Pagos", url: "/pagos", icon: Receipt, tint: null },
+      { title: "Solicitudes", url: "/solicitudes", icon: FileText, tint: null, highlight: true },
     ],
   },
   {
     label: "Tu negocio",
     items: [
-      { title: "Estadísticas", url: "/estadisticas", icon: BarChart3, tint: "190 85% 50%" },
+      { title: "Estadísticas", url: "/estadisticas", icon: BarChart3, tint: null },
     ],
   },
 ];
 
 // Configuración va suelta al final del nav: es la puerta a todo lo secundario.
-const CONFIG_ITEM: NavItem = { title: "Configuración", url: "/configuracion", icon: Settings, tint: "215 15% 65%" };
+const CONFIG_ITEM: NavItem = { title: "Configuración", url: "/configuracion", icon: Settings, tint: null };
 
 // Rutas que viven "adentro" de Configuración: el item se marca activo
 // también cuando estás en cualquiera de sus subpáginas.
@@ -205,17 +205,17 @@ export function PremiumSidebar() {
           />
         )}
 
-        {/* Ícono en cuadradito tintado (mismo lenguaje que el lanzador mobile) */}
-        <div className="relative shrink-0">
-          <span
-            className="flex items-center justify-center w-10 h-10 rounded-xl transition-all duration-200 group-hover:scale-[1.06]"
+        {/* Ícono grande y minimalista, sin cajita: color de marca cuando
+            está activo, neutro apagado cuando no. Levita al pasar el mouse. */}
+        <div className="relative shrink-0 flex items-center justify-center w-10 h-10">
+          <item.icon
+            className="h-[22px] w-[22px] transition-transform duration-300 ease-out group-hover:scale-110 group-active:scale-95"
             style={{
-              background: tintHsla(active ? 0.26 : 0.16),
-              boxShadow: `inset 0 0 0 1px ${tintHsla(active ? 0.45 : 0.26)}${active ? `, 0 6px 18px -6px ${tintHsla(0.5)}` : ""}`,
+              color: active ? tintHsl : undefined,
+              filter: active ? `drop-shadow(0 0 8px ${tintHsla(0.55)})` : undefined,
             }}
-          >
-            <item.icon className="h-[18px] w-[18px]" style={{ color: tintHsl }} strokeWidth={2} />
-          </span>
+            strokeWidth={active ? 2.1 : 1.8}
+          />
           {/* Mini badge dot when collapsed */}
           {showBadge && !expanded && (
             <span
