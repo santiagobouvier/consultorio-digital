@@ -14,18 +14,26 @@ const cache = new Map<string, { at: number; data: ExternalBusyBlock[] }>();
 const TTL_MS = 2 * 60 * 1000;
 
 /** Bloques ocupados del calendario personal para un día (YYYY-MM-DD).
- *  Silencioso: sin calendarios conectados o con error devuelve []. */
+ *  Junta las dos fuentes: el link iCal pegado (external-calendar) y la
+ *  cuenta de Google conectada por OAuth (google-calendar-sync). Silencioso:
+ *  sin nada conectado o con error devuelve []. */
 export const fetchExternalBusyDay = async (dayStr: string): Promise<ExternalBusyBlock[]> => {
   const hit = cache.get(dayStr);
   if (hit && Date.now() - hit.at < TTL_MS) return hit.data;
   try {
     const from = new Date(`${dayStr}T00:00:00`);
     const to = new Date(`${dayStr}T23:59:59`);
-    const { data, error } = await supabase.functions.invoke("external-calendar", {
-      body: { action: "busy", from: from.toISOString(), to: to.toISOString() },
-    });
-    if (error || !Array.isArray(data?.busy)) return [];
-    const blocks = (data.busy as { start: string; end: string; title: string; calendar: string }[])
+    const body = { action: "busy", from: from.toISOString(), to: to.toISOString() };
+    const [icsRes, oauthRes] = await Promise.all([
+      supabase.functions.invoke("external-calendar", { body }).catch(() => ({ data: null, error: true })),
+      supabase.functions.invoke("google-calendar-sync", { body }).catch(() => ({ data: null, error: true })),
+    ]);
+    const raw: { start: string; end: string; title: string; calendar: string }[] = [];
+    for (const res of [icsRes, oauthRes]) {
+      const d = (res as { data: unknown }).data as { busy?: unknown } | null;
+      if (Array.isArray(d?.busy)) raw.push(...(d!.busy as typeof raw));
+    }
+    const blocks = raw
       .map((b) => {
         const s = new Date(b.start);
         const e = new Date(b.end);
@@ -37,7 +45,8 @@ export const fetchExternalBusyDay = async (dayStr: string): Promise<ExternalBusy
           label: `«${b.title}» (${b.calendar})`,
         };
       })
-      .filter((b) => b.end > b.start);
+      .filter((b) => b.end > b.start)
+      .sort((a, b) => a.start - b.start);
     cache.set(dayStr, { at: Date.now(), data: blocks });
     return blocks;
   } catch {

@@ -1,4 +1,22 @@
 import type { QueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+
+/**
+ * Sincronización instantánea con Google Calendar: tras cualquier cambio de
+ * citas se le pide al servidor que empuje lo pendiente. Con debounce para
+ * agrupar ráfagas (ej: crear una serie recurrente) y fire-and-forget: si el
+ * profesional no conectó Google, la función responde vacío y ya.
+ */
+let googleSyncTimer: number | undefined;
+export function requestGoogleSync() {
+  if (typeof window === "undefined") return;
+  window.clearTimeout(googleSyncTimer);
+  googleSyncTimer = window.setTimeout(() => {
+    void supabase.functions
+      .invoke("google-calendar-sync", { body: { action: "sync" } })
+      .catch(() => {});
+  }, 1500);
+}
 
 /**
  * Sincronizador central de caché: cuando cambia la PLATA (crear, cobrar,
@@ -28,4 +46,6 @@ export function invalidateAppointmentData(queryClient: QueryClient) {
   invalidatePaymentData(queryClient);
   queryClient.invalidateQueries({ queryKey: ["appointment_requests"] });
   queryClient.invalidateQueries({ queryKey: ["reminders"] });
+  // El espejo en Google Calendar se actualiza al toque (si está conectado)
+  requestGoogleSync();
 }
