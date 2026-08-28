@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "@/hooks/use-toast";
 import { openWhatsApp } from "@/lib/whatsapp";
+import { cn } from "@/lib/utils";
 
 interface PaymentLinkMenuProps {
   patientPhone: string | null;
@@ -22,6 +23,8 @@ interface PaymentLinkMenuProps {
   getPaymentLink?: () => Promise<string>;
   /** Versión compacta (solo ícono): para lugares angostos como el panel de deudores. */
   compact?: boolean;
+  /** Clases extra para el botón disparador (permite adaptarlo a cada layout). */
+  className?: string;
 }
 
 /**
@@ -33,6 +36,7 @@ export function PaymentLinkMenu({
   patientName,
   getPaymentLink,
   compact = false,
+  className,
 }: PaymentLinkMenuProps) {
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
@@ -83,7 +87,7 @@ export function PaymentLinkMenu({
         <Button
           variant="outline"
           size="sm"
-          className="h-8 gap-1 px-2.5 rounded-lg text-xs font-medium text-primary border-primary/30 hover:bg-primary/5 hover:text-primary"
+          className={cn("h-8 gap-1 px-2.5 rounded-lg text-xs font-medium text-primary border-primary/30 hover:bg-primary/5 hover:text-primary", className)}
           title="Cobrar online con link de pago"
           disabled={busy}
         >

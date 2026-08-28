@@ -40,6 +40,7 @@ import {
   Clock,
   Download,
   MoreVertical,
+  Filter,
 } from "lucide-react";
 import { exportCSV, todayDateString } from "@/lib/csv-export";
 import { createPaymentLink } from "@/lib/payment-links";
@@ -119,6 +120,7 @@ const Payments = () => {
   const [confirmPaymentData, setConfirmPaymentData] = useState<{ id: string; amount: number; patientName: string } | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [showNewPayment, setShowNewPayment] = useState(false);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
   const { businessId, loading: businessLoading } = useBusinessId();
 
@@ -340,6 +342,20 @@ const Payments = () => {
     border: "1px solid rgba(140,200,170,0.1)",
   } as const;
 
+  const handleExportCSV = () => {
+    const headers = ["Paciente", "Monto (UYU)", "Fecha de vencimiento", "Fecha de pago", "Estado", "Método de pago", "Tipo de recurrencia"];
+    const rows = filteredPayments.map((p) => [
+      p.patients?.full_name || "Desconocido",
+      `${p.amount}`,
+      new Date(p.due_date).toLocaleDateString("es-UY"),
+      p.paid_at ? new Date(p.paid_at).toLocaleDateString("es-UY") : "",
+      getPaymentStatusLabel(p.status),
+      p.method || "",
+      getRecurrenceTypeLabel(p.recurrence_type),
+    ]);
+    exportCSV(headers, rows, `pagos_${todayDateString()}.csv`);
+  };
+
   return (
     <div
       className="dark min-h-screen"
@@ -351,13 +367,13 @@ const Payments = () => {
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-3.5 min-w-0">
             <span
-              className="h-[46px] w-[46px] rounded-2xl flex items-center justify-center shrink-0"
+              className="h-[42px] w-[42px] sm:h-[46px] sm:w-[46px] rounded-[13px] sm:rounded-2xl flex items-center justify-center shrink-0"
               style={{ background: "rgba(52,211,153,0.12)", border: "1px solid rgba(52,211,153,0.25)" }}
             >
               <Receipt className="h-5 w-5" style={{ color: "#34d399" }} />
             </span>
             <div className="min-w-0">
-              <h1 className="text-2xl sm:text-[28px] font-bold tracking-tight inline-flex items-center gap-2" style={GROTESK}>
+              <h1 className="text-[22px] sm:text-[28px] font-bold tracking-tight inline-flex items-center gap-2" style={GROTESK}>
                 Pagos
                 <HelpTooltip id="payments" />
               </h1>
@@ -456,21 +472,81 @@ const Payments = () => {
           })}
         </div>
 
-        {/* Search + Filters */}
-        <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
-          <div className="relative flex-1">
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar paciente..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-11 h-11 rounded-[13px] text-sm border-0 focus-visible:ring-emerald-500/30"
-              style={{ background: "rgba(140,200,170,0.05)", border: "1px solid rgba(140,200,170,0.12)", color: "#eaf3ee" }}
-            />
+        {/* Cobranza compacta (mockup mobile): en escritorio vive en la columna lateral */}
+        {(stats.totalAmount > 0 || stats.paidAmount > 0) && (() => {
+          const rate = stats.totalAmount > 0
+            ? Math.min(100, Math.round((stats.paidAmount / stats.totalAmount) * 100))
+            : 100;
+          const rateColor = rate >= 80 ? "#34d399" : rate >= 50 ? "#fcd34d" : "#fda4af";
+          return (
+            <div className="lg:hidden rounded-2xl px-4 py-3.5" style={CARD_BG}>
+              <div className="flex items-baseline gap-2.5 mb-2">
+                <span
+                  className="text-[10px] font-semibold uppercase"
+                  style={{ ...GROTESK, letterSpacing: "0.15em", color: "#5f7a6d" }}
+                >
+                  Cobranza {rangeActive ? "del período" : "del mes"}
+                </span>
+                <span className="ml-auto text-[17px] font-bold" style={{ ...GROTESK, color: rateColor }}>
+                  {rate}%
+                </span>
+              </div>
+              <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(140,200,170,0.12)" }}>
+                <div
+                  className="h-full rounded-full transition-all duration-700"
+                  style={{ width: `${rate}%`, background: `linear-gradient(90deg, ${rateColor}, ${rateColor}cc)` }}
+                />
+              </div>
+              <p className="mt-1.5 text-[11px]" style={{ color: "#5f7a6d" }}>
+                {formatCurrency(stats.paidAmount, "UYU")} de {formatCurrency(stats.totalAmount, "UYU")}
+              </p>
+            </div>
+          );
+        })()}
+
+        {/* Search + Filters. En mobile (mockup): buscador + botón de filtros
+            (con puntito cuando hay filtros activos) + botón CSV, y los selects
+            aparecen solo al tocar el embudo. En escritorio todo queda en fila. */}
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 items-stretch sm:items-center">
+          <div className="flex items-center gap-2 sm:contents">
+            <div className="relative flex-1">
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar paciente..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-11 h-11 rounded-[13px] text-sm border-0 focus-visible:ring-emerald-500/30"
+                style={{ background: "rgba(140,200,170,0.05)", border: "1px solid rgba(140,200,170,0.12)", color: "#eaf3ee" }}
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => setMobileFiltersOpen((v) => !v)}
+              className="sm:hidden relative flex h-11 w-11 items-center justify-center rounded-[13px] shrink-0"
+              style={{ background: "rgba(140,200,170,0.05)", border: "1px solid rgba(140,200,170,0.12)", color: "#a9c4b7" }}
+              title="Filtros"
+            >
+              <Filter className="h-4 w-4" />
+              {(statusFilter !== "all" || periodFilter !== "all" || patientFilter !== "all") && (
+                <span
+                  className="absolute top-[9px] right-[9px] w-[7px] h-[7px] rounded-full"
+                  style={{ background: "#34d399", border: "2px solid #0b130e", boxSizing: "content-box" }}
+                />
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={handleExportCSV}
+              className="sm:hidden flex h-11 w-11 items-center justify-center rounded-[13px] shrink-0"
+              style={{ background: "rgba(140,200,170,0.05)", border: "1px solid rgba(140,200,170,0.12)", color: "#a9c4b7" }}
+              title="Exportar CSV"
+            >
+              <Download className="h-4 w-4" />
+            </button>
           </div>
-          {/* En mobile: grilla 2x2 compacta; en escritorio se disuelve (sm:contents)
-              y los controles quedan en la misma fila que el buscador */}
-          <div className="grid grid-cols-2 gap-2 sm:contents">
+          {/* En mobile: grilla compacta que se abre con el embudo; en escritorio
+              se disuelve (sm:contents) y los controles quedan junto al buscador */}
+          <div className={cn("grid grid-cols-2 gap-2 sm:contents", !mobileFiltersOpen && "hidden sm:contents")}>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger
               className="w-full sm:w-[180px] h-11 rounded-[13px] border-0 text-[13px] font-medium"
@@ -521,25 +597,12 @@ const Payments = () => {
           </Select>
           <Button
             variant="outline"
-            className="h-11 rounded-[13px] border-0 gap-2 text-[13px] font-medium"
+            className="hidden sm:inline-flex h-11 rounded-[13px] border-0 gap-2 text-[13px] font-medium"
             style={{ background: "rgba(140,200,170,0.05)", border: "1px solid rgba(140,200,170,0.12)", color: "#a9c4b7" }}
-            onClick={() => {
-              const headers = ["Paciente", "Monto (UYU)", "Fecha de vencimiento", "Fecha de pago", "Estado", "Método de pago", "Tipo de recurrencia"];
-              const rows = filteredPayments.map((p) => [
-                p.patients?.full_name || "Desconocido",
-                `${p.amount}`,
-                new Date(p.due_date).toLocaleDateString("es-UY"),
-                p.paid_at ? new Date(p.paid_at).toLocaleDateString("es-UY") : "",
-                getPaymentStatusLabel(p.status),
-                p.method || "",
-                getRecurrenceTypeLabel(p.recurrence_type),
-              ]);
-              exportCSV(headers, rows, `pagos_${todayDateString()}.csv`);
-            }}
+            onClick={handleExportCSV}
           >
             <Download className="h-4 w-4" />
-            <span className="sm:hidden">CSV</span>
-            <span className="hidden sm:inline">Exportar CSV</span>
+            Exportar CSV
           </Button>
           </div>
         </div>
@@ -604,21 +667,27 @@ const Payments = () => {
               {debtors.slice(0, 5).map((d) => (
                 <div
                   key={d.patientId}
-                  className="flex items-center justify-between gap-3 rounded-xl px-3 py-2"
+                  className="flex items-center justify-between gap-3 rounded-xl px-3 py-2 sm:py-2"
                   style={{ background: "rgba(251,113,133,0.05)", border: "1px solid rgba(251,113,133,0.14)" }}
                 >
+                  <span
+                    className="flex sm:hidden w-8 h-8 rounded-full items-center justify-center shrink-0 text-[12px] font-semibold"
+                    style={{ ...GROTESK, background: "rgba(251,113,133,0.12)", color: "#fda4af" }}
+                  >
+                    {d.name.trim().split(/\s+/).map((w: string) => w[0]).slice(0, 2).join("").toUpperCase()}
+                  </span>
                   <button
                     type="button"
                     onClick={() => {
                       setPatientFilter(d.patientId);
                       setStatusFilter("overdue");
                     }}
-                    className="text-[13px] font-semibold text-left truncate transition-opacity hover:opacity-80"
+                    className="flex-1 min-w-0 text-[13px] font-semibold text-left truncate transition-opacity hover:opacity-80"
                     style={{ color: "#eaf3ee" }}
                     title="Ver sus pagos vencidos"
                   >
                     {d.name}
-                    <span className="text-[11px] font-normal ml-2" style={{ color: "#a06570" }}>
+                    <span className="block sm:inline text-[11px] font-normal sm:ml-2" style={{ color: "#a06570" }}>
                       {d.count} pago{d.count !== 1 ? "s" : ""}
                     </span>
                   </button>
@@ -737,20 +806,19 @@ const Payments = () => {
             <p className="text-sm" style={{ color: "#5f7a6d" }}>Ajustá los filtros o registrá un nuevo pago</p>
           </div>
         ) : (
-          <div className="rounded-[20px] overflow-hidden" style={CARD_BG}>
+          <div className="flex flex-col gap-2.5 sm:block sm:rounded-[20px] sm:overflow-hidden sm:bg-[linear-gradient(180deg,#101a14,#0b130e)] sm:border sm:border-[rgba(140,200,170,0.1)]">
             {pagePayments.map((payment) => (
               <div
                 key={payment.id}
                 role="button"
                 onClick={() => setSelectedPayment(payment)}
-                className="group cursor-pointer transition-colors hover:bg-white/[0.02]"
-                style={{ borderBottom: "1px solid rgba(140,200,170,0.06)" }}
+                className="group cursor-pointer transition-colors hover:bg-white/[0.02] rounded-[17px] bg-[linear-gradient(180deg,#101a14,#0b130e)] border border-[rgba(140,200,170,0.1)] sm:rounded-none sm:bg-none sm:border-0 sm:border-b sm:border-b-[rgba(140,200,170,0.06)]"
               >
                 <div className="px-4 sm:px-5 py-3.5">
                   <div className="flex items-center gap-3 sm:gap-4">
                     {/* Avatar con la inicial, teñido por estado (mockup) */}
                     <span
-                      className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-[12.5px] font-semibold"
+                      className="w-10 h-10 sm:w-9 sm:h-9 rounded-full flex items-center justify-center shrink-0 text-[13px] sm:text-[12.5px] font-semibold"
                       style={{
                         ...GROTESK,
                         background:
@@ -787,7 +855,7 @@ const Payments = () => {
                           e.stopPropagation();
                           navigate(`/patients/${payment.patient_id}`);
                         }}
-                        className="font-semibold text-[13.5px] text-left truncate block w-full transition-colors"
+                        className="font-semibold text-[14.5px] sm:text-[13.5px] text-left truncate block w-full transition-colors"
                         style={{ color: "#eaf3ee" }}
                       >
                         {payment.patients?.full_name || "Paciente desconocido"}
@@ -810,8 +878,8 @@ const Payments = () => {
                     </div>
 
                     {/* Monto + chip de estado */}
-                    <div className="flex items-center gap-2.5 shrink-0">
-                      <p className="font-bold text-[15px] leading-tight text-right min-w-[70px]" style={{ ...GROTESK, color: "#eaf3ee" }}>
+                    <div className="flex flex-col items-end gap-1 sm:flex-row sm:items-center sm:gap-2.5 shrink-0">
+                      <p className="font-bold text-[17px] sm:text-[15px] leading-tight text-right sm:min-w-[70px]" style={{ ...GROTESK, color: "#eaf3ee" }}>
                         {formatCurrency(payment.amount, payment.currency)}
                       </p>
                       <span
@@ -915,17 +983,17 @@ const Payments = () => {
                     </div>
                   </div>
 
-                  {/* Acciones mobile: barra cómoda abajo, solo si hay algo por cobrar */}
+                  {/* Acciones mobile (mockup): grilla Link · Avisar · Cobrar · ⋮ */}
                   {payment.status !== "paid" && payment.status !== "cancelled" && (
                     <div
-                      className="flex sm:hidden items-center gap-2 mt-3 pt-3"
-                      style={{ borderTop: "1px solid rgba(140,200,170,0.08)" }}
+                      className="grid sm:hidden grid-cols-[1fr_1fr_1.2fr_auto] gap-2 mt-3"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <PaymentLinkMenu
                         patientPhone={payment.patients?.whatsapp_phone || null}
                         patientName={payment.patients?.full_name || ""}
                         getPaymentLink={mpConnected ? () => ensurePaymentLink([payment.id]) : undefined}
+                        className="w-full h-10 px-0 justify-center rounded-[11px] text-xs font-semibold border-[rgba(140,200,170,0.14)] bg-[rgba(140,200,170,0.06)] text-[#a9c4b7] hover:bg-[rgba(140,200,170,0.12)] hover:text-[#6ee7b7]"
                       />
                       <PaymentWhatsAppMenu
                         patientPhone={payment.patients?.whatsapp_phone || null}
@@ -934,9 +1002,10 @@ const Payments = () => {
                         businessId={businessId || undefined}
                         amount={payment.amount}
                         currency={payment.currency}
+                        className="w-full h-10 px-0 justify-center rounded-[11px] text-xs font-semibold border-[rgba(140,200,170,0.14)] bg-[rgba(140,200,170,0.06)] text-[#a9c4b7] hover:bg-[rgba(140,200,170,0.12)] hover:text-[#eaf3ee]"
                       />
-                      <Button
-                        variant="outline"
+                      <button
+                        type="button"
                         onClick={() =>
                           setConfirmPaymentData({
                             id: payment.id,
@@ -944,11 +1013,37 @@ const Payments = () => {
                             patientName: payment.patients?.full_name || "Paciente",
                           })
                         }
-                        className="flex-1 h-10 rounded-xl gap-2"
+                        className="flex h-10 items-center justify-center gap-1.5 rounded-[11px] text-xs font-semibold"
+                        style={{ background: "linear-gradient(135deg,#34d399,#14b8a6)", color: "#04150d", border: "none" }}
                       >
-                        <CheckCircle2 className="h-4 w-4" />
+                        <CheckCircle2 className="h-3.5 w-3.5" />
                         Cobrar
-                      </Button>
+                      </button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            type="button"
+                            className="flex h-10 w-10 items-center justify-center rounded-[11px]"
+                            style={{ background: "transparent", border: "1px solid rgba(140,200,170,0.1)", color: "#5f7a6d" }}
+                            title="Más acciones"
+                          >
+                            <MoreVertical className="h-4 w-4" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-44">
+                          <DropdownMenuItem onClick={() => setEditingPayment(payment)} className="gap-2">
+                            <Pencil className="h-4 w-4" />
+                            Editar pago
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => setDeletingPaymentId(payment.id)}
+                            className="gap-2 text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            Eliminar pago
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   )}
                 </div>
@@ -971,11 +1066,11 @@ const Payments = () => {
       {/* FAB - New Payment (solo mobile; en desktop está en el encabezado) */}
       <button
         onClick={() => setShowNewPayment(true)}
-        className="sm:hidden fixed bottom-6 right-6 z-40 w-14 h-14 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:scale-95 transition-all duration-200 flex items-center justify-center"
+        className="sm:hidden fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:scale-95 transition-all duration-200 flex items-center justify-center"
         style={{
           background: "linear-gradient(135deg,#34d399,#14b8a6)",
           color: "#04150d",
-          boxShadow: "0 8px 25px -5px rgba(52,211,153,0.4)",
+          boxShadow: "0 12px 32px rgba(52,211,153,0.35)",
         }}
       >
         <Plus className="h-6 w-6" />
