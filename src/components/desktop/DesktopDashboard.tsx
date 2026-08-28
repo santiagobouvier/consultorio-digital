@@ -568,7 +568,7 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
       `}</style>
       {/* ══════════ BANDA HERO: el cockpit del día ══════════ */}
       <section className="relative text-white">
-        <div className="relative max-w-screen-2xl mx-auto px-10 pt-6">
+        <div className="relative w-full px-8 pt-6">
           {/* Fila superior: marca · fecha/reloj · acciones */}
           <div className="flex items-center justify-between gap-6">
             <div className="flex items-center gap-4 min-w-0">
@@ -805,7 +805,7 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
       </section>
 
       {/* ══════════ CUERPO: tarjetas montadas sobre la banda ══════════ */}
-      <main className="relative z-10 max-w-screen-2xl mx-auto px-10 mt-6 pb-10 space-y-6">
+      <main className="relative z-10 w-full px-8 mt-6 pb-10 space-y-6">
         <ActivationChecklist
           businessId={businessId}
           onAllDone={() => {
