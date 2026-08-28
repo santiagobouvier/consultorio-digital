@@ -425,7 +425,7 @@ export const CalendarSyncButton = ({ mobile = false }: { mobile?: boolean }) => 
                     <span className="flex flex-col min-w-0">
                       <span className="flex items-center gap-2 text-sm font-semibold text-emerald-600 dark:text-emerald-400">
                         <Check className="h-4 w-4 shrink-0" />
-                        Google sincronizado ⚡ al instante
+                        Google Calendar conectado ⚡ al instante
                       </span>
                       {gAcct.email && (
                         <span className="text-[11px] text-muted-foreground truncate pl-6">
@@ -457,7 +457,7 @@ export const CalendarSyncButton = ({ mobile = false }: { mobile?: boolean }) => 
                     {gLoading ? (
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     ) : null}
-                    Continuar con Google ⚡ al instante
+                    Conectar Google Calendar ⚡ al instante
                   </Button>
                 )}
 
