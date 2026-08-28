@@ -1087,250 +1087,402 @@ const Statistics = () => {
         <TabsContent value="actividad" className="space-y-6 mt-0">
 
         {/* KPIs de actividad (con tendencia vs período anterior) */}
-        <div className="grid grid-cols-3 gap-3">
-          <KpiCard
-            icon={CalendarCheck}
-            label="Citas"
-            value={String(kpis.totalCitas)}
-            color="text-primary"
-            trend={<TrendBadge value={trends?.citas ?? null} />}
-          />
-          <KpiCard icon={Activity} label="Ocupación" value={`${kpis.occupancy}%`} color="text-primary" />
-          <KpiCard
-            icon={TrendingDown}
-            label="Ausencias"
-            value={`${kpis.noShowRate}%`}
-            color="text-destructive"
-            trend={<TrendBadge value={trends?.ausencias ?? null} suffix=" pts" invert />}
-          />
+        <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
+          <div className="rounded-[18px] px-4 py-4" style={CARD_BG}>
+            <div
+              className="flex items-center gap-1.5 uppercase mb-1.5 text-[10px] font-semibold"
+              style={{ ...GROTESK, letterSpacing: "0.14em", color: "var(--cd-dim)" }}
+            >
+              <CalendarCheck className="h-3 w-3 shrink-0" style={{ color: "var(--cd-accent)" }} />
+              Citas
+            </div>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="font-bold text-2xl leading-none" style={{ ...GROTESK, color: "var(--cd-text)" }}>
+                {kpis.totalCitas}
+              </span>
+              <TrendBadge value={trends?.citas ?? null} />
+            </div>
+          </div>
+          <div className="rounded-[18px] px-4 py-4" style={CARD_BG}>
+            <div
+              className="flex items-center gap-1.5 uppercase mb-1.5 text-[10px] font-semibold"
+              style={{ ...GROTESK, letterSpacing: "0.14em", color: "var(--cd-accent)" }}
+            >
+              <Activity className="h-3 w-3 shrink-0" />
+              Ocupación
+            </div>
+            <span className="font-bold text-2xl leading-none" style={{ ...GROTESK, color: "var(--cd-text)" }}>
+              {kpis.occupancy}%
+            </span>
+          </div>
+          <div className="rounded-[18px] px-4 py-4" style={CARD_BG}>
+            <div
+              className="flex items-center gap-1.5 uppercase mb-1.5 text-[10px] font-semibold"
+              style={{ ...GROTESK, letterSpacing: "0.14em", color: "var(--cd-accent)" }}
+            >
+              <TrendingDown className="h-3 w-3 shrink-0" />
+              Ausencias
+            </div>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span
+                className="font-bold text-2xl leading-none"
+                style={{ ...GROTESK, color: kpis.noShowRate === 0 ? "var(--cd-accent-soft)" : "#fda4af" }}
+              >
+                {kpis.noShowRate}%
+              </span>
+              <TrendBadge value={trends?.ausencias ?? null} suffix=" pts" invert />
+            </div>
+          </div>
         </div>
 
         {/* Gráficos de actividad en dos columnas en desktop */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
         {/* Occupancy */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Activity className="h-5 w-5 text-primary" />
+        <div className="rounded-[20px] p-5" style={CARD_BG}>
+          <div className="flex items-center gap-2.5 mb-4 flex-wrap">
+            <span
+              className="flex h-8 w-8 items-center justify-center rounded-[10px] shrink-0"
+              style={{ background: "hsl(var(--cd-accent-hsl)/0.12)", color: "var(--cd-accent)" }}
+            >
+              <Activity className="h-[15px] w-[15px]" />
+            </span>
+            <span className="font-semibold text-base flex-1 inline-flex items-center gap-2" style={{ ...GROTESK, color: "var(--cd-text)" }}>
               Ocupación semanal de agenda
               <HelpTooltip id="statsOccupancy" />
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {occupancyData.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-8 text-center">
-                Se necesita una semana tipo configurada y al menos una cita en el período.
-              </p>
-            ) : (
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={occupancyData}>
-                    <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                    <XAxis dataKey="week" tick={{ fontSize: 12 }} />
-                    <YAxis unit="%" domain={[0, 100]} tick={{ fontSize: 12 }} />
-                    <Tooltip
-                      formatter={(v: number) => [`${v}%`, "Ocupación"]}
-                      contentStyle={{ borderRadius: 8, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))" }}
-                    />
-                    <Line type="monotone" dataKey="ocupacion" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 3 }} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
+            </span>
+            {occupancyData.length > 0 && (
+              <span
+                className="px-2.5 py-1 rounded-full text-[11.5px] font-semibold"
+                style={{
+                  ...GROTESK,
+                  background: "hsl(var(--cd-accent-hsl)/0.12)",
+                  border: "1px solid hsl(var(--cd-accent-hsl)/0.3)",
+                  color: "var(--cd-accent-soft)",
+                }}
+              >
+                pico {Math.max(...occupancyData.map((w) => w.ocupacion))}%
+              </span>
             )}
-          </CardContent>
-        </Card>
+          </div>
+          {occupancyData.length === 0 ? (
+            <p className="text-sm py-8 text-center" style={{ color: "var(--cd-muted)" }}>
+              Se necesita una semana tipo configurada y al menos una cita en el período.
+            </p>
+          ) : (
+            <div className="h-56 sm:h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={occupancyData} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
+                  <CartesianGrid stroke="hsl(var(--cd-tint-hsl)/0.08)" vertical={false} />
+                  <XAxis
+                    dataKey="week"
+                    tick={{ fontSize: 10.5, fill: "var(--cd-dim)", fontFamily: "'Space Grotesk', sans-serif" }}
+                    axisLine={{ stroke: "hsl(var(--cd-tint-hsl)/0.1)" }}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    domain={[0, 100]}
+                    ticks={[0, 50, 100]}
+                    tickFormatter={(v) => `${v}%`}
+                    tick={{ fontSize: 10.5, fill: "var(--cd-dim)", fontFamily: "'Space Grotesk', sans-serif" }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <Tooltip
+                    formatter={(v: number) => [`${v}%`, "Ocupación"]}
+                    contentStyle={{
+                      borderRadius: 12,
+                      border: "1px solid hsl(var(--cd-tint-hsl)/0.2)",
+                      background: "var(--cd-card1)",
+                      color: "var(--cd-text)",
+                    }}
+                    labelStyle={{ color: "var(--cd-text)", fontWeight: 600 }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="ocupacion"
+                    stroke="var(--cd-accent)"
+                    strokeWidth={2.5}
+                    dot={{ r: 4, fill: "var(--cd-card1)", stroke: "var(--cd-accent)", strokeWidth: 2 }}
+                    activeDot={{ r: 5, fill: "var(--cd-accent)" }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </div>
 
         {/* Per-professional */}
         {professionalRows.length > 1 && (
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Users className="h-5 w-5 text-primary" />
+          <div className="rounded-[20px] p-5" style={CARD_BG}>
+            <div className="flex items-center gap-2.5 mb-4">
+              <span
+                className="flex h-8 w-8 items-center justify-center rounded-[10px] shrink-0"
+                style={{ background: "hsl(var(--cd-accent-hsl)/0.12)", color: "var(--cd-accent)" }}
+              >
+                <Users className="h-[15px] w-[15px]" />
+              </span>
+              <span className="font-semibold text-base inline-flex items-center gap-2" style={{ ...GROTESK, color: "var(--cd-text)" }}>
                 Desempeño por profesional
                 <HelpTooltip id="statsByProfessional" />
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {professionalRows.map((p) => (
-                  <div key={p.userId} className="flex items-center justify-between gap-3 p-3 rounded-lg border">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-3 h-3 rounded-full shrink-0" style={{ background: p.color }} />
-                      <p className="font-medium text-sm truncate">{p.name}</p>
+              </span>
+            </div>
+            <div className="space-y-2">
+              {professionalRows.map((p) => (
+                <div
+                  key={p.userId}
+                  className="flex items-center justify-between gap-3 p-3 rounded-xl"
+                  style={{ background: "hsl(var(--cd-tint-hsl)/0.05)", border: "1px solid hsl(var(--cd-tint-hsl)/0.12)" }}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-3 h-3 rounded-full shrink-0" style={{ background: p.color }} />
+                    <p className="font-medium text-sm truncate" style={{ color: "var(--cd-text)" }}>{p.name}</p>
+                  </div>
+                  <div className="flex items-center gap-4 text-sm shrink-0">
+                    <div className="text-right">
+                      <p className="font-semibold" style={{ ...GROTESK, color: "var(--cd-text)" }}>{p.citas}</p>
+                      <p className="text-xs" style={{ color: "var(--cd-muted)" }}>citas</p>
                     </div>
-                    <div className="flex items-center gap-4 text-sm shrink-0">
-                      <div className="text-right">
-                        <p className="font-semibold">{p.citas}</p>
-                        <p className="text-xs text-muted-foreground">citas</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-semibold text-destructive">{p.noShowRate}%</p>
-                        <p className="text-xs text-muted-foreground">ausencias</p>
-                      </div>
+                    <div className="text-right">
+                      <p className="font-semibold" style={{ ...GROTESK, color: p.noShowRate > 0 ? "#fda4af" : "var(--cd-muted)" }}>{p.noShowRate}%</p>
+                      <p className="text-xs" style={{ color: "var(--cd-muted)" }}>ausencias</p>
                     </div>
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                </div>
+              ))}
+            </div>
+          </div>
         )}
 
         {/* Días de la semana */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              <CalendarDays className="h-5 w-5 text-primary" />
+        <div className="rounded-[20px] p-5" style={CARD_BG}>
+          <div className="flex items-center gap-2.5 mb-4">
+            <span
+              className="flex h-8 w-8 items-center justify-center rounded-[10px] shrink-0"
+              style={{ background: "hsl(var(--cd-accent-hsl)/0.12)", color: "var(--cd-accent)" }}
+            >
+              <CalendarDays className="h-[15px] w-[15px]" />
+            </span>
+            <span className="font-semibold text-base" style={{ ...GROTESK, color: "var(--cd-text)" }}>
               Tu semana: días con más sesiones
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {weekdayData.every((d) => d.count === 0) ? (
-              <p className="text-sm text-muted-foreground py-8 text-center">No hay datos de citas en el período</p>
-            ) : (
-              (() => {
-                const maxDay = Math.max(...weekdayData.map((d) => d.count), 1);
-                return (
-                  <div className="space-y-2">
-                    {weekdayData.map((d) => (
+            </span>
+          </div>
+          {weekdayData.every((d) => d.count === 0) ? (
+            <p className="text-sm py-8 text-center" style={{ color: "var(--cd-muted)" }}>No hay datos de citas en el período</p>
+          ) : (
+            (() => {
+              const maxDay = Math.max(...weekdayData.map((d) => d.count), 1);
+              return (
+                <div className="space-y-2">
+                  {weekdayData.map((d) => {
+                    const esPico = d.count === maxDay && d.count > 0;
+                    return (
                       <div key={d.day} className="flex items-center gap-3">
-                        <span className="text-xs w-8 shrink-0 text-muted-foreground font-medium">{d.day}</span>
-                        <div className="flex-1 h-5 rounded-md bg-muted overflow-hidden">
+                        <span
+                          className="text-xs w-8 shrink-0"
+                          style={{ ...GROTESK, fontWeight: esPico ? 700 : 500, color: esPico ? "var(--cd-text)" : "var(--cd-muted)" }}
+                        >
+                          {d.day}
+                        </span>
+                        <div
+                          className="flex-1 h-[15px] rounded-full overflow-hidden"
+                          style={{ background: "hsl(var(--cd-tint-hsl)/0.07)" }}
+                        >
                           <div
-                            className={`h-full rounded-md ${d.count >= maxDay * 0.8 ? "bg-primary" : "bg-primary/40"}`}
-                            style={{ width: `${(d.count / maxDay) * 100}%` }}
+                            className="h-full rounded-full transition-all duration-700"
+                            style={{
+                              width: `${(d.count / maxDay) * 100}%`,
+                              background: esPico
+                                ? "linear-gradient(90deg,var(--cd-accent),var(--cd-accent-soft))"
+                                : "linear-gradient(90deg,hsl(var(--cd-accent-hsl)/0.55),hsl(var(--cd-deep-hsl)/0.55))",
+                            }}
                           />
                         </div>
-                        <span className="text-xs font-semibold w-8 text-right tabular-nums">{d.count}</span>
+                        <span
+                          className="text-[13px] w-8 text-right tabular-nums"
+                          style={{ ...GROTESK, fontWeight: 700, color: esPico ? "var(--cd-text)" : "var(--cd-muted)" }}
+                        >
+                          {d.count}
+                        </span>
                       </div>
-                    ))}
-                  </div>
-                );
-              })()
-            )}
-          </CardContent>
-        </Card>
+                    );
+                  })}
+                </div>
+              );
+            })()
+          )}
+        </div>
 
         {/* Hours */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-primary" />
+        <div className="rounded-[20px] p-5" style={CARD_BG}>
+          <div className="flex items-center gap-2.5 mb-4">
+            <span
+              className="flex h-8 w-8 items-center justify-center rounded-[10px] shrink-0"
+              style={{ background: "hsl(var(--cd-accent-hsl)/0.12)", color: "var(--cd-accent)" }}
+            >
+              <BarChart3 className="h-[15px] w-[15px]" />
+            </span>
+            <span className="font-semibold text-base inline-flex items-center gap-2" style={{ ...GROTESK, color: "var(--cd-text)" }}>
               Horas con mayor cantidad de citas
               <HelpTooltip id="statsHourDistribution" />
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {hourData.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-8 text-center">No hay datos de citas en el período</p>
-            ) : (
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={hourData}>
-                    <XAxis dataKey="hour" tick={{ fontSize: 12 }} />
-                    <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
-                    <Tooltip
-                      formatter={(value: number) => [`${value} citas`, "Cantidad"]}
-                      contentStyle={{ borderRadius: 8, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))" }}
-                    />
-                    <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-                      {hourData.map((entry, i) => (
-                        <Cell
-                          key={i}
-                          fill={entry.count >= maxHourCount * 0.8 ? "hsl(var(--primary))" : "hsl(var(--muted-foreground) / 0.3)"}
-                        />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+            </span>
+          </div>
+          {hourData.length === 0 ? (
+            <p className="text-sm py-8 text-center" style={{ color: "var(--cd-muted)" }}>No hay datos de citas en el período</p>
+          ) : (
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={hourData} margin={{ top: 8, right: 8, left: -22, bottom: 0 }}>
+                  <XAxis
+                    dataKey="hour"
+                    tick={{ fontSize: 10.5, fill: "var(--cd-dim)", fontFamily: "'Space Grotesk', sans-serif" }}
+                    axisLine={{ stroke: "hsl(var(--cd-tint-hsl)/0.1)" }}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    allowDecimals={false}
+                    tick={{ fontSize: 10.5, fill: "var(--cd-dim)", fontFamily: "'Space Grotesk', sans-serif" }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <Tooltip
+                    formatter={(value: number) => [`${value} citas`, "Cantidad"]}
+                    cursor={{ fill: "hsl(var(--cd-tint-hsl)/0.05)" }}
+                    contentStyle={{
+                      borderRadius: 12,
+                      border: "1px solid hsl(var(--cd-tint-hsl)/0.2)",
+                      background: "var(--cd-card1)",
+                      color: "var(--cd-text)",
+                    }}
+                    labelStyle={{ color: "var(--cd-text)", fontWeight: 600 }}
+                  />
+                  <Bar dataKey="count" radius={[6, 6, 2, 2]}>
+                    {hourData.map((entry, i) => (
+                      <Cell
+                        key={i}
+                        fill={entry.count >= maxHourCount * 0.8 ? "var(--cd-accent)" : "hsl(var(--cd-tint-hsl)/0.25)"}
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </div>
 
         {/* No-show trend */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center justify-between gap-2">
-              <span className="flex items-center gap-2">
-                <TrendingDown className="h-5 w-5 text-destructive" />
+        <div className="rounded-[20px] p-5" style={CARD_BG}>
+          <div className="flex items-center justify-between gap-2 mb-4 flex-wrap">
+            <span className="flex items-center gap-2.5">
+              <span
+                className="flex h-8 w-8 items-center justify-center rounded-[10px] shrink-0"
+                style={{ background: "rgba(251,113,133,0.13)", color: "#fda4af" }}
+              >
+                <TrendingDown className="h-[15px] w-[15px]" />
+              </span>
+              <span className="font-semibold text-base inline-flex items-center gap-2" style={{ ...GROTESK, color: "var(--cd-text)" }}>
                 Tendencia de ausencias
                 <HelpTooltip id="statsNoShow" />
               </span>
-              {(() => {
-                const { delta, curRate, prevRate } = noShowTrend;
-                if (prevRate === 0 && curRate === 0) return null;
-                const isUp = delta > 0;
-                const isDown = delta < 0;
-                const Icon = isUp ? ArrowUpRight : isDown ? ArrowDownRight : Minus;
-                const colorClass = isUp ? "text-destructive" : isDown ? "text-[hsl(var(--success,142_70%_45%))]" : "text-muted-foreground";
-                return (
-                  <span className={`flex items-center gap-1 text-sm font-semibold ${colorClass}`}>
-                    <Icon className="h-4 w-4" />
-                    {delta > 0 ? "+" : ""}{delta}% vs mes anterior
-                  </span>
-                );
-              })()}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {noShowData.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-8 text-center">No hay datos suficientes</p>
-            ) : (
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={noShowData}>
-                    <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                    <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                    <YAxis unit="%" allowDecimals={false} tick={{ fontSize: 12 }} domain={[0, 'auto']} />
-                    <Tooltip
-                      formatter={(value: number, name: string) => {
-                        if (name === "rate") return [`${value}%`, "Tasa ausencia"];
-                        return [value, name];
-                      }}
-                      contentStyle={{ borderRadius: 8, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))" }}
-                    />
-                    <Line type="monotone" dataKey="rate" stroke="hsl(var(--destructive))" strokeWidth={2} dot={{ r: 4 }} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+            </span>
+            {(() => {
+              const { delta, curRate, prevRate } = noShowTrend;
+              if (prevRate === 0 && curRate === 0) return null;
+              const isUp = delta > 0;
+              const isDown = delta < 0;
+              const Icon = isUp ? ArrowUpRight : isDown ? ArrowDownRight : Minus;
+              const color = isUp ? "#fda4af" : isDown ? "var(--cd-accent-soft)" : "var(--cd-muted)";
+              return (
+                <span className="flex items-center gap-1 text-sm font-semibold" style={{ color }}>
+                  <Icon className="h-4 w-4" />
+                  {delta > 0 ? "+" : ""}{delta}% vs mes anterior
+                </span>
+              );
+            })()}
+          </div>
+          {noShowData.length === 0 ? (
+            <p className="text-sm py-8 text-center" style={{ color: "var(--cd-muted)" }}>No hay datos suficientes</p>
+          ) : (
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={noShowData} margin={{ top: 8, right: 8, left: -22, bottom: 0 }}>
+                  <CartesianGrid stroke="hsl(var(--cd-tint-hsl)/0.08)" vertical={false} />
+                  <XAxis
+                    dataKey="month"
+                    tick={{ fontSize: 10.5, fill: "var(--cd-dim)", fontFamily: "'Space Grotesk', sans-serif" }}
+                    axisLine={{ stroke: "hsl(var(--cd-tint-hsl)/0.1)" }}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    unit="%"
+                    allowDecimals={false}
+                    tick={{ fontSize: 10.5, fill: "var(--cd-dim)", fontFamily: "'Space Grotesk', sans-serif" }}
+                    domain={[0, 'auto']}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <Tooltip
+                    formatter={(value: number, name: string) => {
+                      if (name === "rate") return [`${value}%`, "Tasa ausencia"];
+                      return [value, name];
+                    }}
+                    contentStyle={{
+                      borderRadius: 12,
+                      border: "1px solid hsl(var(--cd-tint-hsl)/0.2)",
+                      background: "var(--cd-card1)",
+                      color: "var(--cd-text)",
+                    }}
+                    labelStyle={{ color: "var(--cd-text)", fontWeight: 600 }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="rate"
+                    stroke="#fda4af"
+                    strokeWidth={2.5}
+                    dot={{ r: 4, fill: "var(--cd-card1)", stroke: "#fda4af", strokeWidth: 2 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </div>
 
         {/* Origen de las reservas */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Globe className="h-5 w-5 text-primary" />
+        <div className="rounded-[20px] p-5" style={CARD_BG}>
+          <div className="flex items-center gap-2.5 mb-4">
+            <span
+              className="flex h-8 w-8 items-center justify-center rounded-[10px] shrink-0"
+              style={{ background: "hsl(var(--cd-accent-hsl)/0.12)", color: "var(--cd-accent)" }}
+            >
+              <Globe className="h-[15px] w-[15px]" />
+            </span>
+            <span className="font-semibold text-base" style={{ ...GROTESK, color: "var(--cd-text)" }}>
               Origen de las reservas
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {sourceData.total === 0 ? (
-              <p className="text-sm text-muted-foreground py-8 text-center">Sin citas en el período</p>
-            ) : (
-              <div className="space-y-2.5">
-                {([
-                  ["Vos (panel)", sourceData.panel, "bg-muted-foreground/50"],
-                  ["Web pública", sourceData.publica, "bg-primary"],
-                  ["Portal", sourceData.portal, "bg-emerald-500"],
-                ] as const).map(([label, count, color]) => {
-                  const pctVal = Math.round((count / sourceData.total) * 100);
-                  return (
-                    <div key={label} className="flex items-center gap-2">
-                      <span className="text-xs w-20 shrink-0 text-muted-foreground">{label}</span>
-                      <div className="flex-1 h-2.5 rounded-full bg-muted overflow-hidden">
-                        <div className={`h-full rounded-full ${color}`} style={{ width: `${pctVal}%` }} />
-                      </div>
-                      <span className="text-xs font-semibold w-10 text-right tabular-nums">{pctVal}%</span>
+            </span>
+          </div>
+          {sourceData.total === 0 ? (
+            <p className="text-sm py-8 text-center" style={{ color: "var(--cd-muted)" }}>Sin citas en el período</p>
+          ) : (
+            <div className="space-y-2.5">
+              {([
+                ["Vos (panel)", sourceData.panel, "hsl(var(--cd-tint-hsl)/0.4)"],
+                ["Web pública", sourceData.publica, "linear-gradient(90deg,var(--cd-accent),var(--cd-accent-deep))"],
+                ["Portal", sourceData.portal, "linear-gradient(90deg,var(--cd-accent-soft),var(--cd-accent))"],
+              ] as const).map(([label, count, fill]) => {
+                const pctVal = Math.round((count / sourceData.total) * 100);
+                return (
+                  <div key={label} className="flex items-center gap-2">
+                    <span className="text-xs w-20 shrink-0" style={{ color: "var(--cd-muted)" }}>{label}</span>
+                    <div className="flex-1 h-2.5 rounded-full overflow-hidden" style={{ background: "hsl(var(--cd-tint-hsl)/0.07)" }}>
+                      <div className="h-full rounded-full" style={{ width: `${pctVal}%`, background: fill }} />
                     </div>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                    <span className="text-xs font-semibold w-10 text-right tabular-nums" style={{ ...GROTESK, color: "var(--cd-text)" }}>{pctVal}%</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
 
         </div>
         </TabsContent>
