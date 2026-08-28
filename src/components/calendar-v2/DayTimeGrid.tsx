@@ -240,9 +240,14 @@ export const DayTimeGrid = ({
               className="absolute left-[3px] right-[3px] rounded-[10px] border border-dashed border-muted-foreground/40 bg-muted/50 pointer-events-none overflow-hidden"
               style={{ top, height }}
             >
-              <div className={cn("flex items-center gap-1.5 min-w-0", compact ? "px-2 py-0.5" : "px-2.5 py-1.5")}>
+              <div className={cn("flex items-center gap-1.5 min-w-0 overflow-hidden", compact ? "px-2 py-0.5" : "px-2.5 py-1.5")}>
                 <span className={cn("shrink-0", compact ? "text-[10px]" : "text-[11px]")}>📅</span>
-                <span className={cn("font-medium text-muted-foreground truncate", compact ? "text-[10px]" : "text-[11px]")}>
+                <span
+                  className={cn(
+                    "font-medium text-foreground/70 truncate min-w-0 whitespace-nowrap",
+                    compact ? "text-[10px]" : "text-[11.5px]"
+                  )}
+                >
                   {b.label}
                 </span>
               </div>

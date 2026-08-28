@@ -42,7 +42,7 @@ export const fetchExternalBusyDay = async (dayStr: string): Promise<ExternalBusy
         return {
           start: cs.getHours() * 60 + cs.getMinutes(),
           end: ce.getHours() * 60 + ce.getMinutes(),
-          label: `«${b.title}» (${b.calendar})`,
+          label: `«${b.title}» · ${b.calendar}`,
         };
       })
       .filter((b) => b.end > b.start)
