@@ -34,7 +34,6 @@ const Appointments = lazy(() => import("./pages/Appointments"));
 const Agenda = lazy(() => import("./pages/CalendarV2"));
 const PendingReminders = lazy(() => import("./pages/PendingReminders"));
 const ClinicSettings = lazy(() => import("./pages/ClinicSettings"));
-const AvailableSlots = lazy(() => import("./pages/AvailableSlots"));
 const PublicClinic = lazy(() => import("./pages/PublicClinic"));
 const PublicBooking = lazy(() => import("./pages/PublicBooking"));
 const AppointmentRequests = lazy(() => import("./pages/AppointmentRequests"));

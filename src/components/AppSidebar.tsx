@@ -7,7 +7,6 @@ import {
   Settings,
   Palette,
   Clock,
-  AlarmClock,
   FileText,
   LogOut,
   Shield,
