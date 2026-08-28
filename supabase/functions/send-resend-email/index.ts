@@ -191,6 +191,38 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Resend rechaza destinatarios con caracteres no ASCII. Limpiamos espacios
+    // raros / invisibles y convertimos el dominio a punycode (IDN). Si el
+    // usuario (parte antes de @) sigue teniendo acentos, avisamos claro.
+    const cleaned = to
+      .replace(/[\u200B-\u200D\uFEFF\u00A0]/g, "")
+      .trim()
+      .replace(/^mailto:/i, "");
+    const atIndex = cleaned.lastIndexOf("@");
+    if (atIndex < 1) {
+      return new Response(JSON.stringify({ error: "Email inválido", details: { to } }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const localPart = cleaned.slice(0, atIndex);
+    let domainPart = cleaned.slice(atIndex + 1).toLowerCase();
+    try {
+      domainPart = new URL(`https://${domainPart}`).hostname; // IDN -> punycode
+    } catch {
+      // se valida abajo
+    }
+    const recipient = `${localPart}@${domainPart}`;
+    if (/[^\x20-\x7E]/.test(recipient)) {
+      return new Response(
+        JSON.stringify({
+          error: "El email del destinatario tiene caracteres no válidos (acentos o símbolos). Corregilo y volvé a intentar.",
+          details: { to },
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+
     const branding = await getBranding(businessId);
 
     let subject = "";
