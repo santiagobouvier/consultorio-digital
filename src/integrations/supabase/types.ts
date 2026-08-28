@@ -161,6 +161,8 @@ export type Database = {
           contact_phone: string | null
           created_at: string
           end_at: string
+          google_event_id: string | null
+          google_synced_at: string | null
           id: string
           is_new_contact: boolean
           location: string | null
@@ -191,6 +193,8 @@ export type Database = {
           contact_phone?: string | null
           created_at?: string
           end_at: string
+          google_event_id?: string | null
+          google_synced_at?: string | null
           id?: string
           is_new_contact?: boolean
           location?: string | null
@@ -221,6 +225,8 @@ export type Database = {
           contact_phone?: string | null
           created_at?: string
           end_at?: string
+          google_event_id?: string | null
+          google_synced_at?: string | null
           id?: string
           is_new_contact?: boolean
           location?: string | null
@@ -934,6 +940,75 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      google_calendar_accounts: {
+        Row: {
+          business_id: string | null
+          calendar_id: string
+          created_at: string
+          google_email: string | null
+          id: string
+          professional_user_id: string
+          refresh_token: string
+          sync_enabled: boolean
+        }
+        Insert: {
+          business_id?: string | null
+          calendar_id?: string
+          created_at?: string
+          google_email?: string | null
+          id?: string
+          professional_user_id: string
+          refresh_token: string
+          sync_enabled?: boolean
+        }
+        Update: {
+          business_id?: string | null
+          calendar_id?: string
+          created_at?: string
+          google_email?: string | null
+          id?: string
+          professional_user_id?: string
+          refresh_token?: string
+          sync_enabled?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "google_calendar_accounts_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "google_calendar_accounts_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses_public_branding"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      google_oauth_states: {
+        Row: {
+          business_id: string | null
+          created_at: string
+          professional_user_id: string
+          state: string
+        }
+        Insert: {
+          business_id?: string | null
+          created_at?: string
+          professional_user_id: string
+          state?: string
+        }
+        Update: {
+          business_id?: string | null
+          created_at?: string
+          professional_user_id?: string
+          state?: string
+        }
+        Relationships: []
       }
       note_templates: {
         Row: {
