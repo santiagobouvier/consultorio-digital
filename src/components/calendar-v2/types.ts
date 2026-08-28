@@ -43,6 +43,8 @@ export interface PersonalEvent {
   recurrence_until: string | null;
   category?: string | null;
   label_id?: string | null;
+  /** Iconito (emoji) del evento: se ve en la grilla y viaja a Google. */
+  icon?: string | null;
   /** Etiqueta custom (join de personal_event_labels); pisa a category. */
   personal_event_labels?: { name: string; color: string } | null;
 }

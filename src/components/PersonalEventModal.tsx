@@ -84,6 +84,49 @@ const RECURRENCES: { id: Recurrence; label: string }[] = [
 
 const NEUTRAL = "#64748b";
 
+// Iconitos disponibles para el evento (se ven en la grilla y en Google).
+// Curados por contexto de vida real de un profesional de la salud.
+const EVENT_ICONS = [
+  "☕", "🍽️", "🏋️", "🏃", "🧘", "⚽", "🚴",
+  "🩺", "🦷", "💊", "💆", "💇",
+  "📚", "🎓", "💻", "👥", "📞",
+  "🛒", "🏦", "🚗", "✈️", "🏠",
+  "👨‍👩‍👧", "🎂", "🎉", "🐶", "😴", "🌴",
+];
+
+// Sugerencia automática según lo que escribió en el título
+const ICON_HINTS: [RegExp, string][] = [
+  [/desayun|caf[eé]|merienda|mate/i, "☕"],
+  [/almuerz|cena|comida|restaur/i, "🍽️"],
+  [/gym|gimnasio|pesas|entren/i, "🏋️"],
+  [/correr|running|caminata/i, "🏃"],
+  [/yoga|medita|pilates/i, "🧘"],
+  [/f[uú]tbol|partido|cancha/i, "⚽"],
+  [/bici|cicli|spinning/i, "🚴"],
+  [/m[eé]dic|doctor|cl[ií]nic|estudio m|an[aá]lisis/i, "🩺"],
+  [/dentista|odont[oó]/i, "🦷"],
+  [/remedio|medicac|farmacia/i, "💊"],
+  [/masaje|spa|kinesi/i, "💆"],
+  [/pelu|corte de pelo|barber/i, "💇"],
+  [/estudi|facultad|examen|parcial|clase/i, "📚"],
+  [/curso|taller|capacita/i, "🎓"],
+  [/reuni[oó]n|meet|llamada|zoom/i, "👥"],
+  [/tr[aá]mite|banco|bps|dgi|gestion/i, "🏦"],
+  [/super|compra|mandado/i, "🛒"],
+  [/viaje|vuelo|aeropuerto/i, "✈️"],
+  [/auto|mec[aá]nico|taller del auto/i, "🚗"],
+  [/famili|hij|madre|padre|abuel/i, "👨‍👩‍👧"],
+  [/cumple|festej/i, "🎂"],
+  [/fiesta|salida|evento/i, "🎉"],
+  [/vete|perr|gat/i, "🐶"],
+  [/siesta|descans|dormir/i, "😴"],
+  [/vacacion|playa|licencia/i, "🌴"],
+];
+const suggestIcon = (title: string): string | null => {
+  for (const [re, emoji] of ICON_HINTS) if (re.test(title)) return emoji;
+  return null;
+};
+
 type WizStep = "title" | "when" | "time" | "repeat" | "label" | "summary";
 const WIZ_ORDER: WizStep[] = ["title", "when", "time", "repeat", "label", "summary"];
 const WIZ_TITLES: Record<WizStep, string> = {
@@ -196,6 +239,9 @@ export const PersonalEventModal = ({
 
   const [title, setTitle] = useState("");
   const [labelId, setLabelId] = useState<string | null>(null);
+  // Iconito del evento: se sugiere solo según el título, y se puede elegir
+  const [icon, setIcon] = useState<string | null>(null);
+  const [iconTouched, setIconTouched] = useState(false);
   const [customLabels, setCustomLabels] = useState<PersonalEventLabel[]>([]);
   const [creatingLabel, setCreatingLabel] = useState(false);
   const [newLabelName, setNewLabelName] = useState("");
@@ -223,6 +269,8 @@ export const PersonalEventModal = ({
       const e = new Date(event.end_at);
       setTitle(event.title);
       setLabelId(event.label_id ?? null);
+      setIcon(event.icon ?? null);
+      setIconTouched(!!event.icon);
       setDate(format(s, "yyyy-MM-dd"));
       setStartTime(format(s, "HH:mm"));
       setEndTime(format(e, "HH:mm"));
@@ -236,6 +284,8 @@ export const PersonalEventModal = ({
     } else {
       setTitle("");
       setLabelId(null);
+      setIcon(null);
+      setIconTouched(false);
       setDate(format(defaultDate ?? new Date(), "yyyy-MM-dd"));
       const start = defaultStartTime ?? "09:00";
       setStartTime(start);
@@ -249,6 +299,12 @@ export const PersonalEventModal = ({
     // Crear = asistente pregunta por pregunta; editar = arranca en el resumen
     setStep(event ? "summary" : "title");
   }, [open, event, defaultDate, defaultStartTime]);
+
+  // Sugerencia de iconito según el título (mientras no haya elegido uno)
+  useEffect(() => {
+    if (iconTouched || !title.trim()) return;
+    setIcon(suggestIcon(title));
+  }, [title, iconTouched]);
 
   // Etiquetas del profesional
   useEffect(() => {
@@ -356,6 +412,7 @@ export const PersonalEventModal = ({
         title: title.trim(),
         category: "personal", // columna legada; el color vive en la etiqueta
         label_id: labelId,
+        icon: icon || null,
         notes: notes.trim() || null,
         start_at: new Date(`${date}T${startTime}:00`).toISOString(),
         end_at: new Date(`${date}T${endTime}:00`).toISOString(),
@@ -363,21 +420,34 @@ export const PersonalEventModal = ({
         recurrence_until: recurrence !== "none" && until ? until : null,
       };
 
+      // Si la columna icon todavía no está en la base, se reintenta sin ella
+      const isIconColumnError = (e: any) =>
+        e && (e.code === "PGRST204" || String(e.message ?? "").includes("icon"));
+
       if (isEdit && event) {
-        const { error } = await (supabase as any)
+        let { error } = await (supabase as any)
           .from("personal_events")
           .update(payload)
           .eq("id", event.id);
+        if (isIconColumnError(error)) {
+          const { icon: _omit, ...rest } = payload;
+          ({ error } = await (supabase as any).from("personal_events").update(rest).eq("id", event.id));
+        }
         if (error) throw error;
         toast({ title: "Evento actualizado" });
       } else {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error("Sesión no válida");
-        const { error } = await (supabase as any).from("personal_events").insert({
+        const fullRow = {
           ...payload,
           business_id: businessId,
           professional_user_id: user.id,
-        });
+        };
+        let { error } = await (supabase as any).from("personal_events").insert(fullRow);
+        if (isIconColumnError(error)) {
+          const { icon: _omit, ...rest } = fullRow;
+          ({ error } = await (supabase as any).from("personal_events").insert(rest));
+        }
         if (error) throw error;
         toast({ title: "Agendado", description: "Ese horario ya no se puede reservar online." });
       }
@@ -750,6 +820,50 @@ export const PersonalEventModal = ({
             "Facultad" en violeta.
           </p>
         )}
+
+        {/* Iconito del evento: se sugiere solo según el título y se puede
+            cambiar — se ve en la grilla del día y viaja a Google Calendar */}
+        <div className="pt-1.5 space-y-1.5">
+          <p className="text-sm font-semibold">
+            ¿Un iconito? <span className="text-xs font-normal text-muted-foreground">(opcional)</span>
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            <button
+              type="button"
+              onClick={() => {
+                setIcon(null);
+                setIconTouched(true);
+              }}
+              className={cn(
+                "h-10 px-3 rounded-xl border-2 text-xs font-medium transition-all",
+                icon === null
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "border-border text-muted-foreground hover:border-foreground/30"
+              )}
+            >
+              Sin icono
+            </button>
+            {EVENT_ICONS.map((e) => (
+              <button
+                key={e}
+                type="button"
+                onClick={() => {
+                  setIcon(e);
+                  setIconTouched(true);
+                }}
+                className={cn(
+                  "h-10 w-10 rounded-xl border-2 text-lg transition-all flex items-center justify-center",
+                  icon === e
+                    ? "border-primary bg-primary/10 scale-110"
+                    : "border-border/60 hover:border-foreground/30 hover:scale-105"
+                )}
+                aria-label={`Icono ${e}`}
+              >
+                {e}
+              </button>
+            ))}
+          </div>
+        </div>
 
         {creatingLabel && (
           <div className="rounded-xl border border-border/70 p-3 space-y-3">

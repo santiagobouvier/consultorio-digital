@@ -6,6 +6,10 @@ export interface ExternalBusyBlock {
   start: number;
   end: number;
   label: string;
+  /** Título pelado del evento (para dibujarlo lindo en la grilla). */
+  title: string;
+  /** De qué calendario vino ("Google", "Calendario de iPhone", ...). */
+  source: string;
   /** id del evento en Google (solo con OAuth): permite "borrar y agendar". */
   eventId?: string;
   /** Color real del evento en Google, para pintarlo igual en la grilla. */
@@ -53,6 +57,8 @@ export const fetchExternalBusyDay = async (dayStr: string): Promise<ExternalBusy
           start: cs.getHours() * 60 + cs.getMinutes(),
           end: ce.getHours() * 60 + ce.getMinutes(),
           label: `«${b.title}» · ${b.calendar}`,
+          title: b.title,
+          source: b.calendar,
           eventId: b.eventId,
           color: b.color ?? null,
         };

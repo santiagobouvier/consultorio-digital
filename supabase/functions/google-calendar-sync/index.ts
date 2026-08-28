@@ -291,12 +291,20 @@ Deno.serve(async (req) => {
         }
       }
       // ── Eventos personales: mismo espejo, con repetición si tienen ──
-      const { data: pevts } = await admin
-        .from("personal_events")
-        .select("id, title, start_at, end_at, recurrence, recurrence_until, updated_at, google_event_id, google_synced_at, category, personal_event_labels ( color )")
-        .eq("professional_user_id", user.id)
-        .lte("start_at", to.toISOString())
-        .or(`start_at.gte.${from.toISOString()},recurrence.neq.none`);
+      const fetchPevts = (withIcon: boolean) =>
+        admin
+          .from("personal_events")
+          .select(
+            `id, title, ${withIcon ? "icon, " : ""}start_at, end_at, recurrence, recurrence_until, updated_at, google_event_id, google_synced_at, category, personal_event_labels ( color )`
+          )
+          .eq("professional_user_id", user.id)
+          .lte("start_at", to.toISOString())
+          .or(`start_at.gte.${from.toISOString()},recurrence.neq.none`);
+      let { data: pevts, error: pevtsErr } = await fetchPevts(true);
+      if (pevtsErr) {
+        // La columna icon todavía no existe en la base: reintento sin ella
+        ({ data: pevts } = await fetchPevts(false));
+      }
 
       const RECUR_FREQ: Record<string, string> = { daily: "DAILY", weekly: "WEEKLY", monthly: "MONTHLY" };
       const pendingPersonal = (pevts ?? [])
@@ -317,7 +325,7 @@ Deno.serve(async (req) => {
             recurrence = [`RRULE:FREQ=${freq}${until}`];
           }
           const event: Record<string, unknown> = {
-            summary: ev.title || "Evento personal",
+            summary: `${(ev as any).icon ? `${(ev as any).icon} ` : ""}${ev.title || "Evento personal"}`,
             description: "Evento personal de Consultorio Digital",
             start: { dateTime: new Date(ev.start_at).toISOString(), timeZone: "America/Montevideo" },
             end: { dateTime: new Date(ev.end_at).toISOString(), timeZone: "America/Montevideo" },
