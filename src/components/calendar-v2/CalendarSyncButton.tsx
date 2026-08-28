@@ -502,18 +502,36 @@ export const CalendarSyncButton = ({ mobile = false }: { mobile?: boolean }) => 
                     ¿De dónde saco ese link?
                   </button>
                   {showHelp && (
-                    <div className="rounded-xl bg-muted/40 p-3 text-[12.5px] leading-relaxed text-muted-foreground space-y-1.5">
-                      <p>
-                        <span className="font-medium text-foreground">Google Calendar (compu):</span>{" "}
-                        Configuración → tu calendario → Integrar el calendario → copiá la
-                        "Dirección secreta en formato iCal".
-                      </p>
-                      <p>
-                        <span className="font-medium text-foreground">iPhone / iCloud:</span>{" "}
-                        app Calendario → Calendarios → (i) junto a tu calendario → activá
-                        "Calendario público" → Compartir enlace → copialo.
-                      </p>
-                      <p className="text-[11.5px]">
+                    <div className="rounded-xl bg-muted/40 p-3 text-[12.5px] leading-relaxed text-muted-foreground space-y-2.5">
+                      <div className="space-y-1">
+                        <p className="font-medium text-foreground">Google Calendar (desde la compu):</p>
+                        <p>1. Tocá el botón de acá abajo (se abre la configuración de Google).</p>
+                        <p>2. A la izquierda, en "Configuración de mis calendarios", tocá el calendario con TU nombre.</p>
+                        <p>3. Bajá hasta la sección "Integrar el calendario".</p>
+                        <p>4. Copiá la <span className="font-medium text-foreground">"Dirección secreta en formato iCal"</span> (la última, la que dice secreta) y pegala acá arriba.</p>
+                        <Button
+                          asChild
+                          variant="outline"
+                          size="sm"
+                          className="mt-1 rounded-xl h-9"
+                        >
+                          <a
+                            href="https://calendar.google.com/calendar/u/0/r/settings"
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            Abrir la configuración de Google Calendar
+                          </a>
+                        </Button>
+                      </div>
+                      <div className="space-y-1 border-t border-border/50 pt-2.5">
+                        <p className="font-medium text-foreground">iPhone / iCloud:</p>
+                        <p>1. Abrí la app Calendario → "Calendarios" (abajo al medio).</p>
+                        <p>2. Tocá la (i) al lado de tu calendario.</p>
+                        <p>3. Activá "Calendario público" → "Compartir enlace" → Copiar.</p>
+                        <p>4. Pegalo acá arriba.</p>
+                      </div>
+                      <p className="text-[11.5px] border-t border-border/50 pt-2.5">
                         Solo lectura, y el link queda guardado en el servidor: nunca se muestra
                         entero. Lo desconectás cuando quieras.
                       </p>
