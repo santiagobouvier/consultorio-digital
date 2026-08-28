@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useBusinessId } from "@/hooks/use-business-id";
+import { requestGoogleSync } from "@/lib/data-sync";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,7 +45,78 @@ export const CalendarSyncButton = ({ mobile = false }: { mobile?: boolean }) => 
       return { google: false, apple: false };
     }
   });
-  const connected = dest.google || dest.apple;
+  // Cuenta de Google conectada por OAuth (sincronización instantánea)
+  const [gAcct, setGAcct] = useState<{ connected: boolean; email: string | null } | null>(null);
+  const [gLoading, setGLoading] = useState(false);
+
+  const refreshGoogleStatus = async () => {
+    const { data, error } = await supabase.functions.invoke("google-calendar-sync", {
+      body: { action: "status" },
+    });
+    if (!error && typeof data?.connected === "boolean") {
+      setGAcct({ connected: data.connected, email: data.email ?? null });
+    }
+  };
+
+  // El puntito del header necesita saber el estado sin abrir el pop-up
+  useEffect(() => {
+    void refreshGoogleStatus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // La ventanita de Google avisa cuando terminó (postMessage desde el callback)
+  useEffect(() => {
+    const onMsg = (e: MessageEvent) => {
+      if (e.data === "google-calendar-connected") {
+        void refreshGoogleStatus();
+        requestGoogleSync();
+        toast({
+          title: "¡Google conectado! ⚡",
+          description:
+            "Tus citas se están sincronizando ahora mismo. Si antes lo tenías conectado por link, borrá ese calendario en Google para no ver doble.",
+        });
+      }
+    };
+    window.addEventListener("message", onMsg);
+    return () => window.removeEventListener("message", onMsg);
+  }, []);
+
+  const handleGoogleOAuthDisconnect = async () => {
+    setDisconnecting("google");
+    try {
+      await supabase.functions.invoke("google-calendar-sync", { body: { action: "disconnect" } });
+      setGAcct({ connected: false, email: null });
+      toast({
+        title: "Google desconectado",
+        description:
+          "Las citas ya creadas quedan en tu calendario de Google; borralas allá si querés limpiarlas.",
+      });
+    } finally {
+      setDisconnecting(null);
+    }
+  };
+
+  const handleGoogleOAuth = async () => {
+    setGLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("google-oauth-start", {
+        body: { businessId },
+      });
+      if (error || !data?.url) {
+        toast({
+          title: "Todavía no está lista",
+          description: "La conexión con Google no está desplegada aún. Probá en un rato.",
+          variant: "destructive",
+        });
+        return;
+      }
+      window.open(data.url, "_blank", "width=520,height=680");
+    } finally {
+      setGLoading(false);
+    }
+  };
+
+  const connected = !!gAcct?.connected || dest.google || dest.apple;
 
   // Un link privado POR DESTINO (Google / Apple): así se puede desconectar
   // uno sin tocar el otro. Si la columna destination todavía no existe en la
@@ -346,19 +418,26 @@ export const CalendarSyncButton = ({ mobile = false }: { mobile?: boolean }) => 
               </div>
             ) : (
               <div className="space-y-2">
-                {/* Google: botón para conectar; fila verde con su propio
-                    Desconectar cuando ya está */}
-                {dest.google ? (
-                  <div className="flex items-center justify-between gap-2 h-12 rounded-xl border border-emerald-500/30 bg-emerald-500/10 pl-3.5 pr-1.5">
-                    <span className="flex items-center gap-2 text-sm font-semibold text-emerald-600 dark:text-emerald-400 min-w-0 truncate">
-                      <Check className="h-4 w-4 shrink-0" />
-                      Google Calendar conectado
+                {/* Google por OAuth: un permiso y sincronización AL INSTANTE.
+                    Fila verde con su Desconectar cuando ya está. */}
+                {gAcct?.connected ? (
+                  <div className="flex items-center justify-between gap-2 min-h-[48px] rounded-xl border border-emerald-500/30 bg-emerald-500/10 pl-3.5 pr-1.5 py-1">
+                    <span className="flex flex-col min-w-0">
+                      <span className="flex items-center gap-2 text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+                        <Check className="h-4 w-4 shrink-0" />
+                        Google sincronizado ⚡ al instante
+                      </span>
+                      {gAcct.email && (
+                        <span className="text-[11px] text-muted-foreground truncate pl-6">
+                          {gAcct.email}
+                        </span>
+                      )}
                     </span>
                     <Button
                       variant="ghost"
                       size="sm"
                       className="h-9 rounded-lg text-muted-foreground hover:text-destructive shrink-0"
-                      onClick={() => handleDisconnect("google")}
+                      onClick={handleGoogleOAuthDisconnect}
                       disabled={disconnecting !== null}
                     >
                       {disconnecting === "google" ? (
@@ -370,14 +449,15 @@ export const CalendarSyncButton = ({ mobile = false }: { mobile?: boolean }) => 
                   </div>
                 ) : (
                   <Button
-                    asChild
                     className="w-full h-12 rounded-xl text-[15px] font-semibold"
                     style={{ boxShadow: `0 10px 24px -10px hsla(${primaryColor}, 0.65)` }}
-                    onClick={() => markConnected("google")}
+                    onClick={handleGoogleOAuth}
+                    disabled={gLoading}
                   >
-                    <a href={googleAddUrl} target="_blank" rel="noreferrer">
-                      Conectar Google Calendar
-                    </a>
+                    {gLoading ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : null}
+                    Continuar con Google ⚡ al instante
                   </Button>
                 )}
 
