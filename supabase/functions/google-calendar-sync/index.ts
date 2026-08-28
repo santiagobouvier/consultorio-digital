@@ -156,6 +156,22 @@ Deno.serve(async (req) => {
       );
       const data = await res.json();
       if (!res.ok) return json({ busy: [], connected: true });
+
+      // Color por defecto: el del calendario (los eventos sin etiqueta de
+      // color propia no traen colorId — Google usa el color del calendario)
+      let calendarColor: string | null = null;
+      try {
+        const calRes = await fetch(
+          `https://www.googleapis.com/calendar/v3/users/me/calendarList/${calId}`,
+          { headers: gHeaders }
+        );
+        if (calRes.ok) {
+          const calData = await calRes.json();
+          calendarColor = calData?.backgroundColor ?? null;
+        }
+      } catch {
+        calendarColor = null;
+      }
       const busy = (data.items ?? [])
         // Lo que creamos NOSOTROS no es "choque": citas y eventos del sistema
         .filter((e: any) => {
@@ -170,8 +186,8 @@ Deno.serve(async (req) => {
           calendar: "Google",
           // Con OAuth podemos borrar el evento desde acá ("borrar y agendar")
           eventId: e.id,
-          // Color real del evento en Google, para pintarlo igual en la grilla
-          color: EVENT_COLORS[e.colorId as string] ?? null,
+          // Color real del evento en Google (o el del calendario si no tiene)
+          color: EVENT_COLORS[e.colorId as string] ?? calendarColor,
         }));
       return json({ busy, connected: true });
     }
