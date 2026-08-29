@@ -170,37 +170,37 @@ const STEPS = [
   {
     time: "08:55",
     title: "El recordatorio ya salió",
-    text: "Antes de que llegues al consultorio, cada paciente de hoy ya recibió su recordatorio por WhatsApp. Las ausencias bajan sin que hagas nada.",
+    text: "Todavía no llegaste al consultorio y tus pacientes de hoy ya recibieron el recordatorio por WhatsApp. Nadie se olvida de su sesión — y vos no mandaste ni un mensaje.",
     Scene: SceneRecordatorio,
   },
   {
     time: "09:00",
     title: "La sesión, con la ficha al lado",
-    text: "Abrís la cita y está todo: la historia, las notas anteriores y los pagos. Al terminar, la nota de hoy queda guardada en el expediente.",
+    text: "Tocás la cita y aparece todo lo de Camila: cuántas sesiones lleva, qué anotaste la vez pasada y cómo viene con los pagos. Terminás, escribís la nota, y queda guardada.",
     Scene: SceneSesion,
   },
   {
     time: "10:30",
     title: "El cobro se acredita solo",
-    text: "Camila pagó desde el link de Mercado Pago y el sistema marcó el pago sin que lo toques. Los vencidos, los reclama él.",
+    text: "Camila pagó desde el link que le mandó el sistema, y el pago se marcó solo. Y si alguien se atrasa, no lo perseguís vos: lo reclama el sistema.",
     Scene: SceneCobro,
   },
   {
     time: "12:40",
     title: "Una reserva entra sola",
-    text: "Mientras atendías, un paciente eligió un horario libre real desde tu link público. La cita ya está en tu agenda y en tu Google Calendar.",
+    text: "Mientras vos atendías, un paciente entró a tu link, vio tus horarios libres de verdad y eligió uno. La cita ya está en tu agenda y en tu Google Calendar.",
     Scene: SceneReserva,
   },
   {
     time: "13:00",
     title: "Lo tuyo también cuenta",
-    text: "El almuerzo que anotaste en tu iPhone aparece acá al instante y esa hora queda protegida. Tu agenda y tu vida, sincronizadas en los dos sentidos.",
+    text: "Anotaste el almuerzo en tu iPhone y acá apareció al instante. Esa hora queda protegida: nadie puede reservarte encima de tu vida.",
     Scene: SceneAlmuerzo,
   },
   {
     time: "20:00",
     title: "El día, cerrado",
-    text: "Cuánto cobraste, cuántas sesiones diste, quién te debe. El día queda rendido solo, y mañana arranca igual de ordenado.",
+    text: "Cuánto cobraste, cuántas sesiones diste, quién te quedó debiendo. El día se rinde solo — sin planillas, sin cuentas a mano. Y mañana arranca igual.",
     Scene: SceneCierre,
   },
 ];
@@ -241,10 +241,10 @@ export function DayJourney() {
             Un día con Consultorio Digital
           </span>
           <h2 className="mt-3 text-[30px] leading-[1.1] sm:text-5xl font-bold tracking-tight text-white" style={{ ...GROTESK, letterSpacing: "-0.025em" }}>
-            Así trabaja un día entero.
+            Un día entero, trabajando solo.
           </h2>
           <p className="mt-4 text-[14.5px] sm:text-base leading-relaxed" style={{ color: MUTED }}>
-            No es una lista de funciones: es tu jornada, con el sistema ocupándose de lo suyo mientras vos atendés.
+            Seguí el reloj: esto es lo que hace el sistema por vos en una jornada normal, mientras vos solo atendés.
           </p>
         </div>
 

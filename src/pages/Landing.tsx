@@ -259,7 +259,7 @@ const Landing = () => {
       <section className="relative px-5 sm:px-8 py-16 lg:py-24 z-10" style={{ background: "#070b09", borderTop: "1px solid rgba(255,255,255,.05)" }}>
         <div className="max-w-6xl mx-auto flex flex-col lg:flex-row items-center gap-10 lg:gap-16">
           <div className="flex-1 min-w-0">
-            <ScrollReveal>
+            <ScrollReveal direction="left">
               <span className="text-[11px] sm:text-xs font-semibold uppercase" style={{ ...GROTESK, letterSpacing: "0.16em", color: GREEN }}>Sincronización en vivo</span>
               <h2 className="mt-3 text-[30px] leading-[1.1] sm:text-5xl font-bold tracking-tight" style={{ ...GROTESK, letterSpacing: "-0.025em" }}>
                 Agendás acá.<br />Aparece en todos lados.
@@ -282,7 +282,7 @@ const Landing = () => {
             </ScrollReveal>
           </div>
           <div className="flex-1 min-w-0 w-full">
-            <ScrollReveal>
+            <ScrollReveal direction="right" delay={120}>
               {/* Diagrama: Google ↔ Consultorio ↔ iPhone con puntos viajando */}
               <div className="relative rounded-3xl px-4 sm:px-8 py-8 sm:py-12" style={{ background: CARD, border: "1px solid rgba(255,255,255,.07)" }}>
                 <div className="flex items-center justify-between">
@@ -330,7 +330,7 @@ const Landing = () => {
         />
         <div className="relative max-w-6xl mx-auto flex flex-col lg:flex-row items-center gap-10 lg:gap-16">
           <div className="flex-1 min-w-0">
-            <ScrollReveal>
+            <ScrollReveal direction="left">
               <span className="text-[11px] sm:text-xs font-semibold uppercase" style={{ ...GROTESK, letterSpacing: "0.16em", color: GREEN }}>Tu link de reservas</span>
               <h2 className="mt-3 text-[30px] leading-[1.1] sm:text-5xl font-bold tracking-tight" style={{ ...GROTESK, letterSpacing: "-0.025em" }}>
                 Tus pacientes<br />agendan solos.
@@ -347,25 +347,36 @@ const Landing = () => {
             </ScrollReveal>
           </div>
           <div className="flex-1 min-w-0 w-full">
-            <ScrollReveal>
-              <div className="flex flex-col gap-3">
-                {[
-                  "El paciente abre tu link y ve solo los horarios que de verdad tenés libres.",
-                  "Elige, confirma, y la cita entra directo a tu agenda (y a tu Google Calendar).",
-                  "Antes de la sesión le llega el recordatorio automático por WhatsApp.",
-                ].map((t, i) => (
-                  <div key={i} className="flex items-center gap-4 rounded-2xl px-4 sm:px-5 py-4" style={{ background: CARD, border: "1px solid rgba(255,255,255,.07)" }}>
+            <div className="flex flex-col gap-3">
+              {[
+                "El paciente abre tu link y ve solo los horarios que de verdad tenés libres.",
+                "Elige, confirma, y la cita entra directo a tu agenda (y a tu Google Calendar).",
+                "Antes de la sesión le llega el recordatorio automático por WhatsApp.",
+              ].map((t, i) => (
+                <ScrollReveal key={i} direction="right" delay={i * 130}>
+                  <div
+                    className="relative overflow-hidden flex items-center gap-4 rounded-2xl px-4 sm:px-5 py-5"
+                    style={{ background: CARD, border: "1px solid rgba(255,255,255,.07)" }}
+                  >
+                    {/* Número gigante fantasma de fondo */}
                     <span
-                      className="flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm shrink-0"
+                      aria-hidden
+                      className="absolute -right-2 -top-7 font-bold select-none pointer-events-none"
+                      style={{ ...GROTESK, fontSize: 96, lineHeight: 1, color: "rgba(47,181,131,.07)" }}
+                    >
+                      {i + 1}
+                    </span>
+                    <span
+                      className="relative flex items-center justify-center w-9 h-9 rounded-full font-bold text-sm shrink-0"
                       style={{ ...GROTESK, background: "rgba(47,181,131,.12)", border: "1px solid rgba(47,181,131,.3)", color: GREEN_SOFT }}
                     >
                       {i + 1}
                     </span>
-                    <p className="text-[13.5px] sm:text-[15px] leading-relaxed font-medium m-0" style={{ color: SOFT }}>{t}</p>
+                    <p className="relative text-[13.5px] sm:text-[15px] leading-relaxed font-medium m-0 pr-8" style={{ color: SOFT }}>{t}</p>
                   </div>
-                ))}
-              </div>
-            </ScrollReveal>
+                </ScrollReveal>
+              ))}
+            </div>
           </div>
         </div>
       </section>
@@ -422,8 +433,8 @@ const Landing = () => {
                 span: "col-span-2 lg:col-span-4",
                 hl: false,
               },
-            ].map((f) => (
-              <ScrollReveal key={f.title} className={f.span}>
+            ].map((f, i) => (
+              <ScrollReveal key={f.title} className={f.span} direction="scale" delay={(i % 4) * 90}>
                 <div
                   className="h-full rounded-[20px] p-5 sm:p-6 transition-transform duration-300 hover:-translate-y-1"
                   style={{ background: f.hl ? CARD_HL : CARD, border: f.hl ? "1px solid rgba(47,181,131,.11)" : "1px solid rgba(255,255,255,.07)" }}
@@ -474,14 +485,14 @@ const Landing = () => {
             </div>
           </ScrollReveal>
 
-          <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 items-stretch justify-center max-w-[440px] sm:max-w-none mx-auto">
+          <div className="mt-10 flex flex-wrap justify-center gap-4 items-stretch">
             {plans.map((plan) => {
               const price = isAnnual ? plan.priceAnnual : plan.priceMonthly;
               const other = isAnnual
                 ? `${formatPrice(plan.priceMonthly)} si pagás mes a mes`
                 : `${formatPrice(plan.priceAnnual)}/mes si pagás anual`;
               return (
-                <ScrollReveal key={plan.code} className="h-full">
+                <ScrollReveal key={plan.code} className="w-full max-w-[420px] sm:w-[320px] sm:max-w-none lg:w-[330px]">
                   <div
                     className="relative h-full flex flex-col rounded-[20px] p-6"
                     style={
