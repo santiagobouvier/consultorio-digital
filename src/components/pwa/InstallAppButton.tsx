@@ -35,7 +35,7 @@ export const InstallAppButton = ({
   clinicName,
   reloadOnAccept = true,
 }: InstallAppButtonProps) => {
-  const { isInstalled, triggerInstall } = usePWAInstall();
+  const { isInstalled, triggerInstall, isAndroid } = usePWAInstall();
   const [showIOS, setShowIOS] = useState(false);
   const [showSafari, setShowSafari] = useState(false);
   const [showUnsupported, setShowUnsupported] = useState(false);
@@ -70,7 +70,18 @@ export const InstallAppButton = ({
           setShowSafari(true);
           break;
         case "unsupported":
-          setShowUnsupported(true);
+          // En Android con Chrome el prompt nativo puede tardar unos segundos
+          // en habilitarse (o estar desactivado en esta visita): el camino del
+          // menú del navegador siempre funciona — mejor eso que decirle que su
+          // navegador no sirve.
+          if (isAndroid) {
+            toast.info("Instalala desde el menú de Chrome", {
+              description: "Tocá los tres puntos (⋮) arriba a la derecha y elegí “Agregar a la pantalla principal”.",
+              duration: 6000,
+            });
+          } else {
+            setShowUnsupported(true);
+          }
           break;
       }
     } finally {
