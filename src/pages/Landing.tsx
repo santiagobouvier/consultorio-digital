@@ -28,11 +28,12 @@ import { InstallAppButton } from "@/components/InstallAppButton";
 import { ScrollReveal } from "@/components/landing/ScrollReveal";
 import { LandingNavbar } from "@/components/landing/LandingNavbar";
 import { ScrollToTop } from "@/components/landing/ScrollToTop";
+import { DayJourney } from "@/components/landing/DayJourney";
 
 // Marca
-const BRAND = "#00a5a0";
-const GREEN = "#00c78a";
-const GREEN_SOFT = "#35e0a8";
+const BRAND = "#1f938d";
+const GREEN = "#2fb583";
+const GREEN_SOFT = "#7ce0b8";
 const INK = "#04120c";
 const MUTED = "#8fa39a";
 const SOFT = "#c6d4cd";
@@ -135,12 +136,17 @@ const Landing = () => {
   return (
     <div className="min-h-screen text-white" style={{ background: "#050807", fontFamily: "'Instrument Sans', 'Plus Jakarta Sans', sans-serif" }}>
       <style>{`
+        @media (prefers-reduced-motion: no-preference) {
         @keyframes glowFloat { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(28px,-20px) scale(1.1); } }
         @keyframes dotGo { 0% { left: 6%; opacity: 0; } 12% { opacity: 1; } 88% { opacity: 1; } 100% { left: 90%; opacity: 0; } }
         @keyframes dotBack { 0% { left: 90%; opacity: 0; } 12% { opacity: 1; } 88% { opacity: 1; } 100% { left: 6%; opacity: 0; } }
-        @keyframes pulseRing { 0% { box-shadow: 0 0 0 0 rgba(0,199,138,.45); } 70% { box-shadow: 0 0 0 12px rgba(0,199,138,0); } 100% { box-shadow: 0 0 0 0 rgba(0,199,138,0); } }
+        @keyframes pulseRing { 0% { box-shadow: 0 0 0 0 rgba(47,181,131,.45); } 70% { box-shadow: 0 0 0 12px rgba(47,181,131,0); } 100% { box-shadow: 0 0 0 0 rgba(47,181,131,0); } }
         @keyframes heroUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         .cd-up { opacity: 0; animation: heroUp .8s cubic-bezier(0.16,1,0.3,1) forwards; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .cd-up { opacity: 1; }
+        }
       `}</style>
 
       <LandingNavbar />
@@ -151,7 +157,7 @@ const Landing = () => {
           aria-hidden
           className="pointer-events-none absolute -top-40 -right-32 w-[420px] h-[420px] lg:w-[620px] lg:h-[620px] rounded-full"
           style={{
-            background: `radial-gradient(circle, rgba(0,199,138,.15) 0%, rgba(0,199,138,0) 65%)`,
+            background: `radial-gradient(circle, rgba(47,181,131,.10) 0%, rgba(47,181,131,0) 65%)`,
             filter: "blur(18px)",
             animation: "glowFloat 10s ease-in-out infinite",
           }}
@@ -160,7 +166,7 @@ const Landing = () => {
           <div className="flex-1 min-w-0 text-left">
             <span
               className="cd-up inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-[11px] sm:text-xs font-semibold uppercase"
-              style={{ ...GROTESK, letterSpacing: "0.1em", background: "rgba(0,199,138,.08)", border: "1px solid rgba(0,199,138,.22)", color: GREEN_SOFT }}
+              style={{ ...GROTESK, letterSpacing: "0.1em", background: "rgba(47,181,131,.08)", border: "1px solid rgba(47,181,131,.22)", color: GREEN_SOFT }}
             >
               <span className="w-1.5 h-1.5 rounded-full" style={{ background: GREEN, animation: "pulseRing 2.4s infinite" }} />
               Para psicólogos y odontólogos
@@ -184,9 +190,9 @@ const Landing = () => {
               <a
                 href="#pricing"
                 className="flex items-center justify-center gap-2 h-[52px] sm:h-14 px-8 rounded-2xl font-semibold text-[15px] transition-transform hover:scale-[1.03]"
-                style={{ background: `linear-gradient(135deg, ${GREEN}, ${BRAND})`, color: INK, boxShadow: "0 14px 40px rgba(0,199,138,.3)" }}
+                style={{ background: `linear-gradient(135deg, ${GREEN}, ${BRAND})`, color: INK, boxShadow: "0 14px 40px rgba(47,181,131,.22)" }}
               >
-                Empezar 7 días gratis
+                Probalo 7 días gratis
                 <ArrowRight className="w-4 h-4" />
               </a>
               <a
@@ -197,7 +203,7 @@ const Landing = () => {
                 style={{ background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.1)", color: SOFT }}
               >
                 <MessageCircle className="w-4 h-4" />
-                Ver una demo por WhatsApp
+                Demo de 10 min por WhatsApp
               </a>
             </div>
             <div className="cd-up mt-6 flex flex-wrap gap-x-6 gap-y-2 text-xs sm:text-sm" style={{ color: DIM, animationDelay: "0.4s" }}>
@@ -212,22 +218,22 @@ const Landing = () => {
 
           {/* Mini agenda del día con badge de sync latiendo */}
           <div className="cd-up flex-1 min-w-0 w-full max-w-md lg:max-w-none" style={{ animationDelay: "0.45s" }}>
-            <div className="rounded-3xl p-5 sm:p-6" style={{ background: CARD, border: "1px solid rgba(0,199,138,.14)", boxShadow: "0 40px 90px -40px rgba(0,0,0,.8)" }}>
+            <div className="rounded-3xl p-5 sm:p-6" style={{ background: CARD, border: "1px solid rgba(47,181,131,.14)", boxShadow: "0 40px 90px -40px rgba(0,0,0,.8)" }}>
               <div className="flex items-center gap-2 mb-4">
                 <span className="text-xs font-semibold uppercase" style={{ ...GROTESK, letterSpacing: "0.12em", color: DIM }}>Hoy · Martes</span>
                 <span
                   className="ml-auto inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10.5px] sm:text-[11px] font-semibold"
-                  style={{ background: "rgba(0,199,138,.1)", border: "1px solid rgba(0,199,138,.3)", color: GREEN_SOFT }}
+                  style={{ background: "rgba(47,181,131,.1)", border: "1px solid rgba(47,181,131,.3)", color: GREEN_SOFT }}
                 >
                   <span className="w-[5px] h-[5px] rounded-full" style={{ background: GREEN, animation: "pulseRing 2s infinite" }} />
                   Sincronizado con Google
                 </span>
               </div>
               <div className="flex flex-col gap-2">
-                <div className="flex items-center gap-3 px-3.5 py-3 rounded-xl" style={{ background: "rgba(0,199,138,.09)", borderLeft: `3px solid ${GREEN}` }}>
+                <div className="flex items-center gap-3 px-3.5 py-3 rounded-xl" style={{ background: "rgba(47,181,131,.09)", borderLeft: `3px solid ${GREEN}` }}>
                   <span className="text-[13px] font-bold tabular-nums" style={{ ...GROTESK, color: GREEN_SOFT }}>09:00</span>
                   <span className="text-[13.5px] font-semibold">Camila S. · Sesión individual</span>
-                  <span className="ml-auto hidden sm:inline px-2.5 py-0.5 rounded-full text-[10.5px] font-semibold" style={{ background: "rgba(0,199,138,.12)", color: GREEN_SOFT }}>Pagada</span>
+                  <span className="ml-auto hidden sm:inline px-2.5 py-0.5 rounded-full text-[10.5px] font-semibold" style={{ background: "rgba(47,181,131,.12)", color: GREEN_SOFT }}>Pagada</span>
                 </div>
                 <div className="flex items-center gap-3 px-3.5 py-3 rounded-xl" style={{ background: "rgba(255,255,255,.03)", borderLeft: "3px solid rgba(255,255,255,.18)" }}>
                   <span className="text-[13px] font-bold tabular-nums" style={{ ...GROTESK, color: MUTED }}>11:00</span>
@@ -246,6 +252,8 @@ const Landing = () => {
           </div>
         </div>
       </section>
+
+      <DayJourney />
 
       {/* ═══════════ SINCRONIZACIÓN ═══════════ */}
       <section className="relative px-5 sm:px-8 py-16 lg:py-24 z-10" style={{ background: "#070b09", borderTop: "1px solid rgba(255,255,255,.05)" }}>
@@ -301,11 +309,11 @@ const Landing = () => {
                   </div>
                 </div>
                 {/* Líneas punteadas con puntos animados */}
-                <div className="absolute left-[86px] right-[52%] sm:left-[130px] top-[58px] sm:top-[82px] h-[2px]" style={{ background: "repeating-linear-gradient(90deg, rgba(0,199,138,.35) 0 6px, transparent 6px 12px)" }}>
-                  <span className="absolute -top-[3px] w-2 h-2 rounded-full" style={{ background: GREEN, boxShadow: "0 0 10px rgba(0,199,138,.9)", animation: "dotGo 2.8s linear infinite" }} />
+                <div className="absolute left-[86px] right-[52%] sm:left-[130px] top-[58px] sm:top-[82px] h-[2px]" style={{ background: "repeating-linear-gradient(90deg, rgba(47,181,131,.35) 0 6px, transparent 6px 12px)" }}>
+                  <span className="absolute -top-[3px] w-2 h-2 rounded-full" style={{ background: GREEN, boxShadow: "0 0 10px rgba(47,181,131,.9)", animation: "dotGo 2.8s linear infinite" }} />
                 </div>
-                <div className="absolute left-[52%] right-[86px] sm:right-[130px] top-[58px] sm:top-[82px] h-[2px]" style={{ background: "repeating-linear-gradient(90deg, rgba(0,199,138,.35) 0 6px, transparent 6px 12px)" }}>
-                  <span className="absolute -top-[3px] w-2 h-2 rounded-full" style={{ background: GREEN, boxShadow: "0 0 10px rgba(0,199,138,.9)", animation: "dotBack 2.8s linear infinite .9s" }} />
+                <div className="absolute left-[52%] right-[86px] sm:right-[130px] top-[58px] sm:top-[82px] h-[2px]" style={{ background: "repeating-linear-gradient(90deg, rgba(47,181,131,.35) 0 6px, transparent 6px 12px)" }}>
+                  <span className="absolute -top-[3px] w-2 h-2 rounded-full" style={{ background: GREEN, boxShadow: "0 0 10px rgba(47,181,131,.9)", animation: "dotBack 2.8s linear infinite .9s" }} />
                 </div>
               </div>
             </ScrollReveal>
@@ -318,7 +326,7 @@ const Landing = () => {
         <div
           aria-hidden
           className="pointer-events-none absolute -bottom-44 -left-32 w-[420px] h-[420px] rounded-full"
-          style={{ background: "radial-gradient(circle, rgba(0,165,160,.13) 0%, rgba(0,165,160,0) 65%)", filter: "blur(16px)" }}
+          style={{ background: "radial-gradient(circle, rgba(31,147,141,.09) 0%, rgba(31,147,141,0) 65%)", filter: "blur(16px)" }}
         />
         <div className="relative max-w-6xl mx-auto flex flex-col lg:flex-row items-center gap-10 lg:gap-16">
           <div className="flex-1 min-w-0">
@@ -330,7 +338,7 @@ const Landing = () => {
               <p className="mt-4 text-[14.5px] sm:text-base leading-relaxed max-w-md" style={{ color: MUTED }}>
                 Compartís un link y listo: eligen un horario libre real de tu agenda y la cita queda confirmada. Sin idas y vueltas por WhatsApp.
               </p>
-              <div className="mt-6 inline-flex items-center gap-3 px-4 py-3.5 rounded-2xl max-w-full" style={{ background: CARD, border: "1px solid rgba(0,199,138,.25)" }}>
+              <div className="mt-6 inline-flex items-center gap-3 px-4 py-3.5 rounded-2xl max-w-full" style={{ background: CARD, border: "1px solid rgba(47,181,131,.25)" }}>
                 <Link2 className="w-4 h-4 shrink-0" style={{ color: GREEN }} />
                 <span className="text-[13px] sm:text-[15px] font-semibold truncate" style={{ ...GROTESK, color: GREEN_SOFT }}>
                   consultoriodigital.app/tu-consultorio
@@ -349,7 +357,7 @@ const Landing = () => {
                   <div key={i} className="flex items-center gap-4 rounded-2xl px-4 sm:px-5 py-4" style={{ background: CARD, border: "1px solid rgba(255,255,255,.07)" }}>
                     <span
                       className="flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm shrink-0"
-                      style={{ ...GROTESK, background: "rgba(0,199,138,.12)", border: "1px solid rgba(0,199,138,.3)", color: GREEN_SOFT }}
+                      style={{ ...GROTESK, background: "rgba(47,181,131,.12)", border: "1px solid rgba(47,181,131,.3)", color: GREEN_SOFT }}
                     >
                       {i + 1}
                     </span>
@@ -367,7 +375,7 @@ const Landing = () => {
         <div className="max-w-6xl mx-auto">
           <ScrollReveal>
             <h2 className="text-[30px] leading-[1.1] sm:text-5xl font-bold tracking-tight" style={{ ...GROTESK, letterSpacing: "-0.025em" }}>
-              Todo lo demás, también resuelto.
+              Y todo lo demás, resuelto de fábrica.
             </h2>
           </ScrollReveal>
           <div className="mt-8 lg:mt-10 grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
@@ -418,9 +426,9 @@ const Landing = () => {
               <ScrollReveal key={f.title} className={f.span}>
                 <div
                   className="h-full rounded-[20px] p-5 sm:p-6 transition-transform duration-300 hover:-translate-y-1"
-                  style={{ background: f.hl ? CARD_HL : CARD, border: f.hl ? "1px solid rgba(0,199,138,.18)" : "1px solid rgba(255,255,255,.07)" }}
+                  style={{ background: f.hl ? CARD_HL : CARD, border: f.hl ? "1px solid rgba(47,181,131,.11)" : "1px solid rgba(255,255,255,.07)" }}
                 >
-                  <span className="flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 rounded-[13px] mb-4" style={{ background: "rgba(0,199,138,.12)", color: GREEN }}>
+                  <span className="flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 rounded-[13px] mb-4" style={{ background: "rgba(47,181,131,.12)", color: GREEN }}>
                     <f.icon className="w-5 h-5" />
                   </span>
                   <p className="m-0 font-semibold text-[15px] sm:text-[17px]" style={GROTESK}>{f.title}</p>
@@ -439,7 +447,7 @@ const Landing = () => {
             <div className="text-center">
               <span className="text-[11px] sm:text-xs font-semibold uppercase" style={{ ...GROTESK, letterSpacing: "0.16em", color: GREEN }}>Planes</span>
               <h2 className="mt-3 text-[30px] leading-[1.1] sm:text-5xl font-bold tracking-tight" style={{ ...GROTESK, letterSpacing: "-0.025em" }}>
-                Simple y sin sorpresas.
+                Un precio simple. Todo incluido.
               </h2>
               <p className="mt-4 text-sm sm:text-[15px]" style={{ color: MUTED }}>
                 Todos incluyen el sistema completo. 7 días gratis, sin tarjeta.
@@ -466,19 +474,19 @@ const Landing = () => {
             </div>
           </ScrollReveal>
 
-          <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 items-stretch justify-center max-w-[440px] sm:max-w-none mx-auto">
             {plans.map((plan) => {
               const price = isAnnual ? plan.priceAnnual : plan.priceMonthly;
               const other = isAnnual
                 ? `${formatPrice(plan.priceMonthly)} si pagás mes a mes`
                 : `${formatPrice(plan.priceAnnual)}/mes si pagás anual`;
               return (
-                <ScrollReveal key={plan.code}>
+                <ScrollReveal key={plan.code} className="h-full">
                   <div
                     className="relative h-full flex flex-col rounded-[20px] p-6"
                     style={
                       plan.highlight
-                        ? { background: CARD_HL, border: "1px solid rgba(0,199,138,.4)", boxShadow: "0 24px 60px -24px rgba(0,199,138,.4)" }
+                        ? { background: CARD_HL, border: "1px solid rgba(47,181,131,.4)", boxShadow: "0 24px 60px -24px rgba(47,181,131,.3)" }
                         : { background: CARD, border: "1px solid rgba(255,255,255,.07)" }
                     }
                   >
@@ -510,18 +518,18 @@ const Landing = () => {
                         className="flex items-center justify-center h-11 rounded-[13px] font-semibold text-[13.5px] transition-transform hover:scale-[1.02]"
                         style={
                           plan.highlight
-                            ? { background: `linear-gradient(135deg, ${GREEN}, ${BRAND})`, color: INK, boxShadow: "0 10px 28px rgba(0,199,138,.3)" }
+                            ? { background: `linear-gradient(135deg, ${GREEN}, ${BRAND})`, color: INK, boxShadow: "0 10px 28px rgba(47,181,131,.22)" }
                             : { background: "rgba(255,255,255,.05)", border: "1px solid rgba(255,255,255,.12)", color: "#f2f7f4" }
                         }
                       >
-                        Empezar 7 días gratis
+                        Probar gratis 7 días
                       </a>
                       <a
                         href={`/auth?plan=${plan.code}&billing=${isAnnual ? "annual" : "monthly"}&skip_trial=true`}
                         className="block text-center mt-2.5 text-[11.5px] transition-colors hover:text-white"
                         style={{ color: DIM }}
                       >
-                        Comprar ahora sin prueba
+                        Empezar ya, sin prueba
                       </a>
                     </div>
                   </div>
@@ -541,10 +549,10 @@ const Landing = () => {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 px-5 h-11 rounded-[13px] font-semibold text-[13.5px] shrink-0"
-                style={{ background: "rgba(0,199,138,.1)", border: "1px solid rgba(0,199,138,.3)", color: GREEN_SOFT }}
+                style={{ background: "rgba(47,181,131,.1)", border: "1px solid rgba(47,181,131,.3)", color: GREEN_SOFT }}
               >
                 <MessageCircle className="w-4 h-4" />
-                Hablemos por WhatsApp
+                Charlemos por WhatsApp
               </a>
             </div>
             <p className="mt-4 text-center text-xs" style={{ color: DIM }}>
@@ -588,7 +596,7 @@ const Landing = () => {
         <div
           aria-hidden
           className="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 w-[420px] h-[340px] rounded-full"
-          style={{ background: "radial-gradient(circle, rgba(0,199,138,.18) 0%, rgba(0,199,138,0) 65%)", filter: "blur(16px)" }}
+          style={{ background: "radial-gradient(circle, rgba(47,181,131,.11) 0%, rgba(47,181,131,0) 65%)", filter: "blur(16px)" }}
         />
         <div className="relative max-w-2xl mx-auto">
           <ScrollReveal>
@@ -604,7 +612,7 @@ const Landing = () => {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full sm:w-auto flex items-center justify-center gap-2 h-14 px-9 rounded-2xl font-semibold text-[15px] transition-transform hover:scale-[1.03]"
-                style={{ background: `linear-gradient(135deg, ${GREEN}, ${BRAND})`, color: INK, boxShadow: "0 16px 44px rgba(0,199,138,.35)" }}
+                style={{ background: `linear-gradient(135deg, ${GREEN}, ${BRAND})`, color: INK, boxShadow: "0 16px 44px rgba(47,181,131,.24)" }}
               >
                 <MessageCircle className="w-[17px] h-[17px]" />
                 Agendar mi demo
@@ -618,7 +626,7 @@ const Landing = () => {
               </a>
             </div>
             <div className="flex justify-center mt-6">
-              <InstallAppButton />
+              <InstallAppButton className="h-10 px-5 rounded-full text-[13px]" label="Instalar la app en tu dispositivo" />
             </div>
           </ScrollReveal>
         </div>
