@@ -64,7 +64,8 @@ export const CalendarSyncButton = ({ mobile = false }: { mobile?: boolean }) => 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // La ventanita de Google avisa cuando terminó (postMessage desde el callback)
+  // La ventanita de Google avisa cuando terminó (postMessage desde el callback
+  // viejo; se mantiene por compatibilidad con despliegues anteriores)
   useEffect(() => {
     const onMsg = (e: MessageEvent) => {
       if (e.data === "google-calendar-connected") {
@@ -79,6 +80,55 @@ export const CalendarSyncButton = ({ mobile = false }: { mobile?: boolean }) => 
     };
     window.addEventListener("message", onMsg);
     return () => window.removeEventListener("message", onMsg);
+  }, []);
+
+  // Vuelta de Google (flujo nuevo, en la misma pestaña): el callback redirige
+  // a /agenda?google=conectado — acá se abre el modal, se marca Conectado y
+  // se dispara la primera sincronización. Experiencia sin cabos sueltos.
+  useEffect(() => {
+    // Hay dos instancias del botón (pill de escritorio + icono mobile) y las
+    // dos se montan: solo la VISIBLE en este tamaño de pantalla procesa la
+    // vuelta de Google, para que el modal se abra donde el usuario lo ve.
+    const esViewportMobile = window.matchMedia("(max-width: 1023px)").matches;
+    if (mobile !== esViewportMobile) return;
+    const sp = new URLSearchParams(window.location.search);
+    const g = sp.get("google");
+    if (!g) return;
+    const email = sp.get("email");
+    const motivo = sp.get("motivo");
+    sp.delete("google");
+    sp.delete("email");
+    sp.delete("motivo");
+    const rest = sp.toString();
+    window.history.replaceState({}, "", window.location.pathname + (rest ? `?${rest}` : ""));
+
+    setOpen(true);
+    if (g === "conectado") {
+      // Optimista: el callback solo redirige acá cuando la cuenta ya quedó guardada
+      setGAcct({ connected: true, email: email ?? null });
+      void refreshGoogleStatus();
+      requestGoogleSync();
+      toast({
+        title: "¡Google Calendar conectado! ⚡",
+        description: email
+          ? `Tus citas ya se están sincronizando con ${email}.`
+          : "Tus citas ya se están sincronizando.",
+      });
+    } else {
+      const motivos: Record<string, string> = {
+        cancelado: "No completaste el permiso de Google. Probá de nuevo cuando quieras.",
+        vencido: "El enlace venció. Tocá conectar de nuevo.",
+        permiso:
+          "Google no entregó el permiso completo. Si ya habías conectado antes con esa cuenta, quitale el acceso en myaccount.google.com (Seguridad → Conexiones de terceros) y probá de nuevo.",
+        error: "Algo salió mal. Probá de nuevo en un rato.",
+      };
+      toast({
+        title: "No se pudo conectar Google",
+        description: motivos[motivo ?? "error"] ?? motivos.error,
+        variant: "destructive",
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleGoogleOAuthDisconnect = async () => {
@@ -110,7 +160,10 @@ export const CalendarSyncButton = ({ mobile = false }: { mobile?: boolean }) => 
         });
         return;
       }
-      window.open(data.url, "_blank", "width=520,height=680");
+      // Misma pestaña: Google pide el permiso y su callback te devuelve a la
+      // agenda con el modal abierto y el estado ya en Conectado. Sin ventanas
+      // emergentes (que en el celular directamente no funcionan bien).
+      window.location.href = data.url;
     } finally {
       setGLoading(false);
     }
