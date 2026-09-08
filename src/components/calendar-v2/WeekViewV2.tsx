@@ -1,10 +1,10 @@
 import { useMemo } from "react";
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, isToday } from "date-fns";
 import { es } from "date-fns/locale";
-import { CalendarAppointment, DayPayment, getStatusColor, getPaymentColorInfo } from "./types";
+import { CalendarAppointment, DayPayment, getPaymentColorInfo, getEventHexColor } from "./types";
 import { AppointmentCard } from "./AppointmentCard";
 import { cn } from "@/lib/utils";
-import { Plus, CreditCard } from "lucide-react";
+import { Plus, CreditCard, Coffee } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { calculatePaymentStatus, formatCurrency } from "@/lib/payments";
@@ -295,15 +295,22 @@ export const WeekViewV2 = ({
               {/* Cuerpo: eje horario + columnas por día */}
               <div className="overflow-y-auto max-h-[62vh]">
                 <div className="grid" style={gridCols}>
-                  {/* Eje de horas */}
+                  {/* Eje de horas (con las medias horas, como la vista del día) */}
                   <div className="relative border-r bg-muted/20" style={{ height: bodyHeight }}>
                     {hours.map((h, i) => (
-                      <span
-                        key={h}
-                        className="absolute right-1.5 text-[10px] text-muted-foreground font-medium tabular-nums"
-                        style={{ top: i * HOUR_H - (i === 0 ? 0 : 7) }}
-                      >
-                        {`${String(h).padStart(2, "0")}:00`}
+                      <span key={h}>
+                        <span
+                          className="absolute right-1.5 text-[10px] text-muted-foreground font-medium tabular-nums"
+                          style={{ top: i * HOUR_H - (i === 0 ? 0 : 7) }}
+                        >
+                          {`${String(h).padStart(2, "0")}:00`}
+                        </span>
+                        <span
+                          className="absolute right-1.5 text-[9px] text-muted-foreground/50 tabular-nums"
+                          style={{ top: i * HOUR_H + HOUR_H / 2 - 6 }}
+                        >
+                          {`${String(h).padStart(2, "0")}:30`}
+                        </span>
                       </span>
                     ))}
                   </div>
@@ -317,27 +324,37 @@ export const WeekViewV2 = ({
                         style={{ height: bodyHeight }}
                         onClick={() => onDayClick(day)}
                       >
-                        {/* Líneas de hora */}
+                        {/* Líneas de hora y media hora (mismo lenguaje que el día) */}
                         {hours.map((h, i) => (
-                          <div
-                            key={h}
-                            className="absolute inset-x-0 border-t border-border/50"
-                            style={{ top: i * HOUR_H }}
-                            aria-hidden
-                          />
+                          <div key={h}>
+                            <div
+                              className="absolute inset-x-0 border-t border-border/60"
+                              style={{ top: i * HOUR_H }}
+                              aria-hidden
+                            />
+                            <div
+                              className="absolute inset-x-0 border-t border-dashed border-border/40"
+                              style={{ top: i * HOUR_H + HOUR_H / 2 }}
+                              aria-hidden
+                            />
+                          </div>
                         ))}
 
-                        {/* Bloques de citas */}
+                        {/* Bloques de citas: color sólido de la etiqueta/estado,
+                            como en la vista del día */}
                         {placed.map(({ apt, col }) => {
                           const sD = new Date(apt.start_at);
                           const eD = new Date(apt.end_at);
                           const top = ((sD.getHours() * 60 + sD.getMinutes()) / 60 - startHour) * HOUR_H;
                           const height = Math.max(((eD.getTime() - sD.getTime()) / 3600000) * HOUR_H - 3, 26);
                           const compact = height < 44;
-                          const stColor = getStatusColor(apt.status);
+                          const color = getEventHexColor(apt, showProfessionalColors);
                           const payInfo = getPaymentColorInfo(apt.paymentColor);
                           const widthPct = 100 / cols;
                           const isCancelled = apt.status === "cancelled" || apt.status === "cancelled_by_patient";
+                          const inProgress =
+                            isCurrentDay && !apt.isPersonal && !isCancelled &&
+                            sD.getTime() <= now.getTime() && now.getTime() < eD.getTime();
                           return (
                             <div
                               key={apt.id}
@@ -346,34 +363,55 @@ export const WeekViewV2 = ({
                                 onAppointmentClick(apt);
                               }}
                               className={cn(
-                                "absolute rounded-lg border border-border/60 border-l-4 shadow-sm cursor-pointer overflow-hidden transition-all hover:shadow-md hover:z-20 bg-card",
-                                stColor.border,
-                                stColor.bgTint,
-                                apt.status === "attended" && "opacity-60",
+                                "absolute rounded-[10px] text-white cursor-pointer overflow-hidden transition-all hover:z-20 hover:-translate-y-px",
+                                apt.status === "attended" && "opacity-55",
                                 isCancelled && "opacity-40",
+                                inProgress && "ring-2 ring-white/70 z-10",
                               )}
                               style={{
                                 top,
                                 height,
                                 left: `calc(${col * widthPct}% + 3px)`,
                                 width: `calc(${widthPct}% - 6px)`,
+                                backgroundImage: `linear-gradient(160deg, ${color} 0%, ${color} 60%, rgba(0,0,0,0.22) 165%)`,
+                                backgroundColor: color,
+                                boxShadow: `0 5px 14px -7px ${color}cc, 0 1px 2px rgba(0,0,0,0.18)`,
                               }}
                             >
-                              <div className={cn("h-full flex flex-col", compact ? "px-1.5 py-0.5" : "p-1.5")}>
+                              {/* Franja sutil para eventos personales */}
+                              {apt.isPersonal && (
+                                <div
+                                  className="absolute inset-0 opacity-[0.14] pointer-events-none"
+                                  style={{
+                                    backgroundImage:
+                                      "repeating-linear-gradient(45deg, #fff 0 5px, transparent 5px 11px)",
+                                  }}
+                                  aria-hidden
+                                />
+                              )}
+                              <div className={cn("relative h-full flex flex-col", compact ? "px-1.5 py-0.5" : "p-1.5")}>
                                 <div className="flex items-center gap-1 min-w-0">
-                                  {showProfessionalColors && apt.professional && (
+                                  {apt.isPersonal &&
+                                    (apt.personalEvent?.icon ? (
+                                      <span className="text-[10px] leading-none shrink-0">{apt.personalEvent.icon}</span>
+                                    ) : (
+                                      <Coffee className="h-2.5 w-2.5 shrink-0 opacity-90" />
+                                    ))}
+                                  {showProfessionalColors && apt.professional && !apt.isPersonal && (
                                     <span
-                                      className="w-2 h-2 rounded-full shrink-0"
+                                      className="w-2 h-2 rounded-full shrink-0 ring-1 ring-white/60"
                                       style={{ backgroundColor: apt.professional.color }}
                                     />
                                   )}
                                   <p className={cn("font-semibold truncate text-[11px] leading-tight", isCancelled && "line-through")}>
-                                    {apt.patients?.full_name || "Sin paciente"}
+                                    {apt.isPersonal
+                                      ? apt.personalEvent?.title || "Evento"
+                                      : apt.patients?.full_name || "Sin paciente"}
                                   </p>
-                                  {payInfo && <span className={cn("w-1.5 h-1.5 rounded-full shrink-0 ml-auto", payInfo.className)} />}
+                                  {payInfo && <span className={cn("w-1.5 h-1.5 rounded-full shrink-0 ml-auto ring-1 ring-white/50", payInfo.className)} />}
                                 </div>
                                 {!compact && (
-                                  <p className="text-[10px] text-muted-foreground tabular-nums mt-auto">
+                                  <p className="text-[10px] text-white/75 tabular-nums mt-auto">
                                     {format(sD, "HH:mm")} – {format(eD, "HH:mm")}
                                   </p>
                                 )}
