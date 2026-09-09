@@ -23,10 +23,11 @@ import { GoogleLinkTutorial } from "./GoogleLinkTutorial";
 // y tiene los botones de un toque. Vive acá porque ES una función de la
 // agenda, no un ajuste perdido en Configuración.
 
-// Se marca cada destino cuando el profesional toca su botón de conectar.
-// Desconectar es REAL: se borra el token y el link deja de servir citas
-// (para los dos destinos a la vez: es el mismo link).
-const LS_G = "calendar-sync-google";
+// El iPhone/Mac se marca cuando el profesional toca su botón de conectar
+// (es un link: no hay servidor que confirme la suscripción). Google NO usa
+// flag local: su estado sale siempre del servidor (OAuth), así nunca queda
+// un "Conectado" fantasma después de desconectar.
+const LS_G = "calendar-sync-google"; // legado de la era de links: solo se limpia
 const LS_A = "calendar-sync-apple";
 
 type ExternalCal = { id: string; label: string; host: string };
@@ -35,14 +36,12 @@ export const CalendarSyncButton = ({ mobile = false }: { mobile?: boolean }) => 
   const { businessId } = useBusinessId(false);
   const { primaryColor } = useDashboardBranding();
   const [open, setOpen] = useState(false);
-  const [dest, setDest] = useState<{ google: boolean; apple: boolean }>(() => {
+  const [dest, setDest] = useState<{ apple: boolean }>(() => {
     try {
-      return {
-        google: localStorage.getItem(LS_G) === "1",
-        apple: localStorage.getItem(LS_A) === "1",
-      };
+      localStorage.removeItem(LS_G);
+      return { apple: localStorage.getItem(LS_A) === "1" };
     } catch {
-      return { google: false, apple: false };
+      return { apple: false };
     }
   });
   // Cuenta de Google conectada por OAuth (sincronización instantánea)
@@ -169,7 +168,7 @@ export const CalendarSyncButton = ({ mobile = false }: { mobile?: boolean }) => 
     }
   };
 
-  const connected = !!gAcct?.connected || dest.google || dest.apple;
+  const connected = !!gAcct?.connected || dest.apple;
 
   // Un link privado POR DESTINO (Google / Apple): así se puede desconectar
   // uno sin tocar el otro. Si la columna destination todavía no existe en la
@@ -187,13 +186,13 @@ export const CalendarSyncButton = ({ mobile = false }: { mobile?: boolean }) => 
   const [showHelp, setShowHelp] = useState(false);
   const [tutorialOpen, setTutorialOpen] = useState(false);
 
-  const markConnected = (which: "google" | "apple" = "google") => {
+  const markConnected = () => {
     try {
-      localStorage.setItem(which === "google" ? LS_G : LS_A, "1");
+      localStorage.setItem(LS_A, "1");
     } catch {
       /* sin localStorage no pasa nada: el puntito queda gris */
     }
-    setDest((d) => ({ ...d, [which]: true }));
+    setDest({ apple: true });
   };
 
   // Carga (o crea) los links. Con la columna destination: un link por
@@ -254,9 +253,9 @@ export const CalendarSyncButton = ({ mobile = false }: { mobile?: boolean }) => 
   // Desconectar DE VERDAD: borra ese token → ese link muere y ese calendario
   // deja de recibir citas. Después se genera uno nuevo limpio para reconectar.
   const [disconnecting, setDisconnecting] = useState<"google" | "apple" | null>(null);
-  const handleDisconnect = async (which: "google" | "apple") => {
+  const handleDisconnect = async () => {
     if (!businessId) return;
-    setDisconnecting(which);
+    setDisconnecting("apple");
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -267,24 +266,18 @@ export const CalendarSyncButton = ({ mobile = false }: { mobile?: boolean }) => 
         .eq("professional_user_id", user.id);
       if (singleMode) {
         await del;
-        try {
-          localStorage.removeItem(LS_G);
-          localStorage.removeItem(LS_A);
-        } catch { /* nada */ }
-        setDest({ google: false, apple: false });
       } else {
-        await del.eq("destination", which);
-        try {
-          localStorage.removeItem(which === "google" ? LS_G : LS_A);
-        } catch { /* nada */ }
-        setDest((d) => ({ ...d, [which]: false }));
+        await del.eq("destination", "apple");
       }
+      try {
+        localStorage.removeItem(LS_A);
+      } catch { /* nada */ }
+      setDest({ apple: false });
       await loadTokens();
       toast({
         title: "Desconectado",
-        description: singleMode
-          ? "El link compartido dejó de funcionar (Google y iPhone). Para limpiar del todo, borrá el calendario suscrito en la app."
-          : `Ese link dejó de funcionar: ${which === "google" ? "Google Calendar" : "el iPhone/Mac"} ya no recibe citas. Para limpiar del todo, borrá el calendario suscrito en la app.`,
+        description:
+          "Ese link dejó de funcionar: el iPhone/Mac ya no recibe citas. Para limpiar del todo, borrá el calendario suscrito en la app.",
       });
     } finally {
       setDisconnecting(null);
@@ -526,7 +519,7 @@ export const CalendarSyncButton = ({ mobile = false }: { mobile?: boolean }) => 
                       variant="ghost"
                       size="sm"
                       className="h-9 rounded-lg text-muted-foreground hover:text-destructive shrink-0"
-                      onClick={() => handleDisconnect("apple")}
+                      onClick={handleDisconnect}
                       disabled={disconnecting !== null}
                     >
                       {disconnecting === "apple" ? (
@@ -541,7 +534,7 @@ export const CalendarSyncButton = ({ mobile = false }: { mobile?: boolean }) => 
                     asChild
                     variant="outline"
                     className="w-full h-12 rounded-xl text-[15px] font-semibold border-2"
-                    onClick={() => markConnected("apple")}
+                    onClick={() => markConnected()}
                   >
                     <a href={appleWebcal}>Conectar iPhone / Mac</a>
                   </Button>
