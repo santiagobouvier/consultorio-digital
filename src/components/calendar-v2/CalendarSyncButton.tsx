@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useBusinessId } from "@/hooks/use-business-id";
 import { requestGoogleSync } from "@/lib/data-sync";
+import { clearExternalBusyCache } from "@/hooks/use-external-busy";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -135,10 +136,12 @@ export const CalendarSyncButton = ({ mobile = false }: { mobile?: boolean }) => 
     try {
       await supabase.functions.invoke("google-calendar-sync", { body: { action: "disconnect" } });
       setGAcct({ connected: false, email: null });
+      // La agenda deja de mostrar los eventos de su Google al instante
+      clearExternalBusyCache();
       toast({
         title: "Google desconectado",
         description:
-          "Las citas ya creadas quedan en tu calendario de Google; borralas allá si querés limpiarlas.",
+          "Sacamos de tu Google Calendar las citas y eventos que habíamos creado: quedó como antes de conectar.",
       });
     } finally {
       setDisconnecting(null);
@@ -360,6 +363,8 @@ export const CalendarSyncButton = ({ mobile = false }: { mobile?: boolean }) => 
     try {
       await supabase.functions.invoke("external-calendar", { body: { action: "remove", id } });
       setCals((prev) => prev.filter((c) => c.id !== id));
+      // Sus eventos desaparecen de la grilla al instante, sin esperar el cache
+      clearExternalBusyCache();
     } finally {
       setExtWorking(false);
     }

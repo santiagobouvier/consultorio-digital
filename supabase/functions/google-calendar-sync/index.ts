@@ -3,7 +3,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 // Sincronización instantánea con Google Calendar (vía OAuth).
 //
 // POST { action: "status" }          → { connected, email }
-// POST { action: "disconnect" }      → revoca el permiso y borra la cuenta
+// POST { action: "disconnect" }      → borra de Google los eventos que
+//                                      creamos nosotros, revoca el permiso
+//                                      y elimina la cuenta
 // POST { action: "sync" }            → empuja a Google las citas nuevas /
 //                                      cambiadas / canceladas (idempotente)
 // POST { action: "busy", from, to }  → eventos del Google del profesional en
@@ -112,6 +114,61 @@ Deno.serve(async (req) => {
 
     if (action === "disconnect") {
       if (account) {
+        // Desconectar EN SERIO: primero se sacan de Google todos los eventos
+        // que creamos nosotros (citas y eventos personales), así el calendario
+        // del profesional queda como estaba antes de conectar. Recién después
+        // se revoca el permiso y se borra la cuenta.
+        const accessToken = await getAccessToken(account.refresh_token);
+        const calId = encodeURIComponent(account.calendar_id || "primary");
+
+        const { data: aptRows } = await admin
+          .from("appointments")
+          .select("id, google_event_id")
+          .eq("business_id", account.business_id)
+          .or(`professional_id.eq.${user.id},professional_id.is.null`)
+          .not("google_event_id", "is", null);
+        const { data: pevtRows } = await admin
+          .from("personal_events")
+          .select("id, google_event_id")
+          .eq("professional_user_id", user.id)
+          .not("google_event_id", "is", null);
+
+        if (accessToken) {
+          const gHeaders = { Authorization: `Bearer ${accessToken}` };
+          const eventIds = [
+            ...(aptRows ?? []).map((r: any) => r.google_event_id as string),
+            ...(pevtRows ?? []).map((r: any) => r.google_event_id as string),
+          ];
+          // De a 5 en paralelo para que la desconexión no se eternice;
+          // 404/410 (ya borrado allá) no es error.
+          for (let i = 0; i < eventIds.length; i += 5) {
+            await Promise.all(
+              eventIds.slice(i, i + 5).map((id) =>
+                fetch(
+                  `https://www.googleapis.com/calendar/v3/calendars/${calId}/events/${encodeURIComponent(id)}`,
+                  { method: "DELETE", headers: gHeaders }
+                ).catch(() => null)
+              )
+            );
+          }
+        }
+
+        // Los marcadores se limpian con o sin token: si el profesional
+        // reconecta, la sincronización crea eventos nuevos desde cero en vez
+        // de apuntar a eventos muertos de la conexión anterior.
+        if ((aptRows ?? []).length > 0) {
+          await admin
+            .from("appointments")
+            .update({ google_event_id: null, google_synced_at: null })
+            .in("id", (aptRows ?? []).map((r: any) => r.id));
+        }
+        if ((pevtRows ?? []).length > 0) {
+          await admin
+            .from("personal_events")
+            .update({ google_event_id: null, google_synced_at: null })
+            .in("id", (pevtRows ?? []).map((r: any) => r.id));
+        }
+
         // Revocar el permiso en Google (best effort) y borrar la cuenta
         try {
           await fetch(
