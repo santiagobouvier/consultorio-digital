@@ -1,7 +1,6 @@
 import { usePageMeta } from "@/hooks/use-page-meta";
 import { useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
@@ -29,20 +28,23 @@ const Pricing = () => {
     canonicalPath: "/pricing",
   });
   const navigate = useNavigate();
-  const { user } = useAuth();
   const [billingCycle, setBillingCycle] = useState<"monthly" | "annual">("annual");
 
+  // Por ahora la contratación es mano a mano: cada plan abre WhatsApp con un
+  // mensaje ya escrito según el plan y la forma de pago elegida.
   const handleSelectPlan = useCallback(
-    (planCode: string) => {
-      if (!user) {
-        // Not logged in → go to register with plan preselected (no Mercado Pago)
-        navigate(`/auth?plan=${planCode}&billing=${billingCycle}`);
-        return;
-      }
-      // Logged in → go to dashboard (trial is already active or user can manage from billing)
-      navigate("/dashboard");
+    (plan: PlanDefinition) => {
+      const price = billingCycle === "annual" ? plan.priceAnnual : plan.priceMonthly;
+      const msg = `¡Hola! Me interesa el plan ${plan.name} de Consultorio Digital (${formatPrice(price)}/mes ${
+        billingCycle === "annual" ? "pagando anual" : "pagando mes a mes"
+      }). ¿Me contás cómo empezar?`;
+      window.open(
+        `https://wa.me/59898543623?text=${encodeURIComponent(msg)}`,
+        "_blank",
+        "noopener,noreferrer"
+      );
     },
-    [user, billingCycle, navigate]
+    [billingCycle]
   );
 
   const plans = PUBLIC_PLAN_ORDER.map((code) => PLAN_DEFINITIONS[code]);
@@ -156,7 +158,7 @@ const Pricing = () => {
               key={plan.code}
               plan={plan}
               billingCycle={billingCycle}
-              onSelect={() => handleSelectPlan(plan.code)}
+              onSelect={() => handleSelectPlan(plan)}
             />
           ))}
         </div>
@@ -300,7 +302,7 @@ const PlanCard = ({ plan, billingCycle, onSelect }: PlanCardProps) => {
               }
         }
       >
-        Empezar 7 días gratis
+        Quiero este plan
       </Button>
     </div>
   );
