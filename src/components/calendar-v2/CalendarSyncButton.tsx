@@ -136,7 +136,9 @@ export const CalendarSyncButton = ({ mobile = false }: { mobile?: boolean }) => 
     try {
       await supabase.functions.invoke("google-calendar-sync", { body: { action: "disconnect" } });
       setGAcct({ connected: false, email: null });
-      // La agenda deja de mostrar los eventos de su Google al instante
+      // El servidor también desconectó el calendario de Google por link
+      // (si había): la lista del modal y la grilla lo reflejan al instante.
+      setCals((prev) => prev.filter((c) => !c.host.endsWith("google.com")));
       clearExternalBusyCache();
       toast({
         title: "Google desconectado",

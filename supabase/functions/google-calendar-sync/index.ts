@@ -178,6 +178,28 @@ Deno.serve(async (req) => {
         } catch { /* best effort */ }
         await admin.from("google_calendar_accounts").delete().eq("id", account.id);
       }
+
+      // La otra pata de Google: el calendario conectado por link iCal (la
+      // sección "que te avise si chocás") también se desconecta. Desconectar
+      // Google = no queda NADA de Google, ni allá ni acá. Los links de otros
+      // proveedores (iCloud, etc.) no se tocan.
+      const { data: extCals } = await admin
+        .from("external_calendars")
+        .select("id, ics_url")
+        .eq("professional_user_id", user.id);
+      const googleFeedIds = (extCals ?? [])
+        .filter((c: any) => {
+          try {
+            return new URL(String(c.ics_url)).host.endsWith("google.com");
+          } catch {
+            return false;
+          }
+        })
+        .map((c: any) => c.id);
+      if (googleFeedIds.length > 0) {
+        await admin.from("external_calendars").delete().in("id", googleFeedIds);
+      }
+
       return json({ ok: true });
     }
 
