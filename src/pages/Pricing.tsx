@@ -25,7 +25,7 @@ const Pricing = () => {
   usePageMeta({
     title: "Precios y planes | Consultorio Digital",
     description:
-      "Planes desde Emprendedor hasta Consultorio: agenda online, recordatorios y cobros. Precios en pesos uruguayos y 15 días de prueba gratis.",
+      "Planes desde Emprendedor hasta Profesional: agenda online, recordatorios y cobros. Precios en pesos uruguayos y 7 días de prueba gratis.",
     canonicalPath: "/pricing",
   });
   const navigate = useNavigate();
@@ -276,16 +276,6 @@ const PlanCard = ({ plan, billingCycle, onSelect }: PlanCardProps) => {
           <FeatureItem
             icon={<Globe className="w-4 h-4" />}
             text="Web pública del consultorio"
-          />
-        )}
-        {plan.customWebsite !== "none" && (
-          <FeatureItem
-            icon={<Globe className="w-4 h-4" />}
-            text={
-              plan.customWebsite === "custom"
-                ? "Web completamente personalizada con tu dominio — a medida"
-                : "Web propia con tu dominio — 1 página (inicio, servicios, reservas y contacto)"
-            }
           />
         )}
         <FeatureItem icon={<Check className="w-4 h-4" />} text="Agenda inteligente" />
