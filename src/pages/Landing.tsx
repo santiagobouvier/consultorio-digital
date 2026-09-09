@@ -47,6 +47,15 @@ const WA_DEMO =
 const WA_PERSONALIZADO =
   "https://wa.me/59898543623?text=Hola,%20quiero%20un%20plan%20personalizado%20para%20mi%20consultorio.";
 
+// Por ahora la contratación es mano a mano: cada plan abre WhatsApp con un
+// mensaje ya escrito según el plan y la forma de pago elegida.
+const waPlanUrl = (planName: string, priceLabel: string, annual: boolean) =>
+  `https://wa.me/59898543623?text=${encodeURIComponent(
+    `¡Hola! Me interesa el plan ${planName} de Consultorio Digital (${priceLabel}/mes ${
+      annual ? "pagando anual" : "pagando mes a mes"
+    }). ¿Me contás cómo empezar?`
+  )}`;
+
 // FAQ real, sin nada de páginas web
 const faqItems = [
   {
@@ -525,23 +534,22 @@ const Landing = () => {
                     </div>
                     <div className="mt-auto pt-5">
                       <a
-                        href={`/auth?plan=${plan.code}&billing=${isAnnual ? "annual" : "monthly"}`}
-                        className="flex items-center justify-center h-11 rounded-[13px] font-semibold text-[13.5px] transition-transform hover:scale-[1.02]"
+                        href={waPlanUrl(plan.name, formatPrice(price), isAnnual)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center gap-2 h-11 rounded-[13px] font-semibold text-[13.5px] transition-transform hover:scale-[1.02]"
                         style={
                           plan.highlight
                             ? { background: `linear-gradient(135deg, ${GREEN}, ${BRAND})`, color: INK, boxShadow: "0 10px 28px rgba(47,181,131,.22)" }
                             : { background: "rgba(255,255,255,.05)", border: "1px solid rgba(255,255,255,.12)", color: "#f2f7f4" }
                         }
                       >
-                        Probar gratis 7 días
+                        <MessageCircle className="w-4 h-4" />
+                        Quiero este plan
                       </a>
-                      <a
-                        href={`/auth?plan=${plan.code}&billing=${isAnnual ? "annual" : "monthly"}&skip_trial=true`}
-                        className="block text-center mt-2.5 text-[11.5px] transition-colors hover:text-white"
-                        style={{ color: DIM }}
-                      >
-                        Empezar ya, sin prueba
-                      </a>
+                      <p className="m-0 text-center mt-2.5 text-[11.5px]" style={{ color: DIM }}>
+                        Te respondemos en el día y lo dejamos andando.
+                      </p>
                     </div>
                   </div>
                 </ScrollReveal>
