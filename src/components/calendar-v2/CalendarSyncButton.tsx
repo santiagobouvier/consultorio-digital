@@ -31,6 +31,20 @@ import { GoogleLinkTutorial } from "./GoogleLinkTutorial";
 const LS_G = "calendar-sync-google"; // legado de la era de links: solo se limpia
 const LS_A = "calendar-sync-apple";
 
+// Después de desconectar se recarga la página entera: la grilla queda al día
+// sin cache viejo y, al volver, el modal se reabre mostrando el estado real
+// con su aviso de "Desconectado con éxito". El mensaje viaja por
+// sessionStorage porque un toast no sobrevive a la recarga.
+const RELOAD_MSG_KEY = "cd-sync-reload-msg";
+const reloadWithConfirmation = (title: string, description: string) => {
+  try {
+    sessionStorage.setItem(RELOAD_MSG_KEY, JSON.stringify({ title, description }));
+  } catch {
+    /* sin sessionStorage, se recarga igual (solo se pierde el aviso) */
+  }
+  window.location.reload();
+};
+
 type ExternalCal = { id: string; label: string; host: string };
 
 export const CalendarSyncButton = ({ mobile = false }: { mobile?: boolean }) => {
@@ -109,10 +123,10 @@ export const CalendarSyncButton = ({ mobile = false }: { mobile?: boolean }) => 
       void refreshGoogleStatus();
       requestGoogleSync();
       toast({
-        title: "¡Google Calendar conectado! ⚡",
+        title: "Conectado con éxito ⚡",
         description: email
           ? `Tus citas ya se están sincronizando con ${email}.`
-          : "Tus citas ya se están sincronizando.",
+          : "Tus citas ya se están sincronizando con tu Google Calendar.",
       });
     } else {
       const motivos: Record<string, string> = {
@@ -131,20 +145,36 @@ export const CalendarSyncButton = ({ mobile = false }: { mobile?: boolean }) => 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Vuelta de una desconexión (la página se recargó): se reabre el modal con
+  // el estado real y se muestra el "Desconectado con éxito". Solo lo procesa
+  // la instancia visible en este tamaño de pantalla (hay una mobile y una
+  // desktop montadas a la vez).
+  useEffect(() => {
+    const esViewportMobile = window.matchMedia("(max-width: 1023px)").matches;
+    if (mobile !== esViewportMobile) return;
+    try {
+      const raw = sessionStorage.getItem(RELOAD_MSG_KEY);
+      if (!raw) return;
+      sessionStorage.removeItem(RELOAD_MSG_KEY);
+      const { title, description } = JSON.parse(raw) as { title: string; description: string };
+      setOpen(true);
+      toast({ title, description });
+    } catch {
+      /* nada */
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleGoogleOAuthDisconnect = async () => {
     setDisconnecting("google");
     try {
       await supabase.functions.invoke("google-calendar-sync", { body: { action: "disconnect" } });
-      setGAcct({ connected: false, email: null });
-      // El servidor también desconectó el calendario de Google por link
-      // (si había): la lista del modal y la grilla lo reflejan al instante.
-      setCals((prev) => prev.filter((c) => !c.host.endsWith("google.com")));
       clearExternalBusyCache();
-      toast({
-        title: "Google desconectado",
-        description:
-          "Sacamos de tu Google Calendar las citas y eventos que habíamos creado: quedó como antes de conectar.",
-      });
+      // Recarga total: agenda al día y modal reabierto con el estado real
+      reloadWithConfirmation(
+        "Desconectado con éxito 👋",
+        "Sacamos de tu Google Calendar las citas que habíamos creado y tu agenda dejó de mostrar los eventos de Google."
+      );
     } finally {
       setDisconnecting(null);
     }
@@ -198,6 +228,10 @@ export const CalendarSyncButton = ({ mobile = false }: { mobile?: boolean }) => 
       /* sin localStorage no pasa nada: el puntito queda gris */
     }
     setDest({ apple: true });
+    toast({
+      title: "Conectado con éxito 🎉",
+      description: "Confirmá la suscripción en tu calendario y tus citas empiezan a aparecer solas.",
+    });
   };
 
   // Carga (o crea) los links. Con la columna destination: un link por
@@ -277,13 +311,11 @@ export const CalendarSyncButton = ({ mobile = false }: { mobile?: boolean }) => 
       try {
         localStorage.removeItem(LS_A);
       } catch { /* nada */ }
-      setDest({ apple: false });
-      await loadTokens();
-      toast({
-        title: "Desconectado",
-        description:
-          "Ese link dejó de funcionar: el iPhone/Mac ya no recibe citas. Para limpiar del todo, borrá el calendario suscrito en la app.",
-      });
+      clearExternalBusyCache();
+      reloadWithConfirmation(
+        "Desconectado con éxito 👋",
+        "El iPhone/Mac ya no recibe citas nuevas. Para limpiar del todo, borrá el calendario suscrito en la app del celular."
+      );
     } finally {
       setDisconnecting(null);
     }
@@ -364,9 +396,11 @@ export const CalendarSyncButton = ({ mobile = false }: { mobile?: boolean }) => 
     setExtWorking(true);
     try {
       await supabase.functions.invoke("external-calendar", { body: { action: "remove", id } });
-      setCals((prev) => prev.filter((c) => c.id !== id));
-      // Sus eventos desaparecen de la grilla al instante, sin esperar el cache
       clearExternalBusyCache();
+      reloadWithConfirmation(
+        "Calendario desconectado ✓",
+        "La agenda dejó de mostrar los eventos de ese calendario."
+      );
     } finally {
       setExtWorking(false);
     }
