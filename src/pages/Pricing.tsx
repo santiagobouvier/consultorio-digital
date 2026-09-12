@@ -3,7 +3,6 @@ import { useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useState } from "react";
 import {
   Check,
   Users,
@@ -28,24 +27,17 @@ const Pricing = () => {
     canonicalPath: "/pricing",
   });
   const navigate = useNavigate();
-  const [billingCycle, setBillingCycle] = useState<"monthly" | "annual">("annual");
 
-  // Por ahora la contratación es mano a mano: cada plan abre WhatsApp con un
-  // mensaje ya escrito según el plan y la forma de pago elegida.
-  const handleSelectPlan = useCallback(
-    (plan: PlanDefinition) => {
-      const price = billingCycle === "annual" ? plan.priceAnnual : plan.priceMonthly;
-      const msg = `¡Hola! Me interesa el plan ${plan.name} de Consultorio Digital (${formatPrice(price)}/mes ${
-        billingCycle === "annual" ? "pagando anual" : "pagando mes a mes"
-      }). ¿Me contás cómo empezar?`;
-      window.open(
-        `https://wa.me/59898543623?text=${encodeURIComponent(msg)}`,
-        "_blank",
-        "noopener,noreferrer"
-      );
-    },
-    [billingCycle]
-  );
+  // La contratación es mano a mano: cada plan abre WhatsApp con un mensaje ya
+  // escrito. Un solo precio por plan, facturado en un pago anual.
+  const handleSelectPlan = useCallback((plan: PlanDefinition) => {
+    const msg = `¡Hola! Me interesa el plan ${plan.name} de Consultorio Digital (${formatPrice(plan.priceAnnual)}/mes, pago anual). ¿Me contás cómo empezar?`;
+    window.open(
+      `https://wa.me/59898543623?text=${encodeURIComponent(msg)}`,
+      "_blank",
+      "noopener,noreferrer"
+    );
+  }, []);
 
   const plans = PUBLIC_PLAN_ORDER.map((code) => PLAN_DEFINITIONS[code]);
 
@@ -119,45 +111,12 @@ const Pricing = () => {
           </div>
         </div>
 
-        <div className="flex items-center justify-center gap-3 mb-10">
-          <button
-            onClick={() => setBillingCycle("monthly")}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              billingCycle === "monthly"
-                ? "bg-white/10 text-white"
-                : "text-white/40 hover:text-white/60"
-            }`}
-          >
-            Mensual
-          </button>
-          <button
-            onClick={() => setBillingCycle("annual")}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
-              billingCycle === "annual"
-                ? "bg-white/10 text-white"
-                : "text-white/40 hover:text-white/60"
-            }`}
-          >
-            Anual
-            <Badge
-              className="text-[10px] px-1.5 py-0 border-0"
-              style={{
-                backgroundColor: "hsla(160,80%,50%,0.15)",
-                color: "hsl(160,80%,50%)",
-              }}
-            >
-              Ahorrá 20%
-            </Badge>
-          </button>
-        </div>
-
         {/* Plan cards grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-5xl mx-auto">
           {plans.map((plan) => (
             <PlanCard
               key={plan.code}
               plan={plan}
-              billingCycle={billingCycle}
               onSelect={() => handleSelectPlan(plan)}
             />
           ))}
@@ -176,20 +135,11 @@ const Pricing = () => {
 
 interface PlanCardProps {
   plan: PlanDefinition;
-  billingCycle: "monthly" | "annual";
   onSelect: () => void;
 }
 
-const PlanCard = ({ plan, billingCycle, onSelect }: PlanCardProps) => {
-  const price = billingCycle === "annual" ? plan.priceAnnual : plan.priceMonthly;
-  const monthlyPrice = plan.priceMonthly;
-  const isAnnual = billingCycle === "annual";
+const PlanCard = ({ plan, onSelect }: PlanCardProps) => {
   const highlighted = plan.isHighlighted;
-
-  const savings = isAnnual
-    ? Math.round(((monthlyPrice - plan.priceAnnual) / monthlyPrice) * 100)
-    : 0;
-  const annualSavings = isAnnual ? (monthlyPrice - plan.priceAnnual) * 12 : 0;
 
   return (
     <div
@@ -230,30 +180,12 @@ const PlanCard = ({ plan, billingCycle, onSelect }: PlanCardProps) => {
       {/* Price */}
       <div className="mb-5">
         <div className="flex items-baseline gap-1">
-          <span className="text-3xl font-bold text-white">{formatPrice(price)}</span>
+          <span className="text-3xl font-bold text-white">{formatPrice(plan.priceAnnual)}</span>
           <span className="text-sm text-white/40">/mes</span>
         </div>
-        {isAnnual && savings > 0 && (
-          <div className="flex items-center gap-2 mt-1">
-            <span className="text-xs text-white/30 line-through">
-              {formatPrice(monthlyPrice)}/mes
-            </span>
-            <Badge
-              className="text-[10px] px-1.5 py-0 border-0"
-              style={{
-                backgroundColor: "hsla(160,80%,50%,0.12)",
-                color: "hsl(160,80%,50%)",
-              }}
-            >
-              -{savings}%
-            </Badge>
-          </div>
-        )}
-        {isAnnual && annualSavings > 0 && (
-          <p className="text-xs font-medium mt-1.5" style={{ color: "hsl(160,80%,50%)" }}>
-            Ahorrás {formatPrice(annualSavings)} al año
-          </p>
-        )}
+        <p className="text-xs text-white/40 mt-1.5">
+          un solo pago al año de {formatPrice(plan.priceAnnual * 12)}
+        </p>
       </div>
 
       {/* Features */}
