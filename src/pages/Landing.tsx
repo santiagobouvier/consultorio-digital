@@ -1,21 +1,19 @@
-// Landing de Consultorio Digital — diseño "agencia premium dark" aprobado en
-// el mockup de Claude Design: la agenda como centro de control, sincronización
-// en vivo con Google Calendar / iPhone, cobros con Mercado Pago, WhatsApp
-// automático y el link público de reservas como protagonista.
+// Landing de Consultorio Digital — diseño "Luz editorial" aprobado en el
+// mockup de Claude Design: fondo claro cálido, tipografía grande, mucho aire
+// y el teal de la marca como único acento. La agenda como protagonista,
+// sincronización en vivo con Google Calendar / iPhone, cobros y reservas.
 // Sin mención a creación de páginas web (eso se ofrece en privado).
+// Los planes se contratan mano a mano: cada botón abre WhatsApp con el
+// mensaje armado según plan y forma de pago.
 import { usePageMeta } from "@/hooks/use-page-meta";
 import { useJsonLd } from "@/hooks/use-json-ld";
 import { useMemo, useState } from "react";
 import {
   ArrowRight,
-  BarChart3,
   Check,
   CreditCard,
   Link2,
-  Lock,
   MessageCircle,
-  Shield,
-  Users,
 } from "lucide-react";
 import {
   Accordion,
@@ -28,18 +26,18 @@ import { InstallAppButton } from "@/components/InstallAppButton";
 import { ScrollReveal } from "@/components/landing/ScrollReveal";
 import { LandingNavbar } from "@/components/landing/LandingNavbar";
 import { ScrollToTop } from "@/components/landing/ScrollToTop";
-import { DayJourney } from "@/components/landing/DayJourney";
 
-// Marca
+// Marca sobre claro
 const BRAND = "#1f938d";
-const GREEN = "#2fb583";
-const GREEN_SOFT = "#7ce0b8";
-const INK = "#04120c";
-const MUTED = "#8fa39a";
-const SOFT = "#c6d4cd";
-const DIM = "#5c6f66";
-const CARD = "linear-gradient(180deg,#0c1310,#080d0b)";
-const CARD_HL = "linear-gradient(180deg,#0d1a14,#091009)";
+const TEAL_DEEP = "#14655f";
+const BG = "#fbfaf7";
+const BG2 = "#f3f1ea";
+const INK = "#16211c";
+const MUTED = "#5b6a63";
+const DIM = "#93a09a";
+const HAIR = "rgba(22,33,28,.08)";
+const HAIR2 = "rgba(22,33,28,.1)";
+const CARD_BORDER = "1px solid rgba(22,33,28,.09)";
 const GROTESK = { fontFamily: "'Space Grotesk', sans-serif" } as const;
 
 const WA_DEMO =
@@ -97,9 +95,9 @@ const faqItems = [
 
 const Landing = () => {
   usePageMeta({
-    title: "Consultorio Digital | Tu agenda es tu centro de control",
+    title: "Consultorio Digital | Tu agenda, trabajando por vos",
     description:
-      "Citas, cobros y pacientes en un solo lugar — sincronizado en vivo con Google Calendar y tu iPhone. Link público de reservas, cobros con Mercado Pago y recordatorios automáticos por WhatsApp.",
+      "Citas, recordatorios por WhatsApp, cobros y reservas online en un solo lugar — sincronizado en vivo con Google Calendar y tu iPhone.",
     canonicalPath: "/",
   });
 
@@ -143,13 +141,12 @@ const Landing = () => {
   }, []);
 
   return (
-    <div className="min-h-screen text-white" style={{ background: "#050807", fontFamily: "'Instrument Sans', 'Plus Jakarta Sans', sans-serif" }}>
+    <div className="min-h-screen" style={{ background: BG, color: INK, fontFamily: "'Instrument Sans', 'Plus Jakarta Sans', sans-serif" }}>
       <style>{`
         @media (prefers-reduced-motion: no-preference) {
-        @keyframes glowFloat { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(28px,-20px) scale(1.1); } }
         @keyframes dotGo { 0% { left: 6%; opacity: 0; } 12% { opacity: 1; } 88% { opacity: 1; } 100% { left: 90%; opacity: 0; } }
         @keyframes dotBack { 0% { left: 90%; opacity: 0; } 12% { opacity: 1; } 88% { opacity: 1; } 100% { left: 6%; opacity: 0; } }
-        @keyframes pulseRing { 0% { box-shadow: 0 0 0 0 rgba(47,181,131,.45); } 70% { box-shadow: 0 0 0 12px rgba(47,181,131,0); } 100% { box-shadow: 0 0 0 0 rgba(47,181,131,0); } }
+        @keyframes pulseRing { 0% { box-shadow: 0 0 0 0 rgba(31,147,141,.35); } 70% { box-shadow: 0 0 0 12px rgba(31,147,141,0); } 100% { box-shadow: 0 0 0 0 rgba(31,147,141,0); } }
         @keyframes heroUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         .cd-up { opacity: 0; animation: heroUp .8s cubic-bezier(0.16,1,0.3,1) forwards; }
         }
@@ -161,129 +158,164 @@ const Landing = () => {
       <LandingNavbar />
 
       {/* ═══════════ HERO ═══════════ */}
-      <section className="relative overflow-hidden px-5 sm:px-8 pt-28 pb-16 lg:pt-36 lg:pb-24 z-10">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -top-40 -right-32 w-[420px] h-[420px] lg:w-[620px] lg:h-[620px] rounded-full"
-          style={{
-            background: `radial-gradient(circle, rgba(47,181,131,.10) 0%, rgba(47,181,131,0) 65%)`,
-            filter: "blur(18px)",
-            animation: "glowFloat 10s ease-in-out infinite",
-          }}
-        />
-        <div className="relative max-w-6xl mx-auto flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
+      <section className="relative px-5 sm:px-8 pt-28 pb-16 lg:pt-40 lg:pb-24">
+        <div className="relative max-w-6xl mx-auto flex flex-col lg:flex-row items-center gap-12 lg:gap-20">
           <div className="flex-1 min-w-0 text-left">
             <span
-              className="cd-up inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-[11px] sm:text-xs font-semibold uppercase"
-              style={{ ...GROTESK, letterSpacing: "0.1em", background: "rgba(47,181,131,.08)", border: "1px solid rgba(47,181,131,.22)", color: GREEN_SOFT }}
+              className="cd-up inline-flex items-center gap-2 text-[11px] sm:text-xs font-semibold uppercase"
+              style={{ ...GROTESK, letterSpacing: "0.1em", color: TEAL_DEEP }}
             >
-              <span className="w-1.5 h-1.5 rounded-full" style={{ background: GREEN, animation: "pulseRing 2.4s infinite" }} />
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: BRAND, animation: "pulseRing 2.4s infinite" }} />
               Para psicólogos y odontólogos
             </span>
             <h1
-              className="cd-up mt-5 text-[44px] leading-[1.04] sm:text-6xl lg:text-7xl font-bold tracking-tight"
+              className="cd-up mt-5 text-[42px] leading-[1.05] sm:text-6xl lg:text-[68px] font-bold tracking-tight"
               style={{ ...GROTESK, letterSpacing: "-0.03em", animationDelay: "0.1s" }}
             >
-              Tu agenda es tu
-              <span
-                className="block bg-clip-text text-transparent pb-1"
-                style={{ backgroundImage: `linear-gradient(100deg, ${GREEN}, ${BRAND} 70%)` }}
-              >
-                centro de control.
-              </span>
+              Tu agenda,<br />trabajando por vos.
             </h1>
-            <p className="cd-up mt-5 text-[15.5px] sm:text-lg leading-relaxed max-w-lg" style={{ color: MUTED, animationDelay: "0.2s" }}>
-              Citas, cobros y pacientes en un solo lugar — sincronizado en vivo con Google Calendar y tu iPhone.
+            <p className="cd-up mt-5 text-[15.5px] sm:text-lg leading-relaxed max-w-md" style={{ color: MUTED, animationDelay: "0.2s" }}>
+              Citas, recordatorios por WhatsApp, cobros y reservas online — todo en un solo lugar, sincronizado con el calendario que ya usás.
             </p>
             <div className="cd-up mt-7 flex flex-col sm:flex-row gap-3" style={{ animationDelay: "0.3s" }}>
               <a
-                href="#pricing"
-                className="flex items-center justify-center gap-2 h-[52px] sm:h-14 px-8 rounded-2xl font-semibold text-[15px] transition-transform hover:scale-[1.03]"
-                style={{ background: `linear-gradient(135deg, ${GREEN}, ${BRAND})`, color: INK, boxShadow: "0 14px 40px rgba(47,181,131,.22)" }}
+                href="/auth"
+                className="flex items-center justify-center gap-2 h-[52px] px-8 rounded-full font-semibold text-[15px] text-white transition-transform hover:scale-[1.03]"
+                style={{ background: BRAND, boxShadow: "0 14px 30px -12px rgba(31,147,141,.5)" }}
               >
-                Probalo 7 días gratis
+                Probar gratis 7 días
                 <ArrowRight className="w-4 h-4" />
               </a>
               <a
-                href={WA_DEMO}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 h-[52px] sm:h-14 px-7 rounded-2xl font-medium text-[14.5px] transition-colors hover:bg-white/[0.07]"
-                style={{ background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.1)", color: SOFT }}
+                href="/demo"
+                className="flex items-center justify-center gap-2 h-[52px] px-7 rounded-full font-semibold text-[14.5px] transition-colors hover:bg-black/[0.03]"
+                style={{ border: "1px solid rgba(22,33,28,.16)", color: INK }}
               >
-                <MessageCircle className="w-4 h-4" />
-                Demo de 10 min por WhatsApp
+                Ver la demo
               </a>
             </div>
-            <div className="cd-up mt-6 flex flex-wrap gap-x-6 gap-y-2 text-xs sm:text-sm" style={{ color: DIM, animationDelay: "0.4s" }}>
-              {["Sin tarjeta", "7 días gratis", "Cancelás cuando quieras"].map((t) => (
-                <span key={t} className="inline-flex items-center gap-1.5">
-                  <Check className="w-3.5 h-3.5" style={{ color: GREEN }} />
-                  {t}
-                </span>
-              ))}
-            </div>
+            <p className="cd-up mt-5 text-[13px]" style={{ color: DIM, animationDelay: "0.4s" }}>
+              Sin tarjeta · Te lo dejamos configurado en una videollamada
+            </p>
           </div>
 
-          {/* Mini agenda del día con badge de sync latiendo */}
+          {/* Mini agenda del día, versión clara */}
           <div className="cd-up flex-1 min-w-0 w-full max-w-md lg:max-w-none" style={{ animationDelay: "0.45s" }}>
-            <div className="rounded-3xl p-5 sm:p-6" style={{ background: CARD, border: "1px solid rgba(47,181,131,.14)", boxShadow: "0 40px 90px -40px rgba(0,0,0,.8)" }}>
-              <div className="flex items-center gap-2 mb-4">
-                <span className="text-xs font-semibold uppercase" style={{ ...GROTESK, letterSpacing: "0.12em", color: DIM }}>Hoy · Martes</span>
+            <div className="rounded-[22px] p-5 sm:p-6 bg-white" style={{ border: CARD_BORDER, boxShadow: "0 30px 60px -30px rgba(22,33,28,.18)" }}>
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-[15px] font-semibold" style={GROTESK}>Hoy, martes</span>
                 <span
-                  className="ml-auto inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10.5px] sm:text-[11px] font-semibold"
-                  style={{ background: "rgba(47,181,131,.1)", border: "1px solid rgba(47,181,131,.3)", color: GREEN_SOFT }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold"
+                  style={{ background: "rgba(31,147,141,.1)", color: TEAL_DEEP }}
                 >
-                  <span className="w-[5px] h-[5px] rounded-full" style={{ background: GREEN, animation: "pulseRing 2s infinite" }} />
-                  Sincronizado con Google
+                  <span className="w-[5px] h-[5px] rounded-full" style={{ background: BRAND, animation: "pulseRing 2s infinite" }} />
+                  4 sesiones
                 </span>
               </div>
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center gap-3 px-3.5 py-3 rounded-xl" style={{ background: "rgba(47,181,131,.09)", borderLeft: `3px solid ${GREEN}` }}>
-                  <span className="text-[13px] font-bold tabular-nums" style={{ ...GROTESK, color: GREEN_SOFT }}>09:00</span>
-                  <span className="text-[13.5px] font-semibold">Camila S. · Sesión individual</span>
-                  <span className="ml-auto hidden sm:inline px-2.5 py-0.5 rounded-full text-[10.5px] font-semibold" style={{ background: "rgba(47,181,131,.12)", color: GREEN_SOFT }}>Pagada</span>
+              <div className="flex flex-col gap-2.5">
+                <div className="flex items-center gap-3.5 rounded-xl px-4 py-3" style={{ background: "#fdfdfb", border: "1px solid rgba(22,33,28,.07)", borderLeft: `3px solid ${BRAND}` }}>
+                  <span className="text-[13px] font-semibold tabular-nums w-11 shrink-0" style={{ color: MUTED }}>09:00</span>
+                  <div className="min-w-0">
+                    <p className="m-0 text-sm font-semibold">Agustina N.</p>
+                    <p className="m-0 text-xs" style={{ color: DIM }}>Sesión individual · 50 min</p>
+                  </div>
+                  <span className="ml-auto px-2.5 py-1 rounded-full text-[10.5px] font-semibold shrink-0" style={{ background: "rgba(31,147,141,.1)", color: TEAL_DEEP }}>Pagada</span>
                 </div>
-                <div className="flex items-center gap-3 px-3.5 py-3 rounded-xl" style={{ background: "rgba(255,255,255,.03)", borderLeft: "3px solid rgba(255,255,255,.18)" }}>
-                  <span className="text-[13px] font-bold tabular-nums" style={{ ...GROTESK, color: MUTED }}>11:00</span>
-                  <span className="text-[13.5px]" style={{ color: SOFT }}>Turno libre — reservable online</span>
+                <div className="flex items-center gap-3.5 rounded-xl px-4 py-3" style={{ background: "#fdfdfb", border: "1px solid rgba(22,33,28,.07)", borderLeft: `3px solid ${BRAND}` }}>
+                  <span className="text-[13px] font-semibold tabular-nums w-11 shrink-0" style={{ color: MUTED }}>10:30</span>
+                  <div className="min-w-0">
+                    <p className="m-0 text-sm font-semibold">Diego C.</p>
+                    <p className="m-0 text-xs" style={{ color: DIM }}>Primera consulta</p>
+                  </div>
+                  <span className="ml-auto hidden sm:inline-flex items-center gap-1.5 text-[11px] font-semibold shrink-0" style={{ color: MUTED }}>
+                    <Check className="w-3 h-3" style={{ color: BRAND }} strokeWidth={3} />
+                    Recordatorio enviado
+                  </span>
                 </div>
-                <div className="flex items-center gap-3 px-3.5 py-3 rounded-xl" style={{ background: "rgba(255,255,255,.03)", borderLeft: "3px solid #4285F4" }}>
-                  <span className="text-[13px] font-bold tabular-nums" style={{ ...GROTESK, color: MUTED }}>13:00</span>
-                  <span className="text-[13.5px]" style={{ color: SOFT }}>Almuerzo · desde Google Calendar</span>
+                <div className="flex items-center gap-3.5 rounded-xl px-4 py-3" style={{ border: "1px dashed rgba(22,33,28,.18)" }}>
+                  <span className="text-[13px] font-semibold tabular-nums w-11 shrink-0" style={{ color: DIM }}>12:00</span>
+                  <p className="m-0 text-[13px]" style={{ color: DIM }}>Reservado recién desde tu link</p>
+                  <span className="ml-auto px-2.5 py-1 rounded-full text-[10.5px] font-semibold shrink-0" style={{ background: "rgba(200,138,49,.1)", color: "#b0721e" }}>Nueva</span>
                 </div>
-                <div className="flex items-center gap-3 px-3.5 py-3 rounded-xl" style={{ background: "rgba(255,255,255,.03)", borderLeft: `3px solid ${BRAND}` }}>
-                  <span className="text-[13px] font-bold tabular-nums" style={{ ...GROTESK, color: MUTED }}>15:00</span>
-                  <span className="text-[13.5px]" style={{ color: SOFT }}>Andrés S. · reservó solo desde tu link</span>
-                </div>
+              </div>
+              <div className="flex items-center gap-2 mt-4 pt-4" style={{ borderTop: `1px solid ${HAIR}` }}>
+                <span className="w-[5px] h-[5px] rounded-full" style={{ background: BRAND, animation: "pulseRing 2.4s infinite" }} />
+                <span className="text-[12.5px]" style={{ color: MUTED }}>Sincronizado con tu Google Calendar</span>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      <DayJourney />
+      {/* ═══════════ STRIP DE CONFIANZA ═══════════ */}
+      <section className="px-5 sm:px-8" style={{ borderTop: `1px solid ${HAIR}`, borderBottom: `1px solid ${HAIR}` }}>
+        <div className="max-w-6xl mx-auto flex flex-wrap items-center justify-center sm:justify-between gap-x-8 gap-y-2 py-5 text-[13px] font-medium" style={{ color: DIM }}>
+          <span>Hecho en Uruguay</span>
+          <span>Recordatorios automáticos por WhatsApp</span>
+          <span className="hidden sm:inline">Sincroniza con Google Calendar y iPhone</span>
+          <span>Cobros con Mercado Pago</span>
+        </div>
+      </section>
+
+      {/* ═══════════ TRES PILARES ═══════════ */}
+      <section id="funciones" className="px-5 sm:px-8 py-16 lg:py-24 scroll-mt-20">
+        <div className="max-w-6xl mx-auto">
+          <ScrollReveal>
+            <span className="text-[11px] sm:text-xs font-semibold uppercase" style={{ ...GROTESK, letterSpacing: "0.1em", color: TEAL_DEEP }}>Cómo funciona</span>
+            <h2 className="mt-3 text-[30px] leading-[1.1] sm:text-5xl font-bold tracking-tight max-w-xl" style={{ ...GROTESK, letterSpacing: "-0.025em" }}>
+              Vos atendés.<br />El sistema hace el resto.
+            </h2>
+          </ScrollReveal>
+          <div className="mt-10 lg:mt-14 grid grid-cols-1 md:grid-cols-3 gap-5">
+            {[
+              {
+                icon: MessageCircle,
+                title: "Recordatorios que salen solos",
+                text: "Cada paciente recibe su confirmación y su recordatorio por WhatsApp, con tu nombre. Menos ausencias, cero mensajes manuales.",
+              },
+              {
+                icon: CreditCard,
+                title: "Cobros al día",
+                text: "Sabés quién pagó y quién debe, sin planillas. El paciente puede pagar online y el sistema reclama lo pendiente por vos.",
+              },
+              {
+                icon: Link2,
+                title: "Reservas por link",
+                text: "Compartís tu link, el paciente elige un hueco libre y la cita aparece en tu agenda. También de madrugada, también un domingo.",
+              },
+            ].map((f, i) => (
+              <ScrollReveal key={f.title} delay={i * 110}>
+                <div className="h-full rounded-[18px] bg-white p-7 transition-transform duration-300 hover:-translate-y-1" style={{ border: CARD_BORDER }}>
+                  <f.icon className="w-[26px] h-[26px]" style={{ color: BRAND }} strokeWidth={1.8} />
+                  <p className="mt-4 mb-0 font-semibold text-[17px]" style={GROTESK}>{f.title}</p>
+                  <p className="mt-2 mb-0 text-[14.5px] leading-relaxed" style={{ color: MUTED }}>{f.text}</p>
+                </div>
+              </ScrollReveal>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {/* ═══════════ SINCRONIZACIÓN ═══════════ */}
-      <section className="relative px-5 sm:px-8 py-16 lg:py-24 z-10" style={{ background: "#070b09", borderTop: "1px solid rgba(255,255,255,.05)" }}>
+      <section className="px-5 sm:px-8 py-16 lg:py-24" style={{ background: BG2 }}>
         <div className="max-w-6xl mx-auto flex flex-col lg:flex-row items-center gap-10 lg:gap-16">
           <div className="flex-1 min-w-0">
             <ScrollReveal direction="left">
-              <span className="text-[11px] sm:text-xs font-semibold uppercase" style={{ ...GROTESK, letterSpacing: "0.16em", color: GREEN }}>Sincronización en vivo</span>
+              <span className="text-[11px] sm:text-xs font-semibold uppercase" style={{ ...GROTESK, letterSpacing: "0.1em", color: TEAL_DEEP }}>Sincronización</span>
               <h2 className="mt-3 text-[30px] leading-[1.1] sm:text-5xl font-bold tracking-tight" style={{ ...GROTESK, letterSpacing: "-0.025em" }}>
-                Agendás acá.<br />Aparece en todos lados.
+                Seguí usando el calendario de siempre.
               </h2>
               <p className="mt-4 text-[14.5px] sm:text-base leading-relaxed max-w-md" style={{ color: MUTED }}>
-                Conexión directa y bidireccional con Google Calendar y el calendario del iPhone. Borrás allá, se borra acá. Al instante.
+                Conectás tu Google Calendar o el calendario del iPhone una sola vez. Cada cita nueva aparece allá al instante, y tus eventos personales se respetan al agendar.
               </p>
               <div className="mt-6 flex flex-col gap-2.5">
                 {[
-                  "Instantáneo y en los dos sentidos",
-                  "Te avisa si vas a pisar un evento tuyo",
-                  "Se conecta en un click, sin links raros",
+                  "Sincronización instantánea en los dos sentidos",
+                  "Te avisa si una cita choca con algo tuyo",
+                  "Nada clínico viaja: solo nombre, tipo y hora",
                 ].map((t) => (
-                  <span key={t} className="inline-flex items-center gap-2.5 text-[13.5px] sm:text-[15px] font-medium" style={{ color: SOFT }}>
-                    <Check className="w-4 h-4 shrink-0" style={{ color: GREEN }} strokeWidth={2.4} />
+                  <span key={t} className="inline-flex items-center gap-2.5 text-[13.5px] sm:text-[15px] font-medium">
+                    <Check className="w-4 h-4 shrink-0" style={{ color: BRAND }} strokeWidth={2.4} />
                     {t}
                   </span>
                 ))}
@@ -293,18 +325,18 @@ const Landing = () => {
           <div className="flex-1 min-w-0 w-full">
             <ScrollReveal direction="right" delay={120}>
               {/* Diagrama: Google ↔ Consultorio ↔ iPhone con puntos viajando */}
-              <div className="relative rounded-3xl px-4 sm:px-8 py-8 sm:py-12" style={{ background: CARD, border: "1px solid rgba(255,255,255,.07)" }}>
+              <div className="relative rounded-[22px] bg-white px-4 sm:px-8 py-8 sm:py-12" style={{ border: CARD_BORDER, boxShadow: "0 30px 60px -34px rgba(22,33,28,.16)" }}>
                 <div className="flex items-center justify-between">
                   <div className="flex flex-col items-center gap-2 w-[88px] sm:w-[130px]">
-                    <span className="flex items-center justify-center w-[52px] h-[52px] sm:w-[68px] sm:h-[68px] rounded-2xl bg-white">
+                    <span className="flex items-center justify-center w-[52px] h-[52px] sm:w-[68px] sm:h-[68px] rounded-2xl bg-white" style={{ border: `1px solid ${HAIR2}` }}>
                       <svg className="w-6 h-6 sm:w-8 sm:h-8" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.7 1.2 9.2 3.6l6.9-6.9C35.9 2.4 30.5 0 24 0 14.6 0 6.5 5.4 2.6 13.2l8 6.2C12.4 13.7 17.7 9.5 24 9.5z" /><path fill="#4285F4" d="M47 24.6c0-1.6-.2-3.1-.4-4.6H24v9h12.9c-.6 3-2.3 5.5-4.8 7.2l7.7 6c4.5-4.2 7.2-10.3 7.2-17.6z" /><path fill="#FBBC05" d="M10.5 28.6a14.5 14.5 0 0 1 0-9.2l-8-6.2a24 24 0 0 0 0 21.6l8-6.2z" /><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.7-6c-2.1 1.5-4.9 2.3-8.2 2.3-6.3 0-11.6-4.2-13.5-9.9l-8 6.2C6.5 42.6 14.6 48 24 48z" /></svg>
                     </span>
                     <span className="text-[10.5px] sm:text-xs text-center" style={{ color: MUTED }}>Google Calendar</span>
                   </div>
                   <div className="flex flex-col items-center gap-2">
                     <span
-                      className="flex items-center justify-center w-[62px] h-[62px] sm:w-[84px] sm:h-[84px] rounded-[22px] font-bold text-[22px] sm:text-3xl"
-                      style={{ ...GROTESK, background: `linear-gradient(135deg, ${GREEN}, ${BRAND})`, color: INK, animation: "pulseRing 2.6s infinite" }}
+                      className="flex items-center justify-center w-[62px] h-[62px] sm:w-[84px] sm:h-[84px] rounded-[22px] font-bold text-[22px] sm:text-3xl text-white"
+                      style={{ ...GROTESK, background: `linear-gradient(135deg, ${BRAND}, ${TEAL_DEEP})`, animation: "pulseRing 2.6s infinite" }}
                     >
                       C
                     </span>
@@ -318,154 +350,37 @@ const Landing = () => {
                   </div>
                 </div>
                 {/* Líneas punteadas con puntos animados */}
-                <div className="absolute left-[86px] right-[52%] sm:left-[130px] top-[58px] sm:top-[82px] h-[2px]" style={{ background: "repeating-linear-gradient(90deg, rgba(47,181,131,.35) 0 6px, transparent 6px 12px)" }}>
-                  <span className="absolute -top-[3px] w-2 h-2 rounded-full" style={{ background: GREEN, boxShadow: "0 0 10px rgba(47,181,131,.9)", animation: "dotGo 2.8s linear infinite" }} />
+                <div className="absolute left-[86px] right-[52%] sm:left-[130px] top-[58px] sm:top-[82px] h-[2px]" style={{ background: "repeating-linear-gradient(90deg, rgba(31,147,141,.35) 0 6px, transparent 6px 12px)" }}>
+                  <span className="absolute -top-[3px] w-2 h-2 rounded-full" style={{ background: BRAND, boxShadow: "0 0 10px rgba(31,147,141,.8)", animation: "dotGo 2.8s linear infinite" }} />
                 </div>
-                <div className="absolute left-[52%] right-[86px] sm:right-[130px] top-[58px] sm:top-[82px] h-[2px]" style={{ background: "repeating-linear-gradient(90deg, rgba(47,181,131,.35) 0 6px, transparent 6px 12px)" }}>
-                  <span className="absolute -top-[3px] w-2 h-2 rounded-full" style={{ background: GREEN, boxShadow: "0 0 10px rgba(47,181,131,.9)", animation: "dotBack 2.8s linear infinite .9s" }} />
+                <div className="absolute left-[52%] right-[86px] sm:right-[130px] top-[58px] sm:top-[82px] h-[2px]" style={{ background: "repeating-linear-gradient(90deg, rgba(31,147,141,.35) 0 6px, transparent 6px 12px)" }}>
+                  <span className="absolute -top-[3px] w-2 h-2 rounded-full" style={{ background: BRAND, boxShadow: "0 0 10px rgba(31,147,141,.8)", animation: "dotBack 2.8s linear infinite .9s" }} />
                 </div>
-              </div>
-            </ScrollReveal>
-          </div>
-        </div>
-      </section>
-
-      {/* ═══════════ LINK PÚBLICO DE RESERVAS ═══════════ */}
-      <section className="relative overflow-hidden px-5 sm:px-8 py-16 lg:py-24 z-10">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -bottom-44 -left-32 w-[420px] h-[420px] rounded-full"
-          style={{ background: "radial-gradient(circle, rgba(31,147,141,.09) 0%, rgba(31,147,141,0) 65%)", filter: "blur(16px)" }}
-        />
-        <div className="relative max-w-6xl mx-auto flex flex-col lg:flex-row items-center gap-10 lg:gap-16">
-          <div className="flex-1 min-w-0">
-            <ScrollReveal direction="left">
-              <span className="text-[11px] sm:text-xs font-semibold uppercase" style={{ ...GROTESK, letterSpacing: "0.16em", color: GREEN }}>Tu link de reservas</span>
-              <h2 className="mt-3 text-[30px] leading-[1.1] sm:text-5xl font-bold tracking-tight" style={{ ...GROTESK, letterSpacing: "-0.025em" }}>
-                Tus pacientes<br />agendan solos.
-              </h2>
-              <p className="mt-4 text-[14.5px] sm:text-base leading-relaxed max-w-md" style={{ color: MUTED }}>
-                Compartís un link y listo: eligen un horario libre real de tu agenda y la cita queda confirmada. Sin idas y vueltas por WhatsApp.
-              </p>
-              <div className="mt-6 inline-flex items-center gap-3 px-4 py-3.5 rounded-2xl max-w-full" style={{ background: CARD, border: "1px solid rgba(47,181,131,.25)" }}>
-                <Link2 className="w-4 h-4 shrink-0" style={{ color: GREEN }} />
-                <span className="text-[13px] sm:text-[15px] font-semibold truncate" style={{ ...GROTESK, color: GREEN_SOFT }}>
-                  consultoriodigital.app/tu-consultorio
-                </span>
-              </div>
-            </ScrollReveal>
-          </div>
-          <div className="flex-1 min-w-0 w-full">
-            <div className="flex flex-col gap-3">
-              {[
-                "El paciente abre tu link y ve solo los horarios que de verdad tenés libres.",
-                "Elige, confirma, y la cita entra directo a tu agenda (y a tu Google Calendar).",
-                "Antes de la sesión le llega el recordatorio automático por WhatsApp.",
-              ].map((t, i) => (
-                <ScrollReveal key={i} direction="right" delay={i * 130}>
-                  <div
-                    className="relative overflow-hidden flex items-center gap-4 rounded-2xl px-4 sm:px-5 py-5"
-                    style={{ background: CARD, border: "1px solid rgba(255,255,255,.07)" }}
-                  >
-                    {/* Número gigante fantasma de fondo */}
-                    <span
-                      aria-hidden
-                      className="absolute -right-2 -top-7 font-bold select-none pointer-events-none"
-                      style={{ ...GROTESK, fontSize: 96, lineHeight: 1, color: "rgba(47,181,131,.07)" }}
-                    >
-                      {i + 1}
-                    </span>
-                    <span
-                      className="relative flex items-center justify-center w-9 h-9 rounded-full font-bold text-sm shrink-0"
-                      style={{ ...GROTESK, background: "rgba(47,181,131,.12)", border: "1px solid rgba(47,181,131,.3)", color: GREEN_SOFT }}
-                    >
-                      {i + 1}
-                    </span>
-                    <p className="relative text-[13.5px] sm:text-[15px] leading-relaxed font-medium m-0 pr-8" style={{ color: SOFT }}>{t}</p>
+                {/* Ejemplo concreto de lo que viaja */}
+                <div className="mt-7 flex flex-col gap-2">
+                  <div className="flex items-center gap-2.5 rounded-[10px] px-3.5 py-2.5" style={{ background: "#fdfdfb", border: "1px solid rgba(22,33,28,.07)" }}>
+                    <span className="w-[7px] h-[7px] rounded-full shrink-0" style={{ background: BRAND }} />
+                    <span className="text-[13px] font-medium truncate">Viernes 17:00 — Agustina</span>
+                    <span className="ml-auto text-[11px] shrink-0" style={{ color: DIM }}>recién agendada acá</span>
                   </div>
-                </ScrollReveal>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ═══════════ BENTO ═══════════ */}
-      <section id="funciones" className="relative px-5 sm:px-8 py-16 lg:py-24 z-10 scroll-mt-20" style={{ background: "#070b09", borderTop: "1px solid rgba(255,255,255,.05)" }}>
-        <div className="max-w-6xl mx-auto">
-          <ScrollReveal>
-            <h2 className="text-[30px] leading-[1.1] sm:text-5xl font-bold tracking-tight" style={{ ...GROTESK, letterSpacing: "-0.025em" }}>
-              Y todo lo demás, resuelto de fábrica.
-            </h2>
-          </ScrollReveal>
-          <div className="mt-8 lg:mt-10 grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
-            {[
-              {
-                icon: CreditCard,
-                title: "Cobrás sin perseguir a nadie",
-                text: "Link de pago con Mercado Pago, y el sistema reclama solo los vencidos. Sabés al peso quién te debe y cuánto.",
-                span: "col-span-2",
-                hl: true,
-              },
-              {
-                icon: MessageCircle,
-                title: "WhatsApp automático",
-                text: "Recordatorios que bajan las ausencias, sin que muevas un dedo.",
-                span: "",
-                hl: false,
-              },
-              {
-                icon: Users,
-                title: "Ficha del paciente",
-                text: "Historia, sesiones y pagos de cada paciente en un solo lugar.",
-                span: "",
-                hl: false,
-              },
-              {
-                icon: Shield,
-                title: "Tu marca, no la nuestra",
-                text: "Tu logo y tus colores en el panel y en el portal que ven tus pacientes. App instalable en el celular.",
-                span: "col-span-2 lg:col-span-3",
-                hl: true,
-              },
-              {
-                icon: Lock,
-                title: "Datos protegidos",
-                text: "La información clínica de tus pacientes, cifrada y solo tuya.",
-                span: "col-span-2 lg:col-span-1",
-                hl: false,
-              },
-              {
-                icon: BarChart3,
-                title: "Estadísticas de tu negocio",
-                text: "Cuánto facturaste, tu tasa de cobranza y qué pacientes se están enfriando.",
-                span: "col-span-2 lg:col-span-4",
-                hl: false,
-              },
-            ].map((f, i) => (
-              <ScrollReveal key={f.title} className={f.span} direction="scale" delay={(i % 4) * 90}>
-                <div
-                  className="h-full rounded-[20px] p-5 sm:p-6 transition-transform duration-300 hover:-translate-y-1"
-                  style={{ background: f.hl ? CARD_HL : CARD, border: f.hl ? "1px solid rgba(47,181,131,.11)" : "1px solid rgba(255,255,255,.07)" }}
-                >
-                  <span className="flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 rounded-[13px] mb-4" style={{ background: "rgba(47,181,131,.12)", color: GREEN }}>
-                    <f.icon className="w-5 h-5" />
-                  </span>
-                  <p className="m-0 font-semibold text-[15px] sm:text-[17px]" style={GROTESK}>{f.title}</p>
-                  <p className="mt-1.5 mb-0 text-[12.5px] sm:text-sm leading-relaxed" style={{ color: MUTED }}>{f.text}</p>
+                  <div className="flex items-center gap-2.5 rounded-[10px] px-3.5 py-2.5" style={{ background: "#fdfdfb", border: "1px solid rgba(22,33,28,.07)" }}>
+                    <span className="w-[7px] h-[7px] rounded-full shrink-0" style={{ background: DIM }} />
+                    <span className="text-[13px] font-medium truncate" style={{ color: MUTED }}>Dentista 15:00 — tuyo, de Google</span>
+                    <span className="ml-auto text-[11px] shrink-0" style={{ color: DIM }}>esa hora se bloquea</span>
+                  </div>
                 </div>
-              </ScrollReveal>
-            ))}
+              </div>
+            </ScrollReveal>
           </div>
         </div>
       </section>
 
       {/* ═══════════ PLANES ═══════════ */}
-      <section id="pricing" className="relative px-5 sm:px-8 py-16 lg:py-24 z-10 scroll-mt-20">
+      <section id="pricing" className="px-5 sm:px-8 py-16 lg:py-24 scroll-mt-20">
         <div className="max-w-6xl mx-auto">
           <ScrollReveal>
             <div className="text-center">
-              <span className="text-[11px] sm:text-xs font-semibold uppercase" style={{ ...GROTESK, letterSpacing: "0.16em", color: GREEN }}>Planes</span>
+              <span className="text-[11px] sm:text-xs font-semibold uppercase" style={{ ...GROTESK, letterSpacing: "0.1em", color: TEAL_DEEP }}>Planes</span>
               <h2 className="mt-3 text-[30px] leading-[1.1] sm:text-5xl font-bold tracking-tight" style={{ ...GROTESK, letterSpacing: "-0.025em" }}>
                 Un precio simple. Todo incluido.
               </h2>
@@ -473,20 +388,20 @@ const Landing = () => {
                 Todos incluyen el sistema completo. 7 días gratis, sin tarjeta.
               </p>
               {/* Toggle anual / mensual */}
-              <div className="mt-6 inline-flex gap-1 p-1 rounded-[14px]" style={{ background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.1)" }}>
+              <div className="mt-6 inline-flex gap-1 p-1 rounded-full bg-white" style={{ border: "1px solid rgba(22,33,28,.12)" }}>
                 <button
                   type="button"
                   onClick={() => setIsAnnual(true)}
-                  className="px-5 py-2.5 rounded-[11px] text-[13px] transition-colors"
-                  style={isAnnual ? { background: "#f2f7f4", color: "#0a120e", fontWeight: 600 } : { color: MUTED, fontWeight: 500 }}
+                  className="px-5 py-2.5 rounded-full text-[13px] transition-colors"
+                  style={isAnnual ? { background: INK, color: BG, fontWeight: 600 } : { color: MUTED, fontWeight: 500 }}
                 >
-                  Pago anual <span style={{ color: isAnnual ? BRAND : DIM }}>· ahorrás hasta 20%</span>
+                  Pago anual <span style={{ color: isAnnual ? "#7ce0b8" : DIM }}>· ahorrás hasta 20%</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsAnnual(false)}
-                  className="px-5 py-2.5 rounded-[11px] text-[13px] transition-colors"
-                  style={!isAnnual ? { background: "#f2f7f4", color: "#0a120e", fontWeight: 600 } : { color: MUTED, fontWeight: 500 }}
+                  className="px-5 py-2.5 rounded-full text-[13px] transition-colors"
+                  style={!isAnnual ? { background: INK, color: BG, fontWeight: 600 } : { color: MUTED, fontWeight: 500 }}
                 >
                   Pago mensual
                 </button>
@@ -494,54 +409,54 @@ const Landing = () => {
             </div>
           </ScrollReveal>
 
-          <div className="mt-10 flex flex-wrap justify-center gap-4 items-stretch">
+          <div className="mt-10 flex flex-wrap justify-center gap-5 items-stretch">
             {plans.map((plan) => {
               const price = isAnnual ? plan.priceAnnual : plan.priceMonthly;
               const other = isAnnual
                 ? `${formatPrice(plan.priceMonthly)} si pagás mes a mes`
                 : `${formatPrice(plan.priceAnnual)}/mes si pagás anual`;
               return (
-                <ScrollReveal key={plan.code} className="w-full max-w-[420px] sm:w-[320px] sm:max-w-none lg:w-[330px]">
+                <ScrollReveal key={plan.code} className="w-full max-w-[420px] sm:w-[320px] sm:max-w-none lg:w-[340px]">
                   <div
-                    className="relative h-full flex flex-col rounded-[20px] p-6"
+                    className="relative h-full flex flex-col rounded-[20px] bg-white p-7"
                     style={
                       plan.highlight
-                        ? { background: CARD_HL, border: "1px solid rgba(47,181,131,.4)", boxShadow: "0 24px 60px -24px rgba(47,181,131,.3)" }
-                        : { background: CARD, border: "1px solid rgba(255,255,255,.07)" }
+                        ? { border: `1.5px solid ${BRAND}`, boxShadow: "0 24px 50px -28px rgba(31,147,141,.45)" }
+                        : { border: CARD_BORDER }
                     }
                   >
                     {plan.highlight && (
                       <span
-                        className="absolute -top-3 left-1/2 -translate-x-1/2 px-3.5 py-1 rounded-full text-[11px] font-bold whitespace-nowrap"
-                        style={{ ...GROTESK, letterSpacing: "0.06em", background: `linear-gradient(135deg, ${GREEN}, ${BRAND})`, color: INK }}
+                        className="absolute -top-3 left-1/2 -translate-x-1/2 px-3.5 py-1 rounded-full text-[11px] font-bold whitespace-nowrap text-white"
+                        style={{ ...GROTESK, letterSpacing: "0.06em", background: BRAND }}
                       >
                         MÁS ELEGIDO
                       </span>
                     )}
-                    <p className="m-0 font-semibold text-base" style={{ ...GROTESK, color: plan.highlight ? GREEN_SOFT : "#f2f7f4" }}>{plan.name}</p>
-                    <p className="mt-3 mb-0 font-bold text-[32px] leading-none" style={GROTESK}>
+                    <p className="m-0 font-semibold text-base" style={{ ...GROTESK, color: plan.highlight ? TEAL_DEEP : INK }}>{plan.name}</p>
+                    <p className="mt-3 mb-0 font-bold text-[34px] leading-none" style={GROTESK}>
                       {formatPrice(price)}
                       <span className="text-[13px] font-medium" style={{ color: DIM, fontFamily: "'Instrument Sans', sans-serif" }}> /mes</span>
                     </p>
                     <p className="mt-1.5 mb-0 text-[11.5px]" style={{ color: DIM }}>
                       {isAnnual ? "pagando anual" : "pagando mes a mes"} · {other}
                     </p>
-                    <div className="mt-4 flex flex-col gap-2 text-[13px] leading-snug" style={{ color: MUTED }}>
-                      <span className="inline-flex items-start gap-2"><Check className="w-3.5 h-3.5 mt-0.5 shrink-0" style={{ color: GREEN }} />{plan.patients}</span>
-                      <span className="inline-flex items-start gap-2"><Check className="w-3.5 h-3.5 mt-0.5 shrink-0" style={{ color: GREEN }} />{plan.whatsapps}</span>
-                      <span className="inline-flex items-start gap-2"><Check className="w-3.5 h-3.5 mt-0.5 shrink-0" style={{ color: GREEN }} />{plan.professionals}</span>
-                      <span className="inline-flex items-start gap-2"><Check className="w-3.5 h-3.5 mt-0.5 shrink-0" style={{ color: GREEN }} />Sistema completo: agenda, cobros, portal y estadísticas</span>
+                    <div className="mt-5 pt-5 flex flex-col gap-2.5 text-[13.5px] leading-snug" style={{ color: MUTED, borderTop: `1px solid ${HAIR}` }}>
+                      <span className="inline-flex items-start gap-2"><Check className="w-3.5 h-3.5 mt-0.5 shrink-0" style={{ color: BRAND }} />{plan.patients}</span>
+                      <span className="inline-flex items-start gap-2"><Check className="w-3.5 h-3.5 mt-0.5 shrink-0" style={{ color: BRAND }} />{plan.whatsapps}</span>
+                      <span className="inline-flex items-start gap-2"><Check className="w-3.5 h-3.5 mt-0.5 shrink-0" style={{ color: BRAND }} />{plan.professionals}</span>
+                      <span className="inline-flex items-start gap-2"><Check className="w-3.5 h-3.5 mt-0.5 shrink-0" style={{ color: BRAND }} />Sistema completo: agenda, cobros, portal y estadísticas</span>
                     </div>
-                    <div className="mt-auto pt-5">
+                    <div className="mt-auto pt-6">
                       <a
                         href={waPlanUrl(plan.name, formatPrice(price), isAnnual)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center justify-center gap-2 h-11 rounded-[13px] font-semibold text-[13.5px] transition-transform hover:scale-[1.02]"
+                        className="flex items-center justify-center gap-2 h-[46px] rounded-xl font-semibold text-[14px] transition-transform hover:scale-[1.02]"
                         style={
                           plan.highlight
-                            ? { background: `linear-gradient(135deg, ${GREEN}, ${BRAND})`, color: INK, boxShadow: "0 10px 28px rgba(47,181,131,.22)" }
-                            : { background: "rgba(255,255,255,.05)", border: "1px solid rgba(255,255,255,.12)", color: "#f2f7f4" }
+                            ? { background: BRAND, color: "#ffffff", boxShadow: "0 10px 24px -10px rgba(31,147,141,.6)" }
+                            : { border: "1px solid rgba(22,33,28,.16)", color: INK }
                         }
                       >
                         <MessageCircle className="w-4 h-4" />
@@ -558,7 +473,7 @@ const Landing = () => {
           </div>
 
           <ScrollReveal>
-            <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-3 rounded-[20px] px-6 py-5" style={{ background: CARD, border: "1px solid rgba(255,255,255,.07)" }}>
+            <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-3 rounded-[20px] bg-white px-6 py-5" style={{ border: CARD_BORDER }}>
               <div>
                 <p className="m-0 font-semibold text-[15px]" style={GROTESK}>¿Un equipo más grande?</p>
                 <p className="m-0 mt-1 text-[13px]" style={{ color: MUTED }}>Armamos un plan personalizado para tu clínica o centro.</p>
@@ -567,8 +482,8 @@ const Landing = () => {
                 href={WA_PERSONALIZADO}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-5 h-11 rounded-[13px] font-semibold text-[13.5px] shrink-0"
-                style={{ background: "rgba(47,181,131,.1)", border: "1px solid rgba(47,181,131,.3)", color: GREEN_SOFT }}
+                className="inline-flex items-center gap-2 px-5 h-11 rounded-full font-semibold text-[13.5px] shrink-0"
+                style={{ background: "rgba(31,147,141,.08)", border: "1px solid rgba(31,147,141,.3)", color: TEAL_DEEP }}
               >
                 <MessageCircle className="w-4 h-4" />
                 Charlemos por WhatsApp
@@ -582,25 +497,25 @@ const Landing = () => {
       </section>
 
       {/* ═══════════ FAQ ═══════════ */}
-      <section id="faq" className="relative px-5 sm:px-8 py-16 lg:py-24 z-10 scroll-mt-20" style={{ background: "#070b09", borderTop: "1px solid rgba(255,255,255,.05)" }}>
+      <section id="faq" className="px-5 sm:px-8 py-16 lg:py-24 scroll-mt-20" style={{ borderTop: `1px solid ${HAIR}` }}>
         <div className="max-w-3xl mx-auto">
           <ScrollReveal>
             <h2 className="text-[26px] sm:text-4xl font-bold tracking-tight mb-7" style={{ ...GROTESK, letterSpacing: "-0.02em" }}>
-              Preguntas de siempre
+              Preguntas frecuentes
             </h2>
           </ScrollReveal>
-          <Accordion type="single" collapsible className="space-y-3">
+          <Accordion type="single" collapsible>
             {faqItems.map((item, i) => (
               <ScrollReveal key={i}>
                 <AccordionItem
                   value={`faq-${i}`}
-                  className="rounded-2xl px-5 border-0"
-                  style={{ background: CARD, border: "1px solid rgba(255,255,255,.07)" }}
+                  className="border-0"
+                  style={{ borderTop: `1px solid ${HAIR2}` }}
                 >
-                  <AccordionTrigger className="text-left text-sm sm:text-[15px] font-semibold hover:no-underline py-4" style={GROTESK}>
+                  <AccordionTrigger className="text-left text-sm sm:text-[15.5px] font-semibold hover:no-underline py-5" style={GROTESK}>
                     {item.question}
                   </AccordionTrigger>
-                  <AccordionContent className="text-[13px] sm:text-sm leading-relaxed pb-4" style={{ color: MUTED }}>
+                  <AccordionContent className="text-[13px] sm:text-sm leading-relaxed pb-5" style={{ color: MUTED }}>
                     {item.answer}
                   </AccordionContent>
                 </AccordionItem>
@@ -611,81 +526,80 @@ const Landing = () => {
       </section>
 
       {/* ═══════════ CTA FINAL ═══════════ */}
-      <section className="relative overflow-hidden px-5 sm:px-8 py-20 lg:py-28 z-10 text-center">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 w-[420px] h-[340px] rounded-full"
-          style={{ background: "radial-gradient(circle, rgba(47,181,131,.11) 0%, rgba(47,181,131,0) 65%)", filter: "blur(16px)" }}
-        />
-        <div className="relative max-w-2xl mx-auto">
+      <section className="px-5 sm:px-8 pb-20 lg:pb-24">
+        <div className="max-w-6xl mx-auto">
           <ScrollReveal>
-            <h2 className="text-[32px] leading-[1.08] sm:text-5xl font-bold tracking-tight" style={{ ...GROTESK, letterSpacing: "-0.025em" }}>
-              ¿Lo vemos juntos?
-            </h2>
-            <p className="mt-4 text-[14.5px] sm:text-base leading-relaxed max-w-md mx-auto" style={{ color: MUTED }}>
-              Una demo de 10 minutos por WhatsApp y te vas con tu agenda armada.
-            </p>
-            <div className="mt-7 flex flex-col sm:flex-row items-center justify-center gap-3">
-              <a
-                href={WA_DEMO}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full sm:w-auto flex items-center justify-center gap-2 h-14 px-9 rounded-2xl font-semibold text-[15px] transition-transform hover:scale-[1.03]"
-                style={{ background: `linear-gradient(135deg, ${GREEN}, ${BRAND})`, color: INK, boxShadow: "0 16px 44px rgba(47,181,131,.24)" }}
-              >
-                <MessageCircle className="w-[17px] h-[17px]" />
-                Agendar mi demo
-              </a>
-              <a
-                href="/acceso"
-                className="w-full sm:w-auto flex items-center justify-center h-14 px-9 rounded-2xl font-medium text-[14.5px] transition-colors hover:bg-white/[0.07]"
-                style={{ background: "rgba(255,255,255,.04)", border: "1px solid rgba(255,255,255,.1)", color: SOFT }}
-              >
-                Ingresar
-              </a>
-            </div>
-            <div className="flex justify-center mt-6">
-              <InstallAppButton className="h-10 px-5 rounded-full text-[13px]" label="Instalar la app en tu dispositivo" />
+            <div className="rounded-[26px] px-6 py-14 sm:py-16 text-center" style={{ background: INK }}>
+              <h2 className="text-[30px] leading-[1.12] sm:text-5xl font-bold tracking-tight m-0" style={{ ...GROTESK, letterSpacing: "-0.025em", color: BG }}>
+                Empezá hoy.<br />Mañana tu agenda ya trabaja sola.
+              </h2>
+              <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+                <a
+                  href="/auth"
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 h-[52px] px-8 rounded-full font-bold text-[15px] transition-transform hover:scale-[1.03]"
+                  style={{ background: "#2fb583", color: "#071009" }}
+                >
+                  Probar gratis 7 días
+                  <ArrowRight className="w-4 h-4" />
+                </a>
+                <a
+                  href={WA_DEMO}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 h-[52px] px-7 rounded-full font-semibold text-[14.5px]"
+                  style={{ border: "1px solid rgba(251,250,247,.25)", color: BG }}
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  Hablar por WhatsApp
+                </a>
+              </div>
+              <p className="mt-5 mb-0 text-[13px]" style={{ color: "rgba(251,250,247,.5)" }}>
+                Sin tarjeta · Cancelás cuando quieras
+              </p>
+              <div className="flex justify-center mt-6">
+                <InstallAppButton className="h-10 px-5 rounded-full text-[13px]" label="Instalar la app en tu dispositivo" />
+              </div>
             </div>
           </ScrollReveal>
         </div>
       </section>
 
       {/* ═══════════ FOOTER ═══════════ */}
-      <footer className="relative px-4 sm:px-6 py-8 sm:py-12 border-t border-white/5 z-10">
+      <footer className="px-4 sm:px-6 py-8 sm:py-12" style={{ borderTop: `1px solid ${HAIR}` }}>
         <div className="max-w-7xl mx-auto flex flex-col items-center gap-4">
-          <div className="flex items-center gap-2 text-gray-500 text-xs">
+          <div className="flex items-center gap-2 text-xs" style={{ color: DIM }}>
             <span className="text-lg">🇺🇾</span>
             <span>Disponible únicamente en Uruguay</span>
           </div>
-          <p className="text-center text-gray-600 text-xs sm:text-sm font-light">
+          <p className="text-center text-xs sm:text-sm font-light m-0" style={{ color: DIM }}>
             © {new Date().getFullYear()} Consultorio Digital
           </p>
-          <div className="flex items-center gap-4 text-xs text-gray-500">
-            <a href="/terminos" className="hover:text-gray-300 transition-colors">
+          <div className="flex items-center gap-4 text-xs" style={{ color: MUTED }}>
+            <a href="/terminos" className="transition-colors hover:opacity-70" style={{ color: MUTED }}>
               Términos y Condiciones
             </a>
-            <span className="text-gray-700">·</span>
-            <a href="/privacidad" className="hover:text-gray-300 transition-colors">
+            <span style={{ color: DIM }}>·</span>
+            <a href="/privacidad" className="transition-colors hover:opacity-70" style={{ color: MUTED }}>
               Política de Privacidad
             </a>
-            <span className="text-gray-700">·</span>
-            <a href="/seguridad" className="hover:text-gray-300 transition-colors">
+            <span style={{ color: DIM }}>·</span>
+            <a href="/seguridad" className="transition-colors hover:opacity-70" style={{ color: MUTED }}>
               Seguridad
             </a>
           </div>
-          <div className="flex items-center gap-2 text-gray-500 text-xs">
+          <div className="flex items-center gap-2 text-xs" style={{ color: DIM }}>
             <span>Sistema desarrollado por</span>
             <a
               href="https://www.digitalbuilders.net"
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:opacity-80 transition-opacity"
+              className="hover:opacity-80 transition-opacity rounded-xl px-3 py-1.5"
+              style={{ background: INK }}
             >
               <img
                 src="/assets/logo-digitalbuilders.webp"
                 alt="Digital Builders"
-                className="h-10 sm:h-12"
+                className="h-8 sm:h-10"
               />
             </a>
           </div>
@@ -712,11 +626,12 @@ const Landing = () => {
           className="w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-transform duration-300 hover:scale-110"
           style={{
             backgroundColor: "#25d366",
-            boxShadow: "0 4px 20px rgba(37, 211, 102, 0.4)",
-            animation: "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+            boxShadow: "0 8px 25px rgba(37, 211, 102, 0.4)",
           }}
         >
-          <MessageCircle className="w-7 h-7 text-white" strokeWidth={2.2} />
+          <svg viewBox="0 0 24 24" className="w-7 h-7 fill-white" xmlns="http://www.w3.org/2000/svg">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.52.149-.174.198-.298.297-.497.1-.198.05-.371-.025-.52-.074-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z" />
+          </svg>
         </div>
       </a>
     </div>

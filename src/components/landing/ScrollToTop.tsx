@@ -17,17 +17,17 @@ export function ScrollToTop() {
     <button
       onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
       aria-label="Subir al inicio"
-      className={`fixed bottom-6 left-6 z-40 w-11 h-11 rounded-full flex items-center justify-center transition-all duration-300 hover:bg-white/10 ${
+      className={`fixed bottom-6 left-6 z-40 w-11 h-11 rounded-full flex items-center justify-center transition-all duration-300 hover:bg-black/10 ${
         show ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3 pointer-events-none"
       }`}
       style={{
-        backgroundColor: "rgba(255,255,255,0.06)",
+        backgroundColor: "rgba(22,33,28,0.05)",
         backdropFilter: "blur(10px)",
         WebkitBackdropFilter: "blur(10px)",
-        border: "1px solid rgba(255,255,255,0.12)",
+        border: "1px solid rgba(22,33,28,0.14)",
       }}
     >
-      <ArrowUp className="w-5 h-5 text-white/80" />
+      <ArrowUp className="w-5 h-5 text-black/70" />
     </button>
   );
 }
