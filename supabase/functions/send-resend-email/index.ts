@@ -98,11 +98,54 @@ function btn(label: string, url: string, color: string): string {
   </div>`;
 }
 
-function tplAppointmentConfirmation(branding: BrandingInfo, d: any): { subject: string; html: string } {
+// "Agregar a mi calendario" del paciente: link de plantilla de Google Calendar
+// y un .ics adjunto (para iPhone/Mac/Outlook). Hora local de Uruguay, sin
+// permisos ni OAuth. Requiere isoDate (YYYY-MM-DD), time y endTime (HH:MM).
+const icsCompact = (isoDate: string, hm: string) =>
+  `${isoDate.replace(/-/g, "")}T${String(hm).slice(0, 5).replace(":", "")}00`;
+
+function buildCalendarBits(branding: BrandingInfo, d: any):
+  | { gUrl: string; attachment: { filename: string; content: string } }
+  | null {
+  if (!d?.isoDate || !d?.time || !d?.endTime) return null;
+  const title = `${d.serviceName ? `${d.serviceName} — ` : ""}${branding.name}`;
+  const gUrl =
+    `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}` +
+    `&dates=${icsCompact(d.isoDate, d.time)}/${icsCompact(d.isoDate, d.endTime)}&ctz=America/Montevideo`;
+  const ics = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Consultorio Digital//Reserva//ES",
+    "BEGIN:VEVENT",
+    `UID:${crypto.randomUUID()}@consultoriodigital.app`,
+    `DTSTART:${icsCompact(d.isoDate, d.time)}`,
+    `DTEND:${icsCompact(d.isoDate, d.endTime)}`,
+    `SUMMARY:${title.replace(/([,;\\])/g, "\\$1")}`,
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ].join("\r\n");
+  const bytes = new TextEncoder().encode(ics);
+  let bin = "";
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return { gUrl, attachment: { filename: "cita.ics", content: btoa(bin) } };
+}
+
+function tplAppointmentConfirmation(
+  branding: BrandingInfo,
+  d: any,
+): { subject: string; html: string; attachments?: { filename: string; content: string }[] } {
   const accent = `hsl(${branding.primaryColor})`;
   const modality = d.modality === "online" ? "Online" : "Presencial";
   const locBlock = d.location
     ? `<p style="margin:6px 0;color:#374151;"><strong>${d.modality === "online" ? "Link" : "Dirección"}:</strong> ${escapeHtml(d.location)}</p>`
+    : "";
+  const cal = buildCalendarBits(branding, d);
+  const calBlock = cal
+    ? `
+    ${btn("Agregar a mi Google Calendar", cal.gUrl, accent)}
+    <p style="color:#6b7280;font-size:12.5px;line-height:1.5;margin:10px 0 0;">
+      ¿Usás iPhone u otro calendario? Abrí el archivo adjunto <strong>cita.ics</strong> y la cita se guarda sola.
+    </p>`
     : "";
   const body = `
     <h1 style="font-size:20px;margin:0 0 12px;">Hola ${escapeHtml(d.patientName || "")},</h1>
@@ -113,10 +156,15 @@ function tplAppointmentConfirmation(branding: BrandingInfo, d: any): { subject: 
       <p style="margin:6px 0;color:#374151;"><strong>Modalidad:</strong> ${escapeHtml(modality)}</p>
       ${locBlock}
     </div>
-    <p style="color:#374151;line-height:1.55;margin:0 0 6px;">Si necesitás reprogramar o cancelar, contactá directamente al consultorio.</p>
+    ${calBlock}
+    <p style="color:#374151;line-height:1.55;margin:16px 0 6px;">Si necesitás reprogramar o cancelar, contactá directamente al consultorio.</p>
     <p style="color:#6b7280;font-size:13px;margin-top:18px;">¡Te esperamos!</p>
   `;
-  return { subject: `Confirmación de cita — ${branding.name}`, html: shell(branding, body) };
+  return {
+    subject: `Confirmación de cita — ${branding.name}`,
+    html: shell(branding, body),
+    attachments: cal ? [cal.attachment] : undefined,
+  };
 }
 
 function tplAppointmentReminder(branding: BrandingInfo, d: any): { subject: string; html: string } {
@@ -227,9 +275,10 @@ Deno.serve(async (req) => {
 
     let subject = "";
     let html = "";
+    let attachments: { filename: string; content: string }[] | undefined;
 
     if (template === "appointment_confirmation") {
-      ({ subject, html } = tplAppointmentConfirmation(branding, data || {}));
+      ({ subject, html, attachments } = tplAppointmentConfirmation(branding, data || {}));
     } else if (template === "appointment_reminder") {
       ({ subject, html } = tplAppointmentReminder(branding, data || {}));
     } else if (template === "patient_invite") {
@@ -256,6 +305,7 @@ Deno.serve(async (req) => {
         to: [recipient],
         subject,
         html,
+        ...(attachments ? { attachments } : {}),
       }),
     });
 

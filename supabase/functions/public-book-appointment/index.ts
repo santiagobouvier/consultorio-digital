@@ -387,10 +387,15 @@ serve(async (req) => {
       }
     }
 
-    // Best-effort: mail de confirmación al paciente
+    // Best-effort: mail de confirmación al paciente (con "agregar a mi
+    // calendario": link de Google + .ics adjunto, que arma send-resend-email
+    // a partir de isoDate/time/endTime)
     try {
       const [y, m, d] = date.split("-").map(Number);
       const fmtDate = `${String(d).padStart(2, "0")}/${String(m).padStart(2, "0")}/${y}`;
+      const [sh, sm] = String(startTime).split(":").map(Number);
+      const endTotal = sh * 60 + sm + Number(service.duration_minutes || 60);
+      const endTimeStr = `${String(Math.floor(endTotal / 60) % 24).padStart(2, "0")}:${String(endTotal % 60).padStart(2, "0")}`;
       await fetch(`${supabaseUrl}/functions/v1/send-resend-email`, {
         method: "POST",
         headers: {
@@ -407,6 +412,9 @@ serve(async (req) => {
             time: startTime,
             modality,
             location: null,
+            isoDate: date,
+            endTime: endTimeStr,
+            serviceName: service.name,
           },
         }),
       });
