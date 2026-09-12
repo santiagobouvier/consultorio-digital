@@ -8,7 +8,40 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, CalendarDays, CheckCircle2, Clock, CreditCard, Loader2, Stethoscope, Video, MapPin } from "lucide-react";
+import { ArrowLeft, CalendarDays, CheckCircle2, Clock, CreditCard, Loader2, Smartphone, Stethoscope, Video, MapPin } from "lucide-react";
+
+// ── "Agregar a mi calendario" del paciente ──
+// Sin permisos ni OAuth: un link de plantilla de Google Calendar y un archivo
+// .ics para iPhone/Mac/Outlook. Hora local (los pacientes están en Uruguay).
+const compactLocal = (day: string, time: string) =>
+  `${day.replace(/-/g, "")}T${time.slice(0, 5).replace(":", "")}00`;
+
+const googleCalUrl = (title: string, day: string, start: string, end: string) =>
+  `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${compactLocal(day, start)}/${compactLocal(day, end)}&ctz=America/Montevideo`;
+
+const downloadIcs = (title: string, day: string, start: string, end: string) => {
+  const ics = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Consultorio Digital//Reserva//ES",
+    "BEGIN:VEVENT",
+    `UID:${Date.now()}@consultoriodigital.app`,
+    `DTSTART:${compactLocal(day, start)}`,
+    `DTEND:${compactLocal(day, end)}`,
+    `SUMMARY:${title.replace(/([,;\\])/g, "\\$1")}`,
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ].join("\r\n");
+  const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "cita.ics";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+};
 import LoadingPage from "@/components/LoadingPage";
 import { toast } from "sonner";
 import NotFound from "./NotFound";
@@ -567,6 +600,50 @@ const PublicBooking = ({ demo = false, embed = false }: { demo?: boolean; embed?
                 <p className="text-muted-foreground">
                   {formatTime(selectedStart.start_time)} – {formatTime(selectedStart.end_time)}
                 </p>
+              </div>
+            )}
+            {/* La cita también en SU calendario: un toque, sin cuentas ni permisos */}
+            {selectedStart && (
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">
+                  Guardala en tu calendario así no se te pasa:
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    variant="outline"
+                    className="gap-1.5"
+                    onClick={() =>
+                      window.open(
+                        googleCalUrl(
+                          `${selectedService?.name ?? "Sesión"} — ${clinicName}`,
+                          selectedStart.day,
+                          selectedStart.start_time,
+                          selectedStart.end_time
+                        ),
+                        "_blank",
+                        "noopener"
+                      )
+                    }
+                  >
+                    <CalendarDays className="h-4 w-4" />
+                    Google Calendar
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="gap-1.5"
+                    onClick={() =>
+                      downloadIcs(
+                        `${selectedService?.name ?? "Sesión"} — ${clinicName}`,
+                        selectedStart.day,
+                        selectedStart.start_time,
+                        selectedStart.end_time
+                      )
+                    }
+                  >
+                    <Smartphone className="h-4 w-4" />
+                    iPhone / otro
+                  </Button>
+                </div>
               </div>
             )}
             {optionalPay && !paidReturn && (
