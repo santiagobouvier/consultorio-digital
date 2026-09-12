@@ -3,7 +3,7 @@
 // Mobile: a full-screen overlay menu with its own close button, whose items
 // animate in staggered.
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Menu, X, ArrowRight, ExternalLink } from "lucide-react";
 import ofertaValorPdf from "@/assets/oferta-valor-2026.pdf.asset.json";
@@ -120,13 +120,9 @@ export function LandingNavbar() {
             </a>
           </nav>
 
-          {/* Desktop CTAs */}
+          {/* Desktop CTA: solo vender — el acceso de clientes vive en el
+              footer y en el link directo que les pasamos */}
           <div className="hidden md:flex items-center gap-3">
-            <Link to="/acceso">
-              <Button variant="ghost" className="text-sm font-medium tracking-wide text-black/60 hover:text-black hover:bg-black/5">
-                Ingresar
-              </Button>
-            </Link>
             <Button
               onClick={() => go("pricing")}
               className="h-10 px-5 text-sm font-semibold rounded-full text-white transition-transform hover:scale-[1.03]"
@@ -218,11 +214,6 @@ export function LandingNavbar() {
               Empezar 7 días gratis
               <ArrowRight className="w-5 h-5 ml-2" />
             </Button>
-            <Link to="/acceso" onClick={() => setOpen(false)} className="block">
-              <Button variant="outline" className="w-full h-14 text-base bg-transparent border-black/20 hover:bg-black/5 rounded-2xl" style={{ color: "#16211c" }}>
-                Ingresar
-              </Button>
-            </Link>
           </div>
         </div>
       )}

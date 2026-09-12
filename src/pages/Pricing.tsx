@@ -184,7 +184,7 @@ const PlanCard = ({ plan, onSelect }: PlanCardProps) => {
           <span className="text-sm text-white/40">/mes</span>
         </div>
         <p className="text-xs text-white/40 mt-1.5">
-          un solo pago al año de {formatPrice(plan.priceAnnual * 12)}
+          pago anual · hasta 12 cuotas con Mercado Pago
         </p>
       </div>
 
