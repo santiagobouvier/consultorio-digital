@@ -8,19 +8,20 @@ import { Button } from "@/components/ui/button";
 import { Menu, X, ArrowRight, ExternalLink } from "lucide-react";
 import ofertaValorPdf from "@/assets/oferta-valor-2026.pdf.asset.json";
 
-const BRAND = "#00a5a0";
-const GREEN = "#00c78a";
+const BRAND = "#1f938d";
+const GREEN = "#14655f";
+const INK = "#16211c";
 
 const LINKS = [
   { label: "Funciones", id: "funciones" },
   { label: "Precios", id: "pricing" },
-  { label: "Preguntas", id: "preguntas" },
+  { label: "Preguntas", id: "faq" },
 ];
 
 function Wordmark({ className = "" }: { className?: string }) {
   return (
-    <span className={`font-bold tracking-tight text-white ${className}`}>
-      Consultorio<span style={{ color: GREEN }}> Digital</span>
+    <span className={`font-bold tracking-tight ${className}`} style={{ color: INK }}>
+      Consultorio<span style={{ color: BRAND }}> Digital</span>
     </span>
   );
 }
@@ -68,9 +69,9 @@ export function LandingNavbar() {
       `}</style>
 
       <header
-        className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${scrolled ? "border-b border-white/10" : ""}`}
+        className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${scrolled ? "border-b border-black/[0.08]" : ""}`}
         style={{
-          backgroundColor: solid && !open ? "rgba(10,10,10,0.72)" : "transparent",
+          backgroundColor: solid && !open ? "rgba(251,250,247,0.85)" : "transparent",
           backdropFilter: solid && !open ? "blur(14px)" : "none",
           WebkitBackdropFilter: solid && !open ? "blur(14px)" : "none",
         }}
@@ -91,45 +92,45 @@ export function LandingNavbar() {
               <button
                 key={l.id}
                 onClick={() => go(l.id)}
-                className="group relative py-1 text-sm font-medium tracking-wide text-white/70 hover:text-white transition-colors"
+                className="group relative py-1 text-sm font-medium tracking-wide text-black/60 hover:text-black transition-colors"
               >
                 {l.label}
                 <span
                   className="nav-link-underline absolute left-0 -bottom-0.5 h-px w-0 group-hover:w-full"
-                  style={{ backgroundColor: GREEN }}
+                  style={{ backgroundColor: BRAND }}
                 />
               </button>
             ))}
             <button
               onClick={goDemo}
-              className="group relative py-1 text-sm font-medium tracking-wide text-white/70 hover:text-white transition-colors"
+              className="group relative py-1 text-sm font-medium tracking-wide text-black/60 hover:text-black transition-colors"
             >
               Demo
-              <span className="nav-link-underline absolute left-0 -bottom-0.5 h-px w-0 group-hover:w-full" style={{ backgroundColor: GREEN }} />
+              <span className="nav-link-underline absolute left-0 -bottom-0.5 h-px w-0 group-hover:w-full" style={{ backgroundColor: BRAND }} />
             </button>
             <a
               href={ofertaValorPdf.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="group relative py-1 text-sm font-medium tracking-wide text-white/70 hover:text-white transition-colors inline-flex items-center gap-1"
+              className="group relative py-1 text-sm font-medium tracking-wide text-black/60 hover:text-black transition-colors inline-flex items-center gap-1"
             >
               Cómo funciona
               <ExternalLink className="w-3 h-3 opacity-60" />
-              <span className="nav-link-underline absolute left-0 -bottom-0.5 h-px w-0 group-hover:w-full" style={{ backgroundColor: GREEN }} />
+              <span className="nav-link-underline absolute left-0 -bottom-0.5 h-px w-0 group-hover:w-full" style={{ backgroundColor: BRAND }} />
             </a>
           </nav>
 
           {/* Desktop CTAs */}
           <div className="hidden md:flex items-center gap-3">
             <Link to="/acceso">
-              <Button variant="ghost" className="text-sm font-medium tracking-wide text-white/70 hover:text-white hover:bg-white/5">
+              <Button variant="ghost" className="text-sm font-medium tracking-wide text-black/60 hover:text-black hover:bg-black/5">
                 Ingresar
               </Button>
             </Link>
             <Button
               onClick={() => go("pricing")}
               className="h-10 px-5 text-sm font-semibold rounded-full text-white transition-transform hover:scale-[1.03]"
-              style={{ background: `linear-gradient(135deg, ${BRAND}, ${GREEN})`, boxShadow: `0 4px 20px rgba(0,165,160,0.3)` }}
+              style={{ background: BRAND, boxShadow: "0 10px 24px -10px rgba(31,147,141,0.6)" }}
             >
               Empezar gratis
               <ArrowRight className="w-4 h-4 ml-1.5" />
@@ -138,7 +139,7 @@ export function LandingNavbar() {
 
           {/* Mobile open button */}
           <button
-            className="md:hidden p-2 -mr-2 text-white"
+            className="md:hidden p-2 -mr-2" style={{ color: INK }}
             onClick={() => setOpen(true)}
             aria-label="Abrir menú"
           >
@@ -151,12 +152,12 @@ export function LandingNavbar() {
       {open && (
         <div
           className="nav-overlay md:hidden fixed inset-0 z-[60] flex flex-col"
-          style={{ background: "rgba(8,8,8,0.98)", backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)" }}
+          style={{ background: "rgba(251,250,247,0.98)", backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)" }}
         >
           {/* subtle top glow */}
           <div
             className="pointer-events-none absolute inset-x-0 top-0 h-1/2"
-            style={{ background: `radial-gradient(ellipse 80% 50% at 50% 0%, ${BRAND}1f, transparent 70%)` }}
+            style={{ background: `radial-gradient(ellipse 80% 50% at 50% 0%, ${BRAND}14, transparent 70%)` }}
           />
 
           {/* top row: wordmark + close */}
@@ -164,7 +165,7 @@ export function LandingNavbar() {
             <Wordmark className="text-lg" />
             <button
               onClick={() => setOpen(false)}
-              className="p-2 -mr-2 text-white/80 hover:text-white transition-colors"
+              className="p-2 -mr-2 text-black/70 hover:text-black transition-colors"
               aria-label="Cerrar menú"
             >
               <X className="w-7 h-7" />
@@ -177,30 +178,30 @@ export function LandingNavbar() {
               <button
                 key={l.id}
                 onClick={() => go(l.id)}
-                className="nav-item group flex items-center justify-between py-5 border-b border-white/10 text-left"
+                className="nav-item group flex items-center justify-between py-5 border-b border-black/10 text-left"
                 style={{ animationDelay: `${0.07 * i + 0.05}s` }}
               >
-                <span className="text-3xl font-semibold text-white tracking-tight">{l.label}</span>
-                <ArrowRight className="w-6 h-6 text-white/25 transition-all group-hover:text-white group-hover:translate-x-1" />
+                <span className="text-3xl font-semibold tracking-tight" style={{ color: INK }}>{l.label}</span>
+                <ArrowRight className="w-6 h-6 text-black/25 transition-all group-hover:text-black group-hover:translate-x-1" />
               </button>
             ))}
             <button
               onClick={goDemo}
-              className="nav-item group flex items-center justify-between py-5 border-b border-white/10 text-left"
+              className="nav-item group flex items-center justify-between py-5 border-b border-black/10 text-left"
               style={{ animationDelay: `${0.07 * LINKS.length + 0.05}s` }}
             >
-              <span className="text-3xl font-semibold text-white tracking-tight">Demo</span>
-              <ArrowRight className="w-6 h-6 text-white/25 transition-all group-hover:text-white group-hover:translate-x-1" />
+              <span className="text-3xl font-semibold tracking-tight" style={{ color: INK }}>Demo</span>
+              <ArrowRight className="w-6 h-6 text-black/25 transition-all group-hover:text-black group-hover:translate-x-1" />
             </button>
             <a
               href={ofertaValorPdf.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="nav-item group flex items-center justify-between py-5 border-b border-white/10 text-left"
+              className="nav-item group flex items-center justify-between py-5 border-b border-black/10 text-left"
               style={{ animationDelay: `${0.07 * (LINKS.length + 1) + 0.05}s` }}
             >
-              <span className="text-3xl font-semibold text-white tracking-tight">Cómo funciona</span>
-              <ExternalLink className="w-6 h-6 text-white/25 transition-all group-hover:text-white" />
+              <span className="text-3xl font-semibold tracking-tight" style={{ color: INK }}>Cómo funciona</span>
+              <ExternalLink className="w-6 h-6 text-black/25 transition-all group-hover:text-black" />
             </a>
           </nav>
 
@@ -212,13 +213,13 @@ export function LandingNavbar() {
             <Button
               onClick={() => go("pricing")}
               className="w-full h-14 text-base font-semibold rounded-2xl text-white"
-              style={{ background: `linear-gradient(135deg, ${BRAND}, ${GREEN})`, boxShadow: `0 8px 30px rgba(0,165,160,0.35)` }}
+              style={{ background: BRAND, boxShadow: "0 8px 30px rgba(31,147,141,0.35)" }}
             >
               Empezar 7 días gratis
               <ArrowRight className="w-5 h-5 ml-2" />
             </Button>
             <Link to="/acceso" onClick={() => setOpen(false)} className="block">
-              <Button variant="outline" className="w-full h-14 text-base bg-transparent text-white border-white/20 hover:bg-white/5 rounded-2xl">
+              <Button variant="outline" className="w-full h-14 text-base bg-transparent border-black/20 hover:bg-black/5 rounded-2xl" style={{ color: "#16211c" }}>
                 Ingresar
               </Button>
             </Link>
