@@ -6,7 +6,10 @@ import { DemoBanner } from "@/components/demo/DemoBanner";
 import { WhatsAppPhone, buildDemoWaConfirmation, buildDemoWaReminder, type WaMessage } from "@/components/demo/WhatsAppPhone";
 import { User, Stethoscope } from "lucide-react";
 
-const BRAND = "#00c78a";
+const BRAND = "#1f938d";
+const INK = "#16211c";
+const MUTED = "#5b6a63";
+const DIM = "#93a09a";
 
 const fechaEs = (() => {
   const d = new Date();
@@ -105,20 +108,20 @@ const DemoWhatsApp = () => {
   const scenario = SCENARIOS.find((s) => s.id === selectedId)!;
 
   return (
-    <div className="min-h-dvh bg-black text-white flex flex-col">
+    <div className="min-h-dvh flex flex-col" style={{ background: "#fbfaf7", color: INK, fontFamily: "'Instrument Sans', sans-serif" }}>
       <DemoBanner />
 
       <div className="flex-1 w-full max-w-5xl mx-auto px-4 sm:px-6 py-4 sm:py-6 flex flex-col md:grid md:grid-cols-[1fr_auto] md:gap-10 md:items-center">
         {/* Selector + explicación */}
         <div className="min-w-0">
-          <h1 className="text-2xl md:text-3xl font-bold mb-1">WhatsApp automático</h1>
-          <p className="text-sm text-white/50 mb-4 md:mb-5">
+          <h1 className="text-2xl md:text-3xl font-bold mb-1" style={{ fontFamily: "'Space Grotesk', sans-serif", letterSpacing: "-0.02em" }}>WhatsApp automático</h1>
+          <p className="text-sm mb-4 md:mb-5" style={{ color: MUTED }}>
             Todo esto sale solo, sin que nadie escriba. Tocá un aviso y miralo tal como llega:
           </p>
 
           {(["paciente", "profesional"] as const).map((group) => (
             <div key={group} className="mb-3 md:mb-4">
-              <p className="flex items-center gap-1.5 text-[11px] uppercase tracking-[0.14em] font-semibold text-white/40 mb-1.5">
+              <p className="flex items-center gap-1.5 text-[11px] uppercase tracking-[0.14em] font-semibold mb-1.5" style={{ color: DIM }}>
                 {group === "paciente" ? <User className="w-3.5 h-3.5" /> : <Stethoscope className="w-3.5 h-3.5" />}
                 {group === "paciente" ? "Le llegan a tu paciente" : "Te llegan a vos"}
               </p>
@@ -127,19 +130,19 @@ const DemoWhatsApp = () => {
                   <button
                     key={s.id}
                     onClick={() => setSelectedId(s.id)}
-                    className="text-left rounded-xl border px-3 py-2 transition-colors md:w-full"
+                    className="text-left rounded-xl border px-3 py-2 transition-colors md:w-full bg-white"
                     style={
                       s.id === selectedId
-                        ? { borderColor: BRAND, backgroundColor: "rgba(0,199,138,0.1)" }
-                        : { borderColor: "rgba(255,255,255,0.12)" }
+                        ? { borderColor: BRAND, backgroundColor: "rgba(31,147,141,0.07)" }
+                        : { borderColor: "rgba(22,33,28,0.12)" }
                     }
                   >
-                    <span className={`block text-[13px] font-semibold ${s.id === selectedId ? "text-white" : "text-white/70"}`}>
+                    <span className="block text-[13px] font-semibold" style={{ color: s.id === selectedId ? INK : MUTED }}>
                       {s.label}
                     </span>
                     {/* La explicación solo del seleccionado, para no saturar */}
                     {s.id === selectedId && (
-                      <span className="block text-[12px] text-white/50 mt-0.5 leading-snug">{s.explain}</span>
+                      <span className="block text-[12px] mt-0.5 leading-snug" style={{ color: MUTED }}>{s.explain}</span>
                     )}
                   </button>
                 ))}

@@ -145,7 +145,17 @@ const DemoAgenda = () => {
         {/* Header */}
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold">Agenda</h1>
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <h1 className="text-xl sm:text-2xl font-bold">Agenda</h1>
+              {/* El diferencial, siempre a la vista también en la demo */}
+              <button
+                onClick={demoToast}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                Sincronizada con Google Calendar
+              </button>
+            </div>
             <p className="text-sm text-muted-foreground capitalize">
               {format(currentDate, viewType === "day" ? "EEEE d 'de' MMMM" : "MMMM yyyy", { locale: es })}
             </p>
