@@ -116,7 +116,15 @@ export default function PatientPortalDemo() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { canInstall, isInstalled, install } = usePWAInstall();
-  const [isDark, setIsDark] = useState(true);
+  // La elección de tema queda guardada, como en el portal real
+  const [isDark, setIsDark] = useState<boolean>(() => {
+    if (typeof window === "undefined") return true;
+    const stored = localStorage.getItem("portal-theme");
+    return stored ? stored === "dark" : true;
+  });
+  useEffect(() => {
+    localStorage.setItem("portal-theme", isDark ? "dark" : "light");
+  }, [isDark]);
 
   useEffect(() => {
     document.title = "Portal del Paciente — Demo";

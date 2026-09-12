@@ -144,51 +144,56 @@ export interface PatientPortalViewProps {
 // =============================================
 // THEME GENERATOR
 // =============================================
+// Paleta "Luz editorial", como la landing: blanco cálido de día, tinta
+// verdosa profunda de noche. El acento sigue siendo el color de la marca
+// del consultorio.
 const generateThemeVars = (primaryColor: string, isDark: boolean) => {
   const vars: Record<string, string> = {};
   if (isDark) {
-    vars["--background"] = "220 15% 8%";
-    vars["--foreground"] = "220 10% 98%";
-    vars["--card"] = "220 12% 11%";
-    vars["--card-foreground"] = "220 10% 98%";
-    vars["--popover"] = "220 12% 11%";
-    vars["--popover-foreground"] = "220 10% 98%";
+    vars["--background"] = "165 12% 6%";
+    vars["--foreground"] = "40 20% 96%";
+    vars["--card"] = "160 10% 9%";
+    vars["--card-foreground"] = "40 20% 96%";
+    vars["--popover"] = "160 10% 9%";
+    vars["--popover-foreground"] = "40 20% 96%";
     vars["--primary"] = primaryColor;
     vars["--primary-foreground"] = "0 0% 100%";
-    vars["--secondary"] = "220 12% 16%";
-    vars["--secondary-foreground"] = "220 10% 98%";
-    vars["--muted"] = "220 12% 16%";
-    vars["--muted-foreground"] = "220 8% 65%";
-    vars["--accent"] = "220 15% 18%";
-    vars["--accent-foreground"] = "220 10% 90%";
+    vars["--secondary"] = "160 8% 13%";
+    vars["--secondary-foreground"] = "40 20% 96%";
+    vars["--muted"] = "160 8% 13%";
+    vars["--muted-foreground"] = "150 6% 62%";
+    vars["--accent"] = "160 9% 15%";
+    vars["--accent-foreground"] = "40 15% 90%";
     vars["--destructive"] = "0 70% 50%";
     vars["--destructive-foreground"] = "0 0% 100%";
-    vars["--border"] = "220 12% 18%";
-    vars["--input"] = "220 12% 18%";
+    vars["--border"] = "160 8% 16%";
+    vars["--input"] = "160 8% 16%";
     vars["--ring"] = primaryColor;
   } else {
-    vars["--background"] = "220 15% 98%";
-    vars["--foreground"] = "220 10% 15%";
+    vars["--background"] = "45 33% 98%";
+    vars["--foreground"] = "160 14% 11%";
     vars["--card"] = "0 0% 100%";
-    vars["--card-foreground"] = "220 10% 15%";
+    vars["--card-foreground"] = "160 14% 11%";
     vars["--popover"] = "0 0% 100%";
-    vars["--popover-foreground"] = "220 10% 15%";
+    vars["--popover-foreground"] = "160 14% 11%";
     vars["--primary"] = primaryColor;
     vars["--primary-foreground"] = "0 0% 100%";
-    vars["--secondary"] = "220 25% 96%";
-    vars["--secondary-foreground"] = "220 10% 25%";
-    vars["--muted"] = "220 15% 96%";
-    vars["--muted-foreground"] = "220 8% 46%";
-    vars["--accent"] = "220 30% 94%";
-    vars["--accent-foreground"] = "220 10% 25%";
+    vars["--secondary"] = "45 18% 95%";
+    vars["--secondary-foreground"] = "160 10% 25%";
+    vars["--muted"] = "45 18% 95%";
+    vars["--muted-foreground"] = "160 7% 42%";
+    vars["--accent"] = "45 22% 93%";
+    vars["--accent-foreground"] = "160 10% 25%";
     vars["--destructive"] = "0 84% 60%";
     vars["--destructive-foreground"] = "0 0% 100%";
-    vars["--border"] = "220 10% 90%";
-    vars["--input"] = "220 10% 90%";
+    vars["--border"] = "45 12% 88%";
+    vars["--input"] = "45 12% 88%";
     vars["--ring"] = primaryColor;
   }
   return vars;
 };
+
+const GROTESK = { fontFamily: "'Space Grotesk', sans-serif" } as const;
 
 const TABS = [
   { id: "resumen", label: "Resumen", icon: LayoutDashboard },
@@ -557,14 +562,14 @@ export function PatientPortalView(props: PatientPortalViewProps) {
   const nextPayable = !!nextPay && isPayablePayment(nextPay.status) && mpConnected;
 
   const SectionTitle = ({ children }: { children: React.ReactNode }) => (
-    <h2 className="text-[12px] font-semibold uppercase tracking-[0.12em] text-muted-foreground mb-2.5">
+    <h2 className="text-[11px] font-semibold uppercase tracking-[0.15em] text-primary mb-3" style={GROTESK}>
       {children}
     </h2>
   );
 
   return (
     <div className="min-h-screen" style={themeStyle as any}>
-      <div className="min-h-screen bg-background text-foreground transition-colors duration-300">
+      <div className="min-h-screen bg-background text-foreground transition-colors duration-300" style={{ fontFamily: "'Instrument Sans', 'Plus Jakarta Sans', sans-serif" }}>
         {/* Demo banner */}
         {isDemo && (
           <div className="bg-primary text-primary-foreground text-center py-2 px-4 text-sm font-medium">
@@ -575,7 +580,7 @@ export function PatientPortalView(props: PatientPortalViewProps) {
 
         {/* Header */}
         <header className="border-b border-border bg-card sticky top-0 z-20">
-          <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
             <div className="flex items-center gap-3 min-w-0">
               {branding.logoUrl ? (
                 <img src={branding.logoUrl} className="h-9 w-9 rounded-lg object-cover shrink-0" alt="" />
@@ -587,7 +592,7 @@ export function PatientPortalView(props: PatientPortalViewProps) {
                 </Avatar>
               )}
               <div className="min-w-0">
-                <h1 className="text-base font-bold text-foreground truncate leading-tight">{branding.name}</h1>
+                <h1 className="text-base font-bold text-foreground truncate leading-tight" style={GROTESK}>{branding.name}</h1>
                 <p className="text-xs text-muted-foreground truncate">{branding.specialty}</p>
               </div>
             </div>
@@ -620,7 +625,7 @@ export function PatientPortalView(props: PatientPortalViewProps) {
 
         {/* Optional install banner */}
         {showPwaBannerTop && (
-          <div className="max-w-2xl mx-auto px-4 pt-3">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-3">
             <PWAInstallBanner
               variant="inline"
               storageKey="pwa_install_banner_dismissed_patient"
@@ -629,7 +634,7 @@ export function PatientPortalView(props: PatientPortalViewProps) {
           </div>
         )}
 
-        <main className="max-w-2xl mx-auto px-4 py-5 sm:py-7 space-y-7 pb-16">
+        <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 lg:py-9 pb-16 space-y-7">
           {/* Saludo */}
           <div className="flex items-center gap-3">
             <Avatar className="h-11 w-11">
@@ -637,7 +642,7 @@ export function PatientPortalView(props: PatientPortalViewProps) {
               <AvatarFallback className="bg-primary/10 text-primary font-bold">{initials}</AvatarFallback>
             </Avatar>
             <div className="min-w-0">
-              <p className="font-bold text-lg text-foreground truncate leading-tight">Hola, {firstName} 👋</p>
+              <p className="font-bold text-xl text-foreground truncate leading-tight" style={{ ...GROTESK, letterSpacing: "-0.02em" }}>Hola, {firstName} 👋</p>
               <p className="text-xs text-muted-foreground truncate">
                 {totalSessions > 0 ? `Llevás ${totalSessions} ${totalSessions === 1 ? "sesión" : "sesiones"} con ${branding.name}` : `Tu espacio en ${branding.name}`}
               </p>
@@ -674,15 +679,26 @@ export function PatientPortalView(props: PatientPortalViewProps) {
             </div>
           )}
 
+          {/* En escritorio: dos columnas — lo operativo a la izquierda, lo de
+              consulta a la derecha. En el celular todo apilado en orden. */}
+          <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-9 lg:items-start space-y-7 lg:space-y-0">
+          <div className="space-y-7 min-w-0">
+
           {/* ── Tu próxima cita ── */}
           <section>
             <SectionTitle>Tu próxima cita</SectionTitle>
             {nextApt ? (
-              <Card className="rounded-2xl overflow-hidden">
+              <Card
+                className="rounded-[20px] overflow-hidden border-primary/25"
+                style={{
+                  background: "linear-gradient(150deg, hsl(var(--primary) / 0.10) 0%, hsl(var(--card)) 55%)",
+                  boxShadow: "0 26px 50px -30px hsl(var(--primary) / 0.4)",
+                }}
+              >
                 <CardContent className="p-5 space-y-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="text-xl font-bold capitalize leading-tight m-0">
+                      <p className="text-[23px] font-bold capitalize leading-tight m-0" style={{ ...GROTESK, letterSpacing: "-0.02em" }}>
                         {whenLabel(nextApt.start_at)} · {format(parseISO(nextApt.start_at), "HH:mm")} hs
                       </p>
                       <p className="text-sm text-muted-foreground mt-1 m-0">
@@ -777,7 +793,7 @@ export function PatientPortalView(props: PatientPortalViewProps) {
 
             {onBookAppointment && (
               <Button
-                className="w-full min-h-12 mt-3 gap-2 rounded-xl text-[15px] font-semibold"
+                className="w-full min-h-12 mt-3 gap-2 rounded-full text-[15px] font-semibold"
                 variant={nextApt ? "outline" : "default"}
                 onClick={onBookAppointment}
               >
@@ -943,6 +959,10 @@ export function PatientPortalView(props: PatientPortalViewProps) {
             </section>
           )}
 
+          </div>
+
+          <div className="space-y-7 min-w-0">
+
           {/* ── Documentos generales (sin sesión asociada también) ── */}
           {(sharedDocsLoading || sharedDocuments.length > 0) && (
             <section>
@@ -1045,6 +1065,9 @@ export function PatientPortalView(props: PatientPortalViewProps) {
               )}
             </div>
           </section>
+
+          </div>
+          </div>
         </main>
 
         {extras}
