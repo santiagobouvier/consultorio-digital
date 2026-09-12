@@ -411,7 +411,7 @@ const Landing = () => {
                       <span className="text-[13px] font-medium" style={{ color: DIM, fontFamily: "'Instrument Sans', sans-serif" }}> /mes</span>
                     </p>
                     <p className="mt-1.5 mb-0 text-[11.5px]" style={{ color: DIM }}>
-                      un solo pago al año de {formatPrice(plan.price * 12)}
+                      pago anual · hasta 12 cuotas con Mercado Pago
                     </p>
                     <div className="mt-5 pt-5 flex flex-col gap-2.5 text-[13.5px] leading-snug" style={{ color: MUTED, borderTop: `1px solid ${HAIR}` }}>
                       <span className="inline-flex items-start gap-2"><Check className="w-3.5 h-3.5 mt-0.5 shrink-0" style={{ color: BRAND }} />{plan.patients}</span>
@@ -557,6 +557,10 @@ const Landing = () => {
             <span style={{ color: DIM }}>·</span>
             <a href="/seguridad" className="transition-colors hover:opacity-70" style={{ color: MUTED }}>
               Seguridad
+            </a>
+            <span style={{ color: DIM }}>·</span>
+            <a href="/acceso" className="transition-colors hover:opacity-70" style={{ color: MUTED }}>
+              Ingresar
             </a>
           </div>
           <div className="flex items-center gap-2 text-xs" style={{ color: DIM }}>
