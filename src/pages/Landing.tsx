@@ -136,7 +136,9 @@ const Landing = () => {
   }, []);
 
   return (
-    <div className="min-h-screen" style={{ background: BG, color: INK, fontFamily: "'Instrument Sans', 'Plus Jakarta Sans', sans-serif" }}>
+    // overflow-x-hidden: los ScrollReveal laterales arrancan corridos 40px y
+    // sin esto la página se vuelve paneable en el celular
+    <div className="min-h-screen overflow-x-hidden" style={{ background: BG, color: INK, fontFamily: "'Instrument Sans', 'Plus Jakarta Sans', sans-serif" }}>
       <style>{`
         @media (prefers-reduced-motion: no-preference) {
         @keyframes dotGo { 0% { left: 6%; opacity: 0; } 12% { opacity: 1; } 88% { opacity: 1; } 100% { left: 90%; opacity: 0; } }
