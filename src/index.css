@@ -146,6 +146,14 @@ All colors MUST be HSL.
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Nada puede ensanchar la página más allá de la pantalla: sin paneo
+     horizontal en el celular. "clip" no crea contenedor de scroll, así que
+     position: sticky sigue funcionando (a diferencia de "hidden"). */
+  html,
+  body {
+    overflow-x: clip;
+  }
 }
 
 /* Mobile-first card styles */

@@ -255,7 +255,16 @@ const ClinicPortal = () => {
   const [isProfessionalViewer, setIsProfessionalViewer] = useState(false);
   // Watchdog: si algún spinner queda girando demasiado, ofrecemos recargar.
   const [gateTimedOut, setGateTimedOut] = useState(false);
-  const [isDark, setIsDark] = useState(true);
+  // El modo claro/oscuro elegido queda guardado para siempre (misma clave que
+  // el portal directo, así la elección viaja entre ambos)
+  const [isDark, setIsDark] = useState<boolean>(() => {
+    if (typeof window === "undefined") return true;
+    const stored = localStorage.getItem("portal-theme");
+    return stored ? stored === "dark" : true;
+  });
+  useEffect(() => {
+    localStorage.setItem("portal-theme", isDark ? "dark" : "light");
+  }, [isDark]);
   const [payingAppointment, setPayingAppointment] = useState<string | null>(null);
   const [payingPaymentIds, setPayingPaymentIds] = useState<string[]>([]);
   const [mpConnected, setMpConnected] = useState(false);
