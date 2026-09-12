@@ -23,6 +23,13 @@ const prefersReducedMotion = () =>
   typeof window !== "undefined" &&
   window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+// En pantallas angostas los desplazamientos laterales se convierten en
+// verticales: un elemento corrido 40px a la derecha queda fuera de la
+// pantalla del celular y algunos navegadores (iOS) permiten panear hacia él
+// aunque el ancho esté recortado.
+const isNarrowViewport = () =>
+  typeof window !== "undefined" && window.matchMedia("(max-width: 1023px)").matches;
+
 export function ScrollReveal({
   children,
   className,
@@ -33,6 +40,9 @@ export function ScrollReveal({
   const { ref, isVisible } = useScrollReveal();
   const reduce = prefersReducedMotion();
   const visible = reduce || isVisible;
+  if ((direction === "left" || direction === "right") && isNarrowViewport()) {
+    direction = "up";
+  }
 
   return (
     <div
