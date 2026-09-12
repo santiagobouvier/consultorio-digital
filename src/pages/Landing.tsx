@@ -45,13 +45,11 @@ const WA_DEMO =
 const WA_PERSONALIZADO =
   "https://wa.me/59898543623?text=Hola,%20quiero%20un%20plan%20personalizado%20para%20mi%20consultorio.";
 
-// Por ahora la contratación es mano a mano: cada plan abre WhatsApp con un
-// mensaje ya escrito según el plan y la forma de pago elegida.
-const waPlanUrl = (planName: string, priceLabel: string, annual: boolean) =>
+// La contratación es mano a mano: cada plan abre WhatsApp con un mensaje ya
+// escrito. Un solo precio por plan, facturado en un pago anual.
+const waPlanUrl = (planName: string, priceLabel: string) =>
   `https://wa.me/59898543623?text=${encodeURIComponent(
-    `¡Hola! Me interesa el plan ${planName} de Consultorio Digital (${priceLabel}/mes ${
-      annual ? "pagando anual" : "pagando mes a mes"
-    }). ¿Me contás cómo empezar?`
+    `¡Hola! Me interesa el plan ${planName} de Consultorio Digital (${priceLabel}/mes, pago anual). ¿Me contás cómo empezar?`
   )}`;
 
 // FAQ real, sin nada de páginas web
@@ -117,17 +115,14 @@ const Landing = () => {
     )
   );
 
-  const [isAnnual, setIsAnnual] = useState(true);
-
-  // Planes reales, con precio anual Y mensual siempre a la vista
+  // Planes reales: un solo precio por plan (el mensual equivalente del pago anual)
   const plans = useMemo(() => {
     return PUBLIC_PLAN_ORDER.filter((code) => code !== "personalizado").map((code) => {
       const p = PLAN_DEFINITIONS[code];
       return {
         code,
         name: p.name,
-        priceAnnual: p.priceAnnual,
-        priceMonthly: p.priceMonthly,
+        price: p.priceAnnual,
         patients:
           p.maxPatients === null ? "Pacientes activos sin límite" : `Hasta ${p.maxPatients} pacientes activos`,
         whatsapps: p.whatsappMonthly
@@ -385,38 +380,15 @@ const Landing = () => {
                 Un precio simple. Todo incluido.
               </h2>
               <p className="mt-4 text-sm sm:text-[15px]" style={{ color: MUTED }}>
-                Todos incluyen el sistema completo. 7 días gratis, sin tarjeta.
+                Todos incluyen el sistema completo. Un solo pago al año. 7 días gratis, sin tarjeta.
               </p>
-              {/* Toggle anual / mensual */}
-              <div className="mt-6 inline-flex gap-1 p-1 rounded-full bg-white" style={{ border: "1px solid rgba(22,33,28,.12)" }}>
-                <button
-                  type="button"
-                  onClick={() => setIsAnnual(true)}
-                  className="px-5 py-2.5 rounded-full text-[13px] transition-colors"
-                  style={isAnnual ? { background: INK, color: BG, fontWeight: 600 } : { color: MUTED, fontWeight: 500 }}
-                >
-                  Pago anual <span style={{ color: isAnnual ? "#7ce0b8" : DIM }}>· ahorrás hasta 20%</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsAnnual(false)}
-                  className="px-5 py-2.5 rounded-full text-[13px] transition-colors"
-                  style={!isAnnual ? { background: INK, color: BG, fontWeight: 600 } : { color: MUTED, fontWeight: 500 }}
-                >
-                  Pago mensual
-                </button>
-              </div>
             </div>
           </ScrollReveal>
 
-          <div className="mt-10 flex flex-wrap justify-center gap-5 items-stretch">
-            {plans.map((plan) => {
-              const price = isAnnual ? plan.priceAnnual : plan.priceMonthly;
-              const other = isAnnual
-                ? `${formatPrice(plan.priceMonthly)} si pagás mes a mes`
-                : `${formatPrice(plan.priceAnnual)}/mes si pagás anual`;
+          <div className="mt-10 grid grid-cols-1 md:grid-cols-3 gap-5 items-stretch max-w-5xl mx-auto">
+            {plans.map((plan, i) => {
               return (
-                <ScrollReveal key={plan.code} className="w-full max-w-[420px] sm:w-[320px] sm:max-w-none lg:w-[340px]">
+                <ScrollReveal key={plan.code} className="w-full" delay={i * 110}>
                   <div
                     className="relative h-full flex flex-col rounded-[20px] bg-white p-7"
                     style={
@@ -435,11 +407,11 @@ const Landing = () => {
                     )}
                     <p className="m-0 font-semibold text-base" style={{ ...GROTESK, color: plan.highlight ? TEAL_DEEP : INK }}>{plan.name}</p>
                     <p className="mt-3 mb-0 font-bold text-[34px] leading-none" style={GROTESK}>
-                      {formatPrice(price)}
+                      {formatPrice(plan.price)}
                       <span className="text-[13px] font-medium" style={{ color: DIM, fontFamily: "'Instrument Sans', sans-serif" }}> /mes</span>
                     </p>
                     <p className="mt-1.5 mb-0 text-[11.5px]" style={{ color: DIM }}>
-                      {isAnnual ? "pagando anual" : "pagando mes a mes"} · {other}
+                      un solo pago al año de {formatPrice(plan.price * 12)}
                     </p>
                     <div className="mt-5 pt-5 flex flex-col gap-2.5 text-[13.5px] leading-snug" style={{ color: MUTED, borderTop: `1px solid ${HAIR}` }}>
                       <span className="inline-flex items-start gap-2"><Check className="w-3.5 h-3.5 mt-0.5 shrink-0" style={{ color: BRAND }} />{plan.patients}</span>
@@ -449,7 +421,7 @@ const Landing = () => {
                     </div>
                     <div className="mt-auto pt-6">
                       <a
-                        href={waPlanUrl(plan.name, formatPrice(price), isAnnual)}
+                        href={waPlanUrl(plan.name, formatPrice(plan.price))}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="flex items-center justify-center gap-2 h-[46px] rounded-xl font-semibold text-[14px] transition-transform hover:scale-[1.02]"
