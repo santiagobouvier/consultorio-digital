@@ -35,6 +35,12 @@ export const fetchExternalBusyDay = async (dayStr: string): Promise<ExternalBusy
   const hit = cache.get(dayStr);
   if (hit && Date.now() - hit.at < TTL_MS) return hit.data;
   try {
+    // Sin sesión (demos, portal público) las funciones responden 401: ni las llamamos.
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      cache.set(dayStr, { at: Date.now(), data: [] });
+      return [];
+    }
     const from = new Date(`${dayStr}T00:00:00`);
     const to = new Date(`${dayStr}T23:59:59`);
     const body = { action: "busy", from: from.toISOString(), to: to.toISOString() };
