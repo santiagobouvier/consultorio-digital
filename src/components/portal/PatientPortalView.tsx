@@ -780,12 +780,33 @@ export function PatientPortalView(props: PatientPortalViewProps) {
             {laterApts.length > 0 && (
               <div className="mt-2.5 space-y-1.5">
                 {laterApts.map((apt) => (
-                  <div key={apt.id} className="flex items-center gap-3 rounded-xl border border-border/60 bg-card px-3.5 py-2.5">
+                  <div key={apt.id} className="flex items-center gap-2.5 rounded-xl border border-border/60 bg-card px-3.5 py-2">
                     <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <span className="text-sm capitalize truncate">
+                    <span className="text-sm capitalize truncate min-w-0 flex-1">
                       {whenLabel(apt.start_at)} · {format(parseISO(apt.start_at), "HH:mm")} hs
                     </span>
-                    <span className="ml-auto shrink-0">{statusBadge(apt.status)}</span>
+                    {onRescheduleAppointment && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 rounded-lg text-muted-foreground shrink-0"
+                        title="Reprogramar"
+                        onClick={() => onRescheduleAppointment(apt)}
+                      >
+                        <RefreshCw className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
+                    {onCancelAppointment && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 rounded-lg text-muted-foreground hover:text-destructive shrink-0"
+                        title="Cancelar"
+                        onClick={() => openCancelDialog(apt)}
+                      >
+                        <XCircle className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
                   </div>
                 ))}
               </div>

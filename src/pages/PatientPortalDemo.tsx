@@ -153,6 +153,12 @@ export default function PatientPortalDemo() {
       onBookAppointment={() => noop("Reserva de citas deshabilitada en la demo.")}
       onSaveProfile={() => noop("Edición de perfil deshabilitada en la demo.")}
       onPaySession={() => noop("Pagos deshabilitados en la demo.")}
+      // La demo muestra TODO lo que puede hacer un paciente: los botones de
+      // pagar, reprogramar y cancelar aparecen y avisan que es demo
+      mpConnected
+      onPayPayments={() => noop("Pagos deshabilitados en la demo.")}
+      onCancelAppointment={() => noop("Cancelación deshabilitada en la demo.")}
+      onRescheduleAppointment={() => noop("Reprogramación deshabilitada en la demo.")}
     />
   );
 }
