@@ -1,0 +1,1 @@
+ALTER TABLE public.personal_events ADD COLUMN IF NOT EXISTS icon text;
