@@ -28,6 +28,42 @@ const CHUNK_LOAD_ERROR_PATTERNS = [
 let cacheClearPromise: Promise<void> | null = null;
 let hardResetPromise: Promise<void> | null = null;
 
+// ── Frenos a prueba de TODO contra bucles de recarga ──
+// Los guards de sessionStorage de más abajo pueden fallar (storage roto,
+// pestañas que se limpian los caches entre sí). Estos dos no dependen de
+// ningún storage: (1) una sola recuperación por carga de página, en memoria;
+// (2) un contador que viaja en la propia URL y sobrevive a cualquier recarga.
+// A la tercera falla seguida, la recuperación se rinde y la app muestra el
+// botón "Recargar ahora" en lugar de recargar sola.
+let recoveryTriggeredThisLoad = false;
+const RECOVERY_MARKER_PARAM = "__cdr";
+
+const getRecoveryMarkerCount = (): number => {
+  try {
+    const raw = new URLSearchParams(window.location.search).get(RECOVERY_MARKER_PARAM);
+    const n = raw ? parseInt(raw, 10) : 0;
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  } catch {
+    return 0;
+  }
+};
+
+/** Cuando la app arrancó bien, borra el contador de la URL (sin recargar). */
+export const stripRecoveryMarkerWhenStable = (delayMs = 10_000) => {
+  if (typeof window === "undefined") return;
+  window.setTimeout(() => {
+    try {
+      const url = new URL(window.location.href);
+      if (!url.searchParams.has(RECOVERY_MARKER_PARAM)) return;
+      url.searchParams.delete(RECOVERY_MARKER_PARAM);
+      const qs = url.searchParams.toString();
+      window.history.replaceState({}, "", url.pathname + (qs ? `?${qs}` : "") + url.hash);
+    } catch {
+      /* nada: el marcador queda en la URL, sin efecto */
+    }
+  }, delayMs);
+};
+
 const getErrorText = (error: unknown): string => {
   if (!error) return "";
   if (typeof error === "string") return error;
@@ -189,6 +225,12 @@ export const recoverFromChunkLoadFailure = async (
 ) => {
   if (typeof window === "undefined") return false;
 
+  // Frenos duros (no dependen de storage): una recuperación por carga y
+  // máximo 2 recargas automáticas seguidas por pestaña.
+  if (recoveryTriggeredThisLoad) return false;
+  const markerCount = getRecoveryMarkerCount();
+  if (markerCount >= 2) return false;
+
   const now = Date.now();
   const path = `${window.location.pathname}${window.location.search}`;
 
@@ -216,7 +258,14 @@ export const recoverFromChunkLoadFailure = async (
   } catch {
     // sin marca, el detector simplemente no cuenta esta recarga
   }
-  window.location.reload();
+  recoveryTriggeredThisLoad = true;
+  try {
+    const url = new URL(window.location.href);
+    url.searchParams.set(RECOVERY_MARKER_PARAM, String(markerCount + 1));
+    window.location.replace(url.toString());
+  } catch {
+    window.location.reload();
+  }
   return true;
 };
 

@@ -7,6 +7,7 @@ import {
   detectReloadLoopAndRecover,
   isChunkLoadFailure,
   recoverFromChunkLoadFailure,
+  stripRecoveryMarkerWhenStable,
 } from "@/lib/session-recovery";
 
 window.addEventListener("vite:preloadError", (event) => {
@@ -90,6 +91,9 @@ const bootstrap = async () => {
   }
 
   createRoot(document.getElementById("root")!).render(<App />);
+  // Si esta carga vino de una recuperación automática y la app quedó
+  // estable, se limpia el contador de la URL.
+  stripRecoveryMarkerWhenStable();
   // El splash lo apaga la app cuando la primera pantalla real montó
   // (AppSplashKiller). Esto queda como red de seguridad por si algo falla:
   // nunca más de 10 segundos de splash.
