@@ -343,7 +343,7 @@ test("service role → 200 y llega a Resend con adjunto .ics", async () => {
   assert.equal(call.url, "https://api.resend.com/emails");
   assert.deepEqual(call.body.to, ["paciente.prueba@example.test"]);
   assert.equal(call.body.from, deps.fromEmail);
-  assert.match(call.body.subject, /Confirmación de cita/);
+  assert.match(call.body.subject ?? "", /Confirmación de cita/);
   assert.equal(call.body.attachments?.[0]?.filename, "cita.ics");
 });
 
@@ -353,7 +353,7 @@ test("profesional del consultorio → 200 con plantilla raw", async () => {
   assert.equal(res.status, 200);
   assert.equal(resend.calls.length, 1);
   assert.equal(resend.calls[0].body.subject, "Prueba");
-  assert.match(resend.calls[0].body.html, /Hola/);
+  assert.match(resend.calls[0].body.html ?? "", /Hola/);
 });
 
 test("profesional del consultorio → 200 con appointment_confirmation", async () => {
