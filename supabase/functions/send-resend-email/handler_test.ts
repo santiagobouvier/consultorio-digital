@@ -343,7 +343,7 @@ test("service role → 200 y llega a Resend con adjunto .ics", async () => {
   assert.equal(call.url, "https://api.resend.com/emails");
   assert.deepEqual(call.body.to, ["paciente.prueba@example.test"]);
   assert.equal(call.body.from, deps.fromEmail);
-  assert.match(call.body.subject, /Confirmación de cita/);
+  assert.match(call.body.subject ?? "", /Confirmación de cita/);
   assert.equal(call.body.attachments?.[0]?.filename, "cita.ics");
 });
 
