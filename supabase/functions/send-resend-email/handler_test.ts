@@ -16,6 +16,19 @@ const KNOWN_RECIPIENTS: Record<string, string[]> = {
   [OTHER_BUSINESS]: ["paciente.ajeno@example.test"],
 };
 const FUNCTION_URL = "https://example.test/functions/v1/send-resend-email";
+// Token dedicado del trigger (64 hex) y uno con la misma forma pero inválido
+const PORTAL_TOKEN = "a".repeat(32) + "b".repeat(32);
+const WRONG_PORTAL_TOKEN = "c".repeat(64);
+const CONTACT_EMAILS: Record<string, string | null> = {
+  [MY_BUSINESS]: "profesional.prueba@example.test",
+  [OTHER_BUSINESS]: null,
+};
+const portalNotice = (businessId: string, data: Record<string, unknown> = { kind: "new_booking", when: "23/09/2026 09:00" }, extra: Record<string, unknown> = {}) => ({
+  template: "portal_notice",
+  businessId,
+  data,
+  ...extra,
+});
 
 interface ResendPayload {
   from?: string;
@@ -33,10 +46,17 @@ function makeDeps(overrides: Partial<HandlerDeps> = {}): {
   deps: HandlerDeps;
   resend: Recorded;
   recipientChecks: { businessId: string; email: string }[];
+  tokenChecks: string[];
 } {
   const resend: Recorded = { calls: [] };
   const recipientChecks: { businessId: string; email: string }[] = [];
+  const tokenChecks: string[] = [];
   const deps: HandlerDeps = {
+    verifyPortalNotifyToken: async (token) => {
+      tokenChecks.push(token);
+      return token === PORTAL_TOKEN;
+    },
+    getBusinessContactEmail: async (businessId) => CONTACT_EMAILS[businessId] ?? null,
     serviceRoleKey: SERVICE_ROLE,
     resendApiKey: "re_test_key",
     fromEmail: "Consultorio Digital <noreply@example.test>",
@@ -56,7 +76,7 @@ function makeDeps(overrides: Partial<HandlerDeps> = {}): {
     }) as typeof fetch,
     ...overrides,
   };
-  return { deps, resend, recipientChecks };
+  return { deps, resend, recipientChecks, tokenChecks };
 }
 
 function request(body: unknown, auth?: string, method = "POST"): Request {
@@ -193,6 +213,105 @@ test("service role no pasa por la validación de destinatarios (avisos al profes
   assert.equal(res.status, 200);
   assert.equal(recipientChecks.length, 0);
   assert.equal(resend.calls.length, 1);
+});
+
+// ── Trigger del portal (token dedicado) ──
+
+test("trigger: token válido → 200, texto fijo y destinatario del servidor (se ignora el `to` del cuerpo)", async () => {
+  const { deps, resend, recipientChecks } = makeDeps();
+  const res = await createHandler(deps)(
+    request(portalNotice(MY_BUSINESS, undefined, { to: "atacante@example.test" }), `Bearer ${PORTAL_TOKEN}`),
+  );
+  assert.equal(res.status, 200);
+  assert.equal(resend.calls.length, 1);
+  assert.deepEqual(resend.calls[0].body.to, ["profesional.prueba@example.test"]);
+  assert.equal(resend.calls[0].body.subject, "Nueva reserva desde el portal · 23/09/2026 09:00");
+  assert.match(resend.calls[0].body.html ?? "", /reservó desde su portal para el 23\/09\/2026 09:00/);
+  assert.equal(recipientChecks.length, 0);
+});
+
+test("trigger: reprogramación → asunto y texto fijos del tipo", async () => {
+  const { deps, resend } = makeDeps();
+  const res = await createHandler(deps)(
+    request(portalNotice(MY_BUSINESS, { kind: "reschedule_request", when: "24/09/2026 15:30" }), `Bearer ${PORTAL_TOKEN}`),
+  );
+  assert.equal(res.status, 200);
+  assert.equal(resend.calls[0].body.subject, "Solicitud de reprogramación · 24/09/2026 15:30");
+});
+
+test("trigger: token con la forma correcta pero no vigente → 401 sin envío", async () => {
+  const { deps, resend, tokenChecks } = makeDeps();
+  const res = await createHandler(deps)(request(portalNotice(MY_BUSINESS), `Bearer ${WRONG_PORTAL_TOKEN}`));
+  assert.equal(res.status, 401);
+  assert.equal(resend.calls.length, 0);
+  assert.deepEqual(tokenChecks, [WRONG_PORTAL_TOKEN]);
+});
+
+test("trigger: rotación → el token viejo deja de servir al instante", async () => {
+  const NEW_TOKEN = "d".repeat(64);
+  const { deps, resend } = makeDeps({ verifyPortalNotifyToken: async (t) => t === NEW_TOKEN });
+  const handler = createHandler(deps);
+  assert.equal((await handler(request(portalNotice(MY_BUSINESS), `Bearer ${PORTAL_TOKEN}`))).status, 401);
+  assert.equal((await handler(request(portalNotice(MY_BUSINESS), `Bearer ${NEW_TOKEN}`))).status, 200);
+  assert.equal(resend.calls.length, 1);
+});
+
+test("trigger: si la verificación en la base falla → 401 (fail closed)", async () => {
+  const { deps, resend } = makeDeps({
+    verifyPortalNotifyToken: async () => {
+      throw new Error("db down");
+    },
+  });
+  const res = await createHandler(deps)(request(portalNotice(MY_BUSINESS), `Bearer ${PORTAL_TOKEN}`));
+  assert.equal(res.status, 401);
+  assert.equal(resend.calls.length, 0);
+});
+
+test("trigger: no puede usar otras plantillas (raw, confirmación, invitación)", async () => {
+  const { deps, resend } = makeDeps();
+  const handler = createHandler(deps);
+  for (const template of ["raw", "appointment_confirmation", "patient_invite", "business_activation"]) {
+    const res = await handler(
+      request({ to: "x@example.test", template, businessId: MY_BUSINESS, data: { subject: "x", message: "y" } }, `Bearer ${PORTAL_TOKEN}`),
+    );
+    assert.equal(res.status, 403, template);
+  }
+  assert.equal(resend.calls.length, 0);
+});
+
+test("trigger: tipo desconocido o fecha con otro formato → 400 sin envío", async () => {
+  const { deps, resend } = makeDeps();
+  const handler = createHandler(deps);
+  assert.equal((await handler(request(portalNotice(MY_BUSINESS, { kind: "marketing", when: "23/09/2026 09:00" }), `Bearer ${PORTAL_TOKEN}`))).status, 400);
+  assert.equal((await handler(request(portalNotice(MY_BUSINESS, { kind: "new_booking", when: "<b>hola</b>" }), `Bearer ${PORTAL_TOKEN}`))).status, 400);
+  assert.equal((await handler(request(portalNotice(MY_BUSINESS, { kind: "new_booking" }), `Bearer ${PORTAL_TOKEN}`))).status, 400);
+  assert.equal((await handler(request(portalNotice("no-es-uuid"), `Bearer ${PORTAL_TOKEN}`))).status, 403);
+  assert.equal(resend.calls.length, 0);
+});
+
+test("trigger: consultorio sin contact_email → 200 omitido, sin envío", async () => {
+  const { deps, resend } = makeDeps();
+  const res = await createHandler(deps)(request(portalNotice(OTHER_BUSINESS), `Bearer ${PORTAL_TOKEN}`));
+  assert.equal(res.status, 200);
+  assert.deepEqual(await res.json(), { success: false, skipped: "no_contact_email" });
+  assert.equal(resend.calls.length, 0);
+});
+
+test("profesional logueado no puede disparar portal_notice", async () => {
+  const { deps, resend, tokenChecks } = makeDeps();
+  const res = await createHandler(deps)(request(portalNotice(MY_BUSINESS), `Bearer ${USER_TOKEN}`));
+  assert.equal(res.status, 403);
+  assert.equal(resend.calls.length, 0);
+  assert.equal(tokenChecks.length, 0, "un JWT nunca se manda a verificar como token del portal");
+});
+
+test("service role puede usar portal_notice con la misma composición cerrada", async () => {
+  const { deps, resend } = makeDeps();
+  const res = await createHandler(deps)(
+    request({ to: "profesional.prueba@example.test", ...portalNotice(MY_BUSINESS) }, `Bearer ${SERVICE_ROLE}`),
+  );
+  assert.equal(res.status, 200);
+  assert.equal(resend.calls[0].body.subject, "Nueva reserva desde el portal · 23/09/2026 09:00");
 });
 
 test("service role con cuerpo incompleto → 400 sin envío", async () => {

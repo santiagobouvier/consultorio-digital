@@ -4,7 +4,14 @@
 // Quién puede enviar:
 //   1. El propio backend (otras edge functions, pg_net desde la base) con la
 //      service role exacta en Authorization — igual que send-whatsapp.
-//   2. Un profesional logueado (JWT de usuario): solo plantillas operativas,
+//   2. El trigger notify_professional_portal_requests (pg_net desde la base)
+//      con el token dedicado `portal_notify_token` (generado y guardado en
+//      Vault por la migración; acá solo se pregunta a la base si el token
+//      presentado es el vigente, por una RPC restringida a service role).
+//      Ese token solo puede disparar la plantilla cerrada `portal_notice`:
+//      texto fijo y destinatario resuelto en el servidor
+//      (businesses.contact_email); el `to` que venga en el cuerpo se ignora.
+//   3. Un profesional logueado (JWT de usuario): solo plantillas operativas,
 //      solo para un consultorio al que pertenece (businessId obligatorio) y
 //      solo a destinatarios que la base ya conoce como pacientes o
 //      solicitantes de ese consultorio (el `to` del cliente se valida contra
@@ -23,7 +30,31 @@ export type EmailTemplate =
   | "appointment_reminder"
   | "patient_invite"
   | "business_activation"
+  | "portal_notice"
   | "raw";
+
+// Avisos al profesional que dispara el trigger del portal. El contenido es
+// fijo por tipo; el llamador solo elige el tipo y aporta la fecha/hora.
+export const PORTAL_NOTICE_KINDS = {
+  new_booking: {
+    subject: "Nueva reserva desde el portal",
+    message:
+      "Un paciente reservó desde su portal para el %WHEN%.\n\n" +
+      "La cita está pendiente de tu confirmación en el panel (Solicitudes).",
+  },
+  reschedule_request: {
+    subject: "Solicitud de reprogramación",
+    message:
+      "Un paciente pidió reprogramar su cita del %WHEN%.\n\n" +
+      "Revisala y respondela desde tu panel (Solicitudes).",
+  },
+} as const;
+export type PortalNoticeKind = keyof typeof PORTAL_NOTICE_KINDS;
+
+// Formato exacto que arma el trigger: DD/MM/YYYY HH24:MI
+const WHEN_RE = /^\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}$/;
+// El token dedicado es hex de 64 caracteres; un JWT nunca tiene esa forma.
+const PORTAL_TOKEN_RE = /^[0-9a-f]{64}$/i;
 
 export interface SendEmailRequest {
   to: string;
@@ -53,6 +84,15 @@ export interface HandlerDeps {
    * Solo aplica a llamadas de usuario; el backend no pasa por acá.
    */
   recipientBelongsToBusiness: (businessId: string, email: string) => Promise<boolean>;
+  /**
+   * ¿El token presentado es el vigente del trigger del portal? Lo decide la
+   * base (RPC verify_portal_notify_token, solo service role) comparando
+   * digests; el secreto nunca sale de Vault. Se consulta en cada intento
+   * para que la rotación aplique al instante.
+   */
+  verifyPortalNotifyToken: (token: string) => Promise<boolean>;
+  /** Email de contacto del consultorio (businesses.contact_email); null si no hay. */
+  getBusinessContactEmail: (businessId: string) => Promise<string | null>;
   getBranding: (businessId: string | undefined) => Promise<BrandingInfo>;
   /** fetch hacia Resend (inyectable para simular el proveedor). */
   fetch: typeof fetch;
@@ -107,13 +147,19 @@ function bearerToken(req: Request): string {
   return m ? m[1].trim() : "";
 }
 
-type Caller = { kind: "service" } | { kind: "user"; userId: string };
+type Caller =
+  | { kind: "service" }
+  | { kind: "portal_trigger" }
+  | { kind: "user"; userId: string };
 
 async function authenticate(req: Request, deps: HandlerDeps): Promise<Caller | null> {
   const token = bearerToken(req);
   if (!token) return null;
   if (secretEquals(token, deps.serviceRoleKey)) return { kind: "service" };
   try {
+    if (PORTAL_TOKEN_RE.test(token)) {
+      return (await deps.verifyPortalNotifyToken(token)) === true ? { kind: "portal_trigger" } : null;
+    }
     const userId = await deps.getUserIdFromToken(token);
     return userId ? { kind: "user", userId } : null;
   } catch {
@@ -291,7 +337,31 @@ export function createHandler(deps: HandlerDeps): (req: Request) => Promise<Resp
       }
 
       const body = (await req.json()) as SendEmailRequest;
-      const { to, template, businessId, data } = body;
+      const { template, businessId, data } = body;
+      let to = body.to;
+
+      // Trigger del portal: plantilla cerrada, tipo conocido, fecha con el
+      // formato exacto, y el destinatario lo pone el servidor. Cualquier
+      // otra cosa con ese token se rechaza.
+      let portalNotice: { subject: string; message: string } | null = null;
+      if (caller.kind === "portal_trigger") {
+        if (template !== "portal_notice") return json({ error: "forbidden_template" }, 403);
+        if (typeof businessId !== "string" || !UUID_RE.test(businessId)) {
+          return json({ error: "business_required" }, 403);
+        }
+        const kind = data?.kind as string | undefined;
+        const when = data?.when as string | undefined;
+        if (!kind || !(kind in PORTAL_NOTICE_KINDS) || typeof when !== "string" || !WHEN_RE.test(when)) {
+          return json({ error: "invalid_notice" }, 400);
+        }
+        const spec = PORTAL_NOTICE_KINDS[kind as PortalNoticeKind];
+        portalNotice = { subject: `${spec.subject} · ${when}`, message: spec.message.replace("%WHEN%", when) };
+        const contact = await deps.getBusinessContactEmail(businessId);
+        if (!contact) return json({ success: false, skipped: "no_contact_email" }, 200);
+        to = contact;
+      } else if (template === "portal_notice" && caller.kind !== "service") {
+        return json({ error: "forbidden_template" }, 403);
+      }
 
       if (!to || !template) {
         return json({ error: "Missing 'to' or 'template'" }, 400);
@@ -367,6 +437,17 @@ export function createHandler(deps: HandlerDeps): (req: Request) => Promise<Resp
       } else if (template === "raw") {
         subject = data?.subject || `Mensaje — ${branding.name}`;
         html = shell(branding, `<p style="color:#374151;line-height:1.6;white-space:pre-line;">${escapeHtml(data?.message || "")}</p>`);
+      } else if (template === "portal_notice") {
+        // Service role también puede usarla (misma composición cerrada)
+        if (!portalNotice) {
+          const kind = data?.kind as string | undefined;
+          const when = typeof data?.when === "string" && WHEN_RE.test(data.when) ? data.when : null;
+          if (!kind || !(kind in PORTAL_NOTICE_KINDS) || !when) return json({ error: "invalid_notice" }, 400);
+          const spec = PORTAL_NOTICE_KINDS[kind as PortalNoticeKind];
+          portalNotice = { subject: `${spec.subject} · ${when}`, message: spec.message.replace("%WHEN%", when) };
+        }
+        subject = portalNotice.subject;
+        html = shell(branding, `<p style="color:#374151;line-height:1.6;white-space:pre-line;">${escapeHtml(portalNotice.message)}</p>`);
       } else {
         return json({ error: "Unknown template" }, 400);
       }

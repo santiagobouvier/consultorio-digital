@@ -85,6 +85,33 @@ async function recipientBelongsToBusiness(businessId: string, email: string): Pr
   return (patients.count ?? 0) + (requests.count ?? 0) + (appointments.count ?? 0) > 0;
 }
 
+// Token del trigger del portal. Vive en Vault y nunca sale de la base: la
+// RPC verify_portal_notify_token (SECURITY DEFINER, EXECUTE solo para
+// service_role) compara digests y devuelve true/false. Sin caché, para que
+// rotarlo tenga efecto inmediato.
+async function verifyPortalNotifyToken(token: string): Promise<boolean> {
+  const { data, error } = await admin.rpc("verify_portal_notify_token", { p_token: token });
+  if (error) {
+    console.error("verify_portal_notify_token failed:", error);
+    return false;
+  }
+  return data === true;
+}
+
+async function getBusinessContactEmail(businessId: string): Promise<string | null> {
+  const { data, error } = await admin
+    .from("businesses")
+    .select("contact_email")
+    .eq("id", businessId)
+    .maybeSingle();
+  if (error) {
+    console.error("contact_email lookup failed:", error);
+    return null;
+  }
+  const email = (data?.contact_email ?? "").trim();
+  return email || null;
+}
+
 Deno.serve(
   createHandler({
     serviceRoleKey: SERVICE_ROLE,
@@ -93,6 +120,8 @@ Deno.serve(
     getUserIdFromToken,
     userBelongsToBusiness,
     recipientBelongsToBusiness,
+    verifyPortalNotifyToken,
+    getBusinessContactEmail,
     getBranding,
     fetch: (input, init) => fetch(input, init),
   }),
