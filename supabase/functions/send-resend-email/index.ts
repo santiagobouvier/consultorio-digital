@@ -62,6 +62,29 @@ async function userBelongsToBusiness(userId: string, businessId: string): Promis
   return data === true;
 }
 
+// El email tiene que existir en el consultorio: ficha de paciente, solicitud
+// pública de turno o contacto de una cita. Comparación sin mayúsculas, con
+// los comodines de ilike escapados para que el email no actúe como patrón.
+async function recipientBelongsToBusiness(businessId: string, email: string): Promise<boolean> {
+  const pattern = email.replace(/([\\%_])/g, "\\$1");
+  const count = (table: string, column: string) =>
+    admin
+      .from(table)
+      .select("id", { count: "exact", head: true })
+      .eq("business_id", businessId)
+      .ilike(column, pattern);
+
+  const [patients, requests, appointments] = await Promise.all([
+    count("patients", "email"),
+    count("appointment_requests", "email"),
+    count("appointments", "contact_email"),
+  ]);
+  for (const r of [patients, requests, appointments]) {
+    if (r.error) throw r.error;
+  }
+  return (patients.count ?? 0) + (requests.count ?? 0) + (appointments.count ?? 0) > 0;
+}
+
 Deno.serve(
   createHandler({
     serviceRoleKey: SERVICE_ROLE,
@@ -69,6 +92,7 @@ Deno.serve(
     fromEmail: FROM_EMAIL,
     getUserIdFromToken,
     userBelongsToBusiness,
+    recipientBelongsToBusiness,
     getBranding,
     fetch: (input, init) => fetch(input, init),
   }),

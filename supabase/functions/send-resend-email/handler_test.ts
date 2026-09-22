@@ -10,6 +10,11 @@ const ANON_KEY = "anon-key-public-for-tests";
 const USER_TOKEN = "user-jwt-for-tests";
 const MY_BUSINESS = "11111111-1111-4111-8111-111111111111";
 const OTHER_BUSINESS = "22222222-2222-4222-8222-222222222222";
+// "Base de datos" simulada de destinatarios conocidos por consultorio
+const KNOWN_RECIPIENTS: Record<string, string[]> = {
+  [MY_BUSINESS]: ["paciente.prueba@example.test", "solicitante@example.test"],
+  [OTHER_BUSINESS]: ["paciente.ajeno@example.test"],
+};
 const FUNCTION_URL = "https://example.test/functions/v1/send-resend-email";
 
 interface ResendPayload {
@@ -24,14 +29,23 @@ interface Recorded {
   calls: { url: string; body: ResendPayload }[];
 }
 
-function makeDeps(overrides: Partial<HandlerDeps> = {}): { deps: HandlerDeps; resend: Recorded } {
+function makeDeps(overrides: Partial<HandlerDeps> = {}): {
+  deps: HandlerDeps;
+  resend: Recorded;
+  recipientChecks: { businessId: string; email: string }[];
+} {
   const resend: Recorded = { calls: [] };
+  const recipientChecks: { businessId: string; email: string }[] = [];
   const deps: HandlerDeps = {
     serviceRoleKey: SERVICE_ROLE,
     resendApiKey: "re_test_key",
     fromEmail: "Consultorio Digital <noreply@example.test>",
     getUserIdFromToken: async (token) => (token === USER_TOKEN ? "user-1" : null),
     userBelongsToBusiness: async (userId, businessId) => userId === "user-1" && businessId === MY_BUSINESS,
+    recipientBelongsToBusiness: async (businessId, email) => {
+      recipientChecks.push({ businessId, email });
+      return (KNOWN_RECIPIENTS[businessId] ?? []).some((e) => e.toLowerCase() === email.toLowerCase());
+    },
     getBranding: async () => DEFAULT_BRANDING,
     fetch: (async (url: RequestInfo | URL, init?: RequestInit) => {
       resend.calls.push({ url: String(url), body: JSON.parse(String(init?.body ?? "{}")) });
@@ -42,7 +56,7 @@ function makeDeps(overrides: Partial<HandlerDeps> = {}): { deps: HandlerDeps; re
     }) as typeof fetch,
     ...overrides,
   };
-  return { deps, resend };
+  return { deps, resend, recipientChecks };
 }
 
 function request(body: unknown, auth?: string, method = "POST"): Request {
@@ -55,8 +69,8 @@ function request(body: unknown, auth?: string, method = "POST"): Request {
   });
 }
 
-const rawEmail = (businessId?: string) => ({
-  to: "paciente.prueba@example.test",
+const rawEmail = (businessId?: string, to = "paciente.prueba@example.test") => ({
+  to,
   template: "raw",
   businessId,
   data: { subject: "Prueba", message: "Hola" },
@@ -123,6 +137,62 @@ test("usuario logueado no puede mandar invitaciones ni activaciones", async () =
     assert.equal(res.status, 403, template);
   }
   assert.equal(resend.calls.length, 0);
+});
+
+test("profesional a un email que no es de su consultorio → 403 sin envío", async () => {
+  const { deps, resend } = makeDeps();
+  const res = await createHandler(deps)(request(rawEmail(MY_BUSINESS, "desconocido@example.test"), `Bearer ${USER_TOKEN}`));
+  assert.equal(res.status, 403);
+  assert.deepEqual(await res.json(), { error: "recipient_not_allowed" });
+  assert.equal(resend.calls.length, 0);
+});
+
+test("profesional a un paciente de OTRO consultorio (aunque exista) → 403", async () => {
+  const { deps, resend } = makeDeps();
+  const res = await createHandler(deps)(request(rawEmail(MY_BUSINESS, "paciente.ajeno@example.test"), `Bearer ${USER_TOKEN}`));
+  assert.equal(res.status, 403);
+  assert.equal(resend.calls.length, 0);
+});
+
+test("profesional: si la consulta de destinatarios falla, se niega (fail closed)", async () => {
+  const { deps, resend } = makeDeps({
+    recipientBelongsToBusiness: async () => {
+      throw new Error("db down");
+    },
+  });
+  const res = await createHandler(deps)(request(rawEmail(MY_BUSINESS), `Bearer ${USER_TOKEN}`));
+  assert.equal(res.status, 403);
+  assert.equal(resend.calls.length, 0);
+});
+
+test("profesional: el destinatario se valida ya normalizado (mailto:, espacios, mayúsculas)", async () => {
+  const { deps, resend, recipientChecks } = makeDeps();
+  const res = await createHandler(deps)(
+    request(rawEmail(MY_BUSINESS, " mailto:Paciente.Prueba@Example.Test "), `Bearer ${USER_TOKEN}`),
+  );
+  assert.equal(res.status, 200);
+  assert.deepEqual(recipientChecks, [{ businessId: MY_BUSINESS, email: "Paciente.Prueba@example.test" }]);
+  assert.deepEqual(resend.calls[0].body.to, ["Paciente.Prueba@example.test"]);
+});
+
+test("profesional a un solicitante de turno (appointment_requests) → 200", async () => {
+  const { deps, resend } = makeDeps();
+  const res = await createHandler(deps)(request(rawEmail(MY_BUSINESS, "solicitante@example.test"), `Bearer ${USER_TOKEN}`));
+  assert.equal(res.status, 200);
+  assert.equal(resend.calls.length, 1);
+});
+
+test("service role no pasa por la validación de destinatarios (avisos al profesional, activaciones)", async () => {
+  const { deps, resend, recipientChecks } = makeDeps();
+  const res = await createHandler(deps)(
+    request(
+      { to: "profesional@example.test", template: "business_activation", data: { activationUrl: "https://example.test/a" } },
+      `Bearer ${SERVICE_ROLE}`,
+    ),
+  );
+  assert.equal(res.status, 200);
+  assert.equal(recipientChecks.length, 0);
+  assert.equal(resend.calls.length, 1);
 });
 
 test("service role con cuerpo incompleto → 400 sin envío", async () => {

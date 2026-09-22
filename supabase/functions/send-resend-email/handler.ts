@@ -4,10 +4,14 @@
 // Quién puede enviar:
 //   1. El propio backend (otras edge functions, pg_net desde la base) con la
 //      service role exacta en Authorization — igual que send-whatsapp.
-//   2. Un profesional logueado (JWT de usuario): solo plantillas operativas y
-//      solo para un consultorio al que pertenece (businessId obligatorio).
+//   2. Un profesional logueado (JWT de usuario): solo plantillas operativas,
+//      solo para un consultorio al que pertenece (businessId obligatorio) y
+//      solo a destinatarios que la base ya conoce como pacientes o
+//      solicitantes de ese consultorio (el `to` del cliente se valida contra
+//      datos del servidor, nunca se acepta solo).
 // Todo lo demás (sin header, anon key, JWT ajeno, plantillas de invitación o
-// activación desde el navegador) se rechaza antes de tocar Resend.
+// activación desde el navegador, destinatarios ajenos) se rechaza antes de
+// tocar Resend.
 
 export const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -42,6 +46,13 @@ export interface HandlerDeps {
   getUserIdFromToken: (token: string) => Promise<string | null>;
   /** Espejo de public.user_belongs_to_business (dueño, miembro o super admin). */
   userBelongsToBusiness: (userId: string, businessId: string) => Promise<boolean>;
+  /**
+   * ¿El email pertenece a alguien del consultorio según la base? Pacientes
+   * (patients.email), solicitudes públicas (appointment_requests.email) y
+   * contacto de citas (appointments.contact_email), sin distinguir mayúsculas.
+   * Solo aplica a llamadas de usuario; el backend no pasa por acá.
+   */
+  recipientBelongsToBusiness: (businessId: string, email: string) => Promise<boolean>;
   getBranding: (businessId: string | undefined) => Promise<BrandingInfo>;
   /** fetch hacia Resend (inyectable para simular el proveedor). */
   fetch: typeof fetch;
@@ -324,6 +335,19 @@ export function createHandler(deps: HandlerDeps): (req: Request) => Promise<Resp
           },
           400,
         );
+      }
+
+      // Destinatario: un profesional solo escribe a gente de su consultorio.
+      // Se decide con lo que hay en la base, no con lo que mandó el cliente;
+      // ante cualquier error de consulta se niega (fail closed).
+      if (caller.kind === "user") {
+        let allowed = false;
+        try {
+          allowed = await deps.recipientBelongsToBusiness(businessId as string, recipient);
+        } catch (e) {
+          console.error("recipientBelongsToBusiness failed:", e);
+        }
+        if (!allowed) return json({ error: "recipient_not_allowed" }, 403);
       }
 
       const branding = await deps.getBranding(businessId);

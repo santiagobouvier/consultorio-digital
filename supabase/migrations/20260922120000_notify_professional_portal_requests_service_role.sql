@@ -5,8 +5,11 @@
 -- Requisito de despliegue (una sola vez, desde el SQL Editor de Supabase,
 -- nunca en una migración ni en un chat):
 --   select vault.create_secret('<SUPABASE_SERVICE_ROLE_KEY>', 'edge_service_role_key');
+-- Verificación sin exponer el valor:
+--   select name, created_at from vault.secrets where name = 'edge_service_role_key';
 -- Si el secreto no existe, la reserva/reprogramación se guarda igual y el
 -- aviso por email al profesional se omite con un WARNING en los logs.
+-- Checklist completo: supabase/functions/send-resend-email/README.md
 
 CREATE OR REPLACE FUNCTION public.notify_professional_portal_requests()
 RETURNS trigger
@@ -75,3 +78,21 @@ BEGIN
   RETURN NEW;
 END;
 $$;
+
+-- Al aplicar la migración, dejar constancia (solo presencia, nunca el valor)
+-- de si el secreto ya está cargado, para que el despliegue sea verificable.
+DO $$
+DECLARE
+  v_present boolean := false;
+BEGIN
+  BEGIN
+    SELECT EXISTS (SELECT 1 FROM vault.secrets WHERE name = 'edge_service_role_key') INTO v_present;
+  EXCEPTION WHEN OTHERS THEN
+    v_present := false;
+  END;
+  IF v_present THEN
+    RAISE NOTICE 'notify_professional_portal_requests: secreto edge_service_role_key presente en Vault';
+  ELSE
+    RAISE WARNING 'notify_professional_portal_requests: secreto edge_service_role_key AUSENTE en Vault; los avisos por email al profesional quedan omitidos hasta crearlo (ver supabase/functions/send-resend-email/README.md)';
+  END IF;
+END $$;
