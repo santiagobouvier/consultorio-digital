@@ -353,7 +353,7 @@ test("profesional del consultorio → 200 con plantilla raw", async () => {
   assert.equal(res.status, 200);
   assert.equal(resend.calls.length, 1);
   assert.equal(resend.calls[0].body.subject, "Prueba");
-  assert.match(resend.calls[0].body.html, /Hola/);
+  assert.match(resend.calls[0].body.html ?? "", /Hola/);
 });
 
 test("profesional del consultorio → 200 con appointment_confirmation", async () => {
