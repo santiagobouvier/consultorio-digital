@@ -1,0 +1,201 @@
+// Pruebas de autorización de send-resend-email con proveedor simulado.
+// Corren con Node (node --experimental-strip-types --test) y con Deno
+// (deno test); no tocan la red ni envían correos: `fetch` es un doble.
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { createHandler, DEFAULT_BRANDING, type HandlerDeps } from "./handler.ts";
+
+const SERVICE_ROLE = "service-role-secret-for-tests";
+const ANON_KEY = "anon-key-public-for-tests";
+const USER_TOKEN = "user-jwt-for-tests";
+const MY_BUSINESS = "11111111-1111-4111-8111-111111111111";
+const OTHER_BUSINESS = "22222222-2222-4222-8222-222222222222";
+const FUNCTION_URL = "https://example.test/functions/v1/send-resend-email";
+
+interface ResendPayload {
+  from?: string;
+  to?: string[];
+  subject?: string;
+  html?: string;
+  attachments?: { filename: string; content: string }[];
+}
+
+interface Recorded {
+  calls: { url: string; body: ResendPayload }[];
+}
+
+function makeDeps(overrides: Partial<HandlerDeps> = {}): { deps: HandlerDeps; resend: Recorded } {
+  const resend: Recorded = { calls: [] };
+  const deps: HandlerDeps = {
+    serviceRoleKey: SERVICE_ROLE,
+    resendApiKey: "re_test_key",
+    fromEmail: "Consultorio Digital <noreply@example.test>",
+    getUserIdFromToken: async (token) => (token === USER_TOKEN ? "user-1" : null),
+    userBelongsToBusiness: async (userId, businessId) => userId === "user-1" && businessId === MY_BUSINESS,
+    getBranding: async () => DEFAULT_BRANDING,
+    fetch: (async (url: RequestInfo | URL, init?: RequestInit) => {
+      resend.calls.push({ url: String(url), body: JSON.parse(String(init?.body ?? "{}")) });
+      return new Response(JSON.stringify({ id: "email-123" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }) as typeof fetch,
+    ...overrides,
+  };
+  return { deps, resend };
+}
+
+function request(body: unknown, auth?: string, method = "POST"): Request {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (auth !== undefined) headers["Authorization"] = auth;
+  return new Request(FUNCTION_URL, {
+    method,
+    headers,
+    body: method === "POST" ? JSON.stringify(body) : undefined,
+  });
+}
+
+const rawEmail = (businessId?: string) => ({
+  to: "paciente.prueba@example.test",
+  template: "raw",
+  businessId,
+  data: { subject: "Prueba", message: "Hola" },
+});
+
+// ── Rechazos (ninguno llega al proveedor) ──
+
+test("sin Authorization → 401 y no se envía nada", async () => {
+  const { deps, resend } = makeDeps();
+  const res = await createHandler(deps)(request(rawEmail(MY_BUSINESS)));
+  assert.equal(res.status, 401);
+  assert.equal(resend.calls.length, 0);
+});
+
+test("anon key pública como bearer → 401 (no es un usuario)", async () => {
+  const { deps, resend } = makeDeps();
+  const res = await createHandler(deps)(request(rawEmail(MY_BUSINESS), `Bearer ${ANON_KEY}`));
+  assert.equal(res.status, 401);
+  assert.equal(resend.calls.length, 0);
+});
+
+test("token inválido que hace fallar la verificación → 401", async () => {
+  const { deps, resend } = makeDeps({
+    getUserIdFromToken: async () => {
+      throw new Error("jwt malformed");
+    },
+  });
+  const res = await createHandler(deps)(request(rawEmail(MY_BUSINESS), "Bearer basura"));
+  assert.equal(res.status, 401);
+  assert.equal(resend.calls.length, 0);
+});
+
+test("service role casi igual (prefijo) → 401", async () => {
+  const { deps, resend } = makeDeps();
+  const res = await createHandler(deps)(request(rawEmail(MY_BUSINESS), `Bearer ${SERVICE_ROLE.slice(0, -1)}`));
+  assert.equal(res.status, 401);
+  assert.equal(resend.calls.length, 0);
+});
+
+test("usuario logueado sin businessId → 403", async () => {
+  const { deps, resend } = makeDeps();
+  const res = await createHandler(deps)(request(rawEmail(undefined), `Bearer ${USER_TOKEN}`));
+  assert.equal(res.status, 403);
+  assert.equal(resend.calls.length, 0);
+});
+
+test("usuario logueado con businessId de otro consultorio → 403", async () => {
+  const { deps, resend } = makeDeps();
+  const res = await createHandler(deps)(request(rawEmail(OTHER_BUSINESS), `Bearer ${USER_TOKEN}`));
+  assert.equal(res.status, 403);
+  assert.equal(resend.calls.length, 0);
+});
+
+test("usuario logueado no puede mandar invitaciones ni activaciones", async () => {
+  const { deps, resend } = makeDeps();
+  const handler = createHandler(deps);
+  for (const template of ["patient_invite", "business_activation"]) {
+    const res = await handler(
+      request(
+        { to: "x@example.test", template, businessId: MY_BUSINESS, data: { inviteUrl: "https://example.test/i", activationUrl: "https://example.test/a" } },
+        `Bearer ${USER_TOKEN}`,
+      ),
+    );
+    assert.equal(res.status, 403, template);
+  }
+  assert.equal(resend.calls.length, 0);
+});
+
+test("service role con cuerpo incompleto → 400 sin envío", async () => {
+  const { deps, resend } = makeDeps();
+  const res = await createHandler(deps)(request({ to: "x@example.test" }, `Bearer ${SERVICE_ROLE}`));
+  assert.equal(res.status, 400);
+  assert.equal(resend.calls.length, 0);
+});
+
+// ── Caminos autorizados (proveedor simulado) ──
+
+test("service role → 200 y llega a Resend con adjunto .ics", async () => {
+  const { deps, resend } = makeDeps();
+  const res = await createHandler(deps)(
+    request(
+      {
+        to: "paciente.prueba@example.test",
+        template: "appointment_confirmation",
+        businessId: OTHER_BUSINESS, // el backend puede mandar por cualquier consultorio
+        data: { patientName: "Prueba", date: "23/09/2026", time: "09:00", modality: "online", isoDate: "2026-09-23", endTime: "09:50", serviceName: "Sesión" },
+      },
+      `Bearer ${SERVICE_ROLE}`,
+    ),
+  );
+  assert.equal(res.status, 200);
+  assert.deepEqual(await res.json(), { success: true, id: "email-123" });
+  assert.equal(resend.calls.length, 1);
+  const call = resend.calls[0];
+  assert.equal(call.url, "https://api.resend.com/emails");
+  assert.deepEqual(call.body.to, ["paciente.prueba@example.test"]);
+  assert.equal(call.body.from, deps.fromEmail);
+  assert.match(call.body.subject, /Confirmación de cita/);
+  assert.equal(call.body.attachments?.[0]?.filename, "cita.ics");
+});
+
+test("profesional del consultorio → 200 con plantilla raw", async () => {
+  const { deps, resend } = makeDeps();
+  const res = await createHandler(deps)(request(rawEmail(MY_BUSINESS), `Bearer ${USER_TOKEN}`));
+  assert.equal(res.status, 200);
+  assert.equal(resend.calls.length, 1);
+  assert.equal(resend.calls[0].body.subject, "Prueba");
+  assert.match(resend.calls[0].body.html, /Hola/);
+});
+
+test("profesional del consultorio → 200 con appointment_confirmation", async () => {
+  const { deps, resend } = makeDeps();
+  const res = await createHandler(deps)(
+    request(
+      {
+        to: "paciente.prueba@example.test",
+        template: "appointment_confirmation",
+        businessId: MY_BUSINESS,
+        data: { patientName: "Prueba", date: "23/09/2026", time: "09:00", modality: "presencial", location: null },
+      },
+      `Bearer ${USER_TOKEN}`,
+    ),
+  );
+  assert.equal(res.status, 200);
+  assert.equal(resend.calls.length, 1);
+});
+
+test("error del proveedor → 502 (no se enmascara como éxito)", async () => {
+  const { deps } = makeDeps({
+    fetch: (async () =>
+      new Response(JSON.stringify({ message: "domain not verified" }), { status: 403 })) as typeof fetch,
+  });
+  const res = await createHandler(deps)(request(rawEmail(MY_BUSINESS), `Bearer ${SERVICE_ROLE}`));
+  assert.equal(res.status, 502);
+});
+
+test("OPTIONS (preflight CORS) no exige credencial", async () => {
+  const { deps, resend } = makeDeps();
+  const res = await createHandler(deps)(request(undefined, undefined, "OPTIONS"));
+  assert.equal(res.status, 200);
+  assert.equal(resend.calls.length, 0);
+});
