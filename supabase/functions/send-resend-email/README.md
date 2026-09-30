@@ -74,7 +74,7 @@ aplican solas**. Orden seguro:
 
 | Paso | Qué | Por dónde | Estado de la capacidad |
 |---|---|---|---|
-| 1 | Aplicar la migración (SQL completo del archivo) | Ejecutor SQL del backend Lovable Cloud (proyecto `e0bd3602-…`) | **A confirmar**: si la UI de Cloud ofrece un editor SQL / "aplicar migraciones pendientes" sin pasar por el chat. Si no, alternativa autorizada: SQL Editor del dashboard de Supabase del proyecto `sfvuuzpmsgepooeamkin`, si Lovable da acceso. |
+| 1 | Aplicar la migración: pegar y ejecutar el contenido completo de `supabase/migrations/20260922120000_notify_professional_portal_requests_service_role.sql` | Editor SQL de Lovable Cloud (proyecto `e0bd3602-…`, backend `sfvuuzpmsgepooeamkin`), el mismo usado para las migraciones anteriores | Disponible (confirmado por el equipo). Al terminar, el editor muestra los `NOTICE` "portal_notify_token: creado en Vault" y "… presente en Vault". |
 | 2 | Desplegar la función `send-resend-email` | Publish desde la UI de Lovable (despliega las edge functions del repo) | Verificado en esta sesión para funciones anteriores |
 | 3 | Verificar (abajo) | SQL + `curl` | — |
 
