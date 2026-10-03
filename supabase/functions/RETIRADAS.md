@@ -142,3 +142,95 @@ Nada de esto está hecho.
 - El botón "Crear Demo" del panel de administración (crea "Demo Psicología"
   con el administrador como dueño; no usa esta función).
 - El flag `is_demo` / "Sin cobro" y toda la lógica que lo lee.
+
+---
+
+## `setup-demo-patient`
+
+| | |
+|---|---|
+| Repo | Retirada (carpeta borrada; nunca tuvo entrada en `supabase/config.toml`). |
+| Producción | **Pendiente.** Figura activa en Cloud (comprobado por lectura: "View code" muestra esta fuente). El endpoint sigue existiendo hasta borrarlo y verificarlo. |
+| Credenciales/datos | **Sin tocar.** |
+
+### Qué hacía
+
+Recibía `{ patient_id, email, password }` y, sin verificar quién llamaba ni su
+rol, con el cliente administrador:
+
+1. Si existía una cuenta con ese email, le **cambiaba la contraseña** y la
+   marcaba como confirmada. Si no existía, la creaba.
+2. Sobrescribía el perfil (`public.profiles`) con el nombre **"Paciente Demo"**.
+3. Vinculaba esa cuenta al paciente `patient_id` (y le ponía ese email).
+4. Le agregaba el rol `patient`.
+
+Sin entrada en `config.toml` queda con `verify_jwt` por defecto, que la clave
+anon pública satisface: cualquiera podía tomar cualquier cuenta (profesional,
+paciente o superadmin) sabiendo su email. Ninguna pantalla, función, cron,
+script ni migración la usa.
+
+### Flujos legítimos que siguen igual
+
+- **Invitación:** el profesional invita (`create-patient-invite`, exige su
+  sesión) → mail → `/portal-paciente/invitacion` → `activate-patient-account`
+  define la contraseña **solo con un token válido** (existe, no usado, no
+  vencido).
+- **Acceso:** `/acceso/paciente` → `/portal/:slug` → inicio de sesión con email
+  y contraseña.
+- `supabase/functions/_tests/patient_access_test.ts` falla si aparece otra
+  función que cambie contraseñas sin estar en la lista de activaciones por
+  token, o si se desconecta alguno de estos flujos.
+
+### ¿Se usó? Consultas de solo lectura (editor SQL de Lovable Cloud)
+
+```sql
+-- 1) Perfiles que la función marcó como "Paciente Demo"
+--    (ningún flujo legítimo escribe ese nombre)
+select p.id, p.email, p.name, u.created_at, u.updated_at, u.last_sign_in_at,
+       u.raw_user_meta_data->>'name' as nombre_en_auth
+from public.profiles p
+join auth.users u on u.id = p.id
+where p.name = 'Paciente Demo' or u.raw_user_meta_data->>'name' = 'Paciente Demo'
+order by u.updated_at desc;
+
+-- 2) Roles de esas cuentas (¿alguna es profesional, dueña o superadmin?)
+select ur.user_id, ur.role, ur.business_id
+from public.user_roles ur
+where ur.user_id in (select id from public.profiles where name = 'Paciente Demo');
+```
+
+Cómo leerlas:
+
+- **Sin filas:** no hay rastros de uso. Retirar y listo.
+- **Filas de cuentas de prueba conocidas:** uso propio viejo. Retirar y listo;
+  la limpieza de esas cuentas es una decisión aparte.
+- **Una cuenta real** (profesional, dueña, superadmin o paciente real): **es
+  posible que alguien le haya cambiado la contraseña.** No tocar nada y avisar:
+  cerrar sesiones, resetear la contraseña y revisar ese consultorio es una
+  decisión aparte.
+- Si la UI de Cloud muestra logs o invocaciones de la función, revisar si hubo
+  llamadas que no fueron propias.
+
+### Retirar el despliegue (pasos para después de la revisión)
+
+Nada de esto está hecho.
+
+1. **Lectura previa:** las dos consultas de arriba y, si existen, los logs de la
+   función.
+2. **Borrar la función desplegada `setup-demo-patient`** en Cloud, con el mismo
+   procedimiento que se usó para `setup-demo-user`.
+3. **Verificar sin efectos, solo con `OPTIONS`.** Nunca un `POST` mientras
+   pueda seguir viva: cambia la contraseña de la cuenta que se le pase.
+
+   ```
+   B=https://sfvuuzpmsgepooeamkin.supabase.co/functions/v1
+   curl -s -o /dev/null -w '%{http_code}\n' -X OPTIONS "$B/setup-demo-patient"
+   curl -s -o /dev/null -w '%{http_code}\n' -X OPTIONS "$B/no-existe-control"
+   ```
+
+   Retirada = **las dos devuelven lo mismo** (típicamente `404`). Mientras
+   sigue publicada, la primera puede dar `200` o `401` (esta función usa la
+   verificación de JWT por defecto): cualquier código distinto del control
+   significa que todavía existe.
+4. **Merge de la PR.** No despliega ni borra nada en producción; no hace falta
+   Publish (no hay cambios de frontend).
