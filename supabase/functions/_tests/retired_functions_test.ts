@@ -1,4 +1,4 @@
-// Regresión de funciones retiradas (CD-002 y siguientes).
+// Regresión de funciones retiradas (CD-002, setup-demo-patient y siguientes).
 // Corre con `npm run test:functions` (node:test). Lee el repo; no toca red,
 // base de datos ni producción.
 //
@@ -20,6 +20,11 @@ const RETIRED: { name: string; markers: string[] }[] = [
     name: "setup-demo-user",
     // Cuenta demo vieja y su secreto: nada del código debe depender de ellos.
     markers: ["setup-demo-user", "demo@consultorio.app", "DEMO_USER_PASSWORD"],
+  },
+  {
+    // Cambiaba la contraseña de cualquier cuenta por email, sin control.
+    name: "setup-demo-patient",
+    markers: ["setup-demo-patient"],
   },
 ];
 
