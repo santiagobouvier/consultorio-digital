@@ -4,11 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { useSubscriptionStatus } from "@/hooks/use-subscription-status";
 import LoadingPage from "@/components/LoadingPage";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, CreditCard, Loader2, Sparkles, PartyPopper, Clock } from "lucide-react";
+import { AlertTriangle, CreditCard, Loader2, Sparkles, PartyPopper, Clock, MessageCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBusinessIdContext } from "@/contexts/BusinessIdContext";
 import { toast } from "sonner";
 import { resolveSubscriptionStatus } from "@/lib/subscription-status";
+import { buildAccessRequestUrl } from "@/lib/support-whatsapp";
 
 interface SubscriptionGuardProps {
   children: ReactNode;
@@ -447,6 +448,17 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
                 <CreditCard className="w-5 h-5 mr-2" />
               )}
               {reactivating ? "Redirigiendo..." : "Reactivar cuenta"}
+            </Button>
+            {/* Acceso gestionado a mano: no hace falta pagar por la plataforma */}
+            <Button
+              asChild
+              variant="outline"
+              className="w-full h-12 font-semibold text-base border-white/15 bg-transparent text-white hover:bg-white/5 hover:text-white"
+            >
+              <a href={buildAccessRequestUrl()} target="_blank" rel="noopener noreferrer">
+                <MessageCircle className="w-5 h-5 mr-2" />
+                Coordinar con soporte por WhatsApp
+              </a>
             </Button>
             <Button
               variant="ghost"

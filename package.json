@@ -9,6 +9,8 @@
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "test:functions": "node --experimental-strip-types --test \"supabase/functions/**/*_test.ts\"",
+    "test:unit": "node --experimental-strip-types --test \"tests/unit/*.test.ts\"",
+    "test:db": "bash tests/db/run.sh",
     "preview": "vite preview",
     "predev": "bunx tsx scripts/generate-sitemap.ts",
     "prebuild": "bunx tsx scripts/generate-sitemap.ts"

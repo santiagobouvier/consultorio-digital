@@ -77,6 +77,18 @@ interface BusinessWithDetails {
   mpConnected: boolean; // true si la suscripción tiene cobro automático por Mercado Pago
 }
 
+// Gestión manual sobre un consultorio con débito automático de Mercado Pago.
+const MpDebitNotice = () => (
+  <Alert>
+    <AlertTriangle className="h-4 w-4" />
+    <AlertDescription className="text-xs">
+      Este consultorio tiene débito automático de Mercado Pago. Si cambiás su plan, acceso o
+      "Sin cobro", pasa a gestión manual: la app deja de seguir ese débito, pero <strong>no lo
+      cancela</strong>. Si ya no corresponde cobrarlo, cancelalo desde tu cuenta de Mercado Pago.
+    </AlertDescription>
+  </Alert>
+);
+
 const noBillingDue = (b: { isDemo: boolean; noBillingUntil: string | null }) =>
   b.isDemo && !!b.noBillingUntil && new Date(b.noBillingUntil + "T23:59:59") < new Date();
 
@@ -200,6 +212,10 @@ const SaasAdmin = () => {
   const [activatePlan, setActivatePlan] = useState<string>("esencial");
   const [activateType, setActivateType] = useState<"trial" | "active">("trial");
   const [activateDays, setActivateDays] = useState("15");
+  // Cuenta activa con cobro por fuera: vigencia, período y monto (opcionales)
+  const [activateUntil, setActivateUntil] = useState("");
+  const [activatePeriod, setActivatePeriod] = useState<"monthly" | "annual">("annual");
+  const [activateAmount, setActivateAmount] = useState("");
   const [activating, setActivating] = useState(false);
   const [activeSection, setActiveSection] = useState<SaasSection>("home");
   const [invites, setInvites] = useState<PendingInvite[]>([]);
@@ -449,6 +465,9 @@ const SaasAdmin = () => {
     setActivatePlan(valid);
     setActivateType("trial");
     setActivateDays("15");
+    setActivateUntil("");
+    setActivatePeriod(b.billingPeriod === "monthly" ? "monthly" : "annual");
+    setActivateAmount("");
     setShowActivateModal(true);
   };
 
@@ -457,16 +476,21 @@ const SaasAdmin = () => {
     try {
       setActivating(true);
       // "trial" → prueba con días elegibles que vence sola. "active" → cuenta
-      // activa SIN vencimiento (acceso pleno, sin cobro automático): se corta
-      // a mano desde Editar cuando haga falta.
+      // activa cobrada por fuera, sin débito automático: con "acceso hasta"
+      // vence sola en esa fecha; sin fecha, se corta a mano desde Editar.
       const isTrial = activateType === "trial";
       const newStatus = isTrial ? "trial" : "active";
       const days = Math.max(1, parseInt(activateDays) || 15);
       const trialEnd = isTrial
         ? new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString()
         : null;
-      // Sin vencimiento real: fecha lejana para que nada lo bloquee por período
-      const periodEnd = trialEnd ?? new Date("2099-01-01T00:00:00Z").toISOString();
+      // Sin "acceso hasta": fecha lejana para que nada lo bloquee por período
+      const periodEnd = trialEnd
+        ?? (activateUntil
+          ? new Date(`${activateUntil}T23:59:59-03:00`).toISOString()
+          : new Date("2099-01-01T00:00:00Z").toISOString());
+      const externalAmount = Math.max(0, Number(activateAmount.replace(",", ".")) || 0);
+      const commercial = isTrial ? {} : { billing_period: activatePeriod, amount: externalAmount };
 
       // Buscar suscripción actual
       const { data: existingSub } = await supabase
@@ -485,6 +509,7 @@ const SaasAdmin = () => {
             current_period_start: new Date().toISOString(),
             current_period_end: periodEnd,
             cancelled_at: null,
+            ...commercial,
           })
           .eq("id", existingSub.id);
         if (subErr) throw subErr;
@@ -500,6 +525,7 @@ const SaasAdmin = () => {
           billing_period: "monthly",
           amount: 0,
           currency: "UYU",
+          ...commercial,
         });
         if (insErr) throw insErr;
       }
@@ -507,14 +533,16 @@ const SaasAdmin = () => {
       // Activar el business y actualizar plan_code
       const { error: bizErr } = await supabase
         .from("businesses")
-        .update({ is_active: true, plan_code: activatePlan })
+        .update({ is_active: true, plan_code: activatePlan, ...(isTrial ? {} : { billing_period: activatePeriod }) })
         .eq("id", businessToActivate.id);
       if (bizErr) throw bizErr;
 
       toast({
         title: activateType === "trial"
           ? `Prueba de ${days} días activada`
-          : "Cuenta activada sin vencimiento (sin cobro automático)",
+          : activateUntil
+            ? `Cuenta activa hasta el ${activateUntil.split("-").reverse().join("/")} (cobro por fuera)`
+            : "Cuenta activa sin vencimiento (cobro por fuera)",
       });
       setShowActivateModal(false);
       setBusinessToActivate(null);
@@ -1276,6 +1304,7 @@ const SaasAdmin = () => {
                 <SelectContent>{PLAN_ORDER.map(c => <SelectItem key={c} value={c}>{PLAN_DEFINITIONS[c].name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
+            {businessToEdit?.mpConnected && <MpDebitNotice />}
             <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
               <div><Label className="text-sm font-semibold">Estado activo</Label><p className="text-xs text-muted-foreground">Desactivar pausa el acceso</p></div>
               <Switch checked={editIsActive} onCheckedChange={setEditIsActive} />
@@ -1319,7 +1348,7 @@ const SaasAdmin = () => {
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="trial">Prueba (vence sola)</SelectItem>
-                  <SelectItem value="active">Cuenta activa (acceso pleno, sin cobro)</SelectItem>
+                  <SelectItem value="active">Cuenta activa · cobro por fuera</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -1343,6 +1372,34 @@ const SaasAdmin = () => {
                 </p>
               </div>
             )}
+            {activateType === "active" && (
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label>Acceso hasta (opcional)</Label>
+                  <Input type="date" value={activateUntil} onChange={e => setActivateUntil(e.target.value)} className="h-9" />
+                  <p className="text-xs text-muted-foreground">
+                    Vacío = sin vencimiento. Con fecha, el acceso se corta solo 5 días después (margen de gracia).
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label>Período</Label>
+                    <Select value={activatePeriod} onValueChange={(v) => setActivatePeriod(v as "monthly" | "annual")}>
+                      <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="annual">Anual</SelectItem>
+                        <SelectItem value="monthly">Mensual</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Monto cobrado (opcional)</Label>
+                    <Input inputMode="decimal" placeholder="$ por mes" value={activateAmount} onChange={e => setActivateAmount(e.target.value)} className="h-9" />
+                  </div>
+                </div>
+              </div>
+            )}
+            {businessToActivate?.mpConnected && <MpDebitNotice />}
             <div className="space-y-2">
               <Label>Plan a asignar</Label>
               <Select value={activatePlan} onValueChange={setActivatePlan}>
@@ -1358,8 +1415,8 @@ const SaasAdmin = () => {
             <Alert>
               <AlertDescription className="text-xs">
                 {activateType === "trial"
-                  ? `Crea una prueba gratuita de ${activateDays} días. Al vencer, la cuenta se bloquea y la persona paga por Mercado Pago.`
-                  : "Deja la cuenta activa con acceso pleno, SIN cobro automático y SIN vencimiento. La cobrás por fuera (transferencia, etc.) y si el cliente deja de pagar, la cortás vos desde Editar o pasándola a una prueba."}
+                  ? `Crea una prueba gratuita de ${activateDays} días. Al vencer, la cuenta se bloquea y la persona elige cómo seguir: pagar por la plataforma o coordinar con vos por WhatsApp.`
+                  : "Deja la cuenta activa con el plan elegido y SIN débito automático: la cobrás por fuera (transferencia, etc.). No genera ningún cobro en la plataforma. Para dar acceso sin cobrar, usá \"Desactivar cobro en el sistema\" en Editar."}
               </AlertDescription>
             </Alert>
           </div>

@@ -30,6 +30,7 @@ import {
   ArrowUpRight,
   Shield,
   Lock,
+  MessageCircle,
 } from "lucide-react";
 import {
   getPlanDefinition,
@@ -42,6 +43,8 @@ import {
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { isCurrentUserSuperAdmin } from "@/lib/admin-access";
+import { getBillingActions } from "@/lib/billing-actions";
+import { buildAccessRequestUrl, buildPlanChangeRequestUrl } from "@/lib/support-whatsapp";
 
 interface Subscription {
   id: string;
@@ -71,6 +74,7 @@ const Billing = () => {
   const [searchParams] = useSearchParams();
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [businessId, setBusinessId] = useState<string | null>(null);
+  const [businessName, setBusinessName] = useState<string | null>(null);
   const [businessInfo, setBusinessInfo] = useState<{
     profCount: number;
     patientCount: number;
@@ -113,12 +117,13 @@ const Billing = () => {
 
       const { data: business } = await supabase
         .from("businesses")
-        .select("id, plan_code")
+        .select("id, name, plan_code")
         .eq("owner_user_id", user.id)
         .maybeSingle();
 
       if (!business) { navigate("/dashboard"); return; }
       setBusinessId(business.id);
+      setBusinessName(business.name ?? null);
 
       const { data: sub } = await supabase
         .from("subscriptions")
@@ -175,6 +180,18 @@ const Billing = () => {
       toast.error("Error al cancelar. Intentá de nuevo.");
     }
   };
+  // Cliente con suscripción activa: el cambio de plan se pide a soporte por
+  // WhatsApp. Solo abre el link: no cobra ni toca la suscripción.
+  const handleRequestPlanChange = (desiredPlanCode?: string) => {
+    const url = buildPlanChangeRequestUrl({
+      businessName,
+      currentPlanName: subscription ? getPlanDefinition(subscription.plan_code).name : null,
+      desiredPlanName: desiredPlanCode ? getPlanDefinition(desiredPlanCode).name : null,
+      desiredPeriod: desiredPlanCode ? selectedBilling : null,
+    });
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
   const handleSelectPlan = async (planCode: string) => {
     if (!businessId) return;
     setCheckoutLoading(planCode);
@@ -221,10 +238,11 @@ const Billing = () => {
     : PUBLIC_PLAN_ORDER;
   const status = subscription ? statusConfig[subscription.status] || statusConfig.expired : null;
   const StatusIcon = status?.icon || Clock;
+  const actions = getBillingActions(subscription);
+  const requestMode = actions.planChangeMode === "support_request";
   // Cuenta activada a mano desde el superadmin (sin débito de Mercado Pago):
   // no hay "próximo cobro", hay "acceso hasta".
-  const isManualActivation =
-    !!subscription && subscription.status === "active" && !subscription.mercadopago_preapproval_id;
+  const isManualActivation = actions.isManual;
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return "—";
@@ -298,6 +316,15 @@ const Billing = () => {
               >
                 Elegir plan
               </Button>
+              <a
+                href={buildAccessRequestUrl(businessName)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-4 inline-flex items-center gap-1.5 text-sm text-white/50 hover:text-white/80"
+              >
+                <MessageCircle className="w-4 h-4" />
+                ¿Preferís pagar por fuera? Coordinalo por WhatsApp
+              </a>
             </CardContent>
           </Card>
         ) : (
@@ -398,10 +425,14 @@ const Billing = () => {
                     className="flex-1 bg-white text-black hover:bg-white/90"
                     onClick={() => setShowPlanModal(true)}
                   >
-                    <ArrowUpRight className="w-4 h-4 mr-2" />
-                    Cambiar plan
+                    {requestMode ? (
+                      <MessageCircle className="w-4 h-4 mr-2" />
+                    ) : (
+                      <ArrowUpRight className="w-4 h-4 mr-2" />
+                    )}
+                    {requestMode ? "Solicitar cambio de plan" : "Cambiar plan"}
                   </Button>
-                  {subscription.status !== "cancelled" && (
+                  {actions.canCancel && (
                     <Button
                       variant="outline"
                       className="flex-1 border-red-500/20 text-red-400 hover:bg-red-500/10"
@@ -503,6 +534,14 @@ const Billing = () => {
                     <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full bg-white/[0.02]" />
                     <div className="absolute -right-4 -bottom-12 w-40 h-40 rounded-full bg-white/[0.015]" />
                   </div>
+                ) : isManualActivation ? (
+                  <div className="rounded-xl border border-dashed border-white/10 p-6 text-center">
+                    <MessageCircle className="w-8 h-8 mx-auto mb-2 text-white/20" />
+                    <p className="text-sm text-white/60 mb-1">Pagás por fuera de la plataforma</p>
+                    <p className="text-xs text-white/40">
+                      Tu plan y tu acceso los gestiona soporte. No hay cobros automáticos.
+                    </p>
+                  </div>
                 ) : (
                   <div className="rounded-xl border border-dashed border-white/10 p-6 text-center">
                     <CreditCard className="w-8 h-8 mx-auto mb-2 text-white/20" />
@@ -562,7 +601,9 @@ const Billing = () => {
           <DialogHeader>
             <DialogTitle className="text-xl text-white">Elegí tu plan</DialogTitle>
             <DialogDescription className="text-white/50">
-              {currentPlanCode
+              {requestMode
+                ? `Estás en el plan ${plan?.name}. Los cambios de plan los coordina soporte por WhatsApp: elegí el que te interesa y te pasamos las condiciones. Desde acá no se cobra ni se cambia nada.`
+                : currentPlanCode
                 ? `Actualmente estás en el plan ${plan?.name}. Elegí un nuevo plan.`
                 : "Todos los planes incluyen 7 días de prueba gratuita."}
             </DialogDescription>
@@ -652,7 +693,7 @@ const Billing = () => {
                     className="w-full text-sm"
                     variant={isCurrent ? "outline" : "default"}
                     disabled={isCurrent || !!checkoutLoading}
-                    onClick={() => handleSelectPlan(code)}
+                    onClick={() => (requestMode ? handleRequestPlanChange(code) : handleSelectPlan(code))}
                     style={
                       !isCurrent
                         ? { backgroundColor: "#00a5a0", color: "white" }
@@ -663,6 +704,8 @@ const Billing = () => {
                       <Loader2 className="w-4 h-4 animate-spin" />
                     ) : isCurrent ? (
                       "Plan actual"
+                    ) : requestMode ? (
+                      "Solicitar este plan"
                     ) : (
                       "Elegir plan"
                     )}
@@ -670,6 +713,18 @@ const Billing = () => {
                 </div>
               );
             })}
+          </div>
+
+          <div className="mt-2 text-center">
+            <a
+              href={requestMode ? buildPlanChangeRequestUrl({ businessName, currentPlanName: plan?.name }) : buildAccessRequestUrl(businessName)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-sm text-white/50 hover:text-white/80"
+            >
+              <MessageCircle className="w-4 h-4" />
+              {requestMode ? "Escribir a soporte por WhatsApp" : "¿Preferís pagar por fuera? Coordinalo por WhatsApp"}
+            </a>
           </div>
         </DialogContent>
       </Dialog>

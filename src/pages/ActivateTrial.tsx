@@ -127,16 +127,11 @@ const ActivateTrial = () => {
         });
         if (insertErr) throw insertErr;
       } else if (existing.status !== "trial" && existing.status !== "active") {
-        const { error: updateErr } = await supabase
-          .from("subscriptions")
-          .update({
-            status: "trial",
-            trial_ends_at: trialEnd.toISOString(),
-            current_period_start: new Date().toISOString(),
-            current_period_end: trialEnd.toISOString(),
-          })
-          .eq("id", existing.id);
-        if (updateErr) throw updateErr;
+        // La prueba ya se usó: el cliente no se reactiva una prueba solo.
+        // Sigue desde Mi plan (pagar por la plataforma o coordinar con soporte).
+        toast.info("Tu prueba gratuita ya fue usada. Elegí cómo seguir desde Mi plan.");
+        navigate("/billing");
+        return;
       }
 
       toast.success("¡Prueba gratis activada! Tenés 7 días para probar todo.");
