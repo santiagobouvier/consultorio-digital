@@ -2382,6 +2382,8 @@ export type Database = {
         Args: { p_rejection_reason?: string; p_request_id: string }
         Returns: Json
       }
+      revoke_portal_notify_token: { Args: never; Returns: undefined }
+      rotate_portal_notify_token: { Args: never; Returns: undefined }
       user_belongs_to_business: {
         Args: { _business_id: string; _user_id: string }
         Returns: boolean
@@ -2416,6 +2418,10 @@ export type Database = {
           name: string
           used_at: string
         }[]
+      }
+      verify_portal_notify_token: {
+        Args: { p_token: string }
+        Returns: boolean
       }
     }
     Enums: {
