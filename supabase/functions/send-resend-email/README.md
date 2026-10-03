@@ -67,28 +67,42 @@ pgcrypto en el esquema `extensions`, migraciones con rol `postgres` y `USAGE`
 sobre `vault`, RPC restringible con `REVOKE`/`GRANT`. `pg_net` ya lo usa el
 trigger actual.
 
-## Aplicación en Lovable Cloud (sin chat de Lovable)
+## Despliegue
 
-Sincronizar `main` solo trae el código: **ni la función ni la migración se
-aplican solas**. Orden seguro:
+### Estado en producción (22/9/2026)
 
-| Paso | Qué | Por dónde | Estado de la capacidad |
-|---|---|---|---|
-| 1 | Aplicar la migración (SQL completo del archivo) | Ejecutor SQL del backend Lovable Cloud (proyecto `e0bd3602-…`) | **A confirmar**: si la UI de Cloud ofrece un editor SQL / "aplicar migraciones pendientes" sin pasar por el chat. Si no, alternativa autorizada: SQL Editor del dashboard de Supabase del proyecto `sfvuuzpmsgepooeamkin`, si Lovable da acceso. |
-| 2 | Desplegar la función `send-resend-email` | Publish desde la UI de Lovable (despliega las edge functions del repo) | Verificado en esta sesión para funciones anteriores |
-| 3 | Verificar (abajo) | SQL + `curl` | — |
+En el backend `sfvuuzpmsgepooeamkin`:
 
-Por qué ese orden: con la migración aplicada y la función vieja todavía
-publicada, el trigger ya manda el token nuevo y la función vieja (que
-aceptaba todo) lo acepta: nada se corta, pero **la vulnerabilidad sigue
-abierta hasta el paso 2**. En el orden inverso (función nueva antes que la
-migración) el trigger seguiría mandando la anon key, recibiría `401` y los
-avisos al profesional quedarían omitidos hasta aplicar la migración; las citas
-se guardan igual (pg_net es asíncrono y no bloquea el `INSERT`).
+- PR #361 integrada en `main`.
+- Migración `20260922120000_notify_professional_portal_requests_service_role.sql`
+  aplicada a mano en el editor SQL de Lovable Cloud.
+- Función `send-resend-email` desplegada **por separado** (el Publish del
+  frontend no la desplegó).
+- Verificado ese día: una invitación de QA recibida en Gmail (camino service
+  role), una reserva `patient_portal` pendiente cuyo aviso al profesional llegó
+  al buzón de Hostinger (camino token del trigger) y un `POST` vacío sin
+  credenciales que devolvió `401 unauthorized`. Estas pruebas no se repitieron
+  después.
+
+### Cómo se despliega un cambio futuro
+
+- **Publish en Lovable solo publica el frontend.** No despliega edge functions
+  ni aplica migraciones; sincronizar `main` tampoco. Una versión anterior de
+  este README afirmaba que el Publish desplegaba la función: era incorrecto.
+- **Migración**: editor SQL de Lovable Cloud, pegando el archivo completo.
+- **Función**: despliegue explícito de `send-resend-email`, como operación
+  separada del Publish. Con la regla vigente (sin usar el chat de Lovable), la
+  vía por UI para desplegar una edge function está **por confirmar**.
+- **Orden compatible** entre función y trigger: aplicar primero la pieza que
+  sigue funcionando con la versión publicada de la otra. En el cambio del 22/9,
+  la migración primero era segura (la función vieja aceptaba el token nuevo),
+  pero dejaba CD-001 abierto hasta desplegar la función; la función primero no
+  rompía reservas (pg_net es asíncrono), pero dejaba los avisos del trigger en
+  `401` hasta aplicar la migración.
 
 ## Verificación sin exponer secretos
 
-Después del paso 1 (SQL):
+Después de aplicar la migración (SQL):
 
 ```sql
 -- una fila; solo nombre y fechas
@@ -104,7 +118,7 @@ select has_function_privilege('service_role', 'public.verify_portal_notify_token
 select has_function_privilege('service_role', 'public.rotate_portal_notify_token()', 'EXECUTE');      -- false
 ```
 
-Después del paso 2 (desde cualquier máquina, sin credenciales):
+Después de desplegar la función (desde cualquier máquina, sin credenciales):
 
 ```
 curl -s -o /dev/null -w '%{http_code}\n' -X POST \
@@ -125,7 +139,8 @@ prueba propio):
 - Reserva desde el portal del paciente de prueba → llega "Nueva reserva desde
   el portal · DD/MM/YYYY HH:MM" al `contact_email` del consultorio de prueba
   (camino token del trigger). Si no llega, mirar los logs de Postgres: un
-  `WARNING ... falta portal_notify_token` indica que falta el paso 1.
+  `WARNING ... falta portal_notify_token` indica que la migración no está
+  aplicada.
 - Desde el panel del profesional de prueba: cancelar una cita del paciente de
   prueba → llega el aviso (camino JWT + destinatario validado).
 
@@ -138,8 +153,10 @@ prueba propio):
   `select public.revoke_portal_notify_token();` — las citas se siguen
   guardando; el aviso se omite con `WARNING`. Reactivar: rotar (crea uno
   nuevo) o volver a aplicar la migración (idempotente).
-- **Volver atrás la función** (Publish de una versión anterior) no requiere
-  cambios en la base: la función anterior aceptaba cualquier credencial, así
-  que el trigger sigue funcionando; la migración no necesita revertirse.
+- **Volver atrás la función** (desplegar una versión anterior de
+  `send-resend-email`; el Publish no lo hace) no requiere cambios en la base:
+  la versión anterior aceptaba cualquier credencial, así que el trigger sigue
+  funcionando y la migración no necesita revertirse. **Reabre CD-001**: solo
+  como medida de emergencia.
 - Nunca ejecutar `select * from vault.decrypted_secrets` en pantalla ni pegar
   el token en chats, tickets o commits.
