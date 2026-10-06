@@ -2082,6 +2082,7 @@ export type Database = {
           currency: string
           current_period_end: string | null
           current_period_start: string | null
+          detached_mercadopago_preapproval_id: string | null
           id: string
           mercadopago_payer_id: string | null
           mercadopago_preapproval_id: string | null
@@ -2099,6 +2100,7 @@ export type Database = {
           currency?: string
           current_period_end?: string | null
           current_period_start?: string | null
+          detached_mercadopago_preapproval_id?: string | null
           id?: string
           mercadopago_payer_id?: string | null
           mercadopago_preapproval_id?: string | null
@@ -2116,6 +2118,7 @@ export type Database = {
           currency?: string
           current_period_end?: string | null
           current_period_start?: string | null
+          detached_mercadopago_preapproval_id?: string | null
           id?: string
           mercadopago_payer_id?: string | null
           mercadopago_preapproval_id?: string | null
