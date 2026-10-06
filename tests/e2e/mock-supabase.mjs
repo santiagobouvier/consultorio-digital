@@ -30,7 +30,7 @@ export const sessionFor = (u, { expired = false } = {}) => ({
 export async function startMockSupabase(users, { port = 54399, refreshDelayMs = 0, lookupFails = false } = {}) {
   for (const u of Object.values(users)) u.token = fakeJwt(u.id, u.email);
   const byToken = (auth) => Object.values(users).find((u) => auth === `Bearer ${u.token}`) || null;
-  const log = { passwordUpdates: [], recover: [], verify: [], lookups: [], logins: [], refreshes: [] };
+  const log = { passwordUpdates: [], recover: [], verify: [], lookups: [], logins: [], refreshes: [], logouts: [] };
   const state = { refreshDelayMs, lookupFails };
 
   const server = http.createServer(async (req, res) => {
@@ -84,7 +84,7 @@ export async function startMockSupabase(users, { port = 54399, refreshDelayMs = 
       log.recover.push({ email: body.email, redirectTo: url.searchParams.get("redirect_to") });
       return send(200, {});
     }
-    if (url.pathname === "/auth/v1/logout") return send(204);
+    if (url.pathname === "/auth/v1/logout") { log.logouts.push({ user: who ? who.id : null }); return send(204); }
     if (url.pathname === "/rest/v1/rpc/is_super_admin") return send(200, !!who && (who.roles || []).includes("super_admin"));
     if (url.pathname === "/rest/v1/user_roles") return send(200, who ? (who.roles || []).map((role) => ({ role })) : []);
     if (url.pathname === "/rest/v1/businesses") return send(200, who && who.ownsBusiness ? [{ id: "biz-qa" }] : []);

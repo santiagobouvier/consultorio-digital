@@ -58,6 +58,10 @@ export default defineConfig(({ mode }) => ({
         globPatterns: ["**/*.{js,css,html,ico,png,svg,webp}"],
         navigateFallbackDenylist: [/^\/~oauth/],
         cleanupOutdatedCaches: true,
+        // Push y clic en notificaciones: un único service worker por alcance.
+        // Registrar push-sw.js por separado en "/" hacía que cada pestaña
+        // nueva le quitara el control a las demás y las recargara.
+        importScripts: ["/push-sw.js"],
         // Importante: NO usar skipWaiting/clientsClaim juntos con autoUpdate.
         // El nuevo SW espera (waiting) hasta que se cierren todas las pestañas
         // o hasta que el usuario refresque manualmente. Esto evita reloads
