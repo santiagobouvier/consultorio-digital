@@ -1,18 +1,16 @@
-// Custom service worker for push notification handling
-// This file is loaded alongside the workbox-generated SW
-// Bump SW_VERSION on each deploy to force browsers to fetch a fresh worker.
-const SW_VERSION = "2026-04-21-1";
-
-self.addEventListener("install", () => {
-  // Take over as soon as the new SW is installed.
-  self.skipWaiting();
-});
-
-self.addEventListener("activate", (event) => {
-  // Claim all open clients so the updated SW controls them immediately.
-  event.waitUntil(self.clients.claim());
-});
-
+// Manejo de notificaciones push. NO es un service worker aparte: el service
+// worker de la app (sw.js, generado por Workbox) lo carga con importScripts.
+// Un alcance ("/") admite UN solo service worker. Si la app registra dos
+// archivos distintos en el mismo alcance, cada pestaña que carga reemplaza al
+// otro y, como este archivo tomaba el control al instante (skipWaiting +
+// clients.claim), las demás pestañas recibían "controllerchange" y se
+// recargaban solas: con dos o más pestañas, recarga infinita.
+//
+// Por eso acá no hay skipWaiting en install ni clients.claim en activate: la
+// activación de versiones nuevas la decide la persona con "Actualizar". Las
+// pestañas con la versión anterior todavía llaman a register("/push-sw.js");
+// con este contenido ese registro queda esperando y no le quita el control a
+// nadie.
 self.addEventListener("message", (event) => {
   if (event.data?.type === "SKIP_WAITING") {
     self.skipWaiting();

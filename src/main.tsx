@@ -81,13 +81,9 @@ const bootstrap = async () => {
     window.addEventListener("pwa:do-update", () => {
       void updateSW(true);
     });
-
-    // Register push notification service worker
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/push-sw.js").catch((err) => {
-        console.warn("Push SW registration failed:", err);
-      });
-    }
+    // Las notificaciones push las maneja este mismo service worker (sw.js
+    // importa /push-sw.js). No registrar otro en el mismo alcance: dos
+    // service workers peleándose por "/" recargaban sin fin a las pestañas.
   }
 
   createRoot(document.getElementById("root")!).render(<App />);

@@ -13,6 +13,7 @@
     "test:db": "bash tests/db/run.sh",
     "test:e2e:reset": "node tests/e2e/reset-password.e2e.mjs",
     "test:e2e:acceso": "node tests/e2e/patient-access-session.e2e.mjs",
+    "test:e2e:pestanas": "node tests/e2e/pwa-tabs.e2e.mjs",
     "preview": "vite preview",
     "predev": "bunx tsx scripts/generate-sitemap.ts",
     "prebuild": "bunx tsx scripts/generate-sitemap.ts"
