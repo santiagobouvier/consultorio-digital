@@ -6,10 +6,10 @@
 //   - Chromium (PW_CHROMIUM=/ruta/al/chromium; por defecto /opt/pw-browsers/chromium)
 // Uso:  NODE_PATH=... node tests/e2e/reset-password.e2e.mjs
 // Levanta su propio Vite en 127.0.0.1:5200 apuntando al Supabase simulado.
-import http from "node:http";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
+import { fakeJwt, nowSec as now, startMockSupabase } from "./mock-supabase.mjs";
 
 const ROOT = fileURLToPath(new URL("../../", import.meta.url));
 const require = createRequire(import.meta.url);
@@ -24,74 +24,15 @@ try {
 const MOCK_PORT = 54399;
 const APP_PORT = 5200;
 const APP = `http://127.0.0.1:${APP_PORT}`;
-const b64url = (o) => Buffer.from(JSON.stringify(o)).toString("base64url");
-const now = () => Math.floor(Date.now() / 1000);
-const fakeJwt = (sub, email, role = "authenticated") =>
-  `${b64url({ alg: "HS256", typ: "JWT" })}.${b64url({ sub, email, role, aud: "authenticated", iat: now(), exp: now() + 3600 })}.firma-de-prueba`;
 
+// El primero es el que devuelve /verify con token_hash válido.
 const USERS = {
-  patient: { id: "00000000-0000-4000-8000-0000000000a1", email: "paciente.qa@example.test" },
-  pro: { id: "00000000-0000-4000-8000-0000000000b1", email: "profesional.qa@example.test" },
+  patient: { id: "00000000-0000-4000-8000-0000000000a1", email: "paciente.qa@example.test", roles: ["patient"],
+    clinics: [{ slug: "qa-psico", name: "QA Psicología" }] },
+  pro: { id: "00000000-0000-4000-8000-0000000000b1", email: "profesional.qa@example.test", roles: ["owner"], ownsBusiness: true, clinics: [] },
 };
-for (const u of Object.values(USERS)) u.token = fakeJwt(u.id, u.email);
-const byToken = (auth) => Object.values(USERS).find((u) => auth === `Bearer ${u.token}`) || null;
-const userJson = (u) => ({ id: u.id, aud: "authenticated", role: "authenticated", email: u.email, app_metadata: {}, user_metadata: {}, created_at: "2026-09-22T00:00:00Z" });
-
-// Registro de lo que pidió la app (nunca se guardan contraseñas: solo su largo)
-const log = { passwordUpdates: [], recover: [], verify: [] };
-
-const mock = http.createServer(async (req, res) => {
-  const cors = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "*",
-    "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
-  };
-  const send = (status, body) => {
-    res.writeHead(status, { ...cors, "Content-Type": "application/json" });
-    res.end(body === undefined ? "" : JSON.stringify(body));
-  };
-  if (req.method === "OPTIONS") return send(204);
-  let raw = "";
-  for await (const c of req) raw += c;
-  const body = raw ? JSON.parse(raw) : {};
-  const url = new URL(req.url, `http://127.0.0.1:${MOCK_PORT}`);
-  const who = byToken(req.headers.authorization);
-
-  if (url.pathname === "/auth/v1/user" && req.method === "GET") {
-    return who ? send(200, userJson(who)) : send(401, { code: "bad_jwt", message: "invalid JWT" });
-  }
-  if (url.pathname === "/auth/v1/user" && req.method === "PUT") {
-    if (!who) return send(403, { code: "session_not_found", message: "Auth session missing!" });
-    log.passwordUpdates.push({ user: who.id, length: String(body.password || "").length });
-    return send(200, userJson(who));
-  }
-  if (url.pathname === "/auth/v1/verify" && req.method === "POST") {
-    log.verify.push({ type: body.type, ok: body.token_hash === "hash-ok" });
-    if (body.type === "recovery" && body.token_hash === "hash-ok") {
-      const u = USERS.patient;
-      return send(200, { access_token: u.token, token_type: "bearer", expires_in: 3600, expires_at: now() + 3600, refresh_token: "r-ok", user: userJson(u) });
-    }
-    return send(403, { code: "otp_expired", error_code: "otp_expired", msg: "Token has expired or is invalid" });
-  }
-  if (url.pathname === "/auth/v1/recover" && req.method === "POST") {
-    log.recover.push({ email: body.email, redirectTo: url.searchParams.get("redirect_to") });
-    return send(200, {});
-  }
-  if (url.pathname === "/auth/v1/token") return send(400, { code: "refresh_token_not_found", message: "no" });
-  if (url.pathname === "/auth/v1/logout") return send(204);
-  if (url.pathname === "/rest/v1/rpc/is_super_admin") return send(200, false);
-  if (url.pathname === "/rest/v1/user_roles") {
-    return send(200, who === USERS.pro ? [{ role: "owner" }] : who === USERS.patient ? [{ role: "patient" }] : []);
-  }
-  if (url.pathname === "/rest/v1/businesses") return send(200, who === USERS.pro ? [{ id: "biz-qa" }] : []);
-  if (url.pathname.startsWith("/rest/v1/rpc/")) return send(200, null);
-  if (url.pathname.startsWith("/rest/v1/")) return send(200, []);
-  if (url.pathname === "/functions/v1/public-patient-lookup") {
-    if (!who) return send(401, { error: "unauthorized" });
-    return send(200, { clinics: who === USERS.patient ? [{ slug: "qa-psico", name: "QA Psicología", specialty: null, logo_url: null }] : [] });
-  }
-  return send(404, { message: "no simulado" });
-});
+let log;
+let mock;
 
 const results = [];
 const check = (cond, msg) => {
@@ -100,7 +41,8 @@ const check = (cond, msg) => {
 };
 
 async function main() {
-  await new Promise((r) => mock.listen(MOCK_PORT, "127.0.0.1", r));
+  mock = await startMockSupabase(USERS, { port: MOCK_PORT });
+  log = mock.log;
   const vite = spawn("npx", ["vite", "--port", String(APP_PORT), "--host", "127.0.0.1", "--strictPort"], {
     cwd: ROOT,
     env: { ...process.env, VITE_SUPABASE_URL: `http://127.0.0.1:${MOCK_PORT}`, VITE_SUPABASE_PUBLISHABLE_KEY: fakeJwt("anon", "", "anon") },

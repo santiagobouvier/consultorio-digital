@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { resolvePatientAccess } from "@/lib/patient-access";
-import { requestPasswordReset } from "@/lib/password-recovery-actions";
+import { decideExistingSession, resolvePatientAccess } from "@/lib/patient-access";
+import { getOwnPatientClinics, getStaffHomePath, requestPasswordReset } from "@/lib/password-recovery-actions";
 import logoWhite from "@/assets/logo-consultorio-digital-white.png";
 
 const BRAND = "#00a5a0";
@@ -29,6 +29,53 @@ const PatientAccess = () => {
   const [resetSending, setResetSending] = useState(false);
   const [clinics, setClinics] = useState<Clinic[] | null>(null);
   const [notFound, setNotFound] = useState(false);
+  // Sesión ya iniciada (por ejemplo, después de recuperar la contraseña o de
+  // entrar al portal): se reconoce antes de mostrar el formulario.
+  const [checkingSession, setCheckingSession] = useState(true);
+  const [activeSession, setActiveSession] = useState<{ email: string; staffPath: string | null } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        // Espera a que supabase-js termine de cargar (y refrescar) la sesión guardada
+        const { data: { session } } = await supabase.auth.getSession();
+        if (cancelled || !session) return;
+        // Solo sus propios consultorios: la búsqueda usa la sesión, no un email
+        const own = await getOwnPatientClinics();
+        if (cancelled) return;
+        const staffPath = own.length > 0 ? null : await getStaffHomePath(session.user.id);
+        if (cancelled) return;
+        const next = decideExistingSession(own, staffPath);
+        if (next.kind === "redirect") {
+          navigate(next.path, { replace: true });
+          return;
+        }
+        if (next.kind === "choose") {
+          setClinics(own as Clinic[]);
+        } else {
+          setActiveSession({ email: session.user.email ?? "", staffPath: next.kind === "staff" ? next.path : null });
+        }
+      } catch (err) {
+        console.error("Session check error:", err);
+        if (!cancelled) setLoginError("No pudimos verificar tu sesión. Podés ingresar de nuevo.");
+      } finally {
+        if (!cancelled) setCheckingSession(false);
+      }
+    })();
+
+    // Si la sesión se cierra (en esta u otra pestaña), volver al formulario
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_OUT" && !cancelled) {
+        setClinics(null);
+        setActiveSession(null);
+      }
+    });
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
+  }, [navigate]);
 
   // Primero se verifica la identidad (email + contraseña) y recién con la
   // sesión se piden SUS consultorios: un email solo no revela nada. El portal
@@ -106,6 +153,7 @@ const PatientAccess = () => {
   const handleOtherAccount = async () => {
     await supabase.auth.signOut();
     setClinics(null);
+    setActiveSession(null);
     setNotFound(false);
     setPassword("");
   };
@@ -198,8 +246,44 @@ const PatientAccess = () => {
           Ingresá con el email y la contraseña de tu cuenta de paciente
         </p>
 
+        {checkingSession && (
+          <div className="flex flex-col items-center gap-3 py-6" role="status" data-testid="access-checking">
+            <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+            <p className="text-sm text-gray-500">Verificando tu sesión…</p>
+          </div>
+        )}
+
+        {/* Sesión iniciada sin portal de paciente (profesional u otra cuenta) */}
+        {!checkingSession && activeSession && (
+          <div className="w-full space-y-4 rounded-xl border border-white/10 bg-white/5 p-5 text-center" data-testid="access-active-session">
+            <p className="text-sm text-gray-300">
+              Iniciaste sesión como <span className="font-medium text-white">{activeSession.email}</span>.
+            </p>
+            <p className="text-xs text-gray-500">
+              {activeSession.staffPath
+                ? "Esta cuenta es del equipo del consultorio y no tiene portal de paciente."
+                : "Esta cuenta no tiene un portal de paciente."}
+            </p>
+            {activeSession.staffPath && (
+              <Button
+                onClick={() => navigate(activeSession.staffPath as string)}
+                className="w-full h-11 rounded-xl font-semibold text-sm"
+                style={{ background: `linear-gradient(135deg, ${BRAND}, ${GREEN})` }}
+              >
+                Ir a mi panel
+              </Button>
+            )}
+            <button
+              onClick={() => void handleOtherAccount()}
+              className="text-gray-400 text-sm hover:text-gray-200 underline underline-offset-2"
+            >
+              Ingresar con otra cuenta
+            </button>
+          </div>
+        )}
+
         {/* Form */}
-        {!clinics && (
+        {!checkingSession && !activeSession && !clinics && (
           <form
             onSubmit={handleSubmit}
             className="w-full space-y-4"
@@ -280,7 +364,7 @@ const PatientAccess = () => {
         )}
 
         {/* Clinic selection */}
-        {clinics && clinics.length > 1 && (
+        {!checkingSession && clinics && clinics.length > 1 && (
           <div
             className="w-full space-y-3"
             style={{ animation: "fadeSlideUp 0.5s cubic-bezier(0.16,1,0.3,1) both" }}
