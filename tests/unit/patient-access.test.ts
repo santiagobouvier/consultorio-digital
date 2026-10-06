@@ -3,7 +3,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { resolvePatientAccess } from "../../src/lib/patient-access.ts";
+import { decideExistingSession, resolvePatientAccess } from "../../src/lib/patient-access.ts";
 
 const src = (rel: string) => readFileSync(fileURLToPath(new URL(`../../${rel}`, import.meta.url)), "utf8");
 
@@ -37,4 +37,28 @@ test("el portal respeta la sesión ya abierta (no pide login dos veces)", () => 
   const portal = src("src/pages/ClinicPortal.tsx");
   assert.match(portal, /supabase\.auth\.getSession\(\)/);
   assert.match(portal, /\.eq\("auth_user_id", session\.user\.id\)/);
+});
+
+test("sesión ya iniciada: el paciente va a su portal o elige entre los suyos", () => {
+  assert.deepEqual(decideExistingSession([{ slug: "qa-psico", name: "QA" }], null), { kind: "redirect", path: "/portal/qa-psico" });
+  assert.deepEqual(decideExistingSession([{ slug: "a", name: "A" }, { slug: "b", name: "B" }], null), { kind: "choose" });
+});
+
+test("sesión ya iniciada: lo de paciente pesa más que el rol de profesional", () => {
+  assert.deepEqual(decideExistingSession([{ slug: "qa-psico", name: "QA" }], "/dashboard"), { kind: "redirect", path: "/portal/qa-psico" });
+});
+
+test("sesión ya iniciada sin portal: profesional → su panel; otra cuenta → aviso", () => {
+  assert.deepEqual(decideExistingSession([], "/dashboard"), { kind: "staff", path: "/dashboard" });
+  assert.deepEqual(decideExistingSession([], "/saas-admin"), { kind: "staff", path: "/saas-admin" });
+  assert.deepEqual(decideExistingSession(null, null), { kind: "no-portal" });
+});
+
+test("/acceso/paciente revisa la sesión al cargar antes de mostrar el formulario", () => {
+  const page = src("src/pages/PatientAccess.tsx");
+  assert.match(page, /useState\(true\)/, "arranca en 'verificando sesión'");
+  const effect = page.indexOf("useEffect(");
+  assert.ok(effect > 0 && page.indexOf("supabase.auth.getSession()", effect) > effect, "lee la sesión en un efecto al cargar");
+  assert.match(page, /!checkingSession && !activeSession && !clinics &&/, "el formulario solo aparece después de verificar");
+  assert.match(page, /getOwnPatientClinics\(\)/, "consulta solo los consultorios propios por sesión");
 });
