@@ -17,7 +17,7 @@
 //   ... --ref origin/main [--verificar]
 // Otras opciones: --puerto 4390 --salida <carpeta de evidencia> --dist <build ya hecho>
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, mkdirSync, renameSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, renameSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -47,6 +47,23 @@ const USERS = {
     fullName: "Paciente Ficticio QA", roles: ["patient"], clinics: [{ slug: "qa-psico", name: "Consultorio Ficticio QA" }] },
 };
 
+// Versiones que fija el lockfile del proyecto (las del build de Lovable).
+const PINNED = { "@supabase/supabase-js": "2.86.0", "vite-plugin-pwa": "1.2.0", "workbox-window": "7.4.0" };
+
+function checkPinnedVersions() {
+  const wrong = Object.entries(PINNED).filter(([name, version]) => {
+    const pkg = path.join(ROOT, "node_modules", ...name.split("/"), "package.json");
+    return !existsSync(pkg) || JSON.parse(readFileSync(pkg, "utf8")).version !== version;
+  });
+  if (!wrong.length) return;
+  console.error(`
+Faltan las versiones fijadas del proyecto: ${wrong.map(([n, v]) => `${n}@${v}`).join(", ")}.
+Instalalas (no cambia package.json) y volvé a correr:
+  npm install --no-save --package-lock=false ${Object.entries(PINNED).map(([n, v]) => `${n}@${v}`).join(" ")}
+`);
+  process.exit(3);
+}
+
 function build() {
   let cwd = ROOT;
   let worktree = null;
@@ -54,12 +71,15 @@ function build() {
     worktree = mkdtempSync(path.join(tmpdir(), "cd-ref-"));
     const add = spawnSync("git", ["worktree", "add", "--detach", worktree, REF], { cwd: ROOT, stdio: "inherit" });
     if (add.status !== 0) throw new Error(`No se pudo preparar ${REF}`);
-    symlinkSync(path.join(ROOT, "node_modules"), path.join(worktree, "node_modules"));
+    // "junction" funciona en Windows sin permisos de administrador; en Mac/Linux se ignora.
+    symlinkSync(path.join(ROOT, "node_modules"), path.join(worktree, "node_modules"), "junction");
     cwd = worktree;
   }
   const dist = mkdtempSync(path.join(tmpdir(), "cd-entorno-"));
   console.log(`Compilando ${REF || "la rama actual"} (build de producción) …`);
-  const r = spawnSync("npx", ["vite", "build", "--outDir", dist, "--emptyOutDir"], {
+  // Vite con el mismo Node que corre este script: anda igual en Windows, Mac y Linux.
+  const viteBin = path.join(ROOT, "node_modules", "vite", "bin", "vite.js");
+  const r = spawnSync(process.execPath, [viteBin, "build", "--outDir", dist, "--emptyOutDir"], {
     cwd,
     stdio: "ignore",
     env: { ...process.env, VITE_SUPABASE_URL: `http://127.0.0.1:${MOCK_PORT}`, VITE_SUPABASE_PUBLISHABLE_KEY: fakeJwt("anon", "", "anon") },
@@ -214,6 +234,7 @@ async function verify() {
 }
 
 async function main() {
+  if (!arg("dist", null)) checkPinnedVersions();
   const dist = arg("dist", null) || build();
   const mock = await startMockSupabase(USERS, { port: MOCK_PORT });
   const server = await startStaticServer(dist, { port: APP_PORT });
