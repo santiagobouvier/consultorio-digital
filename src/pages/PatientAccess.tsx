@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { resolvePatientAccess } from "@/lib/patient-access";
+import { requestPasswordReset } from "@/lib/password-recovery-actions";
 import logoWhite from "@/assets/logo-consultorio-digital-white.png";
 
 const BRAND = "#00a5a0";
@@ -24,6 +25,8 @@ const PatientAccess = () => {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [resetNotice, setResetNotice] = useState<string | null>(null);
+  const [resetSending, setResetSending] = useState(false);
   const [clinics, setClinics] = useState<Clinic[] | null>(null);
   const [notFound, setNotFound] = useState(false);
 
@@ -76,6 +79,27 @@ const PatientAccess = () => {
       setLoginError("No pudimos verificar tu cuenta. Probá de nuevo en unos minutos.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Mismo mensaje exista o no la cuenta: no revela emails ni consultorios.
+  const handleForgotPassword = async () => {
+    if (!email.trim()) {
+      setResetNotice("Escribí tu email arriba y volvé a tocar \"¿Olvidaste tu contraseña?\".");
+      return;
+    }
+    setResetSending(true);
+    try {
+      const { rateLimited } = await requestPasswordReset(email);
+      setResetNotice(
+        rateLimited
+          ? "Pediste varios enlaces seguidos. Esperá un minuto y probá de nuevo."
+          : "Si ese email tiene una cuenta, te llegó un enlace para crear una contraseña nueva.",
+      );
+    } catch {
+      setResetNotice("No pudimos enviar el enlace. Probá de nuevo en unos minutos.");
+    } finally {
+      setResetSending(false);
     }
   };
 
@@ -215,6 +239,18 @@ const PatientAccess = () => {
                 "Ingresar"
               )}
             </Button>
+
+            <button
+              type="button"
+              onClick={() => void handleForgotPassword()}
+              disabled={resetSending}
+              className="block mx-auto text-xs text-gray-400 hover:text-gray-200 underline underline-offset-2"
+            >
+              {resetSending ? "Enviando…" : "¿Olvidaste tu contraseña?"}
+            </button>
+            {resetNotice && (
+              <p role="status" className="text-xs text-center text-gray-400">{resetNotice}</p>
+            )}
 
             <p className="text-xs text-center text-gray-500">
               ¿No tenés acceso? Contactá a tu profesional.
