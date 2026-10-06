@@ -1,14 +1,11 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { createPushHandler, type DeliveryResult, type PushPayload } from "./handler.ts";
 
 /**
  * Send push notification to a user's registered devices.
  *
  * Body: { user_id, title, body, icon?, url? }
+ * Autorización (quién puede mandar y a quién): ver handler.ts.
  *
  * VAPID keys regeneration:
  *   npx web-push generate-vapid-keys
@@ -179,97 +176,102 @@ async function encryptPayload(
   return { ciphertext: body, salt, localPublicKey: localPublicKeyRaw };
 }
 
-// ── Main handler ─────────────────────────────────────────────
+// ── Envío y autorización ─────────────────────────────────────
 
-Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
+const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_ROLE);
 
-  try {
-    const { user_id, title, body: notifBody, icon, url } = await req.json();
+async function getUserIdFromToken(token: string): Promise<string | null> {
+  const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    global: { headers: { Authorization: `Bearer ${token}` } },
+  });
+  const { data, error } = await userClient.auth.getUser(token);
+  if (error || !data?.user?.id) return null;
+  return data.user.id;
+}
 
-    if (!user_id || !title || !notifBody) {
-      return new Response(JSON.stringify({ error: "Missing user_id, title or body" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
-
-    const { data: subs, error } = await supabaseAdmin
-      .from("push_subscriptions")
-      .select("id, endpoint, p256dh, auth")
-      .eq("user_id", user_id);
-
-    if (error) throw error;
-    if (!subs || subs.length === 0) {
-      return new Response(JSON.stringify({ sent: 0, message: "No subscriptions found" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const vapidPrivateKey = await importVapidPrivateKey(Deno.env.get("VAPID_PRIVATE_KEY")!);
-    const vapidSubject = Deno.env.get("VAPID_SUBJECT")!;
-
-    const payload = JSON.stringify({
-      title,
-      body: notifBody,
-      icon: icon || "/app-icon.svg",
-      data: { url: url || "/" },
+// El destino tiene que ser paciente activo de un consultorio al que pertenece
+// quien envía (misma regla que las políticas RLS: dueño, miembro o superadmin).
+async function isPatientOfCallerBusiness(callerId: string, targetUserId: string): Promise<boolean> {
+  const { data: patients, error } = await supabaseAdmin
+    .from("patients")
+    .select("business_id")
+    .eq("auth_user_id", targetUserId)
+    .eq("is_active", true);
+  if (error) throw error;
+  for (const businessId of new Set((patients ?? []).map((p) => p.business_id))) {
+    const { data: belongs, error: rpcError } = await supabaseAdmin.rpc("user_belongs_to_business", {
+      _user_id: callerId,
+      _business_id: businessId,
     });
+    if (rpcError) throw rpcError;
+    if (belongs === true) return true;
+  }
+  return false;
+}
 
-    let sent = 0;
-    const staleIds: string[] = [];
+async function deliver(targetUserId: string, payloadObj: PushPayload): Promise<DeliveryResult> {
+  const { data: subs, error } = await supabaseAdmin
+    .from("push_subscriptions")
+    .select("id, endpoint, p256dh, auth")
+    .eq("user_id", targetUserId);
 
-    for (const sub of subs) {
-      try {
-        const aud = new URL(sub.endpoint).origin;
-        const authHeader = await createVapidAuthHeader(aud, vapidSubject, vapidPrivateKey);
+  if (error) throw error;
+  if (!subs || subs.length === 0) return { sent: 0, total: 0, cleaned: 0 };
 
-        const { ciphertext } = await encryptPayload(sub.p256dh, sub.auth, payload);
+  const vapidPrivateKey = await importVapidPrivateKey(Deno.env.get("VAPID_PRIVATE_KEY")!);
+  const vapidSubject = Deno.env.get("VAPID_SUBJECT")!;
+  const payload = JSON.stringify(payloadObj);
 
-        const res = await fetch(sub.endpoint, {
-          method: "POST",
-          headers: {
-            Authorization: authHeader,
-            "Content-Encoding": "aes128gcm",
-            "Content-Type": "application/octet-stream",
-            TTL: "86400",
-          },
-          body: ciphertext,
-        });
+  let sent = 0;
+  const staleIds: string[] = [];
 
-        if (res.status === 201 || res.status === 200) {
-          sent++;
-        } else if (res.status === 404 || res.status === 410) {
-          staleIds.push(sub.id);
-        } else {
-          const errText = await res.text();
-          console.error(`Push failed for ${sub.id}: ${res.status} ${errText}`);
-        }
-      } catch (err) {
-        console.error(`Push error for ${sub.id}:`, err);
+  for (const sub of subs) {
+    try {
+      const aud = new URL(sub.endpoint).origin;
+      const authHeader = await createVapidAuthHeader(aud, vapidSubject, vapidPrivateKey);
+
+      const { ciphertext } = await encryptPayload(sub.p256dh, sub.auth, payload);
+
+      const res = await fetch(sub.endpoint, {
+        method: "POST",
+        headers: {
+          Authorization: authHeader,
+          "Content-Encoding": "aes128gcm",
+          "Content-Type": "application/octet-stream",
+          TTL: "86400",
+        },
+        body: ciphertext,
+      });
+
+      if (res.status === 201 || res.status === 200) {
+        sent++;
+      } else if (res.status === 404 || res.status === 410) {
+        staleIds.push(sub.id);
+      } else {
+        const errText = await res.text();
+        console.error(`Push failed for ${sub.id}: ${res.status} ${errText}`);
       }
+    } catch (err) {
+      console.error(`Push error for ${sub.id}:`, err);
     }
-
-    // Clean up stale subscriptions
-    if (staleIds.length > 0) {
-      await supabaseAdmin.from("push_subscriptions").delete().in("id", staleIds);
-    }
-
-    return new Response(JSON.stringify({ sent, total: subs.length, cleaned: staleIds.length }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  } catch (err) {
-    console.error("send-push-notification error:", err);
-    return new Response(JSON.stringify({ error: String(err) }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
   }
-});
+
+  // Clean up stale subscriptions
+  if (staleIds.length > 0) {
+    await supabaseAdmin.from("push_subscriptions").delete().in("id", staleIds);
+  }
+
+  return { sent, total: subs.length, cleaned: staleIds.length };
+}
+
+Deno.serve(
+  createPushHandler({
+    serviceRoleKey: SERVICE_ROLE,
+    getUserIdFromToken,
+    isPatientOfCallerBusiness,
+    deliver,
+  }),
+);
