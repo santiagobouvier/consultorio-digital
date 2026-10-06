@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { resolvePatientAccess } from "@/lib/patient-access";
 import logoWhite from "@/assets/logo-consultorio-digital-white.png";
 
 const BRAND = "#00a5a0";
@@ -20,40 +21,69 @@ interface Clinic {
 const PatientAccess = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
   const [clinics, setClinics] = useState<Clinic[] | null>(null);
   const [notFound, setNotFound] = useState(false);
 
+  // Primero se verifica la identidad (email + contraseña) y recién con la
+  // sesión se piden SUS consultorios: un email solo no revela nada. El portal
+  // respeta la sesión abierta, así que el paciente entra directo.
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim()) return;
+    if (!email.trim() || !password) return;
 
     setLoading(true);
     setNotFound(false);
     setClinics(null);
+    setLoginError(null);
 
     try {
-      const { data, error } = await supabase.functions.invoke("public-patient-lookup", {
-        body: { email: email.trim() },
+      const { data: signIn, error: signInError } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
       });
+      if (signInError || !signIn.session) {
+        // 400 = credenciales inválidas; cualquier otra cosa es conexión/servidor
+        setLoginError(
+          !signInError || signInError.status === 400
+            ? "El email o la contraseña no son correctos."
+            : "No pudimos verificar tu cuenta. Probá de nuevo en unos minutos.",
+        );
+        return;
+      }
 
+      // El email va solo por compatibilidad con la versión anterior de la
+      // función mientras se despliega; la nueva lo ignora y usa la sesión.
+      const { data, error } = await supabase.functions.invoke("public-patient-lookup", {
+        body: { email: signIn.session.user.email },
+      });
       if (error) throw error;
 
       const results: Clinic[] = data?.clinics ?? [];
-
-      if (results.length === 0) {
-        setNotFound(true);
-      } else if (results.length === 1) {
-        navigate(`/portal/${results[0].slug}`);
-      } else {
+      const next = resolvePatientAccess(results);
+      if (next.kind === "redirect") {
+        navigate(next.path);
+      } else if (next.kind === "choose") {
         setClinics(results);
+      } else {
+        await supabase.auth.signOut();
+        setNotFound(true);
       }
     } catch (err) {
       console.error("Lookup error:", err);
-      setNotFound(true);
+      setLoginError("No pudimos verificar tu cuenta. Probá de nuevo en unos minutos.");
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleOtherAccount = async () => {
+    await supabase.auth.signOut();
+    setClinics(null);
+    setNotFound(false);
+    setPassword("");
   };
 
   return (
@@ -141,7 +171,7 @@ const PatientAccess = () => {
           className="text-gray-400 text-sm mb-8 text-center"
           style={{ animation: "fadeSlideUp 0.7s cubic-bezier(0.16,1,0.3,1) 0.2s both" }}
         >
-          Ingresá el email con el que te registraron en tu consultorio
+          Ingresá con el email y la contraseña de tu cuenta de paciente
         </p>
 
         {/* Form */}
@@ -157,11 +187,22 @@ const PatientAccess = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              autoComplete="email"
+              className="h-12 rounded-xl bg-white/5 border-white/10 text-white placeholder:text-gray-500 focus:border-[#00a5a0]/50 focus:ring-[#00a5a0]/20"
+            />
+            <Input
+              type="password"
+              placeholder="Contraseña"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              autoComplete="current-password"
+              aria-label="Contraseña"
               className="h-12 rounded-xl bg-white/5 border-white/10 text-white placeholder:text-gray-500 focus:border-[#00a5a0]/50 focus:ring-[#00a5a0]/20"
             />
             <Button
               type="submit"
-              disabled={loading || !email.trim()}
+              disabled={loading || !email.trim() || !password}
               className="w-full h-12 rounded-xl font-semibold text-sm transition-all duration-300 hover:scale-[1.02]"
               style={{
                 background: `linear-gradient(135deg, ${BRAND}, ${GREEN})`,
@@ -171,7 +212,7 @@ const PatientAccess = () => {
               {loading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
-                "Continuar"
+                "Ingresar"
               )}
             </Button>
 
@@ -179,13 +220,23 @@ const PatientAccess = () => {
               ¿No tenés acceso? Contactá a tu profesional.
             </p>
 
+            {loginError && (
+              <div role="alert" className="rounded-xl border border-white/10 bg-white/5 p-4 text-center">
+                <p className="text-gray-300 text-sm mb-1">{loginError}</p>
+                <p className="text-gray-500 text-xs">
+                  Si todavía no creaste tu contraseña, usá el link del mail de invitación de tu profesional.
+                </p>
+              </div>
+            )}
+
             {notFound && (
-              <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-center">
+              <div role="alert" className="rounded-xl border border-white/10 bg-white/5 p-4 text-center">
                 <p className="text-gray-300 text-sm mb-1">
-                  No encontramos tu cuenta.
+                  Esta cuenta no tiene un portal de paciente.
                 </p>
                 <p className="text-gray-500 text-xs">
-                  Pedile a tu profesional que te envíe la invitación.
+                  Pedile a tu profesional que te envíe la invitación. Si sos profesional,{" "}
+                  <Link to="/auth" className="underline hover:text-gray-300">ingresá desde acá</Link>.
                 </p>
               </div>
             )}
@@ -199,7 +250,7 @@ const PatientAccess = () => {
             style={{ animation: "fadeSlideUp 0.5s cubic-bezier(0.16,1,0.3,1) both" }}
           >
             <p className="text-gray-400 text-sm text-center mb-4">
-              Encontramos tu cuenta en varios consultorios. ¿A cuál querés ingresar?
+              Tenés portal en varios consultorios. ¿A cuál querés ingresar?
             </p>
             {clinics.map((clinic) => (
               <button
@@ -240,13 +291,10 @@ const PatientAccess = () => {
               </button>
             ))}
             <button
-              onClick={() => {
-                setClinics(null);
-                setNotFound(false);
-              }}
+              onClick={() => void handleOtherAccount()}
               className="text-gray-500 text-sm hover:text-gray-300 transition-colors mx-auto block mt-4"
             >
-              Buscar con otro email
+              Ingresar con otra cuenta
             </button>
           </div>
         )}
