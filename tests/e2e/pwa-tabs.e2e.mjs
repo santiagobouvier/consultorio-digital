@@ -2,6 +2,8 @@
 // worker real) y un Supabase SIMULADO local: sin red, sin cuentas reales, sin
 // notificaciones reales (el push se inyecta solo en este Chromium de prueba).
 //
+// Correr con las versiones del lockfile del proyecto (supabase-js 2.86.0,
+// vite-plugin-pwa 1.2.0, workbox-window 7.4.0), como el build de Lovable.
 // Uso:  NODE_PATH=<node_modules con playwright-core> node tests/e2e/pwa-tabs.e2e.mjs
 //       ... --dist <carpeta>   para probar un build ya hecho (apuntando al mock
 //                              en http://127.0.0.1:54396), sin compilar.

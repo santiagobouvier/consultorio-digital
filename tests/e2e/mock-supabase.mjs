@@ -32,6 +32,7 @@ export async function startMockSupabase(users, { port = 54399, refreshDelayMs = 
   const byToken = (auth) => Object.values(users).find((u) => auth === `Bearer ${u.token}`) || null;
   const log = { passwordUpdates: [], recover: [], verify: [], lookups: [], logins: [], refreshes: [], logouts: [] };
   const state = { refreshDelayMs, lookupFails };
+  const allClinics = () => Object.values(users).flatMap((u) => u.clinics || []);
 
   const server = http.createServer(async (req, res) => {
     const cors = {
@@ -88,6 +89,20 @@ export async function startMockSupabase(users, { port = 54399, refreshDelayMs = 
     if (url.pathname === "/rest/v1/rpc/is_super_admin") return send(200, !!who && (who.roles || []).includes("super_admin"));
     if (url.pathname === "/rest/v1/user_roles") return send(200, who ? (who.roles || []).map((role) => ({ role })) : []);
     if (url.pathname === "/rest/v1/businesses") return send(200, who && who.ownsBusiness ? [{ id: "biz-qa" }] : []);
+    // Portal ficticio: marca pública del consultorio y la ficha del paciente logueado
+    if (url.pathname === "/rest/v1/businesses_public_branding") {
+      const q = decodeURIComponent(url.search);
+      const clinic = allClinics().find((c) => q.includes(`.eq.${c.slug}`));
+      return send(200, clinic ? [{ id: `biz-${clinic.slug}`, name: clinic.name, specialty: "Consultorio ficticio de prueba",
+        portal_logo_url: null, portal_clinic_display_name: clinic.name, portal_primary_color: null, portal_dark_primary_color: null,
+        public_slug: clinic.slug, custom_subdomain: null, cancellation_hours_notice: 24, late_cancellation_message: null }] : []);
+    }
+    if (url.pathname === "/rest/v1/patients" && req.method === "GET") {
+      const biz = url.searchParams.get("business_id")?.replace(/^eq\.biz-/, "");
+      const mine = who && (who.clinics || []).some((c) => c.slug === biz);
+      return send(200, mine ? [{ id: `pac-${who.id.slice(-4)}`, full_name: who.fullName || "Paciente Ficticio QA", email: who.email,
+        whatsapp_phone: null, avatar_url: null, reason_for_consultation: null, private_notes: null, created_at: "2026-09-22T00:00:00Z" }] : []);
+    }
     if (url.pathname.startsWith("/rest/v1/rpc/")) return send(200, null);
     if (url.pathname.startsWith("/rest/v1/")) return send(200, []);
     if (url.pathname === "/functions/v1/public-patient-lookup") {
