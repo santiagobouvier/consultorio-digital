@@ -1,93 +1,48 @@
+// Consultorios del paciente logueado. La lógica (autorización) vive en
+// handler.ts; acá solo se conectan el entorno y Supabase.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createLookupHandler, type PatientClinic } from "./handler.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
+const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
 
-  try {
-    const { email } = await req.json();
+async function getUserIdFromToken(token: string): Promise<string | null> {
+  const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    global: { headers: { Authorization: `Bearer ${token}` } },
+  });
+  const { data, error } = await userClient.auth.getUser(token);
+  if (error || !data?.user?.id) return null;
+  return data.user.id;
+}
 
-    if (!email || typeof email !== "string") {
-      return new Response(
-        JSON.stringify({ error: "Email requerido" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+async function listClinicsForUser(userId: string): Promise<PatientClinic[]> {
+  const { data: patients, error } = await admin
+    .from("patients")
+    .select("business_id")
+    .eq("auth_user_id", userId)
+    .eq("is_active", true);
+  if (error) throw error;
 
-    const trimmed = email.trim().toLowerCase();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
-      return new Response(
-        JSON.stringify({ error: "Email inválido" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+  const businessIds = [...new Set((patients ?? []).map((p) => p.business_id))];
+  if (businessIds.length === 0) return [];
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  // Solo datos públicos del consultorio
+  const { data: businesses, error: bizError } = await admin
+    .from("businesses")
+    .select("public_slug, name, specialty, portal_logo_url, portal_clinic_display_name")
+    .in("id", businessIds)
+    .eq("is_active", true);
+  if (bizError) throw bizError;
 
-    // Find patients by email
-    const { data: patients, error } = await supabase
-      .from("patients")
-      .select("business_id")
-      .eq("email", trimmed)
-      .eq("is_active", true);
+  return (businesses ?? []).map((b) => ({
+    slug: b.public_slug,
+    name: b.portal_clinic_display_name || b.name,
+    specialty: b.specialty,
+    logo_url: b.portal_logo_url,
+  }));
+}
 
-    if (error) {
-      console.error("Error querying patients:", error);
-      return new Response(
-        JSON.stringify({ error: "Error interno" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    if (!patients || patients.length === 0) {
-      return new Response(
-        JSON.stringify({ clinics: [] }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Get unique business IDs
-    const businessIds = [...new Set(patients.map((p) => p.business_id))];
-
-    // Fetch only public-safe business info
-    const { data: businesses, error: bizError } = await supabase
-      .from("businesses")
-      .select("public_slug, name, specialty, portal_logo_url, portal_clinic_display_name")
-      .in("id", businessIds)
-      .eq("is_active", true);
-
-    if (bizError) {
-      console.error("Error querying businesses:", bizError);
-      return new Response(
-        JSON.stringify({ error: "Error interno" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const clinics = (businesses || []).map((b) => ({
-      slug: b.public_slug,
-      name: b.portal_clinic_display_name || b.name,
-      specialty: b.specialty,
-      logo_url: b.portal_logo_url,
-    }));
-
-    return new Response(
-      JSON.stringify({ clinics }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  } catch (err) {
-    console.error("Unexpected error:", err);
-    return new Response(
-      JSON.stringify({ error: "Error interno del servidor" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  }
-});
+Deno.serve(createLookupHandler({ getUserIdFromToken, listClinicsForUser }));
