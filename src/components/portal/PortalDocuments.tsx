@@ -196,7 +196,7 @@ export const PortalDocuments = ({ documents, customTypes, loading, isDemo = fals
                   </p>
                   {sessionGroups.map((group) => (
                     <div key={group.start_at + group.docs[0]?.id} className="space-y-2">
-                      <p className="text-xs font-semibold text-foreground flex items-center gap-1.5 capitalize">
+                      <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
                         <span className="h-1.5 w-1.5 rounded-full bg-primary inline-block" />
                         Sesión del {format(parseISO(group.start_at), "EEEE d 'de' MMMM yyyy", { locale: es })}
                       </p>

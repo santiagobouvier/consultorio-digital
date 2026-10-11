@@ -549,20 +549,21 @@ export function PatientPortalView(props: PatientPortalViewProps) {
   );
   const visibleSessions = showAllSessions ? pastSorted : pastSorted.slice(0, 6);
 
+  const capFirst = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
   const whenLabel = (iso: string) => {
     const d = parseISO(iso);
     if (isToday(d)) return "Hoy";
     if (isTomorrow(d)) return "Mañana";
     const days = differenceInCalendarDays(d, new Date());
-    if (days > 1 && days <= 6) return format(d, "EEEE", { locale: es });
-    return format(d, "EEEE d 'de' MMMM", { locale: es });
+    if (days > 1 && days <= 6) return capFirst(format(d, "EEEE", { locale: es }));
+    return capFirst(format(d, "EEEE d 'de' MMMM", { locale: es }));
   };
 
   const nextPay = nextApt ? paymentByAppointment.get(nextApt.id) : undefined;
   const nextPayable = !!nextPay && isPayablePayment(nextPay.status) && mpConnected;
 
   const SectionTitle = ({ children }: { children: React.ReactNode }) => (
-    <h2 className="text-[11px] font-semibold uppercase tracking-[0.15em] text-primary mb-3" style={GROTESK}>
+    <h2 className="text-[11px] lg:text-xs font-semibold uppercase tracking-[0.15em] text-primary mb-3 lg:mb-3.5" style={GROTESK}>
       {children}
     </h2>
   );
@@ -580,7 +581,7 @@ export function PatientPortalView(props: PatientPortalViewProps) {
 
         {/* Header */}
         <header className="border-b border-border bg-card sticky top-0 z-20">
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+          <div className="max-w-5xl lg:max-w-6xl 2xl:max-w-7xl min-[1800px]:max-w-[88rem] mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
             <div className="flex items-center gap-3 min-w-0">
               {branding.logoUrl ? (
                 <img src={branding.logoUrl} className="h-9 w-9 rounded-lg object-cover shrink-0" alt="" />
@@ -625,7 +626,7 @@ export function PatientPortalView(props: PatientPortalViewProps) {
 
         {/* Optional install banner */}
         {showPwaBannerTop && (
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-3">
+          <div className="max-w-5xl lg:max-w-6xl 2xl:max-w-7xl min-[1800px]:max-w-[88rem] mx-auto px-4 sm:px-6 lg:px-8 pt-3">
             <PWAInstallBanner
               variant="inline"
               storageKey="pwa_install_banner_dismissed_patient"
@@ -634,22 +635,20 @@ export function PatientPortalView(props: PatientPortalViewProps) {
           </div>
         )}
 
-        <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 lg:py-9 pb-16 space-y-7">
+        <main className="max-w-5xl lg:max-w-6xl 2xl:max-w-7xl min-[1800px]:max-w-[88rem] mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-10 pb-16 space-y-7 lg:space-y-8">
           {/* Saludo */}
           <div className="flex items-center gap-3">
-            <Avatar className="h-11 w-11">
+            <Avatar className="h-11 w-11 lg:h-12 lg:w-12">
               {patient.avatar_url ? <AvatarImage src={patient.avatar_url} /> : null}
               <AvatarFallback className="bg-primary/10 text-primary font-bold">{initials}</AvatarFallback>
             </Avatar>
             <div className="min-w-0">
-              <p className="font-bold text-xl text-foreground truncate leading-tight" style={{ ...GROTESK, letterSpacing: "-0.02em" }}>Hola, {firstName} 👋</p>
-              <p className="text-xs text-muted-foreground truncate">
+              <p className="font-bold text-xl lg:text-2xl text-foreground truncate leading-tight" style={{ ...GROTESK, letterSpacing: "-0.02em" }}>Hola, {firstName} 👋</p>
+              <p className="text-xs lg:text-sm text-muted-foreground truncate">
                 {totalSessions > 0 ? `Llevás ${totalSessions} ${totalSessions === 1 ? "sesión" : "sesiones"} con ${branding.name}` : `Tu espacio en ${branding.name}`}
               </p>
             </div>
           </div>
-
-          <NotificationsSummaryCard patientId={patient.id} />
 
           {/* Pagos vencidos: lo primero que se ve si existe */}
           {overdueCount > 0 && (
@@ -658,7 +657,7 @@ export function PatientPortalView(props: PatientPortalViewProps) {
                 <div className="h-10 w-10 rounded-full bg-destructive/15 flex items-center justify-center shrink-0">
                   <AlertCircle className="h-5 w-5 text-destructive" />
                 </div>
-                <p className="text-sm leading-snug m-0">
+                <p className="text-sm lg:text-base leading-snug m-0">
                   {overdueCount === 1
                     ? <>Tenés 1 pago vencido por <span className="font-bold text-destructive">{formatCurrency(overdueTotal, overdueCurrency)}</span></>
                     : <>Tenés {overdueCount} pagos vencidos por <span className="font-bold text-destructive">{formatCurrency(overdueTotal, overdueCurrency)}</span></>}
@@ -681,8 +680,8 @@ export function PatientPortalView(props: PatientPortalViewProps) {
 
           {/* En escritorio: dos columnas — lo operativo a la izquierda, lo de
               consulta a la derecha. En el celular todo apilado en orden. */}
-          <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-9 lg:items-start space-y-7 lg:space-y-0">
-          <div className="space-y-7 min-w-0">
+          <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_340px] xl:grid-cols-[minmax(0,1fr)_380px] 2xl:grid-cols-[minmax(0,1fr)_420px] min-[1800px]:grid-cols-[minmax(0,1fr)_440px] lg:gap-10 xl:gap-12 lg:items-start space-y-7 lg:space-y-0">
+          <div className="space-y-7 lg:space-y-9 min-w-0">
 
           {/* ── Tu próxima cita ── */}
           <section>
@@ -695,13 +694,13 @@ export function PatientPortalView(props: PatientPortalViewProps) {
                   boxShadow: "0 26px 50px -30px hsl(var(--primary) / 0.4)",
                 }}
               >
-                <CardContent className="p-5 space-y-4">
+                <CardContent className="p-5 lg:p-6 space-y-4 lg:space-y-5">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="text-[23px] font-bold capitalize leading-tight m-0" style={{ ...GROTESK, letterSpacing: "-0.02em" }}>
+                      <p className="text-[23px] lg:text-[28px] font-bold leading-tight m-0" style={{ ...GROTESK, letterSpacing: "-0.02em" }}>
                         {whenLabel(nextApt.start_at)} · {format(parseISO(nextApt.start_at), "HH:mm")} hs
                       </p>
-                      <p className="text-sm text-muted-foreground mt-1 m-0">
+                      <p className="text-sm lg:text-base text-muted-foreground mt-1 m-0">
                         {nextApt.service_name || "Sesión"}
                         {" · "}
                         {nextApt.modality === "online" ? "Online" : nextApt.location || "Presencial"}
@@ -711,8 +710,8 @@ export function PatientPortalView(props: PatientPortalViewProps) {
                   </div>
 
                   {nextPay && (
-                    <div className="flex items-center justify-between gap-3 rounded-xl bg-muted/40 border border-border/60 px-3.5 py-2.5">
-                      <span className="text-sm">
+                    <div className="flex items-center justify-between gap-3 rounded-xl bg-muted/40 border border-border/60 px-3.5 py-2.5 lg:px-4 lg:py-3">
+                      <span className="text-sm lg:text-[15px]">
                         {formatCurrency(Number(nextPay.amount), nextPay.currency || "UYU")} · {nextPay.status === "paid" ? "sesión paga ✓" : pendingText(nextPay.due_date)}
                       </span>
                       {nextPay.status !== "paid" && nextPayable && (
@@ -771,7 +770,7 @@ export function PatientPortalView(props: PatientPortalViewProps) {
                   <div className="w-12 h-12 mx-auto rounded-full bg-primary/10 flex items-center justify-center">
                     <Calendar className="h-6 w-6 text-primary" />
                   </div>
-                  <p className="text-sm text-muted-foreground m-0">No tenés ninguna cita agendada.</p>
+                  <p className="text-sm lg:text-base text-muted-foreground m-0">No tenés ninguna cita agendada.</p>
                 </CardContent>
               </Card>
             )}
@@ -780,9 +779,9 @@ export function PatientPortalView(props: PatientPortalViewProps) {
             {laterApts.length > 0 && (
               <div className="mt-2.5 space-y-1.5">
                 {laterApts.map((apt) => (
-                  <div key={apt.id} className="flex items-center gap-2.5 rounded-xl border border-border/60 bg-card px-3.5 py-2">
+                  <div key={apt.id} className="flex items-center gap-2.5 rounded-xl border border-border/60 bg-card px-3.5 py-2 lg:px-4 lg:py-2.5">
                     <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <span className="text-sm capitalize truncate min-w-0 flex-1">
+                    <span className="text-sm lg:text-[15px] truncate min-w-0 flex-1">
                       {whenLabel(apt.start_at)} · {format(parseISO(apt.start_at), "HH:mm")} hs
                     </span>
                     {onRescheduleAppointment && (
@@ -831,10 +830,10 @@ export function PatientPortalView(props: PatientPortalViewProps) {
               {pendingPayments.length > 0 ? (
                 <div className="space-y-2">
                   {[...sortedOverdue, ...sortedPending].map((p) => (
-                    <div key={p.id} className={`flex items-center gap-3 rounded-xl border px-3.5 py-3 bg-card ${p.status === "overdue" ? "border-destructive/40" : "border-border/60"}`}>
+                    <div key={p.id} className={`flex items-center gap-3 rounded-xl border px-3.5 py-3 lg:px-4 lg:py-3.5 bg-card ${p.status === "overdue" ? "border-destructive/40" : "border-border/60"}`}>
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-semibold m-0">{formatCurrency(Number(p.amount), p.currency || "UYU")}</p>
-                        <p className={`text-xs m-0 ${p.status === "overdue" ? "text-destructive font-medium" : "text-muted-foreground"}`}>
+                        <p className="text-sm lg:text-base font-semibold m-0">{formatCurrency(Number(p.amount), p.currency || "UYU")}</p>
+                        <p className={`text-xs lg:text-sm m-0 ${p.status === "overdue" ? "text-destructive font-medium" : "text-muted-foreground"}`}>
                           {p.recurrence_label || "Sesión"} · {pendingText(p.due_date)}
                         </p>
                       </div>
@@ -864,7 +863,7 @@ export function PatientPortalView(props: PatientPortalViewProps) {
                 <div className="mt-2">
                   <button
                     onClick={() => setShowPaidHistory((v) => !v)}
-                    className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors py-1.5"
+                    className="flex items-center gap-1.5 text-xs lg:text-sm font-medium text-muted-foreground hover:text-foreground transition-colors py-1.5"
                   >
                     <ChevronRight className={`h-3.5 w-3.5 transition-transform ${showPaidHistory ? "rotate-90" : ""}`} />
                     {showPaidHistory ? "Ocultar pagos anteriores" : `Ver pagos anteriores (${paidPayments.length})`}
@@ -903,11 +902,14 @@ export function PatientPortalView(props: PatientPortalViewProps) {
             </section>
           )}
 
+          {/* ── Novedades sin leer: después de lo accionable, para que no lo empujen ── */}
+          <NotificationsSummaryCard patientId={patient.id} />
+
           {/* ── Tus sesiones ── */}
           {pastSorted.length > 0 && (
             <section>
               <SectionTitle>Tus sesiones</SectionTitle>
-              <div className="space-y-1.5">
+              <div className="space-y-1.5 2xl:space-y-0 2xl:grid 2xl:grid-cols-2 2xl:gap-2 2xl:items-start">
                 {visibleSessions.map((apt) => {
                   const docs = sharedDocsByAppointment.get(apt.id) ?? [];
                   const hasDetail = !!apt.notes || docs.length > 0;
@@ -915,13 +917,13 @@ export function PatientPortalView(props: PatientPortalViewProps) {
                   return (
                     <div key={apt.id} className="rounded-xl border border-border/60 bg-card overflow-hidden">
                       <button
-                        className="w-full flex items-center gap-3 px-3.5 py-3 text-left"
+                        className="w-full flex items-center gap-3 px-3.5 py-3 lg:px-4 lg:py-3.5 text-left"
                         onClick={() => hasDetail && setOpenSessionId(openThis ? null : apt.id)}
                         disabled={!hasDetail}
                       >
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium m-0">{formatShort(parseISO(apt.start_at))}</p>
-                          <p className="text-xs text-muted-foreground m-0">{apt.service_name || "Sesión"}</p>
+                          <p className="text-sm lg:text-[15px] font-medium m-0">{formatShort(parseISO(apt.start_at))}</p>
+                          <p className="text-xs lg:text-sm text-muted-foreground m-0">{apt.service_name || "Sesión"}</p>
                         </div>
                         {statusBadge(apt.status)}
                         {hasDetail && (
@@ -982,20 +984,7 @@ export function PatientPortalView(props: PatientPortalViewProps) {
 
           </div>
 
-          <div className="space-y-7 min-w-0">
-
-          {/* ── Documentos generales (sin sesión asociada también) ── */}
-          {(sharedDocsLoading || sharedDocuments.length > 0) && (
-            <section>
-              <SectionTitle>Tus documentos</SectionTitle>
-              <PortalDocuments
-                documents={sharedDocuments}
-                customTypes={sharedDocTypes}
-                loading={sharedDocsLoading}
-                isDemo={isDemo}
-              />
-            </section>
-          )}
+          <div className="space-y-7 lg:space-y-9 min-w-0">
 
           {/* ── Tus datos ── */}
           <section>
@@ -1010,9 +999,9 @@ export function PatientPortalView(props: PatientPortalViewProps) {
                         <AvatarFallback className="bg-primary/10 text-primary font-bold">{initials}</AvatarFallback>
                       </Avatar>
                       <div className="min-w-0 flex-1">
-                        <p className="font-semibold text-sm m-0 truncate">{patient.full_name}</p>
-                        <p className="text-xs text-muted-foreground m-0 truncate">{patient.email || "Sin email"}</p>
-                        <p className="text-xs text-muted-foreground m-0 truncate">{patient.whatsapp_phone || "Sin teléfono"}</p>
+                        <p className="font-semibold text-sm lg:text-base m-0 truncate">{patient.full_name}</p>
+                        <p className="text-xs lg:text-sm text-muted-foreground m-0 truncate">{patient.email || "Sin email"}</p>
+                        <p className="text-xs lg:text-sm text-muted-foreground m-0 truncate">{patient.whatsapp_phone || "Sin teléfono"}</p>
                       </div>
                       {onSaveProfile && (
                         <Button variant="outline" size="sm" className="gap-1.5 shrink-0" onClick={startEditing}>
@@ -1073,6 +1062,19 @@ export function PatientPortalView(props: PatientPortalViewProps) {
               </CardContent>
             </Card>
           </section>
+
+          {/* ── Documentos generales (sin sesión asociada también) ── */}
+          {(sharedDocsLoading || sharedDocuments.length > 0) && (
+            <section>
+              <SectionTitle>Tus documentos</SectionTitle>
+              <PortalDocuments
+                documents={sharedDocuments}
+                customTypes={sharedDocTypes}
+                loading={sharedDocsLoading}
+                isDemo={isDemo}
+              />
+            </section>
+          )}
 
           {/* ── Avisos + app + contacto ── */}
           <section className="space-y-3">
