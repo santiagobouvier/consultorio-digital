@@ -9,6 +9,7 @@ import {
   recoverFromChunkLoadFailure,
   stripRecoveryMarkerWhenStable,
 } from "@/lib/session-recovery";
+import { installPushAccountGuard } from "@/lib/push-account";
 
 window.addEventListener("vite:preloadError", (event) => {
   event.preventDefault();
@@ -85,6 +86,10 @@ const bootstrap = async () => {
     // importa /push-sw.js). No registrar otro en el mismo alcance: dos
     // service workers peleándose por "/" recargaban sin fin a las pestañas.
   }
+
+  // Los avisos push de una cuenta no se quedan en este navegador cuando
+  // entra otra cuenta o se cierra la sesión (ver src/lib/push-binding.ts).
+  installPushAccountGuard();
 
   createRoot(document.getElementById("root")!).render(<App />);
   // Si esta carga vino de una recuperación automática y la app quedó
