@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { Bell, BellOff, BellRing, CheckCircle2, Loader2, MonitorSmartphone, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePushNotifications } from "@/hooks/use-push-notifications";
 import { IOSInstallTutorial } from "@/components/pwa/IOSInstallTutorial";
 import { toast } from "@/hooks/use-toast";
+import { BlockedNotificationsGuide } from "@/components/notifications/BlockedNotificationsGuide";
 
 interface NotificationActivationCardProps {
   variant?: "compact" | "full";
@@ -39,21 +41,33 @@ export function NotificationActivationCard({
     isPWAInstalled,
   } = usePushNotifications();
 
+  const [guideOpen, setGuideOpen] = useState(false);
+  const iosNeedsApp = deviceType === "ios" && !isPWAInstalled;
+
+  // El permiso se pide SOLO acá, con el clic de la persona en el botón.
   const handleActivate = async () => {
     const ok = await subscribe();
     if (ok) {
       toast({ title: "Notificaciones activadas ✓", description: "Este dispositivo ya recibe los avisos." });
-    } else if (permission === "denied") {
+      return;
+    }
+    // En iPhone sin instalar se muestra la guía de instalación (no hubo pedido de permiso)
+    if (iosNeedsApp || !supportsNotifications) return;
+    // Leído después del intento (el estado del hook puede no estar actualizado todavía)
+    const now = "Notification" in window ? Notification.permission : "default";
+    if (now === "denied") {
+      // Bloqueadas por el navegador o el sistema: mostramos cómo habilitarlas
+      setGuideOpen(true);
+    } else if (now === "default") {
       toast({
-        title: "Permiso denegado",
-        description: "Podés activarlas más tarde desde la configuración de tu navegador.",
-        variant: "destructive",
+        title: "No se activaron todavía",
+        description:
+          "Si no viste el pedido de permiso, buscá un ícono de campana junto a la dirección de la página o probá de nuevo.",
       });
     }
   };
 
   const examples = AUDIENCE_EXAMPLES[audience];
-  const iosNeedsApp = deviceType === "ios" && !isPWAInstalled;
 
   // Already active
   if (isSubscribed) {
@@ -79,28 +93,47 @@ export function NotificationActivationCard({
     );
   }
 
-  // Denied
+  // Denied: solo sabemos que el navegador/sistema no deja mostrar avisos
+  // (puede ser una elección anterior, un bloqueo automático o una política).
   if (permission === "denied") {
+    const guide = <BlockedNotificationsGuide open={guideOpen} onClose={() => setGuideOpen(false)} />;
     if (variant === "compact") {
       return (
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <BellOff className="h-3.5 w-3.5" />
-          <span>Notificaciones bloqueadas en el navegador</span>
-        </div>
+        <>
+          <button
+            type="button"
+            onClick={() => setGuideOpen(true)}
+            className="flex items-center gap-2 text-xs text-muted-foreground underline-offset-2 hover:underline"
+          >
+            <BellOff className="h-3.5 w-3.5" />
+            <span>Notificaciones bloqueadas · ver cómo habilitarlas</span>
+          </button>
+          {guide}
+        </>
       );
     }
     return (
-      <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 px-4 py-3 space-y-1.5">
-        <div className="flex items-center gap-3">
-          <BellOff className="h-5 w-5 text-amber-500 shrink-0" />
-          <span className="text-sm font-medium">Las notificaciones están bloqueadas</span>
+      <>
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 space-y-3" data-testid="notifications-blocked-card">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-500">
+              <BellOff className="h-5 w-5" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold">Las notificaciones están bloqueadas en este dispositivo</p>
+              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                El navegador o el sistema no deja que esta página muestre avisos. Se puede habilitar en un
+                par de minutos: te mostramos cómo, paso a paso.
+              </p>
+            </div>
+          </div>
+          <Button onClick={() => setGuideOpen(true)} variant="outline" className="w-full gap-2">
+            <Bell className="h-4 w-4" />
+            Ver cómo habilitarlas
+          </Button>
         </div>
-        <p className="text-xs text-muted-foreground pl-8 leading-relaxed">
-          En algún momento se le dijo "No permitir" al navegador. Para desbloquearlas:
-          tocá el <strong>candadito</strong> (o el ícono de ajustes) al lado de la dirección
-          de la página → <strong>Notificaciones</strong> → <strong>Permitir</strong>, y recargá.
-        </p>
-      </div>
+        {guide}
+      </>
     );
   }
 
@@ -121,6 +154,7 @@ export function NotificationActivationCard({
           Activar notificaciones
         </Button>
         <IOSInstallTutorial open={needsIOSInstall} onClose={dismissIOSGuide} />
+        <BlockedNotificationsGuide open={guideOpen} onClose={() => setGuideOpen(false)} />
       </>
     );
   }
@@ -180,6 +214,7 @@ export function NotificationActivationCard({
         </Button>
       </div>
       <IOSInstallTutorial open={needsIOSInstall} onClose={dismissIOSGuide} />
+      <BlockedNotificationsGuide open={guideOpen} onClose={() => setGuideOpen(false)} />
     </>
   );
 }
