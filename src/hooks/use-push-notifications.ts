@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { isAlreadyRegistered, withPushLock } from "@/lib/push-binding";
+import { appPushDeps, reconcileThisDevice } from "@/lib/push-account";
 
 const VAPID_PUBLIC_KEY = "BFNi8-zSTKYmf17dMpsLQzK5-uTztO6dnxX6obZzIrVMR987MuubSMjD01s3djoHxmi4f_o86O7YCiPH6fWCxPc";
 
@@ -45,28 +47,44 @@ export function usePushNotifications() {
   const isPWAInstalled = isStandalone();
   const supportsNotifications = "Notification" in window && "serviceWorker" in navigator;
 
+  // "Activas" significa: este navegador tiene suscripción Y es de la cuenta
+  // con sesión (fila propia con ese endpoint). Una suscripción de otra cuenta
+  // se da de baja acá mismo (ver src/lib/push-binding.ts).
+  const refreshStatus = useCallback(async () => {
+    if (!supportsNotifications) return;
+    setPermission(Notification.permission);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const { state } = await reconcileThisDevice(session?.user?.id ?? null);
+      setIsSubscribed(state === "active");
+    } catch {
+      setIsSubscribed(false);
+    }
+  }, [supportsNotifications]);
+
   useEffect(() => {
     if (!supportsNotifications) {
       setPermission("unsupported");
       return;
     }
-    setPermission(Notification.permission);
-
-    // Check if already subscribed
-    if (Notification.permission === "granted") {
-      checkExistingSubscription();
-    }
-  }, []);
-
-  const checkExistingSubscription = async () => {
-    try {
-      const reg = await navigator.serviceWorker.ready;
-      const sub = await reg.pushManager.getSubscription();
-      setIsSubscribed(!!sub);
-    } catch {
+    void refreshStatus();
+    // Cambio de cuenta (logout, login, otra cuenta) en esta u otra pestaña
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      // INITIAL_SESSION ya lo cubre la revisión de arriba
+      if (event === "TOKEN_REFRESHED" || event === "INITIAL_SESSION") return;
       setIsSubscribed(false);
-    }
-  };
+      window.setTimeout(() => void refreshStatus(), 0);
+    });
+    // Al volver a la pestaña (p. ej. se activó o se cambió el permiso en otra)
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void refreshStatus();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      subscription.unsubscribe();
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [supportsNotifications, refreshStatus]);
 
   const subscribe = useCallback(async () => {
     // iOS without PWA installed → show guide
@@ -79,6 +97,7 @@ export function usePushNotifications() {
 
     setLoading(true);
     try {
+      // El permiso se pide acá, como respuesta directa al clic.
       const perm = await Notification.requestPermission();
       setPermission(perm);
 
@@ -87,36 +106,47 @@ export function usePushNotifications() {
         return false;
       }
 
-      const reg = await navigator.serviceWorker.ready;
-      const sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
-      });
-
-      const json = sub.toJSON();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("No authenticated user");
 
-      // Get business_id
-      const { data: bizId } = await supabase.rpc("get_user_business_id", { _user_id: user.id });
+      const ok = await withPushLock(async () => {
+        const reg = await navigator.serviceWorker.ready;
+        let sub = await reg.pushManager.getSubscription();
+        if (sub && (await appPushDeps.ownsEndpoint(user.id, sub.endpoint))) return true; // ya es de esta cuenta
+        if (sub) {
+          // Es de otra cuenta (o de nadie): se reemplaza por una nueva, propia.
+          await sub.unsubscribe().catch(() => false);
+          sub = null;
+        }
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+        });
 
-      await supabase.from("push_subscriptions").upsert(
-        {
+        const json = sub.toJSON();
+        const { data: bizId } = await supabase.rpc("get_user_business_id", { _user_id: user.id });
+        const { error } = await supabase.from("push_subscriptions").insert({
           user_id: user.id,
           business_id: bizId || undefined,
           endpoint: json.endpoint!,
           p256dh: json.keys!.p256dh!,
           auth: json.keys!.auth!,
           device_type: deviceType,
-        },
-        { onConflict: "user_id,endpoint" }
-      );
+        });
+        if (error && !isAlreadyRegistered(error)) {
+          // Sin fila no llegan avisos: no se deja una suscripción huérfana.
+          await sub.unsubscribe().catch(() => false);
+          throw error;
+        }
+        return true;
+      });
 
-      setIsSubscribed(true);
+      setIsSubscribed(ok);
       setLoading(false);
-      return true;
+      return ok;
     } catch (err) {
       console.error("Push subscribe error:", err);
+      setIsSubscribed(false);
       setLoading(false);
       return false;
     }

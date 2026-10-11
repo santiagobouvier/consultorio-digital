@@ -104,7 +104,8 @@ async function main() {
       check(log.passwordUpdates.length === before, "vencido: no intenta guardar (sin 'Auth session missing')");
       await page.fill("#resetEmail", "cualquiera@example.test");
       await page.click('button:has-text("Pedir un enlace nuevo")');
-      await page.waitForSelector('[role="status"]', { timeout: 8000 });
+      // Se espera el mensaje (no cualquier [role=status]: el splash también tiene uno)
+      await page.getByText("Si ese email tiene una cuenta").waitFor({ timeout: 8000 }).catch(() => {});
       const last = log.recover.at(-1);
       check(last && last.redirectTo === `${APP}/reset-password`, "vencido: pide un enlace nuevo que vuelve a /reset-password");
       check(await page.getByText("Si ese email tiene una cuenta").isVisible(), "vencido: mensaje genérico (no revela si el email existe)");
@@ -159,7 +160,8 @@ async function main() {
       await page.fill('input[type="email"]', "paciente.qa@example.test");
       const before = log.recover.length;
       await page.click('button:has-text("¿Olvidaste tu contraseña?")');
-      await page.waitForSelector('[role="status"]', { timeout: 8000 });
+      // Se espera el mensaje (no cualquier [role=status]: el splash también tiene uno)
+      await page.getByText("Si ese email tiene una cuenta").waitFor({ timeout: 8000 }).catch(() => {});
       check(log.recover.length === before + 1 && log.recover.at(-1).redirectTo === `${APP}/reset-password`,
         "acceso paciente: '¿Olvidaste tu contraseña?' pide el enlace a /reset-password");
       check(await page.getByText("Si ese email tiene una cuenta").isVisible(), "acceso paciente: mensaje genérico");

@@ -32,6 +32,14 @@ export async function startMockSupabase(users, { port = 54399, refreshDelayMs = 
   const byToken = (auth) => Object.values(users).find((u) => auth === `Bearer ${u.token}`) || null;
   const log = { passwordUpdates: [], recover: [], verify: [], lookups: [], logins: [], refreshes: [], logouts: [] };
   const state = { refreshDelayMs, lookupFails };
+  const allClinics = () => Object.values(users).flatMap((u) => u.clinics || []);
+  // Tabla push_subscriptions con las reglas RLS reales: cada cuenta ve, inserta
+  // y borra solo sus filas; no hay política UPDATE; UNIQUE (user_id, endpoint).
+  const db = { push: [] };
+  const eqFilter = (url, col) => {
+    const v = url.searchParams.get(col);
+    return v && v.startsWith("eq.") ? decodeURIComponent(v.slice(3)) : null;
+  };
 
   const server = http.createServer(async (req, res) => {
     const cors = {
@@ -88,6 +96,41 @@ export async function startMockSupabase(users, { port = 54399, refreshDelayMs = 
     if (url.pathname === "/rest/v1/rpc/is_super_admin") return send(200, !!who && (who.roles || []).includes("super_admin"));
     if (url.pathname === "/rest/v1/user_roles") return send(200, who ? (who.roles || []).map((role) => ({ role })) : []);
     if (url.pathname === "/rest/v1/businesses") return send(200, who && who.ownsBusiness ? [{ id: "biz-qa" }] : []);
+    if (url.pathname === "/rest/v1/push_subscriptions") {
+      if (!who) return send(401, { message: "JWT requerido" });
+      const visible = (r) => r.user_id === who.id
+        && (!eqFilter(url, "user_id") || r.user_id === eqFilter(url, "user_id"))
+        && (!eqFilter(url, "endpoint") || r.endpoint === eqFilter(url, "endpoint"));
+      if (req.method === "GET") return send(200, db.push.filter(visible).map((r) => ({ id: r.id })));
+      if (req.method === "DELETE") { db.push = db.push.filter((r) => !visible(r)); return send(204); }
+      if (req.method === "POST") {
+        const rows = Array.isArray(body) ? body : [body];
+        if (rows.some((r) => r.user_id !== who.id)) return send(403, { code: "42501", message: "new row violates row-level security policy" });
+        for (const r of rows) {
+          if (db.push.some((x) => x.user_id === r.user_id && x.endpoint === r.endpoint)) {
+            // Con upsert, el conflicto pediría UPDATE, que RLS no permite.
+            return send(409, { code: "23505", message: "duplicate key value violates unique constraint" });
+          }
+        }
+        for (const r of rows) db.push.push({ id: `ps-${db.push.length + 1}-${Date.now()}`, ...r });
+        return send(201);
+      }
+      return send(403, { code: "42501", message: "sin política para esta operación" });
+    }
+    // Portal ficticio: marca pública del consultorio y la ficha del paciente logueado
+    if (url.pathname === "/rest/v1/businesses_public_branding") {
+      const q = decodeURIComponent(url.search);
+      const clinic = allClinics().find((c) => q.includes(`.eq.${c.slug}`));
+      return send(200, clinic ? [{ id: `biz-${clinic.slug}`, name: clinic.name, specialty: "Consultorio ficticio de prueba",
+        portal_logo_url: null, portal_clinic_display_name: clinic.name, portal_primary_color: null, portal_dark_primary_color: null,
+        public_slug: clinic.slug, custom_subdomain: null, cancellation_hours_notice: 24, late_cancellation_message: null }] : []);
+    }
+    if (url.pathname === "/rest/v1/patients" && req.method === "GET") {
+      const biz = (url.searchParams.get("business_id") || "").replace(/^eq\.biz-/, "");
+      const mine = who && (who.clinics || []).some((c) => c.slug === biz);
+      return send(200, mine ? [{ id: `pac-${who.id.slice(-4)}`, full_name: who.fullName || "Paciente Ficticio QA", email: who.email,
+        whatsapp_phone: null, avatar_url: null, reason_for_consultation: null, private_notes: null, created_at: "2026-09-22T00:00:00Z" }] : []);
+    }
     if (url.pathname.startsWith("/rest/v1/rpc/")) return send(200, null);
     if (url.pathname.startsWith("/rest/v1/")) return send(200, []);
     if (url.pathname === "/functions/v1/public-patient-lookup") {
@@ -100,5 +143,5 @@ export async function startMockSupabase(users, { port = 54399, refreshDelayMs = 
   });
 
   await new Promise((r) => server.listen(port, "127.0.0.1", r));
-  return { log, state, users, close: () => server.close() };
+  return { log, state, users, db, close: () => server.close() };
 }
