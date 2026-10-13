@@ -21,6 +21,7 @@ import {
   Download, Eye, Trash2, CalendarDays, Check, CreditCard, Clock,
   AlertTriangle, HeartPulse, Pill, Stethoscope, Mail, Phone, FolderOpen, User as UserIcon,
 } from "lucide-react";
+import { capitalizeFirst } from "@/lib/date-text";
 
 const demoToast = () =>
   toast({ title: "Modo demo", description: "En tu panel real acá se hace de verdad — nada se guarda en la demo." });
@@ -178,7 +179,7 @@ const DemoExpediente = () => {
 
             <div className="grid grid-cols-2 gap-3">
               {[
-                { icon: CalendarDays, label: "Próxima cita", value: format(UPCOMING[0], "EEE d · HH:mm", { locale: es }) },
+                { icon: CalendarDays, label: "Próxima cita", value: capitalizeFirst(format(UPCOMING[0], "EEE d · HH:mm", { locale: es })) },
                 { icon: Check, label: "Sesiones", value: "12" },
                 { icon: CreditCard, label: "Pendiente", value: "$ 1.500" },
                 { icon: Clock, label: "Última sesión", value: format(SESSIONS[0].start, "d MMM", { locale: es }) },
@@ -188,7 +189,7 @@ const DemoExpediente = () => {
                     <p className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
                       <s.icon className="h-3 w-3" /> {s.label}
                     </p>
-                    <p className="font-bold text-sm mt-1 capitalize">{s.value}</p>
+                    <p className="font-bold text-sm mt-1">{s.value}</p>
                   </CardContent>
                 </Card>
               ))}
@@ -213,8 +214,8 @@ const DemoExpediente = () => {
                     <p className="text-[10px] font-semibold uppercase tracking-wider text-primary flex items-center gap-1.5">
                       <CalendarClock className="h-3.5 w-3.5" /> Próxima cita
                     </p>
-                    <p className="text-sm font-bold mt-1.5 capitalize">
-                      {format(UPCOMING[0], "EEEE d 'de' MMMM · HH:mm", { locale: es })} hs
+                    <p className="text-sm font-bold mt-1.5">
+                      {capitalizeFirst(format(UPCOMING[0], "EEEE d 'de' MMMM · HH:mm", { locale: es }))} hs
                     </p>
                     <p className="text-xs text-muted-foreground mt-0.5">Sesión individual · Presencial</p>
                   </CardContent>
@@ -313,9 +314,9 @@ const DemoExpediente = () => {
             <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-1 px-1">
               <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground shrink-0">Próximas</span>
               {UPCOMING.map((d, i) => (
-                <span key={i} className="inline-flex items-center gap-1.5 text-xs bg-primary/5 border border-primary/20 rounded-full px-3 py-1.5 shrink-0 capitalize">
+                <span key={i} className="inline-flex items-center gap-1.5 text-xs bg-primary/5 border border-primary/20 rounded-full px-3 py-1.5 shrink-0">
                   <CalendarClock className="h-3 w-3 text-primary" />
-                  {format(d, "EEE d MMM · HH:mm", { locale: es })}
+                  {capitalizeFirst(format(d, "EEE d MMM · HH:mm", { locale: es }))}
                 </span>
               ))}
             </div>
@@ -359,8 +360,8 @@ const DemoExpediente = () => {
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0 flex-1">
-                            <p className="font-semibold text-sm capitalize">
-                              {format(s.start, "EEEE d 'de' MMMM yyyy", { locale: es })}
+                            <p className="font-semibold text-sm">
+                              {capitalizeFirst(format(s.start, "EEEE d 'de' MMMM yyyy", { locale: es }))}
                             </p>
                             <p className="text-xs text-muted-foreground flex items-center gap-1.5 flex-wrap mt-0.5">
                               {format(s.start, "HH:mm")} – {format(new Date(s.start.getTime() + 3600000), "HH:mm")} hs · {s.service} ·
@@ -421,7 +422,7 @@ const DemoExpediente = () => {
                                 <p className="font-bold">$ {s.amount.toLocaleString("es-UY")}</p>
                                 {payBadge(s.pay)}
                               </div>
-                              <p className="text-xs text-muted-foreground mt-0.5 capitalize">
+                              <p className="text-xs text-muted-foreground mt-0.5">
                                 {s.pay === "paid"
                                   ? `Pagado el ${format(s.start, "d 'de' MMMM", { locale: es })}`
                                   : `Vence: ${format(s.start, "d 'de' MMMM", { locale: es })}`}{" "}
@@ -457,8 +458,8 @@ const DemoExpediente = () => {
                       {UPCOMING.map((d, i) => (
                         <div key={`up-${i}`} className="p-3 rounded-xl border bg-card flex items-center justify-between gap-2 flex-wrap">
                           <div className="min-w-0">
-                            <p className="text-sm font-semibold capitalize">
-                              {format(d, "EEEE d 'de' MMMM · HH:mm", { locale: es })} hs
+                            <p className="text-sm font-semibold">
+                              {capitalizeFirst(format(d, "EEEE d 'de' MMMM · HH:mm", { locale: es }))} hs
                             </p>
                             <p className="text-xs text-muted-foreground flex items-center gap-1.5">
                               <MapPin className="h-3 w-3" /> Sesión individual · Presencial
@@ -470,8 +471,8 @@ const DemoExpediente = () => {
                       {SESSIONS.map((s) => (
                         <div key={`ap-${s.id}`} className="p-3 rounded-xl border bg-card flex items-center justify-between gap-2 flex-wrap">
                           <div className="min-w-0">
-                            <p className="text-sm font-semibold capitalize">
-                              {format(s.start, "EEEE d 'de' MMMM · HH:mm", { locale: es })} hs
+                            <p className="text-sm font-semibold">
+                              {capitalizeFirst(format(s.start, "EEEE d 'de' MMMM · HH:mm", { locale: es }))} hs
                             </p>
                             <p className="text-xs text-muted-foreground flex items-center gap-1.5">
                               {s.modality === "online" ? <Video className="h-3 w-3" /> : <MapPin className="h-3 w-3" />}
@@ -547,8 +548,8 @@ const DemoExpediente = () => {
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-[10px] font-semibold uppercase tracking-wider text-primary">Detalle de la sesión</p>
-                      <DialogTitle className="text-base capitalize leading-tight mt-0.5">
-                        {format(detail.start, "EEEE d 'de' MMMM yyyy", { locale: es })}
+                      <DialogTitle className="text-base leading-tight mt-0.5">
+                        {capitalizeFirst(format(detail.start, "EEEE d 'de' MMMM yyyy", { locale: es }))}
                       </DialogTitle>
                       <DialogDescription className="text-xs mt-0.5">
                         {format(detail.start, "HH:mm")} – {format(new Date(detail.start.getTime() + 3600000), "HH:mm")} hs · {detail.service}

@@ -23,6 +23,7 @@ import {
   APPOINTMENT_STATUS_MAP,
   getPaymentColorInfo,
 } from "@/components/calendar-v2/types";
+import { capitalizeFirst } from "@/lib/date-text";
 
 type ViewType = "day" | "week" | "month";
 
@@ -156,8 +157,8 @@ const DemoAgenda = () => {
                 Sincronizada con Google Calendar
               </button>
             </div>
-            <p className="text-sm text-muted-foreground capitalize">
-              {format(currentDate, viewType === "day" ? "EEEE d 'de' MMMM" : "MMMM yyyy", { locale: es })}
+            <p className="text-sm text-muted-foreground">
+              {capitalizeFirst(format(currentDate, viewType === "day" ? "EEEE d 'de' MMMM" : "MMMM yyyy", { locale: es }))}
             </p>
           </div>
           <div className="flex items-center gap-1">
@@ -227,8 +228,8 @@ const DemoAgenda = () => {
             <>
               <DialogHeader>
                 <DialogTitle className="text-xl">{selected.patients?.full_name}</DialogTitle>
-                <DialogDescription className="capitalize">
-                  {format(new Date(selected.start_at), "EEEE d 'de' MMMM", { locale: es })} ·{" "}
+                <DialogDescription>
+                  {capitalizeFirst(format(new Date(selected.start_at), "EEEE d 'de' MMMM", { locale: es }))} ·{" "}
                   {format(new Date(selected.start_at), "HH:mm")} – {format(new Date(selected.end_at), "HH:mm")} hs
                 </DialogDescription>
               </DialogHeader>

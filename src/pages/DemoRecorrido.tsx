@@ -11,6 +11,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, ArrowRight, ArrowDown, Check, CalendarDays, MessageCircle, BellRing, LayoutDashboard, Video, Sparkles, RefreshCw } from "lucide-react";
 import { WhatsAppPhone, buildDemoWaConfirmation, buildDemoWaReminder } from "@/components/demo/WhatsAppPhone";
+import { capitalizeFirst } from "@/lib/date-text";
 
 const BRAND = "#1f938d";
 const TEAL_DEEP = "#14655f";
@@ -21,7 +22,7 @@ const DIM = "#93a09a";
 
 const tomorrow = new Date();
 tomorrow.setDate(tomorrow.getDate() + 1);
-const tomorrowEs = tomorrow.toLocaleDateString("es-UY", { weekday: "long", day: "numeric", month: "long" });
+const tomorrowEs = capitalizeFirst(tomorrow.toLocaleDateString("es-UY", { weekday: "long", day: "numeric", month: "long" }));
 
 const SLOTS = ["10:00", "11:30", "14:00", "16:00", "17:30"];
 
@@ -171,7 +172,7 @@ const DemoRecorrido = () => {
                 {!booked ? (
                   <>
                     <p className="text-sm font-semibold mb-0.5">Sesión individual · 60 min</p>
-                    <p className="text-xs capitalize mb-3" style={{ color: DIM }}>{tomorrowEs}</p>
+                    <p className="text-xs mb-3" style={{ color: DIM }}>{tomorrowEs}</p>
                     {/* Guía: sin esto no se entiende que hay que tocar un horario */}
                     {!slot && (
                       <div className="flex items-center gap-1.5 mb-2 text-[13px] font-semibold" style={{ color: TEAL_DEEP }}>
@@ -210,7 +211,7 @@ const DemoRecorrido = () => {
                       <Check className="w-5 h-5" style={{ color: BRAND }} />
                     </div>
                     <p className="font-bold text-base mb-0.5">¡Reserva confirmada!</p>
-                    <p className="text-sm capitalize" style={{ color: MUTED }}>{tomorrowEs} · {chosenTime} hs</p>
+                    <p className="text-sm" style={{ color: MUTED }}>{tomorrowEs} · {chosenTime} hs</p>
                   </div>
                 )}
               </div>
@@ -237,7 +238,7 @@ const DemoRecorrido = () => {
 
             {step === 3 && (
               <div className="w-full max-w-sm rounded-2xl bg-white p-4 sm:p-5 text-left" style={{ border: "1px solid rgba(22,33,28,0.09)", boxShadow: "0 24px 46px -28px rgba(22,33,28,0.2)" }}>
-                <p className="text-xs uppercase tracking-wider mb-2.5 capitalize" style={{ color: DIM }}>{tomorrowEs}</p>
+                <p className="text-xs tracking-wider mb-2.5" style={{ color: DIM }}>{tomorrowEs}</p>
                 <div className="space-y-2">
                   {[
                     { time: "09:00", name: "María González", tag: null as string | null },
@@ -278,7 +279,7 @@ const DemoRecorrido = () => {
                     <RefreshCw className="w-3 h-3" /> Sincronizado
                   </span>
                 </div>
-                <p className="text-xs uppercase tracking-wider mb-2 capitalize" style={{ color: DIM }}>{tomorrowEs}</p>
+                <p className="text-xs tracking-wider mb-2" style={{ color: DIM }}>{tomorrowEs}</p>
                 <div className="space-y-1.5">
                   <div className="rounded-lg px-3 py-2" style={{ backgroundColor: "rgba(22,33,28,0.05)", borderLeft: "3px solid #93a09a" }}>
                     <p className="text-[13px] font-medium m-0" style={{ color: MUTED }}>Almuerzo</p>

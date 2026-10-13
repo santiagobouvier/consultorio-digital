@@ -51,8 +51,8 @@ const files = (dir: string): string[] =>
 test("ninguna fecha de varias palabras usa la clase capitalize (palabra por palabra)", () => {
   // Formatos con palabras en minúscula después de la primera: "d 'de' MMMM", "d MMM"
   const multiWord = /format\([^)]*"[^"]*(d 'de' MMMM|d MMM)[^"]*"/;
-  // Fuera de alcance: páginas de la demo pública y el portal (PR #372)
-  const skip = (f: string) => /src\/pages\/Demo|components\/portal\/PatientPortalView/.test(f);
+  // El portal lo corrige el PR #372 (whenLabel); acá queda fuera para no pisarlo
+  const skip = (f: string) => /components\/portal\/PatientPortalView/.test(f);
   const offenders: string[] = [];
   for (const f of files("src").filter((f) => !skip(f) && !f.includes("components/ui/"))) {
     const lines = src(f).split("\n");
@@ -66,6 +66,15 @@ test("ninguna fecha de varias palabras usa la clase capitalize (palabra por pala
     });
   }
   assert.deepEqual(offenders, []);
+});
+
+test("demo pública: fechas armadas con toLocaleDateString tampoco usan capitalize", () => {
+  const rec = src("src/pages/DemoRecorrido.tsx");
+  assert.match(rec, /const tomorrowEs = capitalizeFirst\(/);
+  assert.doesNotMatch(rec, /capitalize"[^>]*>\{tomorrowEs\}|capitalize" style=\{\{[^}]*\}\}>\{tomorrowEs\}/);
+  assert.doesNotMatch(rec, /\bcapitalize\b/);
+  assert.doesNotMatch(src("src/pages/DemoExpediente.tsx"), /\bcapitalize\b/);
+  assert.doesNotMatch(src("src/pages/DemoAgenda.tsx"), /\bcapitalize\b/);
 });
 
 test("textos que no son fechas tampoco se capitalizan palabra por palabra", () => {
