@@ -120,10 +120,10 @@ export const AppointmentDetailModal = ({
       (async () => {
         const { data: policy } = await supabase
           .from("payment_policies")
-          .select("mp_access_token")
+          .select("mp_connected")
           .eq("business_id", businessId)
           .maybeSingle();
-        if (!cancelled) setMpConnected(!!(policy as any)?.mp_access_token);
+        if (!cancelled) setMpConnected(!!(policy as any)?.mp_connected);
       })();
     }
     return () => { cancelled = true; };

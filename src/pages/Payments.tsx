@@ -153,10 +153,10 @@ const Payments = () => {
     queryFn: async () => {
       const { data } = await supabase
         .from("payment_policies")
-        .select("mp_access_token")
+        .select("mp_connected")
         .eq("business_id", businessId!)
         .maybeSingle();
-      return !!(data as any)?.mp_access_token;
+      return !!(data as any)?.mp_connected;
     },
     enabled: !!businessId,
     staleTime: 300_000,
