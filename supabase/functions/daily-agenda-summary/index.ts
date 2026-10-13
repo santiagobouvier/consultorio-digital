@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.48.0";
+import { isAuthorizedCronCaller } from "./cron-auth.ts";
 
 // "Tu día de mañana": push nocturno al profesional con el resumen del día
 // siguiente (cuántos pacientes, primero y último). Lo dispara pg_cron a las
@@ -23,6 +24,17 @@ serve(async (req) => {
   if (req.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
   }
+
+  // Solo pg_cron (token de Vault) y el servidor (service role): ver cron-auth.ts
+  const authorized = await isAuthorizedCronCaller(req.headers.get("Authorization"), {
+    serviceRoleKey,
+    verifyCronToken: async (token) => {
+      const { data, error } = await supabase.rpc("verify_cron_jobs_token", { p_token: token });
+      if (error) throw error;
+      return data === true;
+    },
+  });
+  if (!authorized) return new Response("Unauthorized", { status: 401 });
 
   try {
     // Mañana en hora de Montevideo (UTC-3 fijo, sin horario de verano)

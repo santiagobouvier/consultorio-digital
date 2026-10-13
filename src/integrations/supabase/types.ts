@@ -2203,8 +2203,6 @@ export type Database = {
           is_private_clinic: boolean | null
           late_cancellation_message: string | null
           name: string | null
-          owner_user_id: string | null
-          plan_code: string | null
           portal_clinic_display_name: string | null
           portal_dark_primary_color: string | null
           portal_logo_url: string | null
@@ -2225,8 +2223,6 @@ export type Database = {
           is_private_clinic?: boolean | null
           late_cancellation_message?: string | null
           name?: string | null
-          owner_user_id?: string | null
-          plan_code?: string | null
           portal_clinic_display_name?: string | null
           portal_dark_primary_color?: string | null
           portal_logo_url?: string | null
@@ -2247,8 +2243,6 @@ export type Database = {
           is_private_clinic?: boolean | null
           late_cancellation_message?: string | null
           name?: string | null
-          owner_user_id?: string | null
-          plan_code?: string | null
           portal_clinic_display_name?: string | null
           portal_dark_primary_color?: string | null
           portal_logo_url?: string | null

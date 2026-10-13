@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.48.0";
+import { checkPublicBookingRate } from "./rate-limit.ts";
 
 // Horarios 2.0 · Etapa 3: creación de reserva pública por SERVICIO + INICIO
 // calculado (reemplaza al flujo por casillero precortado).
@@ -79,6 +80,25 @@ serve(async (req) => {
 
     // Agenda privada: no se aceptan reservas públicas (solo pacientes invitados vía portal)
     if (business.is_private_clinic) return json({ error: "private_clinic" }, 403);
+
+    // Límite de intentos por conexión, teléfono y consultorio (ver rate-limit.ts)
+    const limited = await checkPublicBookingRate(req.headers, business.id, cleanPhone, {
+      secret: serviceRoleKey,
+      register: async (clientKey, businessId, phoneKey) => {
+        const { data, error } = await supabase.rpc("register_public_booking_attempt", {
+          p_client_key: clientKey,
+          p_business_id: businessId,
+          p_phone_key: phoneKey,
+        });
+        if (error) throw error;
+        return (data as string | null) ?? null;
+      },
+      log: (msg, extra) => console.warn(msg, extra ?? ""),
+    });
+    if (limited) {
+      console.warn("Reserva pública frenada por límite:", limited, business.id);
+      return json({ error: "rate_limited" }, 429);
+    }
 
     // Servicio activo del negocio
     const { data: service } = await supabase
