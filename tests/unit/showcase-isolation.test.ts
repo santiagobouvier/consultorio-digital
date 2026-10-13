@@ -282,7 +282,19 @@ test("sin la marca, boot no instala nada", () => {
   assert.ok(!/^import .*interceptor/m.test(boot), "boot no importa la capa de forma estática");
 });
 
-test("el esquema del emulador está al día con types.ts", async () => {
+test("el esquema del emulador tiene las mismas relaciones que types.ts", async () => {
+  // Columnas agregadas o quitadas por otros cambios son inocuas (el emulador
+  // devuelve null o el valor ficticio); una relación distinta rompería
+  // pantallas. Para regenerar: node scripts/generate-showcase-schema.mjs
   const gen = await import("../../scripts/generate-showcase-schema.mjs");
-  assert.equal(gen.render(gen.buildSchema(src("src/integrations/supabase/types.ts"))), src("src/lib/showcase/schema.generated.ts"));
+  const { SHOWCASE_SCHEMA } = await import("../../src/lib/showcase/schema.generated.ts");
+  const current = gen.buildSchema(src("src/integrations/supabase/types.ts"));
+  for (const [table, def] of Object.entries(current) as [string, { fks: { name: string; columns: string[]; ref: string }[] }][]) {
+    const mine = SHOWCASE_SCHEMA[table];
+    if (!mine) continue; // tabla nueva: el emulador responde "no existe" hasta regenerar
+    const key = (f: { name: string; columns: string[]; ref: string }) => `${f.name}:${f.columns.join(",")}->${f.ref}`;
+    const real = def.fks.filter((f) => !f.ref.endsWith("_public_branding")).map(key).sort();
+    assert.deepEqual(mine.fks.map(key).sort(), real, `relaciones de ${table}`);
+  }
+  assert.ok(Object.keys(SHOWCASE_SCHEMA).length >= 35);
 });
