@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils";
 import { format, isSameDay } from "date-fns";
 import { es } from "date-fns/locale";
 import { calculatePaymentStatus, formatCurrency, type PaymentStatus } from "@/lib/payments";
+import { capitalizeFirst } from "@/lib/date-text";
 
 interface Appointment {
   id: string;
@@ -109,8 +110,8 @@ export const DayView = ({
     <div className="bg-card rounded-2xl border p-4">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h3 className="text-lg font-bold capitalize">
-            {format(currentDate, "EEEE, d 'de' MMMM", { locale: es })}
+          <h3 className="text-lg font-bold">
+            {capitalizeFirst(format(currentDate, "EEEE, d 'de' MMMM", { locale: es }))}
           </h3>
           <p className="text-sm text-muted-foreground">
             {dayAppointments.length} cita{dayAppointments.length !== 1 ? "s" : ""}

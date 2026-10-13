@@ -24,6 +24,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Loader2, ArrowRight, RefreshCw, CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { capitalizeFirst } from "@/lib/date-text";
 
 // Reprogramar una cita existente: elegir nuevo día y horario tocando —
 // SIEMPRE se ven todos los lapsos del día cada 30 minutos (los ocupados se
@@ -281,15 +282,15 @@ export const RescheduleAppointmentModal = ({
           <div className="flex items-center gap-3 p-3 rounded-xl bg-accent/50 text-sm">
             <div className="min-w-0">
               <p className="text-xs text-muted-foreground">Ahora está</p>
-              <p className="font-semibold capitalize">
-                {format(oldDate, "EEE d MMM · HH:mm", { locale: es })}
+              <p className="font-semibold">
+                {capitalizeFirst(format(oldDate, "EEE d MMM · HH:mm", { locale: es }))}
               </p>
             </div>
             <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
             <div className="min-w-0">
               <p className="text-xs text-muted-foreground">Pasa a</p>
-              <p className={cn("font-semibold capitalize", !newStartAt && "text-muted-foreground")}>
-                {newStartAt ? format(newStartAt, "EEE d MMM · HH:mm", { locale: es }) : "Elegí abajo…"}
+              <p className={cn("font-semibold", !newStartAt && "text-muted-foreground")}>
+                {newStartAt ? capitalizeFirst(format(newStartAt, "EEE d MMM · HH:mm", { locale: es })) : "Elegí abajo…"}
               </p>
             </div>
           </div>
@@ -359,7 +360,7 @@ export const RescheduleAppointmentModal = ({
               {/* TODOS los lapsos del día cada 30 min; los tomados, atenuados */}
               {selectedDay && (
                 <div className="space-y-2">
-                  <p className="text-sm font-semibold capitalize flex items-center gap-2">
+                  <p className="text-sm font-semibold flex items-center gap-2">
                     {formatDayLong(selectedDay)}
                     {busyLoading && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
                   </p>

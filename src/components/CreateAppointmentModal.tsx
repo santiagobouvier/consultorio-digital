@@ -36,6 +36,7 @@ import {
   Loader2, CheckCircle2, User, PencilLine, ChevronDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { capitalizeFirst } from "@/lib/date-text";
 
 // Asistente de cita: el sistema pregunta y vos contestás tocando bloques
 // grandes, en el orden natural del profesional:
@@ -773,7 +774,7 @@ export function CreateAppointmentModal({
               {lockDate && prefilledDate ? (
                 <div className="flex items-center gap-2.5 rounded-xl bg-primary/10 border border-primary/25 px-3.5 py-2.5">
                   <CalendarIcon className="h-4 w-4 text-primary shrink-0" />
-                  <span className="text-sm font-semibold capitalize">{date ? formatDayLong(date) : ""}</span>
+                  <span className="text-sm font-semibold">{date ? formatDayLong(date) : ""}</span>
                   <span className="ml-auto text-[10px] font-bold uppercase tracking-wide text-primary shrink-0">
                     Día fijado
                   </span>
@@ -840,7 +841,7 @@ export function CreateAppointmentModal({
                   atenúan con el nombre — nunca hay "sin horarios". */}
               {date && (
                 <div className="space-y-2">
-                  <p className="text-sm font-semibold capitalize flex items-center gap-2">
+                  <p className="text-sm font-semibold flex items-center gap-2">
                     {formatDayLong(date)}
                     {busyLoading && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
                   </p>
@@ -1370,7 +1371,7 @@ export function CreateAppointmentModal({
                               {recurrenceDates.map((d, i) => (
                                 <div key={i} className="flex items-center gap-2 text-xs">
                                   <span className="text-muted-foreground w-5 text-right">{i + 1}.</span>
-                                  <span className="capitalize">{format(d, "EEEE d 'de' MMMM", { locale: es })}</span>
+                                  <span>{capitalizeFirst(format(d, "EEEE d 'de' MMMM", { locale: es }))}</span>
                                 </div>
                               ))}
                             </div>

@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { capitalizeFirst } from "@/lib/date-text";
 
 interface QuickBlockDialogProps {
   open: boolean;
@@ -418,9 +419,9 @@ export const QuickBlockDialog = ({ open, onOpenChange, businessId, date, onSaved
 
             {/* A qué día se aplica — clarísimo, sin sorpresas */}
             <div className="rounded-xl bg-amber-500/10 border border-amber-500/25 px-3.5 py-2.5 space-y-1">
-              <p className="text-sm font-semibold capitalize flex items-center gap-2">
+              <p className="text-sm font-semibold flex items-center gap-2">
                 <CalendarOff className="h-4 w-4 text-amber-500 shrink-0" />
-                {isToday(date) ? `Hoy · ${dayLabel}` : dayLabel}
+                {isToday(date) ? `Hoy · ${dayLabel}` : capitalizeFirst(dayLabel)}
                 {isToday(date) && (
                   <span className="ml-auto text-[10px] font-bold uppercase tracking-wide text-amber-600 dark:text-amber-400 shrink-0">
                     Día de hoy

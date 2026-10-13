@@ -137,7 +137,7 @@ export const CalendarHeader = ({
               dateLabel={dateLabel}
               currentDate={currentDate}
               onPickDate={onPickDate}
-              className="text-[22px] leading-[1.1] font-bold tracking-tight capitalize truncate"
+              className="text-[22px] leading-[1.1] font-bold tracking-tight truncate"
             />
             <HelpTooltip id="agenda" />
           </div>
@@ -255,7 +255,7 @@ export const CalendarHeader = ({
               dateLabel={dateLabel}
               currentDate={currentDate}
               onPickDate={onPickDate}
-              className="text-xl font-bold capitalize whitespace-nowrap"
+              className="text-xl font-bold whitespace-nowrap"
             />
             <HelpTooltip id="agenda" />
           </div>

@@ -65,6 +65,7 @@ import {
   AppointmentStatus,
   PersonalEvent,
 } from "@/components/calendar-v2/types";
+import { capitalizeFirst } from "@/lib/date-text";
 
 interface Patient {
   id: string;
@@ -546,7 +547,7 @@ const CalendarV2 = () => {
   const getDateLabel = () => {
     switch (viewType) {
       case "month":
-        return format(currentDate, "MMMM yyyy", { locale: es });
+        return capitalizeFirst(format(currentDate, "MMMM yyyy", { locale: es }));
       case "week":
         const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
         const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
@@ -1090,7 +1091,7 @@ const CalendarV2 = () => {
         }
         onQuickBlock={() => openQuickBlock(viewType === "day" ? currentDate : undefined)}
         fixedDateLabel={
-          viewType === "day" ? format(currentDate, "EEEE d 'de' MMMM", { locale: es }) : null
+          viewType === "day" ? capitalizeFirst(format(currentDate, "EEEE d 'de' MMMM", { locale: es })) : null
         }
       />
     </div>

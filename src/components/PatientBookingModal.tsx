@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { DayPicker } from "react-day-picker";
 import { cn } from "@/lib/utils";
+import { capitalizeFirst } from "@/lib/date-text";
 
 interface AvailabilitySlot {
   id: string;
@@ -501,8 +502,8 @@ export const PatientBookingModal = ({
             <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-0.5">
               Cita actual
             </p>
-            <p className="font-medium capitalize text-sm">
-              {format(new Date(rescheduleAppointment.start_at), "EEEE d 'de' MMMM, HH:mm", { locale: es })} hs
+            <p className="font-medium text-sm">
+              {capitalizeFirst(format(new Date(rescheduleAppointment.start_at), "EEEE d 'de' MMMM, HH:mm", { locale: es }))} hs
             </p>
           </div>
         )}
@@ -749,8 +750,8 @@ function SlotStep({
 
   return (
     <div className="space-y-3">
-      <h3 className="text-base font-bold capitalize">
-        {format(selectedDate, "EEEE d 'de' MMMM", { locale: es })}
+      <h3 className="text-base font-bold">
+        {capitalizeFirst(format(selectedDate, "EEEE d 'de' MMMM", { locale: es }))}
       </h3>
       <div className="grid gap-2">
         {slots.map((slot, i) => {
@@ -844,8 +845,8 @@ function ConfirmStep({
             {serviceName && (
               <p className="text-sm font-semibold text-primary mb-0.5">{serviceName}</p>
             )}
-            <p className="text-lg font-bold capitalize leading-tight">
-              {format(selectedDate, "EEEE d 'de' MMMM", { locale: es })}
+            <p className="text-lg font-bold leading-tight">
+              {capitalizeFirst(format(selectedDate, "EEEE d 'de' MMMM", { locale: es }))}
             </p>
             <p className="text-2xl font-bold tracking-tight mt-1">
               {slot.start_time.slice(0, 5)} – {slot.end_time.slice(0, 5)}
@@ -945,7 +946,7 @@ function SuccessStep({
       <h3 className="text-xl font-bold mb-2">
         {isReschedule ? "¡Solicitud enviada!" : "¡Reserva confirmada!"}
       </h3>
-      <p className="text-sm text-muted-foreground mb-1 capitalize">
+      <p className="text-sm text-muted-foreground mb-1">
         Te esperamos el {format(selectedDate, "EEEE d 'de' MMMM", { locale: es })}
       </p>
       <p className="text-base font-semibold mb-6">

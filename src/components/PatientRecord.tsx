@@ -29,6 +29,7 @@ import { SessionNoteSheet, type ExistingNote } from "@/components/expediente/Ses
 import { BUILT_IN_DOC_TYPES, resolveDocType } from "@/lib/document-types";
 import { useDocumentTypes } from "@/hooks/use-document-types";
 import { CreateDocTypeDialog } from "@/components/documents/CreateDocTypeDialog";
+import { capitalizeFirst } from "@/lib/date-text";
 
 // EXPEDIENTE del paciente: la historia clínica organizada POR SESIÓN.
 // Cada sesión es una entrada de la línea de tiempo con su nota clínica,
@@ -442,9 +443,9 @@ export const PatientRecord = ({ patientId, businessId, reasonForConsultation }: 
         <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-1 px-1">
           <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground shrink-0">Próximas</span>
           {upcoming.slice(0, 4).map((apt) => (
-            <span key={apt.id} className="inline-flex items-center gap-1.5 text-xs bg-primary/5 border border-primary/20 text-foreground rounded-full px-3 py-1.5 shrink-0 capitalize">
+            <span key={apt.id} className="inline-flex items-center gap-1.5 text-xs bg-primary/5 border border-primary/20 text-foreground rounded-full px-3 py-1.5 shrink-0">
               <CalendarClock className="h-3 w-3 text-primary" />
-              {format(parseISO(apt.start_at), "EEE d MMM · HH:mm", { locale: es })}
+              {capitalizeFirst(format(parseISO(apt.start_at), "EEE d MMM · HH:mm", { locale: es }))}
             </span>
           ))}
         </div>
@@ -551,8 +552,8 @@ export const PatientRecord = ({ patientId, businessId, reasonForConsultation }: 
                                 Sesión {sessionNumberByApt.get(apt.id)}
                               </span>
                             )}
-                            <p className="font-semibold text-sm capitalize">
-                              {format(parseISO(apt.start_at), "EEEE d 'de' MMMM yyyy", { locale: es })}
+                            <p className="font-semibold text-sm">
+                              {capitalizeFirst(format(parseISO(apt.start_at), "EEEE d 'de' MMMM yyyy", { locale: es }))}
                             </p>
                           </div>
                           <p className="text-xs text-muted-foreground flex items-center gap-1.5 flex-wrap mt-0.5">
@@ -726,8 +727,8 @@ export const PatientRecord = ({ patientId, businessId, reasonForConsultation }: 
                         <p className="text-[10px] font-semibold uppercase tracking-wider text-primary">
                           Detalle de la sesión
                         </p>
-                        <DialogTitle className="text-base capitalize leading-tight mt-0.5">
-                          {format(parseISO(apt.start_at), "EEEE d 'de' MMMM yyyy", { locale: es })}
+                        <DialogTitle className="text-base leading-tight mt-0.5">
+                          {capitalizeFirst(format(parseISO(apt.start_at), "EEEE d 'de' MMMM yyyy", { locale: es }))}
                         </DialogTitle>
                         <DialogDescription className="text-xs mt-0.5 flex items-center gap-1.5 flex-wrap">
                           {format(parseISO(apt.start_at), "HH:mm")} – {format(parseISO(apt.end_at), "HH:mm")} hs

@@ -473,7 +473,7 @@ export const SessionNoteSheet = ({
           <DrawerContent className="max-h-[95dvh]">
             <DrawerHeader className="text-left pb-2">
               <DrawerTitle className="text-lg">{titleText}</DrawerTitle>
-              <DrawerDescription className="capitalize text-[13px]">{subtitleText}</DrawerDescription>
+              <DrawerDescription className="text-[13px]">{subtitleText}</DrawerDescription>
             </DrawerHeader>
             <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-4">{body}</div>
             <div
@@ -489,7 +489,7 @@ export const SessionNoteSheet = ({
           <DialogContent className="max-w-xl max-h-[92dvh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-lg">{titleText}</DialogTitle>
-              <DialogDescription className="capitalize">{subtitleText}</DialogDescription>
+              <DialogDescription>{subtitleText}</DialogDescription>
             </DialogHeader>
             {body}
             <div className="flex justify-end gap-2 pt-1">

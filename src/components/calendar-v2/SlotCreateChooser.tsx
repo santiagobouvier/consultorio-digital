@@ -8,6 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { capitalizeFirst } from "@/lib/date-text";
 
 interface SlotCreateChooserProps {
   open: boolean;
@@ -44,8 +45,8 @@ export const SlotCreateChooser = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md max-h-[88dvh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="capitalize">
-            {format(date, "EEEE d 'de' MMMM", { locale: es })}
+          <DialogTitle>
+            {capitalizeFirst(format(date, "EEEE d 'de' MMMM", { locale: es }))}
           </DialogTitle>
           <DialogDescription>¿Qué va en este horario?</DialogDescription>
         </DialogHeader>

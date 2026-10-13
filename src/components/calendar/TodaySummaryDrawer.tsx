@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { QuickActionSheet } from "./QuickActionSheet";
 import { ConfirmPaymentDialog } from "@/components/ConfirmPaymentDialog";
+import { capitalizeFirst } from "@/lib/date-text";
 
 interface Appointment {
   id: string;
@@ -246,8 +247,8 @@ export const TodaySummaryDrawer = ({
                 </div>
                 <div>
                   <DrawerTitle className="text-xl text-left">Hoy</DrawerTitle>
-                  <p className="text-sm text-muted-foreground capitalize">
-                    {format(today, "EEEE d 'de' MMMM", { locale: es })}
+                  <p className="text-sm text-muted-foreground">
+                    {capitalizeFirst(format(today, "EEEE d 'de' MMMM", { locale: es }))}
                   </p>
                 </div>
               </div>

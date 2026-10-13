@@ -42,6 +42,7 @@ import { AppointmentDetailModal } from "@/components/calendar/AppointmentDetailM
 import { DesktopDayColumn } from "./DesktopDayColumn";
 import { TodayAppointmentList } from "./TodayAppointmentList";
 import { ClinicStatusPanel } from "./ClinicStatusPanel";
+import { capitalizeFirst } from "@/lib/date-text";
 
 interface Payment {
   id: string;
@@ -431,9 +432,9 @@ export const DesktopCommandCenter = () => {
                     <Button variant="ghost" size="icon" onClick={() => navigateDate("next")}>
                       <ChevronRight className="h-5 w-5" />
                     </Button>
-                    <span className="ml-2 text-lg font-semibold capitalize">
+                    <span className="ml-2 text-lg font-semibold">
                       {viewType === "day" 
-                        ? format(currentDate, "EEEE d 'de' MMMM", { locale: es })
+                        ? capitalizeFirst(format(currentDate, "EEEE d 'de' MMMM", { locale: es }))
                         : `${format(startOfWeek(currentDate, { weekStartsOn: 1 }), "d MMM", { locale: es })} - ${format(endOfWeek(currentDate, { weekStartsOn: 1 }), "d MMM", { locale: es })}`
                       }
                     </span>

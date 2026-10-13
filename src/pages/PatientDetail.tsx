@@ -66,6 +66,7 @@ import {
   type PaymentType,
   type TreatmentStatus,
 } from "@/lib/patient-profile";
+import { capitalizeFirst } from "@/lib/date-text";
 
 interface Patient {
   id: string;
@@ -835,8 +836,8 @@ const PatientDetail = () => {
               Próxima cita
             </p>
             {nextAppointment ? (
-              <p className="mt-2 capitalize" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 600, fontSize: 19, color: "var(--cd-text)" }}>
-                {format(new Date(nextAppointment.start_at), "EEE d MMM · HH:mm", { locale: es })}
+              <p className="mt-2" style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 600, fontSize: 19, color: "var(--cd-text)" }}>
+                {capitalizeFirst(format(new Date(nextAppointment.start_at), "EEE d MMM · HH:mm", { locale: es }))}
               </p>
             ) : (
               <>

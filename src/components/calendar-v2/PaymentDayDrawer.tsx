@@ -45,6 +45,7 @@ import {
   formatCurrency,
 } from "@/lib/payments";
 import type { DayPayment } from "./types";
+import { capitalizeFirst, parseDateOnly } from "@/lib/date-text";
 
 interface PaymentDayDrawerProps {
   open: boolean;
@@ -188,10 +189,10 @@ export const PaymentDayDrawer = ({
                 <p className="text-xs text-muted-foreground uppercase tracking-wide">
                   Vencimiento
                 </p>
-                <p className="text-sm font-semibold capitalize">
-                  {format(new Date(payment.due_date), "EEEE d 'de' MMMM yyyy", {
+                <p className="text-sm font-semibold">
+                  {capitalizeFirst(format(parseDateOnly(payment.due_date), "EEEE d 'de' MMMM yyyy", {
                     locale: es,
-                  })}
+                  }))}
                 </p>
               </div>
             </div>

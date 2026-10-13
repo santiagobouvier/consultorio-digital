@@ -45,6 +45,7 @@ import {
   type PersonalEvent,
   type PersonalEventLabel,
 } from "@/components/calendar-v2/types";
+import { capitalizeFirst } from "@/lib/date-text";
 
 interface PersonalEventModalProps {
   open: boolean;
@@ -534,7 +535,7 @@ export const PersonalEventModal = ({
         {label}
       </span>
       {color && <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />}
-      <span className="flex-1 text-sm font-semibold truncate capitalize">{value}</span>
+      <span className="flex-1 text-sm font-semibold truncate">{value}</span>
       <span className="text-xs text-muted-foreground shrink-0">{target ? "Cambiar" : "Día fijado"}</span>
     </button>
   );
@@ -680,9 +681,9 @@ export const PersonalEventModal = ({
       </div>
 
       {/* Resumen vivo */}
-      <p className="text-[13px] text-muted-foreground capitalize">
-        {format(new Date(`${date}T12:00:00`), "EEEE d 'de' MMMM", { locale: es })}
-        <span className="normal-case">
+      <p className="text-[13px] text-muted-foreground">
+        {capitalizeFirst(format(new Date(`${date}T12:00:00`), "EEEE d 'de' MMMM", { locale: es }))}
+        <span>
           {" "}· {startTime} → {endTime}
           {fmtDur && ` (${fmtDur})`}
         </span>
@@ -943,7 +944,7 @@ export const PersonalEventModal = ({
       <SummaryRow label="Qué" value={title || "—"} target="title" />
       <SummaryRow
         label="Día"
-        value={format(new Date(`${date}T12:00:00`), "EEEE d 'de' MMMM", { locale: es })}
+        value={capitalizeFirst(format(new Date(`${date}T12:00:00`), "EEEE d 'de' MMMM", { locale: es }))}
         target={lockDate && !isEdit ? undefined : "when"}
       />
       <SummaryRow

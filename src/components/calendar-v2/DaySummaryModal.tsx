@@ -12,6 +12,7 @@ import { calculatePaymentStatus } from "@/lib/payments";
 import { useDashboardBranding } from "@/contexts/DashboardBrandingContext";
 import { Clock, Video, MapPin, CreditCard, X, ClipboardList, Check, Sunrise, Sun, Moon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { capitalizeFirst } from "@/lib/date-text";
 
 const CANCELLED_STATUSES = ["cancelled", "cancelled_by_patient"];
 
@@ -77,8 +78,8 @@ export const DaySummaryModal = ({
             <ClipboardList className="h-3.5 w-3.5" />
             Ficha del día
           </p>
-          <h2 className="text-lg font-bold capitalize mt-1">
-            {format(date, "EEEE d 'de' MMMM", { locale: es })}
+          <h2 className="text-lg font-bold mt-1">
+            {capitalizeFirst(format(date, "EEEE d 'de' MMMM", { locale: es }))}
           </h2>
           <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
             <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground bg-background/60 border border-border/50 rounded-full px-2.5 py-1 tabular-nums">

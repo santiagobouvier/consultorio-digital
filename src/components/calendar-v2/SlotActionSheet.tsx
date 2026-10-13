@@ -20,6 +20,7 @@ import {
   type DayKey,
   type TimeBlock,
 } from "@/hooks/use-availability-template";
+import { capitalizeFirst } from "@/lib/date-text";
 
 // getDay(): 0=domingo..6=sábado → clave del día en la semana tipo
 const WEEKDAY_KEY: DayKey[] = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
@@ -198,8 +199,8 @@ export const SlotActionSheet = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md max-h-[88dvh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="capitalize">
-            {dayLabel} · {slot.start}
+          <DialogTitle>
+            {capitalizeFirst(dayLabel)} · {slot.start}
           </DialogTitle>
           <DialogDescription>
             {slot.freed ? (
@@ -281,7 +282,7 @@ export const SlotActionSheet = ({
                   <Ban className="h-5 w-5 text-amber-500 shrink-0" />
                 )}
                 <div className="min-w-0">
-                  <p className="font-semibold text-sm capitalize">Solo este {weekdayName}</p>
+                  <p className="font-semibold text-sm">Solo este {weekdayName}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">Tu rutina no cambia</p>
                 </div>
               </button>
@@ -297,7 +298,7 @@ export const SlotActionSheet = ({
                   <Repeat className="h-5 w-5 text-amber-500 shrink-0" />
                 )}
                 <div className="min-w-0">
-                  <p className="font-semibold text-sm capitalize">Todos los {weekdayName}</p>
+                  <p className="font-semibold text-sm">Todos los {weekdayName}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">Sale de tu semana tipo</p>
                 </div>
               </button>

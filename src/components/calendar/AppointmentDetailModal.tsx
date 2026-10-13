@@ -34,6 +34,7 @@ import { calculatePaymentStatus, type PaymentStatus } from "@/lib/payments";
 import { notifyPatient } from "@/lib/push-notifications";
 import { useDashboardBranding } from "@/contexts/DashboardBrandingContext";
 import { SessionNoteSheet } from "@/components/expediente/SessionNoteSheet";
+import { capitalizeFirst } from "@/lib/date-text";
 
 interface Appointment {
   id: string;
@@ -457,8 +458,8 @@ export const AppointmentDetailModal = ({
                   <RefreshCw className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
                   <div className="text-sm">
                     <p className="font-semibold text-amber-800 dark:text-amber-300">El paciente pide reprogramar a:</p>
-                    <p className="capitalize text-foreground mt-0.5">
-                      {format(new Date(rescheduleRequest.requested_start_at), "EEEE d 'de' MMMM, HH:mm", { locale: es })} hs
+                    <p className="text-foreground mt-0.5">
+                      {capitalizeFirst(format(new Date(rescheduleRequest.requested_start_at), "EEEE d 'de' MMMM, HH:mm", { locale: es }))} hs
                     </p>
                     {rescheduleRequest.reason && (
                       <p className="text-xs text-muted-foreground mt-1 italic">"{rescheduleRequest.reason}"</p>
@@ -535,8 +536,8 @@ export const AppointmentDetailModal = ({
             <div className="flex items-center gap-3 p-3 border rounded-xl">
               <Clock className="h-5 w-5 text-muted-foreground" />
               <div>
-                <p className="font-medium capitalize">
-                  {format(new Date(appointment.start_at), "EEEE, d 'de' MMMM 'de' yyyy", { locale: es })}
+                <p className="font-medium">
+                  {capitalizeFirst(format(new Date(appointment.start_at), "EEEE, d 'de' MMMM 'de' yyyy", { locale: es }))}
                 </p>
                 <p className="text-sm text-muted-foreground">
                   {format(new Date(appointment.start_at), "HH:mm")} - {format(new Date(appointment.end_at), "HH:mm")}
