@@ -9,9 +9,16 @@ apunta a Supabase o Lovable.
 PGHOST=... PGPORT=... PGUSER=... npm run test:db
 ```
 
-El usuario de `PGUSER` tiene que poder crear bases y roles. El script crea una
-base temporal, carga `stub_supabase.sql`, aplica la migración dos veces (para
-probar que es idempotente), corre las pruebas y borra la base.
+El usuario de `PGUSER` tiene que poder crear bases y roles, y llamarse
+`postgres` (superusuario): los triggers de CD-005 reconocen al dueño de la base
+por `current_user IN ('postgres', 'service_role', 'supabase_admin')`, igual que
+en Supabase; con otro nombre, los propios datos de prueba se rechazan con
+`subscription_change_not_allowed`.
+
+Por cada `*_test.sql`, el script crea una base temporal, carga
+`stub_supabase.sql`, el esquema extra `<nombre>_pre.sql` si existe, aplica dos
+veces (para probar que son idempotentes) las migraciones que el test declara en
+su línea `-- migraciones: …`, corre las pruebas y borra la base.
 
 | Archivo | Qué prueba |
 |---|---|
