@@ -120,9 +120,10 @@ const PublicClinic = () => {
           return;
         }
 
-        // Restricción por plan: solo planes con `hasPublicWeb` exponen la web pública.
+        // Restricción por plan: la página pública del consultorio es la puerta
+        // de entrada a la reserva online (`includesOnlineBooking`).
         const planDef = getPlanDefinition(businessData.plan_code);
-        if (!planDef.hasPublicWeb) {
+        if (!planDef.includesOnlineBooking) {
           if (!cancelled) {
             setPlanAllowsPublicWeb(false);
             setLoading(false);

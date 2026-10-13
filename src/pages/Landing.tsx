@@ -21,7 +21,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { PLAN_DEFINITIONS, PUBLIC_PLAN_ORDER, formatPrice } from "@/lib/plan-definitions";
+import { PLAN_DEFINITIONS, PUBLIC_PLAN_ORDER, formatPrice, getAnnualTotal } from "@/lib/plan-definitions";
 import { InstallAppButton } from "@/components/InstallAppButton";
 import { ScrollReveal } from "@/components/landing/ScrollReveal";
 import { LandingNavbar } from "@/components/landing/LandingNavbar";
@@ -46,10 +46,11 @@ const WA_PERSONALIZADO =
   "https://wa.me/59898543623?text=Hola,%20quiero%20un%20plan%20personalizado%20para%20mi%20consultorio.";
 
 // La contratación es mano a mano: cada plan abre WhatsApp con un mensaje ya
-// escrito. Un solo precio por plan, facturado en un pago anual.
-const waPlanUrl = (planName: string, priceLabel: string) =>
+// escrito. Un solo precio por plan, un pago anual que se coordina por fuera
+// de la plataforma (no hay cobro automático de la suscripción).
+const waPlanUrl = (planName: string, annualTotalLabel: string) =>
   `https://wa.me/59898543623?text=${encodeURIComponent(
-    `¡Hola! Me interesa el plan ${planName} de Consultorio Digital (${priceLabel}/mes, pago anual). ¿Me contás cómo empezar?`
+    `¡Hola! Me interesa el plan ${planName} de Consultorio Digital (pago anual de ${annualTotalLabel}). ¿Me contás cómo empezar?`
   )}`;
 
 // FAQ real, sin nada de páginas web
@@ -82,7 +83,7 @@ const faqItems = [
   {
     question: "¿Puedo cambiar de plan en cualquier momento?",
     answer:
-      "Sí, podés escalar tu plan cuando lo necesites. Si pasás a un plan superior, solo pagás la diferencia proporcional.",
+      "Sí. Nos escribís por WhatsApp y coordinamos el cambio y las condiciones. El pago de tu plan se hace por fuera de la plataforma.",
   },
   {
     question: "¿Mis pacientes pueden ver información de otros pacientes?",
@@ -123,6 +124,7 @@ const Landing = () => {
         code,
         name: p.name,
         price: p.priceAnnual,
+        annualTotal: getAnnualTotal(code),
         patients:
           p.maxPatients === null ? "Pacientes activos sin límite" : `Hasta ${p.maxPatients} pacientes activos`,
         whatsapps: p.whatsappMonthly
@@ -413,7 +415,7 @@ const Landing = () => {
                       <span className="text-[13px] font-medium" style={{ color: DIM, fontFamily: "'Instrument Sans', sans-serif" }}> /mes</span>
                     </p>
                     <p className="mt-1.5 mb-0 text-[11.5px]" style={{ color: DIM }}>
-                      pago anual · hasta 12 cuotas con Mercado Pago
+                      pago anual de {formatPrice(plan.annualTotal)}
                     </p>
                     <div className="mt-5 pt-5 flex flex-col gap-2.5 text-[13.5px] leading-snug" style={{ color: MUTED, borderTop: `1px solid ${HAIR}` }}>
                       <span className="inline-flex items-start gap-2"><Check className="w-3.5 h-3.5 mt-0.5 shrink-0" style={{ color: BRAND }} />{plan.patients}</span>
@@ -423,7 +425,7 @@ const Landing = () => {
                     </div>
                     <div className="mt-auto pt-6">
                       <a
-                        href={waPlanUrl(plan.name, formatPrice(plan.price))}
+                        href={waPlanUrl(plan.name, formatPrice(plan.annualTotal))}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="flex items-center justify-center gap-2 h-[46px] rounded-xl font-semibold text-[14px] transition-transform hover:scale-[1.02]"

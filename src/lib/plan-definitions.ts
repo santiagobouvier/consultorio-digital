@@ -7,13 +7,17 @@ export interface PlanDefinition {
   description: string;
   maxProfessionals: number | null; // null = unlimited
   maxPatients: number | null; // null = unlimited
-  priceAnnual: number; // Monthly price when paying annually (UYU)
+  /** Pago anual expresado por mes (UYU). El total del año es priceAnnual × 12. */
+  priceAnnual: number;
   priceMonthly: number; // Monthly price when paying monthly (UYU)
   /** Recordatorios automáticos de WhatsApp incluidos por mes. null = sin límite (a medida). */
   whatsappMonthly: number | null;
-  hasPublicWeb: boolean;
-  /** Web con dominio propio armada por el equipo: sin web, plantilla establecida, o diseño a medida. */
-  customWebsite: "none" | "template" | "custom";
+  /**
+   * Página pública de reservas del consultorio (/consultorio/:slug y
+   * /consultorio/:slug/reservar) y portal del paciente. No es una "web"
+   * armada por el equipo: esa prestación se retiró de los planes (oct. 2026).
+   */
+  includesOnlineBooking: boolean;
   isHighlighted?: boolean;
   highlightLabel?: string;
 }
@@ -25,11 +29,10 @@ export const PLAN_DEFINITIONS: Record<string, PlanDefinition> = {
     description: "Para empezar tu consultorio digital",
     maxProfessionals: 1,
     maxPatients: 15,
-    priceAnnual: 1290,
+    priceAnnual: 800, // 9.600 al año
     priceMonthly: 1590,
     whatsappMonthly: 250,
-    customWebsite: "none",
-    hasPublicWeb: true,
+    includesOnlineBooking: true,
   },
   esencial: {
     code: "esencial",
@@ -37,11 +40,10 @@ export const PLAN_DEFINITIONS: Record<string, PlanDefinition> = {
     description: "Para el profesional independiente establecido",
     maxProfessionals: 1,
     maxPatients: 40,
-    priceAnnual: 2400,
+    priceAnnual: 1500, // 18.000 al año
     priceMonthly: 2900,
     whatsappMonthly: 700,
-    customWebsite: "template",
-    hasPublicWeb: true,
+    includesOnlineBooking: true,
     isHighlighted: true,
     highlightLabel: "Más elegido",
   },
@@ -51,11 +53,10 @@ export const PLAN_DEFINITIONS: Record<string, PlanDefinition> = {
     description: "Para el profesional con la agenda llena",
     maxProfessionals: 1,
     maxPatients: null,
-    priceAnnual: 4500,
+    priceAnnual: 3000, // 36.000 al año
     priceMonthly: 5490,
     whatsappMonthly: 1500,
-    customWebsite: "custom",
-    hasPublicWeb: true,
+    includesOnlineBooking: true,
   },
   consultorio: {
     code: "consultorio",
@@ -66,8 +67,7 @@ export const PLAN_DEFINITIONS: Record<string, PlanDefinition> = {
     priceAnnual: 8000,
     priceMonthly: 10000,
     whatsappMonthly: 3000,
-    customWebsite: "custom",
-    hasPublicWeb: true,
+    includesOnlineBooking: true,
   },
   personalizado: {
     code: "personalizado",
@@ -78,8 +78,7 @@ export const PLAN_DEFINITIONS: Record<string, PlanDefinition> = {
     priceAnnual: 0,
     priceMonthly: 0,
     whatsappMonthly: null,
-    customWebsite: "custom",
-    hasPublicWeb: true,
+    includesOnlineBooking: true,
   },
 };
 
@@ -126,6 +125,11 @@ export function getWhatsappMonthlyLimit(planCode: string): number | null {
 export function getPlanPrice(planCode: string, billingCycle: "monthly" | "annual"): number {
   const plan = getPlanDefinition(planCode);
   return billingCycle === "annual" ? plan.priceAnnual : plan.priceMonthly;
+}
+
+/** Total del pago anual (UYU): el precio anual por mes × 12. */
+export function getAnnualTotal(planCode: string): number {
+  return getPlanDefinition(planCode).priceAnnual * 12;
 }
 
 export function formatPrice(price: number): string {

@@ -20,27 +20,32 @@ test("activa gestionada a mano: pide cambio por soporte, sin cancelar ni agregar
     planChangeMode: "support_request",
     canCancel: false,
     canAddPlatformPayment: false,
+    hasLegacyAutomaticDebit: false,
   });
 });
 
-test("activa por la plataforma: pide cambio por soporte y conserva cancelar el débito", () => {
+test("débito automático heredado: pide cambio por soporte y conserva cancelar el débito", () => {
   assert.deepEqual(getBillingActions({ status: "active", mercadopago_preapproval_id: "mp-123" }), {
     isManual: false,
     planChangeMode: "support_request",
     canCancel: true,
     canAddPlatformPayment: false,
+    hasLegacyAutomaticDebit: true,
   });
 });
 
-test("prueba, vencida o sin suscripción: conserva el pago por la plataforma", () => {
-  for (const status of ["trial", "expired", "past_due", "pending"]) {
-    const a = getBillingActions({ status, mercadopago_preapproval_id: null });
-    assert.equal(a.planChangeMode, "self_checkout", status);
-    assert.equal(a.canAddPlatformPayment, true, status);
-    assert.equal(a.isManual, false, status);
+test("cobro manual: en ningún estado se ofrece pagar ni contratar por la plataforma", () => {
+  for (const status of ["trial", "expired", "past_due", "pending", "cancelled", "active"]) {
+    for (const pre of [null, "mp-1"]) {
+      const a = getBillingActions({ status, mercadopago_preapproval_id: pre });
+      assert.equal(a.planChangeMode, "support_request", `${status}/${pre}`);
+      assert.equal(a.canAddPlatformPayment, false, `${status}/${pre}`);
+    }
   }
-  assert.equal(getBillingActions({ status: "cancelled", mercadopago_preapproval_id: null }).canCancel, false);
-  assert.equal(getBillingActions(null).planChangeMode, "self_checkout");
+  assert.equal(getBillingActions(null).planChangeMode, "support_request");
+  assert.equal(getBillingActions({ status: "trial", mercadopago_preapproval_id: null }).canCancel, true, "la prueba se puede cancelar");
+  assert.equal(getBillingActions({ status: "expired", mercadopago_preapproval_id: null }).canCancel, false);
+  assert.equal(getBillingActions({ status: "cancelled", mercadopago_preapproval_id: "mp-1" }).canCancel, false);
 });
 
 test("la solicitud de cambio es solo un link a WhatsApp de soporte, sin importes", () => {
@@ -76,10 +81,20 @@ test("los módulos de la solicitud no pueden cobrar ni escribir: no importan nad
   }
 });
 
-test("Mi plan: en modo solicitud no invoca create-subscription", () => {
+test("ninguna pantalla invoca create-subscription (sin checkout de suscripción)", () => {
+  for (const f of ["src/pages/Billing.tsx", "src/components/SubscriptionGuard.tsx", "src/pages/PlanPayment.tsx", "src/pages/ActivateTrial.tsx"]) {
+    assert.doesNotMatch(src(f), /create-subscription/, f);
+  }
   const billing = src("src/pages/Billing.tsx");
-  const handler = billing.slice(billing.indexOf("const handleRequestPlanChange"), billing.indexOf("const handleSelectPlan"));
-  assert.ok(handler.length > 0, "existe handleRequestPlanChange antes de handleSelectPlan");
-  assert.doesNotMatch(handler, /supabase|invoke|fetch\(/);
-  assert.match(handler, /buildPlanChangeRequestUrl/);
+  assert.doesNotMatch(billing, /handleSelectPlan|Agregar método de pago/);
+  assert.match(billing, /onClick=\{\(\) => handleRequestPlanChange\(code\)\}/);
+});
+
+test("el servidor rechaza contrataciones nuevas salvo habilitación explícita", () => {
+  const fn = src("supabase/functions/create-subscription/index.ts");
+  const guard = fn.indexOf('Deno.env.get("SUBSCRIPTIONS_SELF_CHECKOUT") !== "enabled"');
+  assert.ok(guard > 0, "existe la guarda");
+  assert.ok(guard < fn.indexOf("api.mercadopago.com/preapproval"), "la guarda va antes de tocar Mercado Pago");
+  assert.ok(guard < fn.indexOf('.from("businesses")'), "y antes de crear o leer el consultorio");
+  assert.match(fn.slice(guard, guard + 500), /status: 410/);
 });
