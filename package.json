@@ -16,6 +16,7 @@
     "test:e2e:pestanas": "node tests/e2e/pwa-tabs.e2e.mjs",
     "test:visual:notificaciones": "node tests/visual/notificaciones-bloqueadas.mjs",
     "test:e2e:push": "node tests/e2e/push-cuentas.e2e.mjs",
+    "test:visual:portal": "node tests/visual/portal-paciente.mjs",
     "preview": "vite preview",
     "predev": "bunx tsx scripts/generate-sitemap.ts",
     "prebuild": "bunx tsx scripts/generate-sitemap.ts"

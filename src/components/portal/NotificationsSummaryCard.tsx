@@ -36,51 +36,51 @@ export function NotificationsSummaryCard({ patientId }: Props) {
   const unread = notifications.filter((n) => !n.read_at).slice(0, 3);
   if (unreadCount === 0) return null;
 
+  const more = unreadCount - unread.length;
+
+  // Compacta: va después de próxima cita, reservar y pagos, sin empujarlos.
   return (
-    <Card className="rounded-2xl border-primary/30 bg-primary/5">
+    <Card className="rounded-2xl border-primary/25 bg-primary/[0.04]" data-testid="portal-novedades">
       <CardContent className="p-4 lg:p-5">
-        <div className="flex items-start justify-between gap-3 mb-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="h-10 w-10 rounded-full bg-primary/15 flex items-center justify-center shrink-0">
-              <Bell className="h-5 w-5 text-primary" />
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="h-8 w-8 rounded-full bg-primary/15 flex items-center justify-center shrink-0">
+              <Bell className="h-4 w-4 text-primary" />
             </div>
-            <div className="min-w-0">
-              <p className="text-sm lg:text-base font-semibold text-foreground">
-                {unreadCount === 1
-                  ? "Tenés 1 novedad sin leer"
-                  : `Tenés ${unreadCount} novedades sin leer`}
-              </p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Actualizaciones de tus citas y pagos.
-              </p>
-            </div>
+            <p className="text-sm lg:text-base font-semibold text-foreground m-0 truncate">
+              {unreadCount === 1 ? "1 novedad sin leer" : `${unreadCount} novedades sin leer`}
+            </p>
           </div>
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 px-2 text-xs"
+            className="h-8 px-2.5 text-xs lg:text-sm shrink-0"
             onClick={() => markAllAsRead()}
           >
             Marcar todo
           </Button>
         </div>
-        <ul className="space-y-2">
+        <ul className="divide-y divide-border/60 rounded-xl border border-border/60 bg-background/60">
           {unread.map((n) => (
-            <li
-              key={n.id}
-              className="flex gap-3 items-start rounded-xl bg-background/60 border border-border/60 p-3"
-            >
+            <li key={n.id} className="flex gap-3 items-start px-3 py-2.5 lg:px-4 lg:py-3">
               <div className="mt-0.5 shrink-0">{typeIcon(n.type)}</div>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium leading-snug">{n.title}</p>
-                <p className="text-xs text-muted-foreground leading-snug mt-0.5">{n.body}</p>
-                <p className="text-[11px] text-muted-foreground/70 mt-1">
+              <div className="min-w-0 flex-1 sm:flex sm:items-baseline sm:gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm lg:text-[15px] font-medium leading-snug m-0">{n.title}</p>
+                  <p className="text-xs lg:text-sm text-muted-foreground leading-snug mt-0.5 m-0">{n.body}</p>
+                </div>
+                <p className="text-[11px] lg:text-xs text-muted-foreground mt-1 sm:mt-0 m-0 shrink-0">
                   {formatDistanceToNow(parseISO(n.created_at), { addSuffix: true, locale: es })}
                 </p>
               </div>
             </li>
           ))}
         </ul>
+        {more > 0 && (
+          <p className="text-xs text-muted-foreground mt-2 m-0">
+            {more === 1 ? "Y 1 más" : `Y ${more} más`} en la campana de arriba.
+          </p>
+        )}
       </CardContent>
     </Card>
   );
