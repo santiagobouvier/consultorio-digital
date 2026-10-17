@@ -80,7 +80,7 @@ export const ActivationChecklist = ({ businessId, onAllDone }: Props) => {
         .eq("is_active", true),
       supabase
         .from("payment_policies")
-        .select("mp_access_token")
+        .select("mp_connected")
         .eq("business_id", businessId)
         .maybeSingle(),
       supabase
@@ -105,7 +105,7 @@ export const ActivationChecklist = ({ businessId, onAllDone }: Props) => {
       contact: !!bizData?.contact_email?.trim(),
       template: (tpl.count ?? 0) > 0,
       services: (svcs.count ?? 0) > 0,
-      mp: !!pol.data?.mp_access_token,
+      mp: !!pol.data?.mp_connected,
       shared: !!bizData?.onboarding_link_shared_at,
       portalCustomized:
         !!bizData?.portal_logo_url ||

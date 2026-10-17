@@ -161,7 +161,7 @@ serve(async (req) => {
         },
         auto_return: "approved",
         external_reference: externalReference,
-        notification_url: `${supabaseUrl}/functions/v1/mercadopago-webhook`,
+        notification_url: `${supabaseUrl}/functions/v1/mercadopago-webhook?business_id=${businessId}`,
       }),
     });
 

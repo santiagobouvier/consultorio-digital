@@ -376,10 +376,10 @@ const PatientDetail = () => {
     (async () => {
       const { data } = await supabase
         .from("payment_policies")
-        .select("mp_access_token")
+        .select("mp_connected")
         .eq("business_id", patient.business_id)
         .maybeSingle();
-      setMpConnected(!!(data as any)?.mp_access_token);
+      setMpConnected(!!(data as any)?.mp_connected);
     })();
   }, [patient?.business_id]);
 

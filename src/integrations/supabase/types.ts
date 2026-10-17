@@ -1404,6 +1404,7 @@ export type Database = {
           deposit_percentage: number | null
           id: string
           mp_access_token: string | null
+          mp_connected: boolean
           mp_public_key: string | null
           policy_type: Database["public"]["Enums"]["payment_policy_type"]
           session_price: number

@@ -161,7 +161,9 @@ const read = (rel: string) => readFileSync(fileURLToPath(new URL(`../../../${rel
 test("los llamadores del backend mandan la service role", () => {
   for (const fn of ["public-book-appointment", "mercadopago-webhook", "daily-agenda-summary"]) {
     const code = read(`supabase/functions/${fn}/index.ts`);
-    const at = code.indexOf("/functions/v1/send-push-notification");
+    let at = code.indexOf("/functions/v1/send-push-notification");
+    // mercadopago-webhook llama a las funciones a través de callFunction(name, …)
+    if (at < 0 && code.includes('callFunction("send-push-notification"')) at = code.indexOf("/functions/v1/${name}");
     assert.ok(at > 0, `${fn} llama a send-push-notification`);
     assert.match(code.slice(at, at + 400), /Authorization: `Bearer \$\{(serviceRoleKey|supabaseServiceKey)\}`/, fn);
   }

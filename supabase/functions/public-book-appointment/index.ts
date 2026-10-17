@@ -287,7 +287,15 @@ serve(async (req) => {
               business_id: business.id,
               patient_id: patientId,
             }),
-            notification_url: `${supabaseUrl}/functions/v1/mercadopago-webhook`,
+            // business_id: el webhook consulta el pago SOLO con el token de este consultorio
+            notification_url: `${supabaseUrl}/functions/v1/mercadopago-webhook?business_id=${business.id}`,
+            // La reserva sin pagar se cancela a los 15 minutos (cron
+            // expire-unpaid-public-bookings): el link de pago vence igual.
+            // Un pago que igual llegue tarde lo registra el webhook sin
+            // reconfirmar la cita (ver mercadopago-webhook/handler.ts).
+            expires: true,
+            expiration_date_from: new Date().toISOString(),
+            expiration_date_to: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
           }),
         });
 
@@ -359,7 +367,8 @@ serve(async (req) => {
               business_id: business.id,
               patient_id: patientId,
             }),
-            notification_url: `${supabaseUrl}/functions/v1/mercadopago-webhook`,
+            // business_id: el webhook consulta el pago SOLO con el token de este consultorio
+            notification_url: `${supabaseUrl}/functions/v1/mercadopago-webhook?business_id=${business.id}`,
           }),
         });
         if (oResp.ok) {

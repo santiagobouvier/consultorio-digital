@@ -144,7 +144,7 @@ serve(async (req) => {
       },
       auto_return: "approved",
       external_reference: externalReference,
-      notification_url: `${supabaseUrl}/functions/v1/mercadopago-webhook`,
+      notification_url: `${supabaseUrl}/functions/v1/mercadopago-webhook?business_id=${businessId}`,
       expires: true,
       expiration_date_from: new Date(now).toISOString(),
       expiration_date_to: new Date(now + LINK_TTL_DAYS * 86400000).toISOString(),

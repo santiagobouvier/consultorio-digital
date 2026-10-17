@@ -99,7 +99,8 @@ export const PaymentPolicySettings = ({ businessId }: Props) => {
       setLoading(true);
       const { data, error } = await supabase
         .from("payment_policies")
-        .select("*")
+        // Sin mp_access_token: el navegador no puede (ni necesita) leerlo.
+        .select("id, policy_type, deposit_percentage, session_price, mp_connected")
         .eq("business_id", businessId)
         .maybeSingle();
 
@@ -108,7 +109,7 @@ export const PaymentPolicySettings = ({ businessId }: Props) => {
       if (data) {
         setPolicyId(data.id);
         setPolicyType((data.policy_type as PolicyType) || "none");
-        setMpConnected(!!data.mp_access_token);
+        setMpConnected(!!data.mp_connected);
 
         if (data.deposit_percentage !== null && data.deposit_percentage < 100) {
           setChargeType("deposit");
