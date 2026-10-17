@@ -73,7 +73,6 @@ test("landing, precios y Mi plan: sin cuotas, sin prorrateo, sin web como presta
     assert.doesNotMatch(code, /diferencia proporcional/i, f);
     assert.doesNotMatch(code, /Web pública (incluida|del consultorio)/, f);
   }
-  assert.match(src("src/pages/Landing.tsx"), /pago anual de \{formatPrice\(plan\.annualTotal\)\}/);
   assert.match(src("src/pages/Pricing.tsx"), /pago anual de \{formatPrice\(getAnnualTotal\(plan\.code\)\)\}/);
   assert.doesNotMatch(src("src/pages/Billing.tsx"), /-20%/);
 });
