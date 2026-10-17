@@ -53,7 +53,7 @@ export const NewActionDialog = ({
         {fixedDateLabel && (
           <div className="flex items-center gap-2.5 rounded-xl bg-primary/10 border border-primary/25 px-3.5 py-2.5">
             <CalendarDays className="h-4 w-4 text-primary shrink-0" />
-            <span className="text-sm font-semibold capitalize text-foreground">{fixedDateLabel}</span>
+            <span className="text-sm font-semibold text-foreground">{fixedDateLabel}</span>
             <span className="ml-auto text-[10px] font-bold uppercase tracking-wide text-primary shrink-0">
               Día fijado
             </span>

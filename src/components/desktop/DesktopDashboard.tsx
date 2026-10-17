@@ -52,6 +52,7 @@ import {
   CalendarClock,
   CheckCircle2,
 } from "lucide-react";
+import { capitalizeFirst } from "@/lib/date-text";
 
 interface Appointment {
   id: string;
@@ -588,8 +589,8 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
             </div>
             <div className="hidden lg:flex items-center gap-3 text-right">
               <div>
-                <p className="text-sm font-semibold capitalize text-white/85">
-                  {format(new Date(nowTick), "EEEE d 'de' MMMM", { locale: es })}
+                <p className="text-sm font-semibold text-white/85">
+                  {capitalizeFirst(format(new Date(nowTick), "EEEE d 'de' MMMM", { locale: es }))}
                 </p>
                 <p className="text-[11px] text-white/45">Consultorio Digital</p>
               </div>
@@ -1119,8 +1120,8 @@ export const DesktopDashboard = ({ businessId, userName: propUserName }: Desktop
                               <StickyNote className="h-4 w-4 text-primary shrink-0" />
                               <div className="flex-1 min-w-0">
                                 <p className="text-sm font-semibold truncate">{a.patients?.full_name || "Sin paciente"}</p>
-                                <p className="text-[11px] text-muted-foreground capitalize">
-                                  sesión de {new Date(a.start_at).getTime() >= todayStart ? "hoy" : "ayer"} ·{" "}
+                                <p className="text-[11px] text-muted-foreground">
+                                  Sesión de {new Date(a.start_at).getTime() >= todayStart ? "hoy" : "ayer"} ·{" "}
                                   {format(new Date(a.start_at), "HH:mm")} hs · tocá para escribirla
                                 </p>
                               </div>

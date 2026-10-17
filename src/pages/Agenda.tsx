@@ -30,6 +30,7 @@ import { es } from "date-fns/locale";
 import { calculatePaymentStatus, type PaymentStatus } from "@/lib/payments";
 import { useBusinessId } from "@/hooks/use-business-id";
 import { useProfessionals } from "@/hooks/use-professionals";
+import { capitalizeFirst } from "@/lib/date-text";
 
 
 interface AppointmentWithRelations {
@@ -528,8 +529,8 @@ const Agenda = () => {
             </Button>
             <div>
               <p className="text-xs text-muted-foreground">Calendario</p>
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-primary capitalize">
-                {getDateRangeLabel()}
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-primary">
+                {capitalizeFirst(getDateRangeLabel())}
               </h1>
             </div>
           </div>

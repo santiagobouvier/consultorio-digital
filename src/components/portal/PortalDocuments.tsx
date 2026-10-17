@@ -127,19 +127,18 @@ export const PortalDocuments = ({ documents, customTypes, loading, isDemo = fals
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-2 flex-wrap">
-        <h2 className="text-lg lg:text-xl font-bold flex items-center gap-2">
-          <FolderOpen className="h-5 w-5 text-primary" /> Mis documentos
-        </h2>
+      {/* El título lo pone la sección del portal ("Tus documentos"); acá solo
+          qué hay y cuántos, sin repetir otro encabezado. */}
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-xs text-muted-foreground m-0">
+          Todo lo que tu profesional compartió con vos: informes, materiales, recibos.
+        </p>
         {documents.length > 0 && (
-          <Badge variant="secondary" className="text-xs">
+          <Badge variant="secondary" className="text-xs shrink-0">
             {documents.length} documento{documents.length !== 1 ? "s" : ""}
           </Badge>
         )}
       </div>
-      <p className="text-xs text-muted-foreground -mt-2">
-        Todo lo que tu profesional compartió con vos: informes, materiales, recibos.
-      </p>
 
       {loading ? (
         <div className="py-10 flex justify-center text-muted-foreground">
@@ -196,7 +195,7 @@ export const PortalDocuments = ({ documents, customTypes, loading, isDemo = fals
                   </p>
                   {sessionGroups.map((group) => (
                     <div key={group.start_at + group.docs[0]?.id} className="space-y-2">
-                      <p className="text-xs font-semibold text-foreground flex items-center gap-1.5 capitalize">
+                      <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
                         <span className="h-1.5 w-1.5 rounded-full bg-primary inline-block" />
                         Sesión del {format(parseISO(group.start_at), "EEEE d 'de' MMMM yyyy", { locale: es })}
                       </p>

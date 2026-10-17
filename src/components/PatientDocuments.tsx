@@ -65,6 +65,7 @@ import { cn } from "@/lib/utils";
 import { BUILT_IN_DOC_TYPES, resolveDocType } from "@/lib/document-types";
 import { useDocumentTypes } from "@/hooks/use-document-types";
 import { CreateDocTypeDialog } from "@/components/documents/CreateDocTypeDialog";
+import { capitalizeFirst } from "@/lib/date-text";
 
 // DOCUMENTOS del paciente, pensado para acumular muchos sin volverse un
 // pantano: filas compactas de una línea, buscador + filtros arriba, el
@@ -726,8 +727,8 @@ export const PatientDocuments = ({ patientId, businessId }: PatientDocumentsProp
                     <SelectItem value="none">Sin sesión — documento general</SelectItem>
                     {sessionOptions.map((s) => (
                       <SelectItem key={s.id} value={s.id}>
-                        <span className="capitalize">
-                          {format(new Date(s.start_at), "EEE d MMM yyyy · HH:mm", { locale: es })}
+                        <span>
+                          {capitalizeFirst(format(new Date(s.start_at), "EEE d MMM yyyy · HH:mm", { locale: es }))}
                         </span>
                       </SelectItem>
                     ))}

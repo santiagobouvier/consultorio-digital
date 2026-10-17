@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { Calendar, CreditCard, Clock, MapPin, User, X, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { capitalizeFirst } from "@/lib/date-text";
 
 interface Appointment {
   id: string;
@@ -120,8 +121,8 @@ export const DayDetailDrawer = ({
                 <Calendar className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <DrawerTitle className="capitalize text-left">
-                  {format(selectedDate, "EEEE d 'de' MMMM", { locale: es })}
+                <DrawerTitle className="text-left">
+                  {capitalizeFirst(format(selectedDate, "EEEE d 'de' MMMM", { locale: es }))}
                 </DrawerTitle>
                 <p className="text-sm text-muted-foreground">
                   {dayAppointments.length} cita{dayAppointments.length !== 1 ? "s" : ""}
