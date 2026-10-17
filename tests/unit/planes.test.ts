@@ -73,7 +73,17 @@ test("landing, precios y Mi plan: sin cuotas, sin prorrateo, sin web como presta
     assert.doesNotMatch(code, /diferencia proporcional/i, f);
     assert.doesNotMatch(code, /Web pública (incluida|del consultorio)/, f);
   }
-  assert.match(src("src/pages/Landing.tsx"), /pago anual de \{formatPrice\(plan\.annualTotal\)\}/);
   assert.match(src("src/pages/Pricing.tsx"), /pago anual de \{formatPrice\(getAnnualTotal\(plan\.code\)\)\}/);
   assert.doesNotMatch(src("src/pages/Billing.tsx"), /-20%/);
+});
+
+test("landing: los planes se muestran sin precios, con lo que incluye cada uno", () => {
+  const code = src("src/pages/Landing.tsx");
+  assert.doesNotMatch(code, /formatPrice|priceAnnual|priceMonthly|getAnnualTotal|\/mes/, "la landing no publica precios");
+  assert.match(code, /PUBLIC_PLAN_ORDER/, "sigue mostrando los planes públicos");
+  for (const field of ["maxPatients", "whatsappMonthly", "maxProfessionals", "description"]) {
+    assert.match(code, new RegExp(`p\\.${field}`), `muestra ${field}`);
+  }
+  assert.doesNotMatch(code, /waPlanUrl\(plan\.name,/, "el mensaje de WhatsApp no lleva precio");
+  assert.match(src("src/components/landing/LandingNavbar.tsx"), /label: "Planes"/);
 });
