@@ -2,6 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ShowcaseBanner } from "@/components/showcase/ShowcaseBanner";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Component, lazy, Suspense, useEffect, type ErrorInfo, type ReactNode } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
@@ -27,6 +28,7 @@ const Landing = lazy(() => import("./pages/Landing"));
 const Auth = lazy(() => import("./pages/Auth"));
 const AuthCallback = lazy(() => import("./pages/AuthCallback"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
+const ShowcaseMode = lazy(() => import("./pages/ShowcaseMode"));
 const BusinessSetup = lazy(() => import("./pages/OnboardingWizard"));
 const Patients = lazy(() => import("./pages/Patients"));
 const PatientDetail = lazy(() => import("./pages/PatientDetail"));
@@ -174,6 +176,7 @@ const PROTECTED_ROUTE_PREFIXES = [
   "/estadisticas",
   "/ayuda",
   "/configuracion",
+  "/modo-capturas",
   "/saas-admin",
 ];
 
@@ -241,6 +244,7 @@ const App = () => {
         <PwaUpdatePrompt />
         <SessionExpiredDialog />
         <PWAInstalledCelebrationModal />
+        <ShowcaseBanner />
         <BrowserRouter>
           <AuthSyncBridge />
           {/* Bienvenida con marca tras el login: por ENCIMA del Suspense de
@@ -301,6 +305,7 @@ const App = () => {
                 <Route path="/estadisticas" element={<Protected><Statistics /></Protected>} />
                 <Route path="/ayuda" element={<Protected><HelpCenter /></Protected>} />
                 <Route path="/configuracion" element={<Protected><Configuracion /></Protected>} />
+                <Route path="/modo-capturas" element={<Protected><ShowcaseMode /></Protected>} />
                 <Route path="/saas-admin" element={<AdminProtected><SaasAdmin /></AdminProtected>} />
 
                 {/* Catch-all */}

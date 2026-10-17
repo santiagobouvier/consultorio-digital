@@ -1,4 +1,5 @@
 -- Pruebas de la migración 20261003120000_planes_gestion_manual.sql.
+-- migraciones: 20261003120000_planes_gestion_manual.sql
 -- Correr con tests/db/run.sh contra un Postgres DESECHABLE (nunca producción).
 -- Cada caso imprime "OK: …"; cualquier falla corta con "FALLA: …".
 \set ON_ERROR_STOP on

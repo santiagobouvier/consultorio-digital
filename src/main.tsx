@@ -1,3 +1,5 @@
+// Modo capturas: tiene que instalarse antes que todo lo demás (ver boot.ts).
+import { showcaseReady } from "@/lib/showcase/boot";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
@@ -10,6 +12,8 @@ import {
   stripRecoveryMarkerWhenStable,
 } from "@/lib/session-recovery";
 import { installPushAccountGuard } from "@/lib/push-account";
+import { isShowcaseActive } from "@/lib/showcase/session";
+import { verifyActiveShowcase } from "@/lib/showcase/runtime";
 
 window.addEventListener("vite:preloadError", (event) => {
   event.preventDefault();
@@ -87,9 +91,14 @@ const bootstrap = async () => {
     // service workers peleándose por "/" recargaban sin fin a las pestañas.
   }
 
+  // Modo capturas: la capa aislada tiene que estar puesta antes de la primera pantalla.
+  await showcaseReady();
+
   // Los avisos push de una cuenta no se quedan en este navegador cuando
   // entra otra cuenta o se cierra la sesión (ver src/lib/push-binding.ts).
-  installPushAccountGuard();
+  // En modo capturas no se revisa la suscripción push del dispositivo.
+  if (!isShowcaseActive()) installPushAccountGuard();
+  else verifyActiveShowcase();
 
   createRoot(document.getElementById("root")!).render(<App />);
   // Si esta carga vino de una recuperación automática y la app quedó

@@ -13,6 +13,7 @@
     "test:db": "bash tests/db/run.sh",
     "test:e2e:reset": "node tests/e2e/reset-password.e2e.mjs",
     "test:e2e:acceso": "node tests/e2e/patient-access-session.e2e.mjs",
+    "test:e2e:capturas": "node --experimental-strip-types tests/e2e/modo-capturas.e2e.mjs",
     "test:e2e:pestanas": "node tests/e2e/pwa-tabs.e2e.mjs",
     "test:visual:notificaciones": "node tests/visual/notificaciones-bloqueadas.mjs",
     "test:e2e:push": "node tests/e2e/push-cuentas.e2e.mjs",
