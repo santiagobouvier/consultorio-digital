@@ -4,6 +4,7 @@
 // public-book-appointment: pueden correr a la vez, por eso cada aviso se
 // reclama de forma atómica (solo el proceso que gana la marca lo envía).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { isAuthorizedCronCaller } from "./cron-auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -82,6 +83,23 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
+
+  // Solo pg_cron (token de Vault) y el servidor (service role): ver cron-auth.ts
+  const authorized = await isAuthorizedCronCaller(req.headers.get("Authorization"), {
+    serviceRoleKey: SERVICE_ROLE,
+    verifyCronToken: async (token) => {
+      const { data, error } = await supabase.rpc("verify_cron_jobs_token", { p_token: token });
+      if (error) throw error;
+      return data === true;
+    },
+  });
+  if (!authorized) {
+    return new Response(JSON.stringify({ error: "unauthorized" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
   const startedAt = new Date().toISOString();
   const summary = { processed: 0, sent: 0, failed: 0, skipped: 0 };
 

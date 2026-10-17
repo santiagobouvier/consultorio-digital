@@ -72,6 +72,22 @@ const MODE_LABEL: Record<string, string> = {
   ambas: "Online o presencial",
 };
 
+// Ajustes de clinic_settings (nombre, bienvenida, portada): por RLS solo los
+// ve el propio dueño. Un visitante sin sesión no puede leer owner_user_id, así
+// que ni se consulta.
+async function loadOwnerSettings(businessId: string) {
+  const { data: sessionData } = await supabase.auth.getSession();
+  if (!sessionData.session) return null;
+  const { data: biz } = await supabase
+    .from("businesses")
+    .select("owner_user_id")
+    .eq("id", businessId)
+    .maybeSingle();
+  if (!biz?.owner_user_id) return null;
+  const { data } = await supabase.from("clinic_settings").select("*").eq("user_id", biz.owner_user_id).maybeSingle();
+  return data;
+}
+
 const PublicClinic = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
@@ -93,7 +109,8 @@ const PublicClinic = () => {
         }
 
         const columns =
-          "id, owner_user_id, name, specialty, public_slug, custom_subdomain, portal_logo_url, portal_primary_color, portal_dark_primary_color, portal_clinic_display_name, plan_code, is_private_clinic";
+          "id, name, specialty, public_slug, custom_subdomain, portal_logo_url, portal_primary_color, portal_dark_primary_color, portal_clinic_display_name, is_private_clinic";
+        // Sin plan_code ni owner_user_id: no se exponen a visitantes (la reserva online está en todos los planes).
 
         // Buscar primero por public_slug (caso más común), luego fallback a custom_subdomain.
         let businessData: any = null;
@@ -130,12 +147,8 @@ const PublicClinic = () => {
           return;
         }
 
-        const [{ data: settingsData }, { data: templateData }, svcResp] = await Promise.all([
-          supabase
-            .from("clinic_settings")
-            .select("*")
-            .eq("user_id", businessData.owner_user_id)
-            .maybeSingle(),
+        const [settingsData, { data: templateData }, svcResp] = await Promise.all([
+          loadOwnerSettings(businessData.id),
           supabase
             .from("availability_templates")
             .select("*")

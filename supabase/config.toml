@@ -34,8 +34,9 @@ verify_jwt = false
 [functions.calendar-feed]
 verify_jwt = false
 
-# daily-agenda-summary: lo dispara pg_cron con la anon key (mismo patrón
-# que process-scheduled-reminders).
+# daily-agenda-summary y process-scheduled-reminders: los dispara pg_cron con
+# el token cron_jobs_token de Vault (o el servidor con la service role); la
+# propia función valida el Bearer (cron-auth.ts), por eso verify_jwt = false.
 [functions.daily-agenda-summary]
 verify_jwt = false
 

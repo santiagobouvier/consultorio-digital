@@ -144,6 +144,23 @@ const demoStarts = (durationMinutes: number): Start[] => {
   return out;
 };
 
+// Código de error de public-book-appointment. Con status 4xx, supabase-js
+// deja data en null y el cuerpo ({ error }) queda en error.context.
+async function bookingErrorCode(data: unknown, error: unknown): Promise<string | undefined> {
+  const fromData = (data as { error?: string } | null)?.error;
+  if (fromData) return fromData;
+  const ctx = (error as { context?: Response } | null)?.context;
+  if (ctx && typeof ctx.clone === "function") {
+    try {
+      const body = await ctx.clone().json();
+      if (body?.error) return String(body.error);
+    } catch {
+      /* cuerpo no JSON */
+    }
+  }
+  return (error as { message?: string } | null)?.message;
+}
+
 const PublicBooking = ({ demo = false, embed = false }: { demo?: boolean; embed?: boolean }) => {
   const { slug } = useParams();
   const navigate = useNavigate();
@@ -252,7 +269,8 @@ const PublicBooking = ({ demo = false, embed = false }: { demo?: boolean; embed?
         }
 
         const columns =
-          "id, name, specialty, public_slug, custom_subdomain, portal_logo_url, portal_primary_color, portal_dark_primary_color, portal_clinic_display_name, plan_code, is_private_clinic";
+          "id, name, specialty, public_slug, custom_subdomain, portal_logo_url, portal_primary_color, portal_dark_primary_color, portal_clinic_display_name, is_private_clinic";
+        // Sin plan_code ni owner_user_id: no se exponen a visitantes (la reserva online está en todos los planes).
 
         let businessData: any = null;
         const bySlug = await supabase
@@ -443,8 +461,10 @@ const PublicBooking = ({ demo = false, embed = false }: { demo?: boolean; embed?
       });
 
       if (error || (data && (data as any).error)) {
-        const errCode = (data as any)?.error || error?.message;
-        if (errCode === "start_not_available") {
+        const errCode = await bookingErrorCode(data, error);
+        if (errCode === "rate_limited") {
+          toast.error("Recibimos varios intentos de reserva seguidos. Esperá unos minutos o escribile al consultorio.");
+        } else if (errCode === "start_not_available") {
           // Cubre dos casos: se lo ganaron de mano, o el plazo mínimo de
           // anticipación se venció con la página abierta.
           toast.error("Ese horario ya no está disponible para reservar online. Elegí otro de la lista.");

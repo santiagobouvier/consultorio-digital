@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { checkCalendarUrl, safeFetchText } from "./url-guard.ts";
 
 // Calendario personal del profesional (Google Calendar / iCloud / Outlook).
 // El profesional pega el link iCal PRIVADO de su calendario y el sistema lo
@@ -237,20 +238,28 @@ const guessLabel = (url: string): string => {
   return "Mi calendario";
 };
 
-const fetchIcs = async (url: string): Promise<string | null> => {
-  try {
-    const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(), 10000);
-    const res = await fetch(url, { signal: ctrl.signal, redirect: "follow" });
-    clearTimeout(t);
-    if (!res.ok) return null;
-    const text = await res.text();
-    if (text.length > 3_000_000) return text.slice(0, 3_000_000);
-    return text;
-  } catch {
-    return null;
+// IPs del host para validar que sean públicas (url-guard.ts). null = el
+// runtime no permite resolver DNS: quedan las reglas sobre el host.
+const resolveHost = async (host: string): Promise<string[] | null> => {
+  // deno-lint-ignore no-explicit-any
+  const d = Deno as any;
+  if (typeof d.resolveDns !== "function") return null;
+  const ips: string[] = [];
+  for (const type of ["A", "AAAA"]) {
+    try {
+      ips.push(...(await d.resolveDns(host, type)));
+    } catch (e) {
+      if (e instanceof Deno.errors.NotFound) continue;
+      return null;
+    }
   }
+  if (ips.length === 0) throw new Error("host_not_found");
+  return ips;
 };
+
+// Descarga con las protecciones de url-guard.ts (también para links ya guardados)
+const fetchIcs = (url: string): Promise<string | null> =>
+  safeFetchText(url, { fetch, resolve: resolveHost, timeoutMs: 10000 });
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -292,6 +301,9 @@ Deno.serve(async (req) => {
     if (action === "add") {
       const url = normalizeUrl(String(body?.url ?? ""));
       if (!url) return json({ error: "El link no es válido. Tiene que empezar con https:// o webcal://" }, 400);
+      if (checkCalendarUrl(url)) {
+        return json({ error: "Ese link no apunta a un calendario público de internet. Copiá la dirección iCal de Google, iCloud u Outlook." }, 400);
+      }
       const ics = await fetchIcs(url);
       if (!ics || !ics.includes("BEGIN:VCALENDAR")) {
         return json({ error: "Ese link no devuelve un calendario. Fijate de copiar la dirección iCal (termina en .ics)." }, 400);
