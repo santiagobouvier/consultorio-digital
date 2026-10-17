@@ -14,7 +14,7 @@ const INK = "#16211c";
 
 const LINKS = [
   { label: "Funciones", id: "funciones" },
-  { label: "Precios", id: "pricing" },
+  { label: "Planes", id: "pricing" },
   { label: "Preguntas", id: "faq" },
 ];
 
