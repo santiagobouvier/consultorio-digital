@@ -83,7 +83,7 @@ const faqItems = [
   {
     question: "¿Puedo cambiar de plan en cualquier momento?",
     answer:
-      "Sí, podés escalar tu plan cuando lo necesites. Si pasás a un plan superior, solo pagás la diferencia proporcional.",
+      "Sí. Nos escribís por WhatsApp y coordinamos el cambio y las condiciones. El pago de tu plan se hace por fuera de la plataforma.",
   },
   {
     question: "¿Mis pacientes pueden ver información de otros pacientes?",

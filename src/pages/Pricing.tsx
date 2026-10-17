@@ -16,6 +16,7 @@ import {
   PLAN_DEFINITIONS,
   PUBLIC_PLAN_ORDER,
   formatPrice,
+  getAnnualTotal,
   type PlanDefinition,
 } from "@/lib/plan-definitions";
 
@@ -31,7 +32,7 @@ const Pricing = () => {
   // La contratación es mano a mano: cada plan abre WhatsApp con un mensaje ya
   // escrito. Un solo precio por plan, facturado en un pago anual.
   const handleSelectPlan = useCallback((plan: PlanDefinition) => {
-    const msg = `¡Hola! Me interesa el plan ${plan.name} de Consultorio Digital (${formatPrice(plan.priceAnnual)}/mes, pago anual). ¿Me contás cómo empezar?`;
+    const msg = `¡Hola! Me interesa el plan ${plan.name} de Consultorio Digital (pago anual de ${formatPrice(getAnnualTotal(plan.code))}). ¿Me contás cómo empezar?`;
     window.open(
       `https://wa.me/59898543623?text=${encodeURIComponent(msg)}`,
       "_blank",
@@ -184,7 +185,7 @@ const PlanCard = ({ plan, onSelect }: PlanCardProps) => {
           <span className="text-sm text-white/40">/mes</span>
         </div>
         <p className="text-xs text-white/40 mt-1.5">
-          pago anual · hasta 12 cuotas con Mercado Pago
+          pago anual de {formatPrice(getAnnualTotal(plan.code))} · se coordina por WhatsApp
         </p>
       </div>
 
@@ -206,10 +207,10 @@ const PlanCard = ({ plan, onSelect }: PlanCardProps) => {
               : `Hasta ${plan.maxPatients} pacientes`
           }
         />
-        {plan.hasPublicWeb && (
+        {plan.includesOnlineBooking && (
           <FeatureItem
             icon={<Globe className="w-4 h-4" />}
-            text="Web pública del consultorio"
+            text="Reservas online para tus pacientes"
           />
         )}
         <FeatureItem icon={<Check className="w-4 h-4" />} text="Agenda inteligente" />

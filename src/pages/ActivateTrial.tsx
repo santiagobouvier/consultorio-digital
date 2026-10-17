@@ -128,8 +128,8 @@ const ActivateTrial = () => {
         if (insertErr) throw insertErr;
       } else if (existing.status !== "trial" && existing.status !== "active") {
         // La prueba ya se usó: el cliente no se reactiva una prueba solo.
-        // Sigue desde Mi plan (pagar por la plataforma o coordinar con soporte).
-        toast.info("Tu prueba gratuita ya fue usada. Elegí cómo seguir desde Mi plan.");
+        // Sigue desde Mi plan, coordinando el plan con soporte por WhatsApp.
+        toast.info("Tu prueba gratuita ya fue usada. Coordiná tu plan desde Mi plan.");
         navigate("/billing");
         return;
       }

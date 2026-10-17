@@ -6,16 +6,19 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Precio anual por mes (oct. 2026): Emprendedor 800, Esencial 1500,
+// Profesional 3000 (9.600 / 18.000 / 36.000 al año). Los mensuales no se
+// redefinieron. Debe coincidir con src/lib/plan-definitions.ts.
 const PLAN_PRICES: Record<string, { monthly: number; annual: number }> = {
-  emprendedor: { monthly: 1613, annual: 1290 },
-  esencial: { monthly: 3125, annual: 2500 },
-  profesional: { monthly: 5625, annual: 4500 },
+  emprendedor: { monthly: 1613, annual: 800 },
+  esencial: { monthly: 3125, annual: 1500 },
+  profesional: { monthly: 5625, annual: 3000 },
   consultorio: { monthly: 10000, annual: 8000 },
   // Legacy codes mapped
-  starter: { monthly: 1613, annual: 1290 },
-  individual: { monthly: 3125, annual: 2500 },
-  inicial: { monthly: 3125, annual: 2500 },
-  professional: { monthly: 5625, annual: 4500 },
+  starter: { monthly: 1613, annual: 800 },
+  individual: { monthly: 3125, annual: 1500 },
+  inicial: { monthly: 3125, annual: 1500 },
+  professional: { monthly: 5625, annual: 3000 },
   advanced: { monthly: 10000, annual: 8000 },
   equipo: { monthly: 10000, annual: 8000 },
 };
@@ -23,6 +26,20 @@ const PLAN_PRICES: Record<string, { monthly: number; annual: number }> = {
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
+  }
+
+  // Desde oct. 2026 la suscripción a Consultorio Digital se cobra POR FUERA de
+  // la aplicación: Santiago la registra desde el superadmin. No se crean
+  // débitos automáticos nuevos en Mercado Pago. Para reabrir el autoservicio
+  // habría que configurar SUBSCRIPTIONS_SELF_CHECKOUT=enabled a propósito.
+  if (Deno.env.get("SUBSCRIPTIONS_SELF_CHECKOUT") !== "enabled") {
+    return new Response(
+      JSON.stringify({
+        error: "manual_billing",
+        message: "Los planes se coordinan con soporte por WhatsApp; no se cobran desde la aplicación.",
+      }),
+      { status: 410, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
   }
 
   try {

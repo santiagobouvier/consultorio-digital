@@ -278,10 +278,10 @@ const PublicBooking = ({ demo = false, embed = false }: { demo?: boolean; embed?
           return;
         }
 
-        // Restricción por plan: la reserva pública solo está disponible
-        // en planes con `hasPublicWeb`.
+        // Restricción por plan: la reserva pública depende de
+        // `includesOnlineBooking` (no de la "web", que ya no es prestación).
         const planDef = getPlanDefinition(businessData.plan_code);
-        if (!planDef.hasPublicWeb) {
+        if (!planDef.includesOnlineBooking) {
           if (!cancelled) {
             setPlanAllowsPublicWeb(false);
             setLoading(false);

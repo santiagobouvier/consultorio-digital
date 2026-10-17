@@ -44,7 +44,7 @@ export const HELP_CONTENT: Record<string, HelpEntry> = {
   },
   billing: {
     title: "Mi plan",
-    body: "Tu plan, próximos cobros y método de pago vinculado con Mercado Pago.",
+    body: "Tu plan, su vigencia y cómo se coordina el pago (por fuera de la plataforma).",
   },
   schedules: {
     title: "Horarios",
@@ -59,8 +59,8 @@ export const HELP_CONTENT: Record<string, HelpEntry> = {
     body: "Notas privadas del consultorio. El paciente nunca las ve, solo vos y tu equipo.",
   },
   publicClinic: {
-    title: "Web pública",
-    body: "Página abierta con tu marca y reserva sin login. Solo en planes con web pública.",
+    title: "Página de reservas",
+    body: "Página abierta con tu marca donde tus pacientes reservan sin login. Incluida en todos los planes.",
   },
 
   // ─────────────── Dashboard - métricas ───────────────
@@ -222,11 +222,11 @@ export const HELP_CONTENT: Record<string, HelpEntry> = {
   },
   billingTrial: {
     title: "Prueba gratuita",
-    body: "Tenés 7 días sin cobro. Cuando termine, se activa el plan elegido automáticamente.",
+    body: "Tenés 7 días sin cobro. Cuando termine, si querés seguir, coordinás el plan con nosotros por WhatsApp. No hay cobro automático.",
   },
   billingPaymentMethod: {
     title: "Método de pago",
-    body: "Tu tarjeta queda guardada de forma segura en Mercado Pago. Nosotros no la vemos.",
+    body: "El pago de tu plan se coordina con nosotros por fuera de la plataforma. Si tenías un débito automático de Mercado Pago, sigue vigente hasta que lo canceles.",
   },
   billingCancel: {
     title: "Cancelar suscripción",

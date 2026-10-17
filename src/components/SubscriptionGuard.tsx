@@ -4,10 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useSubscriptionStatus } from "@/hooks/use-subscription-status";
 import LoadingPage from "@/components/LoadingPage";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, CreditCard, Loader2, Sparkles, PartyPopper, Clock, MessageCircle } from "lucide-react";
+import { AlertTriangle, Loader2, Sparkles, PartyPopper, Clock, MessageCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBusinessIdContext } from "@/contexts/BusinessIdContext";
-import { toast } from "sonner";
 import { resolveSubscriptionStatus } from "@/lib/subscription-status";
 import { buildAccessRequestUrl } from "@/lib/support-whatsapp";
 
@@ -50,7 +49,6 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
   const [loadTimedOut, setLoadTimedOut] = useState(false);
 
   const { status, loading } = useSubscriptionStatus(businessId);
-  const [reactivating, setReactivating] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
 
   // Cuando la verificación completa exitosamente, marcar como verificado a nivel módulo
@@ -132,45 +130,6 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
     poll();
     return () => { cancelled = true; };
   }, [searchParams, businessId, status, loading, businessLoading]);
-
-  const handleReactivate = useCallback(async () => {
-    if (!businessId) return;
-    setReactivating(true);
-    try {
-      // Get business plan info
-      const { data: business } = await supabase
-        .from("businesses")
-        .select("plan_code, billing_period")
-        .eq("id", businessId)
-        .maybeSingle();
-
-      if (!business?.plan_code) {
-        navigate("/billing");
-        return;
-      }
-
-      const { data, error } = await supabase.functions.invoke("create-subscription", {
-        body: {
-          plan_code: business.plan_code,
-          billing_period: business.billing_period || "annual",
-        },
-      });
-
-      if (error) throw error;
-
-      if (data?.checkout_url) {
-        window.location.href = data.checkout_url;
-      } else {
-        toast.success("¡Cuenta reactivada!");
-        navigate("/dashboard");
-      }
-    } catch (err: any) {
-      console.error("Reactivation error:", err);
-      toast.error("Error al reactivar. Intentá de nuevo.");
-    } finally {
-      setReactivating(false);
-    }
-  }, [businessId, navigate]);
 
   const handleDismissCelebration = useCallback(() => {
     setShowCelebration(false);
@@ -393,8 +352,8 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
   // Bloqueado: expired, cancelled, past_due, none — all show reactivation modal
   const messages: Record<string, { title: string; desc: string }> = {
     expired: {
-      title: "Tu período de prueba ha terminado",
-      desc: "Para seguir usando Tu Consultorio Digital, activá tu suscripción eligiendo un plan.",
+      title: "Tu acceso terminó",
+      desc: "Para seguir usando Tu Consultorio Digital, coordiná tu plan con nosotros por WhatsApp. El pago se hace por fuera de la plataforma.",
     },
     pending: {
       title: "Tu pago todavía no fue aprobado",
@@ -402,15 +361,15 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
     },
     cancelled: {
       title: "Tu suscripción fue cancelada",
-      desc: "Reactivá tu plan para volver a acceder a todas las funcionalidades.",
+      desc: "Escribinos por WhatsApp para volver a activar tu plan.",
     },
     past_due: {
       title: "Tu pago está pendiente",
-      desc: "Actualizá tu método de pago para continuar usando la plataforma.",
+      desc: "Escribinos por WhatsApp para regularizarlo y seguir usando la plataforma.",
     },
     none: {
       title: "No tenés una suscripción activa",
-      desc: "Elegí un plan para comenzar a usar Tu Consultorio Digital.",
+      desc: "Coordiná tu plan con nosotros por WhatsApp para empezar a usar Tu Consultorio Digital.",
     },
   };
 
@@ -436,28 +395,16 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
           <p className="text-sm sm:text-base text-white/50">{msg.desc}</p>
 
           <div className="flex flex-col gap-3 pt-1 sm:pt-2">
+            {/* La suscripción se cobra por fuera: el acceso lo habilita Santiago
+                desde el superadmin después de coordinar el pago. */}
             <Button
-              onClick={handleReactivate}
-              disabled={reactivating}
+              asChild
               className="w-full h-12 font-semibold text-white text-base"
               style={{ backgroundColor: '#00a5a0', boxShadow: '0 4px 20px rgba(0,165,160,0.3)' }}
             >
-              {reactivating ? (
-                <Loader2 className="w-5 h-5 animate-spin mr-2" />
-              ) : (
-                <CreditCard className="w-5 h-5 mr-2" />
-              )}
-              {reactivating ? "Redirigiendo..." : "Reactivar cuenta"}
-            </Button>
-            {/* Acceso gestionado a mano: no hace falta pagar por la plataforma */}
-            <Button
-              asChild
-              variant="outline"
-              className="w-full h-12 font-semibold text-base border-white/15 bg-transparent text-white hover:bg-white/5 hover:text-white"
-            >
               <a href={buildAccessRequestUrl()} target="_blank" rel="noopener noreferrer">
                 <MessageCircle className="w-5 h-5 mr-2" />
-                Coordinar con soporte por WhatsApp
+                Coordinar por WhatsApp
               </a>
             </Button>
             <Button

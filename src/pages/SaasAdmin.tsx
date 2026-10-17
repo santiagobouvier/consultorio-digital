@@ -39,7 +39,7 @@ import {
 import LoadingPage from "@/components/LoadingPage";
 import { getPlanName, getPlanConfig, checkProfessionalLimit } from "@/hooks/use-plan-limits";
 import {
-  PLAN_DEFINITIONS, PLAN_ORDER, getPlanPrice, normalizePlanCode,
+  PLAN_DEFINITIONS, PLAN_ORDER, getPlanPrice, getAnnualTotal, formatPrice, normalizePlanCode,
 } from "@/lib/plan-definitions";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { PlanSelector } from "@/components/PlanSelector";
@@ -1395,6 +1395,10 @@ const SaasAdmin = () => {
                   <div className="space-y-1.5">
                     <Label>Monto cobrado (opcional)</Label>
                     <Input inputMode="decimal" placeholder="$ por mes" value={activateAmount} onChange={e => setActivateAmount(e.target.value)} className="h-9" />
+                    <p className="text-[11px] text-muted-foreground">
+                      Precio de lista: {formatPrice(getPlanPrice(activatePlan, activatePeriod))}/mes
+                      {activatePeriod === "annual" ? ` · ${formatPrice(getAnnualTotal(activatePlan))} al año` : ""}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -1415,7 +1419,7 @@ const SaasAdmin = () => {
             <Alert>
               <AlertDescription className="text-xs">
                 {activateType === "trial"
-                  ? `Crea una prueba gratuita de ${activateDays} días. Al vencer, la cuenta se bloquea y la persona elige cómo seguir: pagar por la plataforma o coordinar con vos por WhatsApp.`
+                  ? `Crea una prueba gratuita de ${activateDays} días. Al vencer, la cuenta se bloquea y la persona coordina con vos por WhatsApp (no hay cobro por la plataforma).`
                   : "Deja la cuenta activa con el plan elegido y SIN débito automático: la cobrás por fuera (transferencia, etc.). No genera ningún cobro en la plataforma. Para dar acceso sin cobrar, usá \"Desactivar cobro en el sistema\" en Editar."}
               </AlertDescription>
             </Alert>

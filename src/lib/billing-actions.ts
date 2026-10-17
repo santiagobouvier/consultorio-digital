@@ -1,12 +1,13 @@
 // Qué puede hacer el cliente en "Mi plan" según su suscripción. Puro: no
 // consulta ni modifica nada.
 //
-// - Suscripción activa (manual o por plataforma): el cambio de plan se pide a
-//   soporte por WhatsApp. Ni cobra ni toca la suscripción.
-// - Prueba, vencida, cancelada o sin suscripción: puede elegir plan y pagar por
-//   la plataforma (capacidad existente) o coordinar con soporte.
-// - Activa sin débito de Mercado Pago = gestionada a mano por el superadmin:
-//   no hay nada automático que cancelar ni medio de pago que agregar.
+// Desde oct. 2026 la suscripción a Consultorio Digital se cobra POR FUERA de
+// la aplicación: Santiago coordina el pago y registra plan, período, monto y
+// vigencia desde el superadmin. Por eso, en todos los casos:
+// - Contratar o cambiar de plan se pide a soporte por WhatsApp (sin checkout).
+// - No se ofrece "agregar método de pago" en la plataforma.
+// - Un débito automático de Mercado Pago que ya existía se respeta: el cliente
+//   puede cancelarlo (es su derecho) y su estado sigue llegando por el webhook.
 
 export interface BillingSubscriptionLike {
   status: string;
@@ -14,27 +15,31 @@ export interface BillingSubscriptionLike {
 }
 
 export interface BillingActions {
-  /** Activa sin débito automático: la gestiona el superadmin a mano. */
+  /** Sin débito automático: la gestiona Santiago a mano desde el superadmin. */
   isManual: boolean;
-  /** "support_request": pedir por WhatsApp. "self_checkout": elegir plan y pagar por la plataforma. */
-  planChangeMode: "support_request" | "self_checkout";
-  /** Mostrar "Cancelar prueba/suscripción" (cancela el débito de Mercado Pago o la prueba). */
+  /** Siempre "support_request": el plan se coordina por WhatsApp. */
+  planChangeMode: "support_request";
+  /** Mostrar "Cancelar prueba/suscripción" (prueba o débito de Mercado Pago heredado). */
   canCancel: boolean;
-  /** Mostrar "Agregar método de pago" (abre el pago por la plataforma). */
-  canAddPlatformPayment: boolean;
+  /** Siempre false: ya no se cobra la suscripción por la plataforma. */
+  canAddPlatformPayment: false;
+  /** Tiene un débito automático de Mercado Pago anterior al cobro manual. */
+  hasLegacyAutomaticDebit: boolean;
 }
 
 export function getBillingActions(sub: BillingSubscriptionLike | null | undefined): BillingActions {
   if (!sub) {
-    return { isManual: false, planChangeMode: "self_checkout", canCancel: false, canAddPlatformPayment: true };
+    return { isManual: false, planChangeMode: "support_request", canCancel: false, canAddPlatformPayment: false, hasLegacyAutomaticDebit: false };
   }
   const hasPlatformDebit = !!sub.mercadopago_preapproval_id;
   const isActive = sub.status === "active";
   const isManual = isActive && !hasPlatformDebit;
   return {
     isManual,
-    planChangeMode: isActive ? "support_request" : "self_checkout",
-    canCancel: sub.status !== "cancelled" && !isManual,
-    canAddPlatformPayment: !isActive && !hasPlatformDebit,
+    planChangeMode: "support_request",
+    // Prueba: se puede cancelar. Débito heredado: se puede cancelar. Manual: lo corta Santiago.
+    canCancel: sub.status !== "cancelled" && !isManual && (sub.status === "trial" || hasPlatformDebit),
+    canAddPlatformPayment: false,
+    hasLegacyAutomaticDebit: hasPlatformDebit,
   };
 }

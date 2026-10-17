@@ -4,8 +4,9 @@ import { useBusinessId } from "./use-business-id";
 import { getPlanDefinition } from "@/lib/plan-definitions";
 
 /**
- * Devuelve si el negocio del usuario actual tiene habilitada la web pública,
- * según `hasPublicWeb` de la definición de su plan actual.
+ * Devuelve si el plan del negocio actual incluye la reserva online pública y
+ * el portal (`includesOnlineBooking`). La "web" armada por el equipo ya no es
+ * una prestación de los planes.
  *
  * Se usa para ocultar secciones del panel (Mi Consultorio, Personalizar Portal)
  * que ofrecen funciones exclusivas de planes con web pública.
@@ -38,7 +39,7 @@ export function useBusinessPublicWeb() {
         } else {
           const def = getPlanDefinition(data.plan_code);
           setPlanCode(data.plan_code);
-          setHasPublicWeb(Boolean(def.hasPublicWeb));
+          setHasPublicWeb(Boolean(def.includesOnlineBooking));
         }
       } finally {
         if (!cancelled) setLoading(false);
